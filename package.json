@@ -4,14 +4,15 @@
   "description": "An experimental markdown editor",
   "main": "main.js",
   "scripts": {
-    "test": "test"
+    "start": "electron ."
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jcarpenter/gambier.git"
   },
   "keywords": [
-    "markdown"
+    "markdown",
+    "electron"
   ],
   "author": "Josh Carpenter",
   "license": "ISC",
