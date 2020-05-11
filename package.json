@@ -1,0 +1,25 @@
+{
+  "name": "gambier",
+  "version": "1.0.0",
+  "description": "An experimental markdown editor",
+  "main": "main.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jcarpenter/gambier.git"
+  },
+  "keywords": [
+    "markdown"
+  ],
+  "author": "Josh Carpenter",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jcarpenter/gambier/issues"
+  },
+  "homepage": "https://github.com/jcarpenter/gambier#readme",
+  "dependencies": {
+    "electron": "^8.2.5"
+  }
+}
