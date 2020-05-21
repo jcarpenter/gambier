@@ -11,7 +11,7 @@ export default [
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electron', 'path', 'fs-extra', 'chokidar'],
+    external: ['electro n', 'path', 'fs-extra', 'chokidar'],
   },
 
   // Electron | Preload
