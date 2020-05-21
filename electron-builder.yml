@@ -1,0 +1,32 @@
+appId: com.josh-carpenter.gambier
+# artifactName: "${productName}-${os}-${arch}-${version}.${ext}"
+asar: true
+# compression: maximum
+copyright: "Copyright © Josh Carpenter"
+directories:
+  buildResources: assets
+  output: dist
+# dmg:
+#   background: "assets/appdmg.png"
+#   contents:
+#     - path: /Applications
+#       type: link
+#       x: 532
+#       y: 249
+#     - type: file
+#       x: 281
+#       y: 249
+#   icon: "assets/icon.icns"
+#   iconSize: 128
+files:
+  - "app/**/*"
+  - "node_modules/**/*"
+  - "package.json"
+publish: null
+# forceCodeSigning: false
+# mac:
+#   category: public.app-category.productivity
+#   minimumSystemVersion: "10.14"
+nodeGypRebuild: false
+npmRebuild: true
+productName: Gambier

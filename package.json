@@ -1,10 +1,22 @@
 {
   "name": "gambier",
+  "productName": "Gambier",
   "version": "1.0.0",
   "description": "An experimental markdown editor",
-  "main": "main.js",
+  "main": "./app/main.js",
   "scripts": {
-    "start": "electron ."
+    "postinstall": "electron-builder install-app-deps",
+    "sass": "node-sass src/styles -o app/styles --source-map true --output-style expanded",
+    "rollup": "rollup -c",
+    "copy:codemirror": "cpy 'lib/codemirror.css' 'lib/codemirror.js' 'addon/mode/overlay.js' 'mode/markdown/markdown.js' '../../app/js/third-party/codemirror' --cwd=node_modules/codemirror --parents",
+    "copy": "run-p copy:*",
+    "watch:rollup": "onchange 'src/**/*.js' -d 0 -- npm run rollup",
+    "watch:sass": "onchange 'src/styles/*.scss' -d 0 -- npm run sass",
+    "watch": "run-p watch:*",
+    "build": "run-p sass rollup && npm run watch",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "release": "electron-builder"
   },
   "repository": {
     "type": "git",
@@ -21,6 +33,25 @@
   },
   "homepage": "https://github.com/jcarpenter/gambier#readme",
   "dependencies": {
-    "electron": "^8.2.5"
+    "chokidar": "^3.4.0",
+    "fs-extra": "^9.0.0",
+    "path": "^0.12.7",
+    "locale-en-us": "0.0.2"
+  },
+  "devDependencies": {
+    "citeproc": "^2.3.8",
+    "@rollup/plugin-commonjs": "^12.0.0",
+    "@rollup/plugin-node-resolve": "^8.0.0",
+    "codemirror": "^5.54.0",
+    "cpy-cli": "^3.1.1",
+    "electron": "8.2.5",
+    "electron-builder": "^22.6.1",
+    "electron-reload": "^1.5.0",
+    "node-sass": "^4.14.1",
+    "npm-run-all": "^4.1.5",
+    "onchange": "^7.0.2",
+    "rollup": "^2.10.2",
+    "sass": "^1.26.5",
+    "xml-js": "^1.6.11"
   }
 }

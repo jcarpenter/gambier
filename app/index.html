@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Gambier</title>
+        <!-- https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'">
+        <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+
+        <!-- Code mirror -->
+        <link rel="stylesheet" href="./js/third-party/codemirror/lib/codemirror.css">
+        <script src="./js/third-party/codemirror/lib/codemirror.js"></script>
+        <script src="./js/third-party/codemirror/addon/mode/overlay.js"></script>
+        <script src="./js/third-party/codemirror/mode/markdown/markdown.js"></script>
+        <!--<script src="./js/third-party/codemirror/mode/xml/xml.js"></script>
+        <script src="./js/third-party/codemirror/mode/css/css.js"></script>
+        <script src="./js/third-party/codemirror/mode/javascript/javascript.js"></script>-->
+
+        <link rel="stylesheet" href="./styles/main.css">
+
+    </head>
+    <body>
+
+        <span class="cm-citation-collapsed"><button class="icon"></button><div class="popup" tabindex="0"><header><h1>Citation</h1><span class="instructions"><span class="update">Enter to Update, </span>Esc to Cancel</span></header><p class="wrapper"></p><p contenteditable="true" class="input"></p></div><div class="tooltip"></div></span>
+
+        <nav></nav>
+        <div id="editor">
+            <textarea></textarea>
+        </div>
+
+        <!-- You can also require other files to run in this process -->
+        <script src="./js/renderer.js"></script>
+
+        <!--<script src="./js/main.min.js"></script>-->
+    </body>
+</html>

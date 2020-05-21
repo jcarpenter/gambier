@@ -1,0 +1,446 @@
+:root {
+  /* -------------- Layouts (CSS grid) -------------- */
+  --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end editor-start]
+        1fr [editor-end];
+  /* -------------- Colors -------------- */
+  --clr-editorText: #24292e;
+  --side-bar-bg-color: #fafafa;
+  --control-text-color: #777;
+  --body-color: rgb(51, 51, 51);
+  --body-color-light: rgb(96, 96, 96);
+  --clr-warning: rgba(255, 50, 50, 0.4);
+  --clr-warning-dark: rgba(255, 50, 50, 0.75);
+  --clr-gray-darkest: hsl(0, 0%, 7.5%);
+  --clr-gray-darker: hsl(0, 0%, 15%);
+  --clr-gray-dark: hsl(0, 0%, 30%);
+  --clr-gray: hsl(0, 0%, 50%);
+  --clr-gray-light: hsl(0, 0%, 70%);
+  --clr-gray-lighter: hsl(0, 0%, 85%);
+  --clr-gray-lightest: hsl(0, 0%, 92.5%);
+  --clr-blue: rgb(13, 103, 220);
+  --clr-blue-light: #b9d0ee;
+  --clr-blue-lighter:rgb(232, 242, 255);
+  /* -------------- Type sizes -------------- */
+  --baseFontSize: 16px;
+  --baseLineHeight: 1.625rem;
+  /* 26px */
+  --baseFontScale: 1.125;
+  --font-base-size: 1rem;
+  --font-sml-3: calc(var(--font-sml-2) / var(--baseFontScale));
+  /* 11.237 */
+  --font-sml-2: calc(var(--font-sml-1) / var(--baseFontScale));
+  /* 12.641 */
+  --font-sml-1: calc(var(--font-base-size) / var(--baseFontScale));
+  /* 14.222 */
+  --font-lg-1: calc(var(--font-base-size) * var(--baseFontScale));
+  /* 18.000 */
+  --font-lg-2: calc(var(--font-lg-1) * var(--baseFontScale));
+  /* 20.250 */
+  --font-lg-3: calc(var(--font-lg-2) * var(--baseFontScale));
+  /* 22.781 */
+  --font-lg-4: calc(var(--font-lg-3) * var(--baseFontScale));
+  /* 25.628 */
+  --font-lg-5: calc(var(--font-lg-4) * var(--baseFontScale));
+  /* 28.832 */
+  --font-lg-6: calc(var(--font-lg-5) * var(--baseFontScale));
+  /* 32.436 */
+  --font-lg-7: calc(var(--font-lg-6) * var(--baseFontScale));
+  /* 36.491 */
+  --font-lg-8: calc(var(--font-lg-7) * var(--baseFontScale));
+  /* 41.052 */
+  /* -------------- Grid units -------------- */
+  --grid: var(--baseLineHeight);
+  --grid-eighth: calc(var(--grid) * 0.125);
+  --grid-sixth: calc(var(--grid) * 0.166);
+  --grid-quarter: calc(var(--grid) * 0.25);
+  --grid-half: calc(var(--grid) * 0.5);
+  --grid-three-quarters: calc(var(--grid) * 0.75);
+  --grid-1-and-quarter: calc(var(--grid) * 1.25);
+  --grid-1-and-half: calc(var(--grid) * 1.5);
+  --grid-1-and-three-quarters: calc(var(--grid) * 1.75);
+  --grid-2: calc(var(--grid) * 2);
+  --grid-3: calc(var(--grid) * 3);
+  --grid-4: calc(var(--grid) * 4);
+  --grid-5: calc(var(--grid) * 5);
+  --grid-6: calc(var(--grid) * 6);
+  --grid-7: calc(var(--grid) * 7);
+  --grid-8: calc(var(--grid) * 8);
+  --grid-9: calc(var(--grid) * 9);
+  --grid-10: calc(var(--grid) * 10);
+  --grid-12: calc(var(--grid) * 12);
+  --grid-14: calc(var(--grid) * 14);
+  --grid-16: calc(var(--grid) * 16);
+  --grid-24: calc(var(--grid) * 24);
+  --grid-32: calc(var(--grid) * 32);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: var(--baseFontSize);
+}
+
+body {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: min-content;
+  grid-template-columns: var(--layout);
+  font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  line-height: var(--baseLineHeight);
+  height: 40em;
+  color: var(--body-color);
+}
+
+nav {
+  grid-column: nav;
+  /* outline: 1px solid var(--debug-outline); */
+  background: var(--clr-gray-lightest);
+  height: auto;
+}
+
+#editor {
+  display: flex;
+  justify-content: center;
+  grid-column: editor;
+  /* outline: 1px solid var(--debug-outline); */
+}
+
+#editor .CodeMirror {
+  /* outline: 1px solid var(--debug-outline); */
+  max-width: 44em;
+  padding-top: var(--grid);
+  height: auto;
+}
+
+.cm-s-gambier {
+  /* -------------- Frontmatter -------------- */
+  /* -------------- Citation -------------- */
+  /* -------------- Wikilink -------------- */
+  /* -------------- Figure -------------- */
+}
+
+.cm-s-gambier.CodeMirror {
+  /* border: 1px solid #eee; */
+  font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
+  font-size: var(--font-base-size);
+  line-height: var(--baseLineHeight);
+}
+
+.cm-s-gambier .frontmatter span {
+  color: gray;
+}
+
+.cm-s-gambier pre.frontmatter {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.cm-s-gambier .cm-wikilink {
+  color: turquoise;
+}
+
+.cm-s-gambier .figure span {
+  color: pink;
+}
+
+/* 
+========================================================
+OLD
+========================================================
+*/
+.cm-s-gambier.CodeMirror {
+  background: #fff;
+  color: var(--clr-editorText);
+}
+
+.cm-s-gambier .CodeMirror-gutters {
+  background: #fff;
+  border-right-width: 0;
+}
+
+.cm-s-gambier .CodeMirror-guttermarker {
+  color: white;
+}
+
+.cm-s-gambier .CodeMirror-guttermarker-subtle {
+  color: #d0d0d0;
+}
+
+.cm-s-gambier .CodeMirror-linenumber {
+  color: #959da5;
+  padding: 0 16px 0 16px;
+}
+
+.cm-s-gambier .CodeMirror-cursor {
+  border-left: 1px solid #24292e;
+}
+
+.cm-s-gambier div.CodeMirror-selected,
+.cm-s-gambier .CodeMirror-line::selection,
+.cm-s-gambier .CodeMirror-line > span::selection,
+.cm-s-gambier .CodeMirror-line > span > span::selection,
+.cm-s-gambier .CodeMirror-line::-moz-selection,
+.cm-s-gambier .CodeMirror-line > span::-moz-selection,
+.cm-s-gambier .CodeMirror-line > span > span::-moz-selection {
+  background: #b4d7ff;
+}
+
+.cm-s-gambier .CodeMirror-activeline-background {
+  background: #fafbfc;
+}
+
+.cm-s-gambier .CodeMirror-matchingbracket {
+  text-decoration: underline;
+  color: #24292e !important;
+}
+
+.cm-s-gambier .CodeMirror-lines {
+  /* font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; */
+  background: #fff;
+}
+
+.cm-s-gambier .cm-comment {
+  color: #6a737d;
+}
+
+.cm-s-gambier .cm-constant {
+  color: #005cc5;
+}
+
+.cm-s-gambier .cm-entity {
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: none;
+  color: #6f42c1;
+}
+
+.cm-s-gambier .cm-keyword {
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: none;
+  color: #d73a49;
+}
+
+.cm-s-gambier .cm-storage {
+  color: #d73a49;
+}
+
+.cm-s-gambier .cm-string {
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: none;
+  color: #032f62;
+}
+
+.cm-s-gambier .cm-support {
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: none;
+  color: #005cc5;
+}
+
+.cm-s-gambier .cm-variable {
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: none;
+  color: #e36209;
+}
+
+/* ==========================================================================
+   Citations
+   ========================================================================== */
+body > .cm-citation-collapsed {
+  display: none;
+}
+
+.cm-citation-collapsed {
+  position: relative;
+}
+
+.cm-citation-collapsed button.icon {
+  text-decoration: none;
+  border: none;
+  border-radius: 0.1em;
+  padding: 0.2em 0.2em;
+  font-size: 0.9em;
+  line-height: 1em;
+  background-color: #ebebeb;
+  color: #666666;
+  position: relative;
+  margin-left: 0.1em;
+  text-decoration: none;
+}
+
+.cm-citation-collapsed button.icon::before {
+  content: "c";
+}
+
+.cm-citation-collapsed button.icon:hover,
+.cm-citation-collapsed:focus-within button.icon,
+.cm-citation-collapsed .popup:hover button.icon {
+  background-color: #d1d1d1;
+}
+
+.cm-citation-collapsed .tooltip {
+  display: none;
+}
+
+.cm-citation-collapsed:not(:focus-within):hover .popup {
+  opacity: 1;
+  visibility: visible;
+  transition: visibility 0s, opacity 0.05s ease-in;
+}
+
+.cm-citation-collapsed:not(:focus-within):hover .popup header,
+.cm-citation-collapsed:not(:focus-within):hover .popup .wrapper {
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+}
+
+.cm-citation-collapsed:focus-within .popup {
+  opacity: 1;
+  visibility: visible;
+  transition: visibility 0s, opacity 0.05s ease-in;
+}
+
+.cm-citation-collapsed .popup {
+  opacity: 0;
+  visibility: hidden;
+  transition: visibility 0.1s, opacity 0.1s;
+  transition-timing-function: ease-out;
+  transition-delay: 0s;
+}
+
+.cm-citation-collapsed .tooltip,
+.cm-citation-collapsed .popup {
+  color: var(--clr-editorText);
+  padding: var(--grid-quarter);
+  margin: 0;
+  background-color: #f6f6f6;
+  border: 1px solid #d0d0d0;
+  box-shadow: 0 2px 7px 0 rgba(0, 0, 0, 0.12);
+  border-radius: 0.2em;
+  white-space: normal;
+  font-size: var(--font-sml-1);
+  line-height: var(--grid-three-quarters);
+  position: absolute;
+  left: 50%;
+  top: -0.5em;
+  transform: translate(-50%, -100%);
+  width: 22em;
+}
+
+.cm-citation-collapsed .tooltip::before,
+.cm-citation-collapsed .popup::before {
+  content: "";
+  background-color: inherit;
+  box-shadow: 1px 1px rgba(0, 0, 0, 0.12);
+  border-radius: 0.2em;
+  width: 0.8em;
+  height: 0.8em;
+  position: absolute;
+  transform: rotate(45deg);
+  z-index: -1;
+  bottom: 0.05em;
+  left: 50%;
+  transform: translate(-50%, 50%) rotate(45deg);
+}
+
+.cm-citation-collapsed .tooltip:focus,
+.cm-citation-collapsed .popup:focus {
+  outline: none;
+}
+
+.cm-citation-collapsed .popup {
+  z-index: 11;
+}
+
+.cm-citation-collapsed .popup .wrapper {
+  margin: var(--grid-half) 0;
+  opacity: 1;
+  position: relative;
+  padding: 0 var(--grid-quarter);
+}
+
+.cm-citation-collapsed .popup .wrapper a {
+  color: var(--clr-editorText);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.cm-citation-collapsed .popup .wrapper a:hover {
+  border-bottom: 1px solid var(--clr-editorText);
+}
+
+.cm-citation-collapsed .popup .input {
+  padding: var(--grid-eighth) var(--grid-eighth);
+  white-space: nowrap;
+  margin: 0;
+  display: block;
+  font-size: inherit;
+  width: 100%;
+  border-radius: 0.3em;
+  background-color: white;
+  color: var(--clr-editorText);
+  outline: none;
+  border: var(--grid-eighth) solid white;
+  transition: border 0.2s;
+  overflow: hidden;
+}
+
+.cm-citation-collapsed .popup .input:focus {
+  border: var(--grid-eighth) solid #abd0ff;
+}
+
+.cm-citation-collapsed .popup .input::before, .cm-citation-collapsed .popup .input::after {
+  color: #999999;
+}
+
+.cm-citation-collapsed .popup .input::before {
+  content: "[@";
+}
+
+.cm-citation-collapsed .popup .input::after {
+  content: "]";
+}
+
+.cm-citation-collapsed .popup header {
+  font-size: var(--font-sml-3);
+  line-height: var(--font-sml-3);
+  margin: var(--grid-sixth) var(--grid-quarter);
+  cursor: default;
+  display: flex;
+  color: var(--clr-gray);
+}
+
+.cm-citation-collapsed .popup header h1 {
+  font-size: inherit;
+  font-weight: inherit;
+  font-weight: 600;
+  line-height: inherit;
+  margin: 0;
+  padding: 0;
+  text-shadow: 0px -1px rgba(255, 255, 255, 0.4);
+}
+
+.cm-citation-collapsed .popup header .instructions {
+  white-space: nowrap;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.cm-citation-collapsed[data-badId="true"] .input:focus {
+  border-color: var(--clr-warning);
+}
+
+.cm-citation-collapsed[data-state="edited"] header .instructions {
+  opacity: 1;
+}
+
+/*# sourceMappingURL=main.css.map */

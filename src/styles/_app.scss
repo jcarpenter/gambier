@@ -1,0 +1,43 @@
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: var(--baseFontSize);
+}
+
+body {
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-rows: min-content;
+    grid-template-columns: var(--layout);
+
+    font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    line-height: var(--baseLineHeight);
+    height: 40em;
+    color: var(--body-color);
+}
+
+nav {
+    grid-column: nav;
+    /* outline: 1px solid var(--debug-outline); */
+    background: var(--clr-gray-lightest);
+    height: auto;
+}
+
+#editor {
+    display: flex;
+    justify-content: center;
+    grid-column: editor;
+    /* outline: 1px solid var(--debug-outline); */
+}
+
+#editor .CodeMirror {
+    /* outline: 1px solid var(--debug-outline); */
+    max-width: 44em;
+    padding-top: var(--grid);
+    height: auto;
+}
