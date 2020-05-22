@@ -3,6 +3,7 @@
 // -------- Editor -------- //
 
 const projectDirectory = '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src';
+const demoFile = 'md/test.md';
 
 /*
 Copyright (c) 2009-2019 Frank Bennett
@@ -23922,7 +23923,33 @@ async function setup() {
   //   // window.api.send("readDirectory", config.projectDirectory)
   }
 
-  return
+  // return
+  
+
+
+  // -------- IPC Examples: On (Receive) / Send -------- //
+
+
+  async function test() {
+
+    let ifPathExists = await window.api.invoke("ifPathExists", demoFile);
+
+    console.log(ifPathExists);
+
+    let file = await window.api.invoke('readFile', demoFile, 'utf8');
+
+    console.log(file);
+  }
+
+  test();
+
+
+
+  // window.api.receive("directoryContents", (data) => {
+  //   data.children.map((d) => {
+  //     console.log(d)
+  //   })
+  // })
 }
 
 window.addEventListener('DOMContentLoaded', setup);

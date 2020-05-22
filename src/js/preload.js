@@ -1,22 +1,34 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
+// Whitelist channels
+
+let validSendChannels = ['loadFile', 'checkIfPathExists', 'readDirectory', 'watchProjectDirectory']
+
+let validReceiveChannels = ['fileFromMain', 'ifPathExists', 'directoryContents']
+
+let validInvokeChannels = ['readFile', 'ifPathExists', 'reaedDirectoryContents']
+
+// Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 contextBridge.exposeInMainWorld(
-  'api', {
-      send: (channel, data) => {
-          // whitelist channels
-          let validChannels = ['loadFile', 'checkIfPathExists', 'readDirectory', 'watchProjectDirectory'];
-          if (validChannels.includes(channel)) {
-              ipcRenderer.send(channel, data)
-          }
-      },
-      receive: (channel, func) => {
-          let validChannels = ['fileFromMain', 'ifPathExists', 'directoryContents']
-          if (validChannels.includes(channel)) {
-              // Deliberately strip event as it includes `sender` 
-              ipcRenderer.on(channel, (event, ...args) => func(...args))
-          }
+  'api',
+  {
+    send: (channel, ...args) => {
+      if (validSendChannels.includes(channel)) {
+        ipcRenderer.send(channel, ...args)
       }
+    },
+
+    receive: (channel, func) => {
+      if (validReceiveChannels.includes(channel)) {
+        // Deliberately strip event as it includes `sender` 
+        ipcRenderer.on(channel, (event, ...args) => func(...args))
+      }
+    },
+
+    invoke: (channel, ...args) => {
+      if (validInvokeChannels.includes(channel)) {
+        return ipcRenderer.invoke(channel, ...args)
+      }
+    }
   }
 )

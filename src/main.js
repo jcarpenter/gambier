@@ -12,8 +12,7 @@ import * as mainMenu from './js/mainMenu.js'
 // Probably want it for development, but skip for distribution.
 // require('electron-reload')('**')
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
+// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
 let win
 
 // Set process variables
@@ -42,19 +41,21 @@ function createWindow() {
 
   })
 
-  // Open the DevTools.
+  // Open DevTools.
   win.webContents.openDevTools();
 
-  // Load the index.html of the app
+  // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'))
  
+  // Populate OS menus
   mainMenu.create()
 }
 
 app.whenReady().then(createWindow)
 
 
-// Objects
+
+// -------- Get Directory -------- //
 
 function File(name, path, created, modified, type = 'file') {
   this.name = name
@@ -70,8 +71,6 @@ function Directory(name, path, type = 'directory', children = []) {
   this.type = type
   this.children = children
 }
-
-// Functions
 
 async function getDirectory(directoryObject) {
 
@@ -99,32 +98,38 @@ async function getDirectory(directoryObject) {
       directoryObject.children.push(file)
     }
   }
-
   return directoryObject
 }
 
 
 
-// Main
+// -------- IPC Examples: Invoke/Handle -------- //
+
 ipcMain.handle('checkIfFileExists', async (event, filepath) => {
   return await fse.pathExists(filepath)
 })
 
 
-// Interprocess commands
 
-ipcMain.on('loadFile', async (event, fileName, encoding) => {
+// -------- IPC Examples: On/Send -------- //
 
-  let file = await fse.readFile(path.join(__dirname, fileName), 'utf8')
+
+ipcMain.handle('readFile', async (event, fileName, encoding) => {
+
+  let file = await fse.readFile(path.join(__dirname, fileName), encoding)
 
   // Send result back to renderer process
-  win.webContents.send('fileFromMain', file);
+  return file
 })
 
-ipcMain.on('checkIfPathExists', async (event, filepath) => {
+ipcMain.handle('ifPathExists', async (event, filepath) => {
 
   const exists = await fse.pathExists(filepath)
-  win.webContents.send('ifPathExists', { path: filepath, exists: exists });
+  return { path: filepath, exists: exists }
+})
+
+ipcMain.handle('getCharacterState', (event, characterName) => {
+  return `${characterName} is probably dead.`
 })
 
 ipcMain.on('readDirectory', async (event, directoryPath) => {

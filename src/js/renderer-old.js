@@ -89,7 +89,7 @@ async function makeEditor() {
  * Load file contents into CodeMirror
  * @param {string} path 
  */
-async function loadFile(path) {
+async function APP_loadFile(path) {
   let file = await fse.readFile(path, 'utf8')
   editor.setValue(file)
 }
@@ -262,7 +262,7 @@ async function setup() {
 
   await setupCitations()
   await makeEditor()
-  await loadFile(config.demoFile)
+  await APP_loadFile(config.demoFile)
   markCitations()
 }
 

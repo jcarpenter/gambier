@@ -11,28 +11,33 @@ async function setup() {
   //   // window.api.send("readDirectory", config.projectDirectory)
   }
 
-  return
+  // return
   
 
 
-  if (config.demoFile) {
-    window.api.send("loadFile", config.demoFile, 'utf8')
+  // -------- IPC Examples: On (Receive) / Send -------- //
+
+
+  async function test() {
+
+    let ifPathExists = await window.api.invoke("ifPathExists", config.demoFile)
+
+    console.log(ifPathExists)
+
+    let file = await window.api.invoke('readFile', config.demoFile, 'utf8')
+
+    console.log(file)
   }
-  
-  window.api.receive("fileFromMain", (data) => {
-    // console.log(`Received ${data} from main process`)
-  })
 
-  // Receive
-  window.api.receive("ifPathExists", (result) => {
-    console.log(result)
-  })
+  test()
 
-  window.api.receive("directoryContents", (data) => {
-    data.children.map((d) => {
-      console.log(d)
-    })
-  })
+
+
+  // window.api.receive("directoryContents", (data) => {
+  //   data.children.map((d) => {
+  //     console.log(d)
+  //   })
+  // })
 }
 
 window.addEventListener('DOMContentLoaded', setup)
