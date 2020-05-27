@@ -1,5 +1,6 @@
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
+import svelte from 'rollup-plugin-svelte'
 
 export default [
   
@@ -11,7 +12,7 @@ export default [
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electro n', 'path', 'fs-extra', 'chokidar'],
+    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar'],
   },
 
   // Electron | Preload
@@ -33,7 +34,19 @@ export default [
       format: 'es',
       file: 'app/js/renderer.js',
     },
-    plugins: [resolve(), commonjs()],
+    plugins: [
+      svelte({
+        // enable run-time checks when not in production
+        // dev: !production,
+        // we'll extract any component CSS out into
+        // a separate file - better for performance
+        // css: css => {
+        //   css.write('public/build/bundle.css');
+        // }
+      }),
+      resolve(), 
+      commonjs()
+    ],
     external: [],
   }
 ]

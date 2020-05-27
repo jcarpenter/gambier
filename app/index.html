@@ -4,7 +4,7 @@
         <meta charset="UTF-8">
         <title>Gambier</title>
         <!-- https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline' 'self'">
         <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
 
         <!-- Code mirror -->
@@ -21,7 +21,7 @@
     </head>
     <body>
 
-        <span class="cm-citation-collapsed"><button class="icon"></button><div class="popup" tabindex="0"><header><h1>Citation</h1><span class="instructions"><span class="update">Enter to Update, </span>Esc to Cancel</span></header><p class="wrapper"></p><p contenteditable="true" class="input"></p></div><div class="tooltip"></div></span>
+        <!--<span class="cm-citation-collapsed"><button class="icon"></button><div class="popup" tabindex="0"><header><h1>Citation</h1><span class="instructions"><span class="update">Enter to Update, </span>Esc to Cancel</span></header><p class="wrapper"></p><p contenteditable="true" class="input"></p></div><div class="tooltip"></div></span>-->
 
         <nav></nav>
         <div id="editor">

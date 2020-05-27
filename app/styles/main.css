@@ -1,6 +1,6 @@
 :root {
   /* -------------- Layouts (CSS grid) -------------- */
-  --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end editor-start]
+  --layout: [nav-start] minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [nav-end editor-start]
         1fr [editor-end];
   /* -------------- Colors -------------- */
   --clr-editorText: #24292e;
@@ -80,19 +80,20 @@
 
 html {
   font-size: var(--baseFontSize);
+  height: 100vh;
 }
 
 body {
   display: grid;
   grid-auto-flow: row;
-  grid-auto-rows: min-content;
+  grid-auto-rows: 100%;
   grid-template-columns: var(--layout);
   font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
   margin: 0;
   padding: 0;
   font-size: 16px;
   line-height: var(--baseLineHeight);
-  height: 40em;
+  height: 100%;
   color: var(--body-color);
 }
 
@@ -100,7 +101,10 @@ nav {
   grid-column: nav;
   /* outline: 1px solid var(--debug-outline); */
   background: var(--clr-gray-lightest);
-  height: auto;
+  height: 100%;
+  padding: var(--grid);
+  padding-left: var(--grid-half);
+  overflow-y: scroll;
 }
 
 #editor {

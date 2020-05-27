@@ -10,7 +10,7 @@
     "rollup": "rollup -c",
     "copy:codemirror": "cpy 'lib/codemirror.css' 'lib/codemirror.js' 'addon/mode/overlay.js' 'mode/markdown/markdown.js' '../../app/js/third-party/codemirror' --cwd=node_modules/codemirror --parents",
     "copy": "run-p copy:*",
-    "watch:rollup": "onchange 'src/**/*.js' -d 0 -- npm run rollup",
+    "watch:rollup": "onchange 'src/**/*.js' 'src/**/*.svelte' -d 0 -- npm run rollup",
     "watch:sass": "onchange 'src/styles/*.scss' -d 0 -- npm run sass",
     "watch": "run-p watch:*",
     "build": "run-p sass rollup && npm run watch",
@@ -34,14 +34,15 @@
   "homepage": "https://github.com/jcarpenter/gambier#readme",
   "dependencies": {
     "chokidar": "^3.4.0",
+    "electron-store": "^5.1.1",
     "fs-extra": "^9.0.0",
-    "path": "^0.12.7",
-    "locale-en-us": "0.0.2"
+    "locale-en-us": "0.0.2",
+    "path": "^0.12.7"
   },
   "devDependencies": {
-    "citeproc": "^2.3.8",
     "@rollup/plugin-commonjs": "^12.0.0",
     "@rollup/plugin-node-resolve": "^8.0.0",
+    "citeproc": "^2.3.8",
     "codemirror": "^5.54.0",
     "cpy-cli": "^3.1.1",
     "electron": "8.2.5",
@@ -51,7 +52,9 @@
     "npm-run-all": "^4.1.5",
     "onchange": "^7.0.2",
     "rollup": "^2.10.2",
+    "rollup-plugin-svelte": "^5.2.2",
     "sass": "^1.26.5",
+    "svelte": "^3.22.3",
     "xml-js": "^1.6.11"
   }
 }

@@ -3,7 +3,6 @@
 // -------- Editor -------- //
 
 const projectDirectory = '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src';
-const demoFile = 'md/test.md';
 
 /*
 Copyright (c) 2009-2019 Frank Bennett
@@ -23913,43 +23912,884 @@ CSL.parseParticles = (function(){
     };
 }());
 
+function noop() { }
+function run(fn) {
+    return fn();
+}
+function blank_object() {
+    return Object.create(null);
+}
+function run_all(fns) {
+    fns.forEach(run);
+}
+function is_function(thing) {
+    return typeof thing === 'function';
+}
+function safe_not_equal(a, b) {
+    return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
+}
+
+function append(target, node) {
+    target.appendChild(node);
+}
+function insert(target, node, anchor) {
+    target.insertBefore(node, anchor || null);
+}
+function detach(node) {
+    node.parentNode.removeChild(node);
+}
+function destroy_each(iterations, detaching) {
+    for (let i = 0; i < iterations.length; i += 1) {
+        if (iterations[i])
+            iterations[i].d(detaching);
+    }
+}
+function element(name) {
+    return document.createElement(name);
+}
+function text(data) {
+    return document.createTextNode(data);
+}
+function space() {
+    return text(' ');
+}
+function empty() {
+    return text('');
+}
+function listen(node, event, handler, options) {
+    node.addEventListener(event, handler, options);
+    return () => node.removeEventListener(event, handler, options);
+}
+function attr(node, attribute, value) {
+    if (value == null)
+        node.removeAttribute(attribute);
+    else if (node.getAttribute(attribute) !== value)
+        node.setAttribute(attribute, value);
+}
+function children(element) {
+    return Array.from(element.childNodes);
+}
+function set_data(text, data) {
+    data = '' + data;
+    if (text.data !== data)
+        text.data = data;
+}
+function toggle_class(element, name, toggle) {
+    element.classList[toggle ? 'add' : 'remove'](name);
+}
+
+let current_component;
+function set_current_component(component) {
+    current_component = component;
+}
+
+const dirty_components = [];
+const binding_callbacks = [];
+const render_callbacks = [];
+const flush_callbacks = [];
+const resolved_promise = Promise.resolve();
+let update_scheduled = false;
+function schedule_update() {
+    if (!update_scheduled) {
+        update_scheduled = true;
+        resolved_promise.then(flush);
+    }
+}
+function add_render_callback(fn) {
+    render_callbacks.push(fn);
+}
+let flushing = false;
+const seen_callbacks = new Set();
+function flush() {
+    if (flushing)
+        return;
+    flushing = true;
+    do {
+        // first, call beforeUpdate functions
+        // and update components
+        for (let i = 0; i < dirty_components.length; i += 1) {
+            const component = dirty_components[i];
+            set_current_component(component);
+            update(component.$$);
+        }
+        dirty_components.length = 0;
+        while (binding_callbacks.length)
+            binding_callbacks.pop()();
+        // then, once components are updated, call
+        // afterUpdate functions. This may cause
+        // subsequent updates...
+        for (let i = 0; i < render_callbacks.length; i += 1) {
+            const callback = render_callbacks[i];
+            if (!seen_callbacks.has(callback)) {
+                // ...so guard against infinite loops
+                seen_callbacks.add(callback);
+                callback();
+            }
+        }
+        render_callbacks.length = 0;
+    } while (dirty_components.length);
+    while (flush_callbacks.length) {
+        flush_callbacks.pop()();
+    }
+    update_scheduled = false;
+    flushing = false;
+    seen_callbacks.clear();
+}
+function update($$) {
+    if ($$.fragment !== null) {
+        $$.update();
+        run_all($$.before_update);
+        const dirty = $$.dirty;
+        $$.dirty = [-1];
+        $$.fragment && $$.fragment.p($$.ctx, dirty);
+        $$.after_update.forEach(add_render_callback);
+    }
+}
+const outroing = new Set();
+let outros;
+function group_outros() {
+    outros = {
+        r: 0,
+        c: [],
+        p: outros // parent group
+    };
+}
+function check_outros() {
+    if (!outros.r) {
+        run_all(outros.c);
+    }
+    outros = outros.p;
+}
+function transition_in(block, local) {
+    if (block && block.i) {
+        outroing.delete(block);
+        block.i(local);
+    }
+}
+function transition_out(block, local, detach, callback) {
+    if (block && block.o) {
+        if (outroing.has(block))
+            return;
+        outroing.add(block);
+        outros.c.push(() => {
+            outroing.delete(block);
+            if (callback) {
+                if (detach)
+                    block.d(1);
+                callback();
+            }
+        });
+        block.o(local);
+    }
+}
+function create_component(block) {
+    block && block.c();
+}
+function mount_component(component, target, anchor) {
+    const { fragment, on_mount, on_destroy, after_update } = component.$$;
+    fragment && fragment.m(target, anchor);
+    // onMount happens before the initial afterUpdate
+    add_render_callback(() => {
+        const new_on_destroy = on_mount.map(run).filter(is_function);
+        if (on_destroy) {
+            on_destroy.push(...new_on_destroy);
+        }
+        else {
+            // Edge case - component was destroyed immediately,
+            // most likely as a result of a binding initialising
+            run_all(new_on_destroy);
+        }
+        component.$$.on_mount = [];
+    });
+    after_update.forEach(add_render_callback);
+}
+function destroy_component(component, detaching) {
+    const $$ = component.$$;
+    if ($$.fragment !== null) {
+        run_all($$.on_destroy);
+        $$.fragment && $$.fragment.d(detaching);
+        // TODO null out other refs, including component.$$ (but need to
+        // preserve final state?)
+        $$.on_destroy = $$.fragment = null;
+        $$.ctx = [];
+    }
+}
+function make_dirty(component, i) {
+    if (component.$$.dirty[0] === -1) {
+        dirty_components.push(component);
+        schedule_update();
+        component.$$.dirty.fill(0);
+    }
+    component.$$.dirty[(i / 31) | 0] |= (1 << (i % 31));
+}
+function init(component, options, instance, create_fragment, not_equal, props, dirty = [-1]) {
+    const parent_component = current_component;
+    set_current_component(component);
+    const prop_values = options.props || {};
+    const $$ = component.$$ = {
+        fragment: null,
+        ctx: null,
+        // state
+        props,
+        update: noop,
+        not_equal,
+        bound: blank_object(),
+        // lifecycle
+        on_mount: [],
+        on_destroy: [],
+        before_update: [],
+        after_update: [],
+        context: new Map(parent_component ? parent_component.$$.context : []),
+        // everything else
+        callbacks: blank_object(),
+        dirty
+    };
+    let ready = false;
+    $$.ctx = instance
+        ? instance(component, prop_values, (i, ret, ...rest) => {
+            const value = rest.length ? rest[0] : ret;
+            if ($$.ctx && not_equal($$.ctx[i], $$.ctx[i] = value)) {
+                if ($$.bound[i])
+                    $$.bound[i](value);
+                if (ready)
+                    make_dirty(component, i);
+            }
+            return ret;
+        })
+        : [];
+    $$.update();
+    ready = true;
+    run_all($$.before_update);
+    // `false` as a special case of no DOM component
+    $$.fragment = create_fragment ? create_fragment($$.ctx) : false;
+    if (options.target) {
+        if (options.hydrate) {
+            const nodes = children(options.target);
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            $$.fragment && $$.fragment.l(nodes);
+            nodes.forEach(detach);
+        }
+        else {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            $$.fragment && $$.fragment.c();
+        }
+        if (options.intro)
+            transition_in(component.$$.fragment);
+        mount_component(component, options.target, options.anchor);
+        flush();
+    }
+    set_current_component(parent_component);
+}
+class SvelteComponent {
+    $destroy() {
+        destroy_component(this, 1);
+        this.$destroy = noop;
+    }
+    $on(type, callback) {
+        const callbacks = (this.$$.callbacks[type] || (this.$$.callbacks[type] = []));
+        callbacks.push(callback);
+        return () => {
+            const index = callbacks.indexOf(callback);
+            if (index !== -1)
+                callbacks.splice(index, 1);
+        };
+    }
+    $set() {
+        // overridden by instance, if it has props
+    }
+}
+
+/* src/js/File.svelte generated by Svelte v3.22.3 */
+
+function create_fragment(ctx) {
+	let div;
+	let t;
+
+	return {
+		c() {
+			div = element("div");
+			t = text(/*nameWithoutExt*/ ctx[0]);
+		},
+		m(target, anchor) {
+			insert(target, div, anchor);
+			append(div, t);
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*nameWithoutExt*/ 1) set_data(t, /*nameWithoutExt*/ ctx[0]);
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(div);
+		}
+	};
+}
+
+function instance($$self, $$props, $$invalidate) {
+	let { name } = $$props;
+
+	$$self.$set = $$props => {
+		if ("name" in $$props) $$invalidate(1, name = $$props.name);
+	};
+
+	let nameWithoutExt;
+
+	$$self.$$.update = () => {
+		if ($$self.$$.dirty & /*name*/ 2) {
+			 $$invalidate(0, nameWithoutExt = name.slice(0, name.lastIndexOf(".")));
+		}
+	};
+
+	return [nameWithoutExt, name];
+}
+
+class File extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, { name: 1 });
+	}
+}
+
+/* src/js/Folder.svelte generated by Svelte v3.22.3 */
+
+function add_css() {
+	var style = element("style");
+	style.id = "svelte-kfatu3-style";
+	style.textContent = ".test.svelte-kfatu3{font-weight:700}ul.svelte-kfatu3{padding:0;margin:0;list-style:none}li.svelte-kfatu3{font-size:0.8rem;padding:0.5em 0;border-top:1px solid rgba(0, 0, 0, 0.2);line-height:1.4em}";
+	append(document.head, style);
+}
+
+function get_each_context(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[7] = list[i];
+	return child_ctx;
+}
+
+// (52:0) {#if expanded}
+function create_if_block(ctx) {
+	let ul;
+	let t;
+	let current;
+	let if_block = !/*hidden*/ ctx[1] && create_if_block_2(ctx);
+	let each_value = /*children*/ ctx[3];
+	let each_blocks = [];
+
+	for (let i = 0; i < each_value.length; i += 1) {
+		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+	}
+
+	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+		each_blocks[i] = null;
+	});
+
+	return {
+		c() {
+			ul = element("ul");
+			if (if_block) if_block.c();
+			t = space();
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				each_blocks[i].c();
+			}
+
+			attr(ul, "class", "svelte-kfatu3");
+		},
+		m(target, anchor) {
+			insert(target, ul, anchor);
+			if (if_block) if_block.m(ul, null);
+			append(ul, t);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				each_blocks[i].m(ul, null);
+			}
+
+			current = true;
+		},
+		p(ctx, dirty) {
+			if (!/*hidden*/ ctx[1]) {
+				if (if_block) {
+					if_block.p(ctx, dirty);
+				} else {
+					if_block = create_if_block_2(ctx);
+					if_block.c();
+					if_block.m(ul, t);
+				}
+			} else if (if_block) {
+				if_block.d(1);
+				if_block = null;
+			}
+
+			if (dirty & /*children*/ 8) {
+				each_value = /*children*/ ctx[3];
+				let i;
+
+				for (i = 0; i < each_value.length; i += 1) {
+					const child_ctx = get_each_context(ctx, each_value, i);
+
+					if (each_blocks[i]) {
+						each_blocks[i].p(child_ctx, dirty);
+						transition_in(each_blocks[i], 1);
+					} else {
+						each_blocks[i] = create_each_block(child_ctx);
+						each_blocks[i].c();
+						transition_in(each_blocks[i], 1);
+						each_blocks[i].m(ul, null);
+					}
+				}
+
+				group_outros();
+
+				for (i = each_value.length; i < each_blocks.length; i += 1) {
+					out(i);
+				}
+
+				check_outros();
+			}
+		},
+		i(local) {
+			if (current) return;
+
+			for (let i = 0; i < each_value.length; i += 1) {
+				transition_in(each_blocks[i]);
+			}
+
+			current = true;
+		},
+		o(local) {
+			each_blocks = each_blocks.filter(Boolean);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				transition_out(each_blocks[i]);
+			}
+
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) detach(ul);
+			if (if_block) if_block.d();
+			destroy_each(each_blocks, detaching);
+		}
+	};
+}
+
+// (54:8) {#if !hidden }
+function create_if_block_2(ctx) {
+	let li;
+	let t;
+	let dispose;
+
+	return {
+		c() {
+			li = element("li");
+			t = text(/*name*/ ctx[2]);
+			attr(li, "class", "test svelte-kfatu3");
+			toggle_class(li, "expanded", /*expanded*/ ctx[0]);
+		},
+		m(target, anchor, remount) {
+			insert(target, li, anchor);
+			append(li, t);
+			if (remount) dispose();
+			dispose = listen(li, "click", /*toggle*/ ctx[4]);
+		},
+		p(ctx, dirty) {
+			if (dirty & /*name*/ 4) set_data(t, /*name*/ ctx[2]);
+
+			if (dirty & /*expanded*/ 1) {
+				toggle_class(li, "expanded", /*expanded*/ ctx[0]);
+			}
+		},
+		d(detaching) {
+			if (detaching) detach(li);
+			dispose();
+		}
+	};
+}
+
+// (61:4) {:else}
+function create_else_block(ctx) {
+	let current;
+	const file = new File({ props: { name: /*file*/ ctx[7].name } });
+
+	return {
+		c() {
+			create_component(file.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(file, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const file_changes = {};
+			if (dirty & /*children*/ 8) file_changes.name = /*file*/ ctx[7].name;
+			file.$set(file_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(file.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(file.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(file, detaching);
+		}
+	};
+}
+
+// (59:16) {#if file.typeOf === 'Directory'}
+function create_if_block_1(ctx) {
+	let current;
+
+	const folder = new Folder({
+			props: {
+				name: /*file*/ ctx[7].name,
+				children: /*file*/ ctx[7].children,
+				expanded: true
+			}
+		});
+
+	return {
+		c() {
+			create_component(folder.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(folder, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const folder_changes = {};
+			if (dirty & /*children*/ 8) folder_changes.name = /*file*/ ctx[7].name;
+			if (dirty & /*children*/ 8) folder_changes.children = /*file*/ ctx[7].children;
+			folder.$set(folder_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(folder.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(folder.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(folder, detaching);
+		}
+	};
+}
+
+// (57:2) {#each children as file}
+function create_each_block(ctx) {
+	let li;
+	let current_block_type_index;
+	let if_block;
+	let t;
+	let current;
+	const if_block_creators = [create_if_block_1, create_else_block];
+	const if_blocks = [];
+
+	function select_block_type(ctx, dirty) {
+		if (/*file*/ ctx[7].typeOf === "Directory") return 0;
+		return 1;
+	}
+
+	current_block_type_index = select_block_type(ctx);
+	if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+
+	return {
+		c() {
+			li = element("li");
+			if_block.c();
+			t = space();
+			attr(li, "class", "svelte-kfatu3");
+		},
+		m(target, anchor) {
+			insert(target, li, anchor);
+			if_blocks[current_block_type_index].m(li, null);
+			append(li, t);
+			current = true;
+		},
+		p(ctx, dirty) {
+			let previous_block_index = current_block_type_index;
+			current_block_type_index = select_block_type(ctx);
+
+			if (current_block_type_index === previous_block_index) {
+				if_blocks[current_block_type_index].p(ctx, dirty);
+			} else {
+				group_outros();
+
+				transition_out(if_blocks[previous_block_index], 1, 1, () => {
+					if_blocks[previous_block_index] = null;
+				});
+
+				check_outros();
+				if_block = if_blocks[current_block_type_index];
+
+				if (!if_block) {
+					if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+					if_block.c();
+				}
+
+				transition_in(if_block, 1);
+				if_block.m(li, t);
+			}
+		},
+		i(local) {
+			if (current) return;
+			transition_in(if_block);
+			current = true;
+		},
+		o(local) {
+			transition_out(if_block);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) detach(li);
+			if_blocks[current_block_type_index].d();
+		}
+	};
+}
+
+function create_fragment$1(ctx) {
+	let if_block_anchor;
+	let current;
+	let if_block = /*expanded*/ ctx[0] && create_if_block(ctx);
+
+	return {
+		c() {
+			if (if_block) if_block.c();
+			if_block_anchor = empty();
+		},
+		m(target, anchor) {
+			if (if_block) if_block.m(target, anchor);
+			insert(target, if_block_anchor, anchor);
+			current = true;
+		},
+		p(ctx, [dirty]) {
+			if (/*expanded*/ ctx[0]) {
+				if (if_block) {
+					if_block.p(ctx, dirty);
+
+					if (dirty & /*expanded*/ 1) {
+						transition_in(if_block, 1);
+					}
+				} else {
+					if_block = create_if_block(ctx);
+					if_block.c();
+					transition_in(if_block, 1);
+					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+				}
+			} else if (if_block) {
+				group_outros();
+
+				transition_out(if_block, 1, 1, () => {
+					if_block = null;
+				});
+
+				check_outros();
+			}
+		},
+		i(local) {
+			if (current) return;
+			transition_in(if_block);
+			current = true;
+		},
+		o(local) {
+			transition_out(if_block);
+			current = false;
+		},
+		d(detaching) {
+			if (if_block) if_block.d(detaching);
+			if (detaching) detach(if_block_anchor);
+		}
+	};
+}
+
+function instance$1($$self, $$props, $$invalidate) {
+	let { expanded = true } = $$props;
+	let { hidden = false } = $$props;
+	let { typeOf } = $$props;
+	let { name } = $$props;
+	let { path } = $$props;
+	let { children } = $$props;
+
+	function toggle() {
+		$$invalidate(0, expanded = !expanded);
+	}
+
+	$$self.$set = $$props => {
+		if ("expanded" in $$props) $$invalidate(0, expanded = $$props.expanded);
+		if ("hidden" in $$props) $$invalidate(1, hidden = $$props.hidden);
+		if ("typeOf" in $$props) $$invalidate(5, typeOf = $$props.typeOf);
+		if ("name" in $$props) $$invalidate(2, name = $$props.name);
+		if ("path" in $$props) $$invalidate(6, path = $$props.path);
+		if ("children" in $$props) $$invalidate(3, children = $$props.children);
+	};
+
+	return [expanded, hidden, name, children, toggle, typeOf, path];
+}
+
+class Folder extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-kfatu3-style")) add_css();
+
+		init(this, options, instance$1, create_fragment$1, safe_not_equal, {
+			expanded: 0,
+			hidden: 1,
+			typeOf: 5,
+			name: 2,
+			path: 6,
+			children: 3
+		});
+	}
+}
+
+/* src/js/Navigation.svelte generated by Svelte v3.22.3 */
+
+function create_if_block$1(ctx) {
+	let current;
+
+	const folder = new Folder({
+			props: {
+				name: /*root*/ ctx[0].name,
+				children: /*root*/ ctx[0].children,
+				expanded: true,
+				hidden: true
+			}
+		});
+
+	return {
+		c() {
+			create_component(folder.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(folder, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const folder_changes = {};
+			if (dirty & /*root*/ 1) folder_changes.name = /*root*/ ctx[0].name;
+			if (dirty & /*root*/ 1) folder_changes.children = /*root*/ ctx[0].children;
+			folder.$set(folder_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(folder.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(folder.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(folder, detaching);
+		}
+	};
+}
+
+function create_fragment$2(ctx) {
+	let if_block_anchor;
+	let current;
+	let if_block = /*root*/ ctx[0] && create_if_block$1(ctx);
+
+	return {
+		c() {
+			if (if_block) if_block.c();
+			if_block_anchor = empty();
+		},
+		m(target, anchor) {
+			if (if_block) if_block.m(target, anchor);
+			insert(target, if_block_anchor, anchor);
+			current = true;
+		},
+		p(ctx, [dirty]) {
+			if (/*root*/ ctx[0]) {
+				if (if_block) {
+					if_block.p(ctx, dirty);
+
+					if (dirty & /*root*/ 1) {
+						transition_in(if_block, 1);
+					}
+				} else {
+					if_block = create_if_block$1(ctx);
+					if_block.c();
+					transition_in(if_block, 1);
+					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+				}
+			} else if (if_block) {
+				group_outros();
+
+				transition_out(if_block, 1, 1, () => {
+					if_block = null;
+				});
+
+				check_outros();
+			}
+		},
+		i(local) {
+			if (current) return;
+			transition_in(if_block);
+			current = true;
+		},
+		o(local) {
+			transition_out(if_block);
+			current = false;
+		},
+		d(detaching) {
+			if (if_block) if_block.d(detaching);
+			if (detaching) detach(if_block_anchor);
+		}
+	};
+}
+
+function instance$2($$self, $$props, $$invalidate) {
+	let root;
+
+	window.api.receive("projectDirectoryStoreUpdated", newValue => {
+		if (newValue.hierarchy && newValue.hierarchy[0] !== root) {
+			$$invalidate(0, root = newValue.hierarchy[0]);
+		}
+	});
+
+	return [root];
+}
+
+class Navigation extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance$2, create_fragment$2, safe_not_equal, {});
+	}
+}
+
 async function setup() {
-  
-  {
-    // const check = await ipcRenderer.invoke('checkIfFileExists', config.projectDirectory)
-    console.log(projectDirectory);
-  //   // Check if path exists
-  //   // window.api.send("checkIfPathExists", config.projectDirectory)
-  //   // window.api.send("readDirectory", config.projectDirectory)
-  }
 
   // return
-  
 
+  // window.api.receive('projectDirectoryStoreUpdated', (newValue) => {
+  //   console.log(newValue)
+  // })
+
+
+  const navigation = new Navigation({
+    target: document.querySelector('nav'),
+    // props: {
+    //   name: 'world'
+    // }
+  });
 
   // -------- IPC Examples: On (Receive) / Send -------- //
 
 
   async function test() {
-
-    let ifPathExists = await window.api.invoke("ifPathExists", demoFile);
-
-    console.log(ifPathExists);
-
-    let file = await window.api.invoke('readFile', demoFile, 'utf8');
-
-    console.log(file);
+    
+    window.api.send("updateProjectDirectoryStore", projectDirectory);
+    return
   }
 
+  
   test();
-
-
-
-  // window.api.receive("directoryContents", (data) => {
-  //   data.children.map((d) => {
-  //     console.log(d)
-  //   })
-  // })
 }
 
 window.addEventListener('DOMContentLoaded', setup);

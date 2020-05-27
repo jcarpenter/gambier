@@ -4,11 +4,11 @@ var electron = require('electron');
 
 // Whitelist channels
 
-let validSendChannels = ['loadFile', 'checkIfPathExists', 'readDirectory', 'watchProjectDirectory'];
+let validSendChannels = ['updateProjectDirectoryStore'];
 
-let validReceiveChannels = ['fileFromMain', 'ifPathExists', 'directoryContents'];
+let validReceiveChannels = ['projectDirectoryStoreUpdated'];
 
-let validInvokeChannels = ['readFile', 'ifPathExists', 'reaedDirectoryContents'];
+let validInvokeChannels = ['readFile', 'ifPathExists'];
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 electron.contextBridge.exposeInMainWorld(

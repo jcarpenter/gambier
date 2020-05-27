@@ -4,12 +4,13 @@
 
 html {
     font-size: var(--baseFontSize);
+    height: 100vh;
 }
 
 body {
     display: grid;
     grid-auto-flow: row;
-    grid-auto-rows: min-content;
+    grid-auto-rows: 100%;
     grid-template-columns: var(--layout);
 
     font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
@@ -17,7 +18,10 @@ body {
     padding: 0;
     font-size: 16px;
     line-height: var(--baseLineHeight);
-    height: 40em;
+    // height: 100%;
+    // min-height: 100%;
+    height: 100%;
+    // height: 40em; // Might need this for codewarrior?
     color: var(--body-color);
 }
 
@@ -25,7 +29,10 @@ nav {
     grid-column: nav;
     /* outline: 1px solid var(--debug-outline); */
     background: var(--clr-gray-lightest);
-    height: auto;
+    height: 100%;
+    padding: var(--grid);
+    padding-left: var(--grid-half);
+    overflow-y: scroll;
 }
 
 #editor {
