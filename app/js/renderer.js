@@ -1,9 +1,3 @@
-// -------- Citations -------- //
-
-// -------- Editor -------- //
-
-const projectDirectory = '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src';
-
 /*
 Copyright (c) 2009-2019 Frank Bennett
 
@@ -23982,6 +23976,14 @@ let current_component;
 function set_current_component(component) {
     current_component = component;
 }
+function get_current_component() {
+    if (!current_component)
+        throw new Error(`Function called outside component initialization`);
+    return current_component;
+}
+function onMount(fn) {
+    get_current_component().$$.on_mount.push(fn);
+}
 
 const dirty_components = [];
 const binding_callbacks = [];
@@ -24204,15 +24206,18 @@ class SvelteComponent {
 function create_fragment(ctx) {
 	let div;
 	let t;
+	let dispose;
 
 	return {
 		c() {
 			div = element("div");
 			t = text(/*nameWithoutExt*/ ctx[0]);
 		},
-		m(target, anchor) {
+		m(target, anchor, remount) {
 			insert(target, div, anchor);
 			append(div, t);
+			if (remount) dispose();
+			dispose = listen(div, "click", /*holler*/ ctx[1]);
 		},
 		p(ctx, [dirty]) {
 			if (dirty & /*nameWithoutExt*/ 1) set_data(t, /*nameWithoutExt*/ ctx[0]);
@@ -24221,32 +24226,39 @@ function create_fragment(ctx) {
 		o: noop,
 		d(detaching) {
 			if (detaching) detach(div);
+			dispose();
 		}
 	};
 }
 
 function instance($$self, $$props, $$invalidate) {
 	let { name } = $$props;
+	let { path } = $$props;
+
+	function holler() {
+		window.api.send("dispatch", { type: "OPEN_FILE", fileName: path });
+	}
 
 	$$self.$set = $$props => {
-		if ("name" in $$props) $$invalidate(1, name = $$props.name);
+		if ("name" in $$props) $$invalidate(2, name = $$props.name);
+		if ("path" in $$props) $$invalidate(3, path = $$props.path);
 	};
 
 	let nameWithoutExt;
 
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*name*/ 2) {
+		if ($$self.$$.dirty & /*name*/ 4) {
 			 $$invalidate(0, nameWithoutExt = name.slice(0, name.lastIndexOf(".")));
 		}
 	};
 
-	return [nameWithoutExt, name];
+	return [nameWithoutExt, holler, name, path];
 }
 
 class File extends SvelteComponent {
 	constructor(options) {
 		super();
-		init(this, options, instance, create_fragment, safe_not_equal, { name: 1 });
+		init(this, options, instance, create_fragment, safe_not_equal, { name: 2, path: 3 });
 	}
 }
 
@@ -24254,18 +24266,18 @@ class File extends SvelteComponent {
 
 function add_css() {
 	var style = element("style");
-	style.id = "svelte-kfatu3-style";
-	style.textContent = ".test.svelte-kfatu3{font-weight:700}ul.svelte-kfatu3{padding:0;margin:0;list-style:none}li.svelte-kfatu3{font-size:0.8rem;padding:0.5em 0;border-top:1px solid rgba(0, 0, 0, 0.2);line-height:1.4em}";
+	style.id = "svelte-y1nc5j-style";
+	style.textContent = ".test.svelte-y1nc5j{font-weight:700}ul.svelte-y1nc5j{padding:0;margin:0;list-style:none}li.svelte-y1nc5j{font-size:0.8rem;padding:0.5em 0;border-top:1px solid rgba(0, 0, 0, 0.2);line-height:1.4em}li.svelte-y1nc5j:hover{cursor:default}";
 	append(document.head, style);
 }
 
 function get_each_context(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[7] = list[i];
+	child_ctx[5] = list[i];
 	return child_ctx;
 }
 
-// (52:0) {#if expanded}
+// (45:0) {#if expanded}
 function create_if_block(ctx) {
 	let ul;
 	let t;
@@ -24292,7 +24304,7 @@ function create_if_block(ctx) {
 				each_blocks[i].c();
 			}
 
-			attr(ul, "class", "svelte-kfatu3");
+			attr(ul, "class", "svelte-y1nc5j");
 		},
 		m(target, anchor) {
 			insert(target, ul, anchor);
@@ -24372,7 +24384,7 @@ function create_if_block(ctx) {
 	};
 }
 
-// (54:8) {#if !hidden }
+// (47:8) {#if !hidden }
 function create_if_block_2(ctx) {
 	let li;
 	let t;
@@ -24382,7 +24394,7 @@ function create_if_block_2(ctx) {
 		c() {
 			li = element("li");
 			t = text(/*name*/ ctx[2]);
-			attr(li, "class", "test svelte-kfatu3");
+			attr(li, "class", "test svelte-y1nc5j");
 			toggle_class(li, "expanded", /*expanded*/ ctx[0]);
 		},
 		m(target, anchor, remount) {
@@ -24405,10 +24417,16 @@ function create_if_block_2(ctx) {
 	};
 }
 
-// (61:4) {:else}
+// (54:4) {:else}
 function create_else_block(ctx) {
 	let current;
-	const file = new File({ props: { name: /*file*/ ctx[7].name } });
+
+	const file = new File({
+			props: {
+				path: /*file*/ ctx[5].path,
+				name: /*file*/ ctx[5].name
+			}
+		});
 
 	return {
 		c() {
@@ -24420,7 +24438,8 @@ function create_else_block(ctx) {
 		},
 		p(ctx, dirty) {
 			const file_changes = {};
-			if (dirty & /*children*/ 8) file_changes.name = /*file*/ ctx[7].name;
+			if (dirty & /*children*/ 8) file_changes.path = /*file*/ ctx[5].path;
+			if (dirty & /*children*/ 8) file_changes.name = /*file*/ ctx[5].name;
 			file.$set(file_changes);
 		},
 		i(local) {
@@ -24438,14 +24457,14 @@ function create_else_block(ctx) {
 	};
 }
 
-// (59:16) {#if file.typeOf === 'Directory'}
+// (52:16) {#if file.typeOf === 'Directory'}
 function create_if_block_1(ctx) {
 	let current;
 
 	const folder = new Folder({
 			props: {
-				name: /*file*/ ctx[7].name,
-				children: /*file*/ ctx[7].children,
+				name: /*file*/ ctx[5].name,
+				children: /*file*/ ctx[5].children,
 				expanded: true
 			}
 		});
@@ -24460,8 +24479,8 @@ function create_if_block_1(ctx) {
 		},
 		p(ctx, dirty) {
 			const folder_changes = {};
-			if (dirty & /*children*/ 8) folder_changes.name = /*file*/ ctx[7].name;
-			if (dirty & /*children*/ 8) folder_changes.children = /*file*/ ctx[7].children;
+			if (dirty & /*children*/ 8) folder_changes.name = /*file*/ ctx[5].name;
+			if (dirty & /*children*/ 8) folder_changes.children = /*file*/ ctx[5].children;
 			folder.$set(folder_changes);
 		},
 		i(local) {
@@ -24479,7 +24498,7 @@ function create_if_block_1(ctx) {
 	};
 }
 
-// (57:2) {#each children as file}
+// (50:2) {#each children as file}
 function create_each_block(ctx) {
 	let li;
 	let current_block_type_index;
@@ -24490,7 +24509,7 @@ function create_each_block(ctx) {
 	const if_blocks = [];
 
 	function select_block_type(ctx, dirty) {
-		if (/*file*/ ctx[7].typeOf === "Directory") return 0;
+		if (/*file*/ ctx[5].typeOf === "Directory") return 0;
 		return 1;
 	}
 
@@ -24502,7 +24521,7 @@ function create_each_block(ctx) {
 			li = element("li");
 			if_block.c();
 			t = space();
-			attr(li, "class", "svelte-kfatu3");
+			attr(li, "class", "svelte-y1nc5j");
 		},
 		m(target, anchor) {
 			insert(target, li, anchor);
@@ -24609,9 +24628,7 @@ function create_fragment$1(ctx) {
 function instance$1($$self, $$props, $$invalidate) {
 	let { expanded = true } = $$props;
 	let { hidden = false } = $$props;
-	let { typeOf } = $$props;
 	let { name } = $$props;
-	let { path } = $$props;
 	let { children } = $$props;
 
 	function toggle() {
@@ -24621,26 +24638,22 @@ function instance$1($$self, $$props, $$invalidate) {
 	$$self.$set = $$props => {
 		if ("expanded" in $$props) $$invalidate(0, expanded = $$props.expanded);
 		if ("hidden" in $$props) $$invalidate(1, hidden = $$props.hidden);
-		if ("typeOf" in $$props) $$invalidate(5, typeOf = $$props.typeOf);
 		if ("name" in $$props) $$invalidate(2, name = $$props.name);
-		if ("path" in $$props) $$invalidate(6, path = $$props.path);
 		if ("children" in $$props) $$invalidate(3, children = $$props.children);
 	};
 
-	return [expanded, hidden, name, children, toggle, typeOf, path];
+	return [expanded, hidden, name, children, toggle];
 }
 
 class Folder extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-kfatu3-style")) add_css();
+		if (!document.getElementById("svelte-y1nc5j-style")) add_css();
 
 		init(this, options, instance$1, create_fragment$1, safe_not_equal, {
 			expanded: 0,
 			hidden: 1,
-			typeOf: 5,
 			name: 2,
-			path: 6,
 			children: 3
 		});
 	}
@@ -24747,9 +24760,17 @@ function create_fragment$2(ctx) {
 function instance$2($$self, $$props, $$invalidate) {
 	let root;
 
-	window.api.receive("projectDirectoryStoreUpdated", newValue => {
-		if (newValue.hierarchy && newValue.hierarchy[0] !== root) {
-			$$invalidate(0, root = newValue.hierarchy[0]);
+	window.api.receive("storeChanged", store => {
+		if (store.hierarchy && store.hierarchy[0] !== root) {
+			$$invalidate(0, root = store.hierarchy[0]);
+		}
+	});
+
+	onMount(async () => {
+		const store = await window.api.invoke("getStore");
+
+		if (store && store.hierarchy) {
+			$$invalidate(0, root = store.hierarchy[0]);
 		}
 	});
 
@@ -24765,31 +24786,25 @@ class Navigation extends SvelteComponent {
 
 async function setup() {
 
-  // return
-
-  // window.api.receive('projectDirectoryStoreUpdated', (newValue) => {
-  //   console.log(newValue)
-  // })
-
-
   const navigation = new Navigation({
     target: document.querySelector('nav'),
-    // props: {
-    //   name: 'world'
+    // props: { name: 'world' }
+  });
+
+  window.api.receive('storeChanged', (store) => {
+    if (store.projectDirectory === 'undefined') ; else {
+      if (store.lastOpenedFile === 'undefined') {
+        console.log('store.lastOpenedFile = undefined');
+        // Load first file
+        // window.api.send('dispatch', { type: 'SET_PROJECT_DIRECTORY', path: 
+      }
+    }
+
+    // if (store.hierarchy && store.hierarchy[0] !== root) {
+    //   root = store.hierarchy[0]
     // }
   });
 
-  // -------- IPC Examples: On (Receive) / Send -------- //
-
-
-  async function test() {
-    
-    window.api.send("updateProjectDirectoryStore", projectDirectory);
-    return
-  }
-
-  
-  test();
 }
 
 window.addEventListener('DOMContentLoaded', setup);

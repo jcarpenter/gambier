@@ -7,14 +7,13 @@
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
     "sass": "node-sass src/styles -o app/styles --source-map true --output-style expanded",
-    "rollup": "rollup -c",
-    "copy:codemirror": "cpy 'lib/codemirror.css' 'lib/codemirror.js' 'addon/mode/overlay.js' 'mode/markdown/markdown.js' '../../app/js/third-party/codemirror' --cwd=node_modules/codemirror --parents",
-    "copy": "run-p copy:*",
-    "watch:rollup": "onchange 'src/**/*.js' 'src/**/*.svelte' -d 0 -- npm run rollup",
     "watch:sass": "onchange 'src/styles/*.scss' -d 0 -- npm run sass",
     "watch": "run-p watch:*",
-    "build": "run-p sass rollup && npm run watch",
-    "start": "electron .",
+    "rollup:dev": "rollup --config --watch",
+    "rollup:build": "rollup --config",
+    "dev": "run-p sass rollup:dev",
+    "build": "run-p sass rollup:build",
+    "start": "electron --inspect=5858 .",
     "pack": "electron-builder --dir",
     "release": "electron-builder"
   },
@@ -55,6 +54,7 @@
     "rollup-plugin-svelte": "^5.2.2",
     "sass": "^1.26.5",
     "svelte": "^3.22.3",
+    "svelte-preprocess": "^3.7.4",
     "xml-js": "^1.6.11"
   }
 }

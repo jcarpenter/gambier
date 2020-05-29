@@ -5,14 +5,31 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var electron = require('electron');
 var electron__default = _interopDefault(electron);
 var path = _interopDefault(require('path'));
-var fse = require('fs-extra');
+var fsExtra = require('fs-extra');
+require('chokidar');
 var Store = _interopDefault(require('electron-store'));
 
-// This is a recursive setup: directories can contain directories.
-// See: https://json-schema.org/understanding-json-schema/structuring.html#id1
-// `id` can be anything, but it must be present, or our $refs will not work.
 const StoreSchema = {
+
+  appStartupTime: {
+    type: 'string',
+    default: 'undefined'
+  },
+  
+  projectDirectory: {
+    descrition: 'User specified directory that contains their project files',
+    type: 'string',
+    default: 'undefined'
+  },
+
+  lastOpenedFile: {
+    description: 'id of the last opened file.',
+    type: 'string',
+    default: 'undefined'
+  },
+
   hierarchy: {
+    description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',
     $schema: "http://json-schema.org/draft-07/schema#",
     $id: "anything-could-go-here",
     definitions: {
@@ -33,21 +50,78 @@ const StoreSchema = {
       }
     },
     type: 'array',
-    items: { $ref: '#/definitions/fileOrDirectory' }
+    items: { $ref: '#/definitions/fileOrDirectory' },
+    default: []
   }
 };
 
-// export const StoreSchema = {
-//   foo: {
-//     type: 'string',
-//     default: 'Bruce Lee'
-//   },
-//   bar: {
-// 		type: 'string',
-//     format: 'uri',
-//     default: 'http://www.google.com'
-// 	}
-// }
+const initialState = {};
+
+function reducers(state = initialState, action) {
+  switch (action.type) {
+    case 'SET_PROJECT_DIRECTORY':
+      return Object.assign({}, state, {
+        projectDirectory: action.path
+      })
+    case 'OPEN_FILE':
+      return Object.assign({}, state, {
+        lastOpened: action.fileName
+      })
+    case 'SET_STARTUP_TIME':
+      return Object.assign({}, state, {
+        appStartupTime: action.time
+      })
+    default:
+      return state
+  }
+}
+
+class GambierStore extends Store {
+  constructor() {
+    // Note `Super` lets us access and call functions on object's parent (MDN)
+    // We pass in our config options for electron-store
+    // Per: https://github.com/sindresorhus/electron-store#options
+    super({
+      name: "store",
+      schema: StoreSchema
+    });
+  }
+
+  getPreviousState() {
+    return this.store
+  }
+
+  dispatch(action) {
+    let nextState = reducers(this.getPreviousState(), action);
+    this.set(nextState);
+  }
+}
+
+const store = new GambierStore();
+
+class ProjectDirectory {
+
+  constructor() {
+    this.oldState = {};
+  }
+
+  setup(store) {
+    store.onDidAnyChange((state) => this.handleChange(state));
+  }
+
+  handleChange(state) {
+        
+    if (state.projectDirectory !== this.oldState.projectDirectory) {
+      console.log("Project directory has changed");
+    } else {
+      console.log("Project directory has --NOT-- changed");
+    }
+
+    this.oldState = state;
+  }
+}
+
+const projectDirectory = new ProjectDirectory();
 
 const app = electron__default.app;
 
@@ -148,7 +222,7 @@ const template = [
 ];
 
 if (process.platform === 'darwin') {
-  const name = app.getName();
+  const name = app.name;
   template.unshift({
     label: name,
     submenu: [
@@ -231,50 +305,46 @@ function create() {
 }
 
 // External dependencies
+// import * as config from './config.js'
 
-// Not sure how this works with our packaged build...
-// Probably want it for development, but skip for distribution.
-require('electron-reload')('**');
+
 
 // Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
 let win;
 
-// Create Store
-const store = new Store({
-  name: "store",
-  schema: StoreSchema
-});
+// -------- Process variables -------- //
 
-// Set process variables
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
 
+// -------- Reload -------- //
+
+// Not sure how this works with our packaged build. Want it for dev, but not distribution.
+const watchAndHardReset = [
+  path.join(__dirname, '**/*.js'),
+  path.join(__dirname, '**/*.html'),
+  path.join(__dirname, '**/*.css'),
+  path.join(__dirname, '**/*.xml')
+  // 'main.js',
+  // '**/*.js',
+  // '**/*.html',
+  // '**/*.css',
+  // '**/*.xml',
+  // '**/*.png',
+  // '**/*.jpg',
+];
+
+require('electron-reload')(watchAndHardReset, {
+  // awaitWriteFinish: {
+  //   stabilityThreshold: 10,
+  //   pollInterval: 50
+  // },
+  electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+  argv: ['--inspect=5858'],
+});
+
+// -------- Create window -------- //
+
 function createWindow() {
-
-//   const test3 = {
-//     typeOf: 'File',
-//     name: 'Juniper',
-//     path: 'src/wobbles/',
-//     created: new Date('05 January 2011 14:48 UTC').toISOString(),
-//     modified: new Date('05 September 2014 14:48 UTC').toISOString()
-// }
-
-//   const test2 = [
-//     {
-//       typeOf: 'Directory',
-//       name: 'Hi there',
-//       path: 'src/',
-//       children: [test3]
-//     },
-//     {
-//       typeOf: 'File',
-//       name: 'Borderlands.md',
-//       path: 'src/borderlands.md',
-//       created: new Date('Mon, 10 Oct 2011 23:24:11 GMT').toISOString(),
-//       modified: new Date('03 January 2020 17:18 UTC').toISOString()
-//     }
-//   ]
-
-  // projectDirectoryStore.set('contents', test2)
 
   // Create the browser window.
   win = new electron.BrowserWindow({
@@ -297,7 +367,7 @@ function createWindow() {
 
   });
 
-  // Open DevTools.
+  // Open DevTools
   win.webContents.openDevTools();
 
   // Load index.html
@@ -306,106 +376,57 @@ function createWindow() {
   // Populate OS menus
   create();
 
+  // Setup project directory
+  projectDirectory.setup(store);
+
+  // Setup store
+  // TEMP: For development testing purposes, at startup we clear (delete all items) and reset (to default values).
+  // store.clear()
+  // store.reset()
+  // This triggers a change event, which subscribers then receive
+  store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() });
+
+  // Send store to render process once dom is ready
+  win.webContents.once('dom-ready', () => {
+    win.webContents.send('storeChanged', store.getPreviousState());
+  });
 }
+
+// Set this to shut up console warnings re: deprecated default 
+// If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9.
+// Per: https://github.com/electron/electron/issues/18397
+electron.app.allowRendererProcessReuse = true;
 
 electron.app.whenReady().then(createWindow);
 
 
-// async function updateTest() {
-//   projectDirectoryStore.store = updateProjectDirectoryStore()
-// } 
+// -------- Store -------- //
 
-
-
-// -------- Get Directory -------- //
-
-function Directory(name, path, children = []) {
-  this.typeOf = 'Directory';
-  this.name = name;
-  this.path = path;
-  this.children = children;
-}
-
-function File(name, path, created, modified) {
-  this.typeOf = 'File';
-  this.name = name;
-  this.path = path;
-  this.created = created;
-  this.modified = modified;
-}
-
-async function getDirectoryContents(directoryObject) {
-
-  let directoryPath = directoryObject.path;
-
-  let contents = await fse.readdir(directoryPath, { withFileTypes: true });
-
-  // Remove .DS_Store files
-  contents = contents.filter((c) => c.name !== '.DS_Store');
-
-  for (let c of contents) {
-    if (c.isDirectory()) {
-      const subPath = path.join(directoryPath, c.name);
-      const subDir = new Directory(c.name, subPath);
-      const subDirContents = await getDirectoryContents(subDir);
-      const hasFilesWeCareAbout = subDirContents.children.find((s) => s.name.includes('.md')) == undefined ? false : true;
-      if (hasFilesWeCareAbout)
-        directoryObject.children.push(subDirContents);
-    } else if (c.name.includes('.md')) {
-      const filePath = path.join(directoryPath, c.name);
-      const stats = await fse.stat(filePath);
-      const created = stats.birthtime.toISOString();
-      const modified = stats.mtime.toISOString();
-      let file = new File(c.name, filePath, created, modified);
-      directoryObject.children.push(file);
-    }
-  }
-  return directoryObject
-}
-
+store.onDidAnyChange((newValue, oldValue) => {
+  win.webContents.send('storeChanged', newValue);
+});
 
 
 // -------- IPC: Send/Receive -------- //
 
-electron.ipcMain.on("updateProjectDirectoryStore", async (event, directoryPath) => {
-  
-  store.clear();
-
-  let directoryName = directoryPath.substring(directoryPath.lastIndexOf('/') + 1);
-  let topLevelDirectory = new Directory(directoryName, directoryPath);
-  let contents = await getDirectoryContents(topLevelDirectory);
-  
-  store.set('hierarchy', [contents]);
-});
-
-store.onDidAnyChange((newValue, oldValue) => {
-  win.webContents.send('projectDirectoryStoreUpdated', newValue);
+electron.ipcMain.on('dispatch', (event, action) => {
+  store.dispatch(action);
 });
 
 
 // -------- IPC: Invoke -------- //
 
 electron.ipcMain.handle('readFile', async (event, fileName, encoding) => {
-  let file = await fse.readFile(path.join(__dirname, fileName), encoding);
+  let file = await fsExtra.readFile(path.join(__dirname, fileName), encoding);
   return file
 });
 
 electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
-  const exists = await fse.pathExists(filepath);
+  const exists = await fsExtra.pathExists(filepath);
   return { path: filepath, exists: exists }
 });
 
-// ipcMain.handle('getDirectoryContents', async (event, directoryPath) => {
-//   let directoryName = directoryPath.substring(directoryPath.lastIndexOf('/') + 1)
-//   let topLevelDirectory = new Directory(directoryName, directoryPath, 'directory')
-//   let contents = await getDirectory(topLevelDirectory)
-//   return contents;
-// })
-
-// ipcMain.on('watchProjectDirectory', async (event) => {
-//   const watcher = chokidar.watch('file, dir, glob, or array', {
-//     ignored: /(^|[\/\\])\../, // ignore dotfiles
-//     persistent: true
-//   });
-// })
+electron.ipcMain.handle('getStore', async (event) => {
+  return store.store
+});
 //# sourceMappingURL=main.js.map

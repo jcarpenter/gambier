@@ -1,20 +1,26 @@
 <script>
     import * as config from '../config.js'
     import Folder from './Folder.svelte'
+    import { onMount } from 'svelte'
 
-    let items;
     let root
-    let rootChildren = []
 
-    window.api.receive('projectDirectoryStoreUpdated', (newValue) => {
-        if (newValue.hierarchy && newValue.hierarchy[0] !== root) {
-            root = newValue.hierarchy[0]
+    window.api.receive('storeChanged', (store) => {
+        if (store.hierarchy && store.hierarchy[0] !== root) {
+            root = store.hierarchy[0]
         }
     })
 
+    onMount(async () => {
+        const store = await window.api.invoke('getStore')
+        if (store && store.hierarchy) {
+            root = store.hierarchy[0]
+        }
+	});
+
 </script>
 
-<style>
+<style type="text/scss">
     nav {
         background-color: lightgray;
         border: 10px solid red;

@@ -1,6 +1,9 @@
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import svelte from 'rollup-plugin-svelte'
+import autoPreprocess from 'svelte-preprocess'
+
+console.log("Welp. Damnit. ARGH...")
 
 export default [
   
@@ -36,6 +39,7 @@ export default [
     },
     plugins: [
       svelte({
+        preprocess: autoPreprocess(),
         // enable run-time checks when not in production
         // dev: !production,
         // we'll extract any component CSS out into

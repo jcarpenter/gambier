@@ -4,9 +4,9 @@
     export let expanded = true;
     export let hidden = false;
 
-    export let typeOf;
+    // export let typeOf;
     export let name;
-    export let path;
+    // export let path;
     // export let created;
     // export let modified;
     export let children;
@@ -16,7 +16,7 @@
     }
 </script>
 
-<style>
+<style type="text/scss">
     .expanded {
         /* background-color: rgba(119, 196, 247, 0.2); */
     } 
@@ -37,11 +37,11 @@
         padding: 0.5em 0;
         border-top: 1px solid rgba(0, 0, 0, 0.2);
         line-height: 1.4em;
-    }
-
-    li:hover {
-        /* cursor: pointer; */
-        /* background-color: rgba(0, 0, 0, 0.2); */
+    
+        &:hover {
+            cursor: default;
+            // background-color: rgba(0, 0, 0, 0.2);
+        }
     }
 </style>
 
@@ -59,7 +59,7 @@
                 {#if file.typeOf === 'Directory'}
 					<svelte:self name={file.name} children={file.children} expanded/>
 				{:else}
-					<File name={file.name}/>
+					<File path={file.path} name={file.name}/>
 				{/if}
 			</li>
 		{/each}

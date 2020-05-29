@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <title>Gambier</title>
-        <!-- https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
+        <!-- Per: https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
         <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline' 'self'">
         <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
 
@@ -12,6 +12,7 @@
         <script src="./js/third-party/codemirror/lib/codemirror.js"></script>
         <script src="./js/third-party/codemirror/addon/mode/overlay.js"></script>
         <script src="./js/third-party/codemirror/mode/markdown/markdown.js"></script>
+
         <!--<script src="./js/third-party/codemirror/mode/xml/xml.js"></script>
         <script src="./js/third-party/codemirror/mode/css/css.js"></script>
         <script src="./js/third-party/codemirror/mode/javascript/javascript.js"></script>-->
@@ -30,7 +31,5 @@
 
         <!-- You can also require other files to run in this process -->
         <script src="./js/renderer.js"></script>
-
-        <!--<script src="./js/main.min.js"></script>-->
     </body>
 </html>

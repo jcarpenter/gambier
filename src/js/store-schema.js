@@ -1,8 +1,24 @@
-// This is a recursive setup: directories can contain directories.
-// See: https://json-schema.org/understanding-json-schema/structuring.html#id1
-// `id` can be anything, but it must be present, or our $refs will not work.
 export const StoreSchema = {
+
+  appStartupTime: {
+    type: 'string',
+    default: 'undefined'
+  },
+  
+  projectDirectory: {
+    descrition: 'User specified directory that contains their project files',
+    type: 'string',
+    default: 'undefined'
+  },
+
+  lastOpenedFile: {
+    description: 'id of the last opened file.',
+    type: 'string',
+    default: 'undefined'
+  },
+
   hierarchy: {
+    description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',
     $schema: "http://json-schema.org/draft-07/schema#",
     $id: "anything-could-go-here",
     definitions: {
@@ -23,18 +39,7 @@ export const StoreSchema = {
       }
     },
     type: 'array',
-    items: { $ref: '#/definitions/fileOrDirectory' }
+    items: { $ref: '#/definitions/fileOrDirectory' },
+    default: []
   }
 }
-
-// export const StoreSchema = {
-//   foo: {
-//     type: 'string',
-//     default: 'Bruce Lee'
-//   },
-//   bar: {
-// 		type: 'string',
-//     format: 'uri',
-//     default: 'http://www.google.com'
-// 	}
-// }
