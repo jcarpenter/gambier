@@ -5,7 +5,7 @@
 
     let root
 
-    window.api.receive('storeChanged', (store) => {
+    window.api.receive('stateChanged', (store) => {
         if (store.hierarchy && store.hierarchy[0] !== root) {
             root = store.hierarchy[0]
         }

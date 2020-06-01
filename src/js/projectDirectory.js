@@ -1,70 +1,94 @@
+import { readdir, readFile, pathExists, stat } from 'fs-extra'
+import chokidar from 'chokidar'
+import path from 'path'
+
 class ProjectDirectory {
 
   constructor() {
-    this.oldState = {}
+    this.store
+    this.directory = ''
+
+    this.watcher = chokidar.watch('', {
+      ignored: /(^|[\/\\])\../, // Ignore dotfiles
+      ignoreInitial: true,
+      persistent: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 200,
+        pollInterval: 50
+      }
+    })
+
+    this.watcher.on('all', (event, path) => {
+      console.log('- - - - - - - -')
+      console.log(event)
+      console.log(path)
+      // this.mapProjectHierarchy(this.directory)
+    })
   }
 
-  setup(store) {
-    store.onDidAnyChange((state) => this.handleChange(state))
+  async setup(store) {
+
+    this.store = store
+    this.directory = store.store.projectDirectory
+    
+    // Check if path is valid
+    if (await this.isWorkingPath(this.directory)) {
+      this.mapProjectHierarchy(this.directory)
+      this.watcher.add(this.directory)
+    }
+
+    // Setup change listener for store
+    this.store.onDidAnyChange((newState, oldState) => {
+      this.onStoreChange(newState, oldState)
+    })
   }
 
-  handleChange(state) {
-        
-    if (state.projectDirectory !== this.oldState.projectDirectory) {
-      console.log("Project directory has changed")
+  async isWorkingPath(directory) {
+
+    if (directory == 'undefined') {
+      return false
     } else {
-      console.log("Project directory has --NOT-- changed")
+      if (await pathExists(directory)) {
+        return true
+      } else {
+        return false
+      }
     }
-
-    this.oldState = state
   }
-}
 
-/*
-If projectDirectory has changed:
-  If projectDirectory === undefined
-    Stop watching
-    Reset store.hierarchy to default
-  Else
-    Scan project directory
-*/
+  async onStoreChange(newState, oldState) {
 
-async function scan(newValue, oldValue) {
+    let newDir = newState.projectDirectory
+    let oldDir = oldState.projectDirectory
 
-  if (store.get('projectDirectory') === 'undefined') return
+    // We update the local saved directory value
+    this.directory = newDir
 
-  const dir = store.get('projectDirectory')
-  const exists = await pathExists(dir)
-  if (!exists) return
-  updateHierarchy()
-  watch(dir)
-}
+    // If the directory has changed...
+    if (newDir !== oldDir) {
 
-function watch(directory) {
-  const watcher = chokidar.watch(directory, {
-    ignored: /(^|[\/\\])\../, // Ignore dotfiles
-    ignoreInitial: true,
-    persistent: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 200,
-      pollInterval: 50
+      // We unwatch the old directory (if it wasn't undefined)
+      if (oldDir !== 'undefined') this.watcher.unwatch(oldDir)
+
+      // If the new directory exists, we map it and watch it
+      if (await this.isWorkingPath(newDir)) {
+        this.mapProjectHierarchy(newDir)
+        this.watcher.add(newDir)
+      } else {
+        // Else, if it doesn't exist, we reset the hierarchy (clear contents)
+        this.store.dispatch({ type: 'RESET_HIERARCHY' })
+      }
     }
-  })
+  }
 
-  watcher.on('all', (event, path) => {
-    updateHierarchy()
-  })
-}
+  async mapProjectHierarchy(directory) {
 
-async function updateHierarchy() {
-  store.reset('hierarchy')
+    let name = directory.substring(directory.lastIndexOf('/') + 1)
 
-  let path = store.get('projectDirectory')
-  let name = path.substring(path.lastIndexOf('/') + 1)
+    let contents = await getDirectoryContents(new Directory(name, directory))
 
-  let contents = await getDirectoryContents(new Directory(name, path))
-
-  store.set('hierarchy', [contents])
+    this.store.dispatch({ type: 'UPDATE_HIERARCHY', contents: [contents] })
+  }
 }
 
 

@@ -13,12 +13,12 @@ class GambierStore extends Store {
     })
   }
 
-  getPreviousState() {
+  getCurrentState() {
     return this.store
   }
 
   dispatch(action) {
-    let nextState = reducers(this.getPreviousState(), action)
+    let nextState = reducers(this.getCurrentState(), action)
     this.set(nextState)
   }
 }

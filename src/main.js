@@ -2,18 +2,12 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
 import { readdir, readFile, pathExists, stat } from 'fs-extra'
-import chokidar from 'chokidar'
 
 // Bundled dependencies
 import { store } from './js/GambierStore'
 import { projectDirectory } from './js/projectDirectory'
 import * as mainMenu from './js/mainMenu'
-// import * as config from './config.js'
 
-
-
-// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
-let win
 
 // -------- Process variables -------- //
 
@@ -46,6 +40,9 @@ require('electron-reload')(watchAndHardReset, {
 })
 
 // -------- Create window -------- //
+
+// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
+let win
 
 function createWindow() {
 
@@ -82,18 +79,33 @@ function createWindow() {
   // Setup project directory
   projectDirectory.setup(store)
 
-  // Setup store
-  // TEMP: For development testing purposes, at startup we clear (delete all items) and reset (to default values).
+
+  // Send state to render process once dom is ready
+  win.webContents.once('dom-ready', () => {
+    win.webContents.send('setInitialState', store.getCurrentState())
+  })
+
+  // -------- TEMP DEVELOPMENT STUFF -------- //
   // store.clear()
   // store.reset()
   // This triggers a change event, which subscribers then receive
-  store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
+  // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
 
-  // Send store to render process once dom is ready
-  win.webContents.once('dom-ready', () => {
-    win.webContents.send('storeChanged', store.getPreviousState())
-  })
+  // setTimeout(() => {
+  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
+  // }, 2000)
+
+  // setTimeout(() => {
+  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/arasd'})
+  // }, 4000)
+
+  // setTimeout(() => {
+  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Notes'})
+  // }, 6000)
 }
+
+
+// -------- Kickoff -------- //
 
 // Set this to shut up console warnings re: deprecated default 
 // If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9.
@@ -105,8 +117,8 @@ app.whenReady().then(createWindow)
 
 // -------- Store -------- //
 
-store.onDidAnyChange((newValue, oldValue) => {
-  win.webContents.send('storeChanged', newValue)
+store.onDidAnyChange((newState, oldState) => {
+  win.webContents.send('stateChanged', newState, oldState)
 })
 
 

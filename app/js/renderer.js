@@ -24760,7 +24760,7 @@ function create_fragment$2(ctx) {
 function instance$2($$self, $$props, $$invalidate) {
 	let root;
 
-	window.api.receive("storeChanged", store => {
+	window.api.receive("stateChanged", store => {
 		if (store.hierarchy && store.hierarchy[0] !== root) {
 			$$invalidate(0, root = store.hierarchy[0]);
 		}
@@ -24791,14 +24791,13 @@ async function setup() {
     // props: { name: 'world' }
   });
 
-  window.api.receive('storeChanged', (store) => {
-    if (store.projectDirectory === 'undefined') ; else {
-      if (store.lastOpenedFile === 'undefined') {
-        console.log('store.lastOpenedFile = undefined');
-        // Load first file
-        // window.api.send('dispatch', { type: 'SET_PROJECT_DIRECTORY', path: 
-      }
-    }
+  window.api.receive('setInitialState', (initialState) => {
+    // console.log(initialState)
+  });
+
+  window.api.receive('stateChanged', (newState) => {
+    // console.log(newState)
+    return
 
     // if (store.hierarchy && store.hierarchy[0] !== root) {
     //   root = store.hierarchy[0]

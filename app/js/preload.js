@@ -6,7 +6,7 @@ var electron = require('electron');
 
 let validSendChannels = ['updateProjectDirectoryStore', 'dispatch'];
 
-let validReceiveChannels = ['storeChanged'];
+let validReceiveChannels = ['stateChanged', 'setInitialState'];
 
 let validInvokeChannels = ['readFile', 'ifPathExists', 'getStore'];
 

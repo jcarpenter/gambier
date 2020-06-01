@@ -10,12 +10,20 @@ async function setup() {
     // props: { name: 'world' }
   })
 
-  window.api.receive('storeChanged', (store) => {
-    if (store.projectDirectory === 'undefined') {
+  window.api.receive('setInitialState', (initialState) => {
+    // console.log(initialState)
+  })
+
+  window.api.receive('stateChanged', (newState) => {
+    // console.log(newState)
+    return
+    console.log(newState.projectDirectory)
+    if (newState.projectDirectory === 'undefined') {
+      console.log('Renderer says: projectDirectory is undefined')
       // window.api.send('dispatch', { type: 'SET_PROJECT_DIRECTORY', path: tempHardCodedProjectPath })
     } else {
-      if (store.lastOpenedFile === 'undefined') {
-        console.log('store.lastOpenedFile = undefined')
+      console.log(`Renderer says: projectDirectory is ${newState.projectDirectory}`)
+      if (newState.lastOpenedFile === 'undefined') {
         // Load first file
         // window.api.send('dispatch', { type: 'SET_PROJECT_DIRECTORY', path: 
       }
