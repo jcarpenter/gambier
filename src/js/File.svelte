@@ -1,8 +1,6 @@
 <script>
-    export let name
+    export let title
     export let path
-
-    $: nameWithoutExt = name.slice(0, name.lastIndexOf('.'));
 
     function holler() {
         window.api.send('dispatch', { type: 'OPEN_FILE', fileName: path })
@@ -15,4 +13,4 @@
 	} */
 </style>
 
-<div on:click={holler}>{nameWithoutExt}</div>
+<div on:click={holler}>{title}</div>

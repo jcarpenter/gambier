@@ -24211,7 +24211,7 @@ function create_fragment(ctx) {
 	return {
 		c() {
 			div = element("div");
-			t = text(/*nameWithoutExt*/ ctx[0]);
+			t = text(/*title*/ ctx[0]);
 		},
 		m(target, anchor, remount) {
 			insert(target, div, anchor);
@@ -24220,7 +24220,7 @@ function create_fragment(ctx) {
 			dispose = listen(div, "click", /*holler*/ ctx[1]);
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*nameWithoutExt*/ 1) set_data(t, /*nameWithoutExt*/ ctx[0]);
+			if (dirty & /*title*/ 1) set_data(t, /*title*/ ctx[0]);
 		},
 		i: noop,
 		o: noop,
@@ -24232,7 +24232,7 @@ function create_fragment(ctx) {
 }
 
 function instance($$self, $$props, $$invalidate) {
-	let { name } = $$props;
+	let { title } = $$props;
 	let { path } = $$props;
 
 	function holler() {
@@ -24240,25 +24240,17 @@ function instance($$self, $$props, $$invalidate) {
 	}
 
 	$$self.$set = $$props => {
-		if ("name" in $$props) $$invalidate(2, name = $$props.name);
-		if ("path" in $$props) $$invalidate(3, path = $$props.path);
+		if ("title" in $$props) $$invalidate(0, title = $$props.title);
+		if ("path" in $$props) $$invalidate(2, path = $$props.path);
 	};
 
-	let nameWithoutExt;
-
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*name*/ 4) {
-			 $$invalidate(0, nameWithoutExt = name.slice(0, name.lastIndexOf(".")));
-		}
-	};
-
-	return [nameWithoutExt, holler, name, path];
+	return [title, holler, path];
 }
 
 class File extends SvelteComponent {
 	constructor(options) {
 		super();
-		init(this, options, instance, create_fragment, safe_not_equal, { name: 2, path: 3 });
+		init(this, options, instance, create_fragment, safe_not_equal, { title: 0, path: 2 });
 	}
 }
 
@@ -24424,7 +24416,7 @@ function create_else_block(ctx) {
 	const file = new File({
 			props: {
 				path: /*file*/ ctx[5].path,
-				name: /*file*/ ctx[5].name
+				title: /*file*/ ctx[5].title
 			}
 		});
 
@@ -24439,7 +24431,7 @@ function create_else_block(ctx) {
 		p(ctx, dirty) {
 			const file_changes = {};
 			if (dirty & /*children*/ 8) file_changes.path = /*file*/ ctx[5].path;
-			if (dirty & /*children*/ 8) file_changes.name = /*file*/ ctx[5].name;
+			if (dirty & /*children*/ 8) file_changes.title = /*file*/ ctx[5].title;
 			file.$set(file_changes);
 		},
 		i(local) {
@@ -24463,7 +24455,7 @@ function create_if_block_1(ctx) {
 
 	const folder = new Folder({
 			props: {
-				name: /*file*/ ctx[5].name,
+				title: /*file*/ ctx[5].title,
 				children: /*file*/ ctx[5].children,
 				expanded: true
 			}
@@ -24479,7 +24471,7 @@ function create_if_block_1(ctx) {
 		},
 		p(ctx, dirty) {
 			const folder_changes = {};
-			if (dirty & /*children*/ 8) folder_changes.name = /*file*/ ctx[5].name;
+			if (dirty & /*children*/ 8) folder_changes.title = /*file*/ ctx[5].title;
 			if (dirty & /*children*/ 8) folder_changes.children = /*file*/ ctx[5].children;
 			folder.$set(folder_changes);
 		},

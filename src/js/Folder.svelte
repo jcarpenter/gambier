@@ -57,9 +57,9 @@
 		{#each children as file}
 			<li>
                 {#if file.typeOf === 'Directory'}
-					<svelte:self name={file.name} children={file.children} expanded/>
+					<svelte:self title={file.title} children={file.children} expanded/>
 				{:else}
-					<File path={file.path} name={file.name}/>
+					<File path={file.path} title={file.title}/>
 				{/if}
 			</li>
 		{/each}

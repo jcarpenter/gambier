@@ -3,8 +3,6 @@ import commonjs from '@rollup/plugin-commonjs'
 import svelte from 'rollup-plugin-svelte'
 import autoPreprocess from 'svelte-preprocess'
 
-console.log("Welp. Damnit. ARGH...")
-
 export default [
   
   // Electron | Main
@@ -15,7 +13,7 @@ export default [
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar'],
+    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'directory-tree', 'hierarchy-js', 'colors', 'deep-object-diff', 'deep-eql'],
   },
 
   // Electron | Preload

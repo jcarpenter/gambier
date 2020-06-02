@@ -8,6 +8,8 @@ import { store } from './js/GambierStore'
 import { projectDirectory } from './js/projectDirectory'
 import * as mainMenu from './js/mainMenu'
 
+// Dev only
+import colors from 'colors'
 
 // -------- Process variables -------- //
 
@@ -46,6 +48,8 @@ let win
 
 function createWindow() {
 
+  console.log(`Create window`.bgBrightBlue.black, `(Main.js)`.brightBlue)
+
   // Create the browser window.
   win = new BrowserWindow({
     width: 1000,
@@ -64,7 +68,6 @@ function createWindow() {
       webviewTag: false,
       preload: path.join(__dirname, 'js/preload.js')
     }
-
   })
 
   // Open DevTools
@@ -79,9 +82,9 @@ function createWindow() {
   // Setup project directory
   projectDirectory.setup(store)
 
-
   // Send state to render process once dom is ready
   win.webContents.once('dom-ready', () => {
+    console.log(`dom-ready`.bgBrightBlue.black, `(Main.js)`.brightBlue)
     win.webContents.send('setInitialState', store.getCurrentState())
   })
 
@@ -91,9 +94,14 @@ function createWindow() {
   // This triggers a change event, which subscribers then receive
   // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
 
+  
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
-  // }, 2000)
+  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
+  // }, 1000)
+
+  setTimeout(() => {
+    store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
+  }, 1000)
 
   // setTimeout(() => {
   //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/arasd'})
