@@ -24,16 +24,14 @@ body {
 }
 
 #folders, #files {
-    /* outline: 1px solid var(--debug-outline); */
     height: 100%;
-    // padding: var(--grid);
-    padding: var(--grid-half) 0;
     overflow-y: scroll;
 }
 
 #folders {
     grid-column: folders;
     background: var(--clr-gray-lightest);
+    padding: var(--grid-half) 0;
 }
 
 #files {
@@ -41,6 +39,7 @@ body {
     background-color: white;
     border-left: 1px solid lightgray;
     border-right: 1px solid lightgray;
+    padding: 0;
 }
 
 #editor {

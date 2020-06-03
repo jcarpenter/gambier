@@ -192,7 +192,8 @@ class ProjectDirectory {
     // Check if path is valid. 
     // If yes, map directory, update store, and add watcher.
     if (await this.isWorkingPath(this.directory)) {
-      const contents = await this.mapDirectoryRecursively(this.directory);
+      let contents = await this.mapDirectoryRecursively(this.directory);
+      contents = await this.getFilesDetails(contents);
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
       this.watcher.add(this.directory);
     }
@@ -228,7 +229,8 @@ class ProjectDirectory {
       // Check if path is valid. 
       // If yes, map directory, update store, and add watcher.
       if (await this.isWorkingPath(newDir)) {
-        const contents = await this.mapDirectoryRecursively(newDir);
+        let contents = await this.mapDirectoryRecursively(newDir);
+        contents = await this.getFilesDetails(contents);
         this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
         this.watcher.add(newDir);
       } else {
@@ -316,10 +318,10 @@ class ProjectDirectory {
   /**
    * Go through each file in `this.contents` and add details loaded from stats (e.g. created) and gray-matter (e.g. excerpt, tags, title). We use Promise.all() to run this in parallel, so we're processing files in a batch, instead of sequentially one-by-one.
    */
-  async getFilesDetails() {
+  async getFilesDetails(contents) {
 
     await Promise.all(
-      this.contents.map(async (f) => {
+      contents.map(async (f) => {
 
         // Ignore directories
         if (f.type == 'file') {
@@ -357,6 +359,8 @@ class ProjectDirectory {
         }
       })
     );
+    console.log(contents);
+    return contents
   }
 }
 

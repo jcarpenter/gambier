@@ -23954,6 +23954,13 @@ function listen(node, event, handler, options) {
     node.addEventListener(event, handler, options);
     return () => node.removeEventListener(event, handler, options);
 }
+function prevent_default(fn) {
+    return function (event) {
+        event.preventDefault();
+        // @ts-ignore
+        return fn.call(this, event);
+    };
+}
 function attr(node, attribute, value) {
     if (value == null)
         node.removeAttribute(attribute);
@@ -24084,6 +24091,12 @@ function transition_out(block, local, detach, callback) {
         block.o(local);
     }
 }
+
+const globals = (typeof window !== 'undefined'
+    ? window
+    : typeof globalThis !== 'undefined'
+        ? globalThis
+        : global);
 function create_component(block) {
     block && block.c();
 }
@@ -24205,19 +24218,17 @@ class SvelteComponent {
 
 function add_css() {
 	var style = element("style");
-	style.id = "svelte-1jhm606-style";
-	style.textContent = "div.svelte-1jhm606{border-bottom:1px solid lightgray;padding:0.5em}h2.svelte-1jhm606,p.svelte-1jhm606{font-size:0.8em;line-height:1.4em;margin:0;padding:0}.selected.svelte-1jhm606{background:#2d67fa;color:white}";
+	style.id = "svelte-delljs-style";
+	style.textContent = "div.svelte-delljs.svelte-delljs{border-bottom:1px solid lightgray;padding:0.5em;cursor:default}h2.svelte-delljs.svelte-delljs,p.svelte-delljs.svelte-delljs{font-size:0.8em;line-height:1.5em;margin:0;padding:0}p.svelte-delljs.svelte-delljs{font-size:0.8em;color:gray;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.selected.svelte-delljs.svelte-delljs{background:#2d67fa}.selected.svelte-delljs h2.svelte-delljs{color:white}.selected.svelte-delljs p.svelte-delljs{color:rgba(255, 255, 255, 0.8)}";
 	append(document.head, style);
 }
 
 function create_fragment(ctx) {
 	let div;
 	let h2;
-	let t0_value = /*details*/ ctx[1].title + "";
 	let t0;
 	let t1;
 	let p;
-	let t2_value = /*details*/ ctx[1].excerpt + "";
 	let t2;
 	let dispose;
 
@@ -24225,14 +24236,14 @@ function create_fragment(ctx) {
 		c() {
 			div = element("div");
 			h2 = element("h2");
-			t0 = text(t0_value);
+			t0 = text(/*title*/ ctx[0]);
 			t1 = space();
 			p = element("p");
-			t2 = text(t2_value);
-			attr(h2, "class", "svelte-1jhm606");
-			attr(p, "class", "svelte-1jhm606");
-			attr(div, "class", "svelte-1jhm606");
-			toggle_class(div, "selected", /*selected*/ ctx[0]);
+			t2 = text(/*excerpt*/ ctx[1]);
+			attr(h2, "class", "svelte-delljs");
+			attr(p, "class", "svelte-delljs");
+			attr(div, "class", "svelte-delljs");
+			toggle_class(div, "selected", /*selected*/ ctx[2]);
 		},
 		m(target, anchor, remount) {
 			insert(target, div, anchor);
@@ -24242,14 +24253,14 @@ function create_fragment(ctx) {
 			append(div, p);
 			append(p, t2);
 			if (remount) dispose();
-			dispose = listen(div, "click", /*openFile*/ ctx[2]);
+			dispose = listen(div, "click", /*openFile*/ ctx[3]);
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*details*/ 2 && t0_value !== (t0_value = /*details*/ ctx[1].title + "")) set_data(t0, t0_value);
-			if (dirty & /*details*/ 2 && t2_value !== (t2_value = /*details*/ ctx[1].excerpt + "")) set_data(t2, t2_value);
+			if (dirty & /*title*/ 1) set_data(t0, /*title*/ ctx[0]);
+			if (dirty & /*excerpt*/ 2) set_data(t2, /*excerpt*/ ctx[1]);
 
-			if (dirty & /*selected*/ 1) {
-				toggle_class(div, "selected", /*selected*/ ctx[0]);
+			if (dirty & /*selected*/ 4) {
+				toggle_class(div, "selected", /*selected*/ ctx[2]);
 			}
 		},
 		i: noop,
@@ -24262,39 +24273,30 @@ function create_fragment(ctx) {
 }
 
 function instance($$self, $$props, $$invalidate) {
-	let { details = {} } = $$props;
+	let { title } = $$props;
+	let { excerpt } = $$props;
+	let { id } = $$props;
 	let { selected = false } = $$props;
 
 	function openFile() {
-		window.api.send("dispatch", { type: "OPEN_FILE", id: details.id });
+		window.api.send("dispatch", { type: "OPEN_FILE", id });
 	}
-
-	function update(state) {
-		$$invalidate(0, selected = state.lastOpenedFileId === details.id);
-	}
-
-	window.api.receive("stateChanged", state => {
-		update(state);
-	});
-
-	onMount(async () => {
-		const state = await window.api.invoke("getState");
-		update(state);
-	});
 
 	$$self.$set = $$props => {
-		if ("details" in $$props) $$invalidate(1, details = $$props.details);
-		if ("selected" in $$props) $$invalidate(0, selected = $$props.selected);
+		if ("title" in $$props) $$invalidate(0, title = $$props.title);
+		if ("excerpt" in $$props) $$invalidate(1, excerpt = $$props.excerpt);
+		if ("id" in $$props) $$invalidate(4, id = $$props.id);
+		if ("selected" in $$props) $$invalidate(2, selected = $$props.selected);
 	};
 
-	return [selected, details, openFile];
+	return [title, excerpt, selected, openFile, id];
 }
 
 class File extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1jhm606-style")) add_css();
-		init(this, options, instance, create_fragment, safe_not_equal, { details: 1, selected: 0 });
+		if (!document.getElementById("svelte-delljs-style")) add_css();
+		init(this, options, instance, create_fragment, safe_not_equal, { title: 0, excerpt: 1, id: 4, selected: 2 });
 	}
 }
 
@@ -25003,16 +25005,30 @@ class NavFolders extends SvelteComponent {
 
 /* src/js/NavFiles.svelte generated by Svelte v3.22.3 */
 
+const { window: window_1 } = globals;
+
 function get_each_context$1(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[2] = list[i];
+	child_ctx[6] = list[i].title;
+	child_ctx[7] = list[i].excerpt;
+	child_ctx[8] = list[i].id;
 	return child_ctx;
 }
 
-// (30:0) {#each files as file}
+// (59:0) {#each files as { title, excerpt, id }}
 function create_each_block$1(ctx) {
 	let current;
-	const file = new File({ props: { details: /*file*/ ctx[2] } });
+
+	const file = new File({
+			props: {
+				title: /*title*/ ctx[6],
+				excerpt: /*excerpt*/ ctx[7],
+				id: /*id*/ ctx[8],
+				selected: /*selectedFileId*/ ctx[1] == /*id*/ ctx[8]
+				? true
+				: undefined
+			}
+		});
 
 	return {
 		c() {
@@ -25024,7 +25040,14 @@ function create_each_block$1(ctx) {
 		},
 		p(ctx, dirty) {
 			const file_changes = {};
-			if (dirty & /*files*/ 1) file_changes.details = /*file*/ ctx[2];
+			if (dirty & /*files*/ 1) file_changes.title = /*title*/ ctx[6];
+			if (dirty & /*files*/ 1) file_changes.excerpt = /*excerpt*/ ctx[7];
+			if (dirty & /*files*/ 1) file_changes.id = /*id*/ ctx[8];
+
+			if (dirty & /*selectedFileId, files*/ 3) file_changes.selected = /*selectedFileId*/ ctx[1] == /*id*/ ctx[8]
+			? true
+			: undefined;
+
 			file.$set(file_changes);
 		},
 		i(local) {
@@ -25045,6 +25068,7 @@ function create_each_block$1(ctx) {
 function create_fragment$3(ctx) {
 	let each_1_anchor;
 	let current;
+	let dispose;
 	let each_value = /*files*/ ctx[0];
 	let each_blocks = [];
 
@@ -25064,16 +25088,18 @@ function create_fragment$3(ctx) {
 
 			each_1_anchor = empty();
 		},
-		m(target, anchor) {
+		m(target, anchor, remount) {
 			for (let i = 0; i < each_blocks.length; i += 1) {
 				each_blocks[i].m(target, anchor);
 			}
 
 			insert(target, each_1_anchor, anchor);
 			current = true;
+			if (remount) dispose();
+			dispose = listen(window_1, "keydown", prevent_default(/*handleKeydown*/ ctx[2]));
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*files*/ 1) {
+			if (dirty & /*files, selectedFileId, undefined*/ 3) {
 				each_value = /*files*/ ctx[0];
 				let i;
 
@@ -25121,32 +25147,62 @@ function create_fragment$3(ctx) {
 		d(detaching) {
 			destroy_each(each_blocks, detaching);
 			if (detaching) detach(each_1_anchor);
+			dispose();
 		}
 	};
 }
 
 function instance$3($$self, $$props, $$invalidate) {
 	let files = [];
+	let selectedFileId = 0;
+	let selectedFileIndex = 0;
+	let key;
+
+	function handleKeydown(event) {
+		key = event.key;
+
+		switch (key) {
+			case "ArrowUp":
+				// console.log("ArrowUp");
+				window.api.send("dispatch", { type: "OPEN_FILE", id: prevFileId });
+				break;
+			case "ArrowDown":
+				// console.log("ArrowDown");
+				window.api.send("dispatch", { type: "OPEN_FILE", id: nextFileId });
+				break;
+		}
+	}
 
 	function update(state) {
-		// Get files for active folder
-		$$invalidate(0, files = state.contents.filter(obj => {
+		// On folder change
+		// Get files for selected folder
+		$$invalidate(0, files = state.contents.filter((obj, index) => {
 			return obj.parentId === state.selectedFolderId && obj.type == "file";
 		}));
 
-		console.log(files);
+		// selectedFileId = state.lastOpenedFileId;
+		// On selected file chngaee
+		$$invalidate(1, selectedFileId = state.lastOpenedFileId);
+
+		selectedFileIndex = files.findIndex(f => f.id == selectedFileId);
+
+		prevFileId = selectedFileIndex > 0
+		? files[selectedFileIndex - 1].id
+		: selectedFileId;
+
+		nextFileId = selectedFileIndex < files.length - 1
+		? files[selectedFileIndex + 1].id
+		: selectedFileId;
 	}
 
-	window.api.receive("stateChanged", state => {
-		update(state);
-	});
+	window.api.receive("stateChanged", (state, oldState) => update(state));
 
 	onMount(async () => {
 		const state = await window.api.invoke("getState");
 		update(state);
 	});
 
-	return [files];
+	return [files, selectedFileId, handleKeydown];
 }
 
 class NavFiles extends SvelteComponent {
