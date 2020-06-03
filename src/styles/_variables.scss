@@ -1,8 +1,7 @@
 :root {
     /* -------------- Layouts (CSS grid) -------------- */
 
-    --layout: [nav-start] minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [nav-end editor-start]
-        1fr [editor-end];
+    --layout: [folders-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [folders-end files-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [files-end editor-start] 1fr [editor-end];
 
     /* -------------- Colors -------------- */
 

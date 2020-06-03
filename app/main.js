@@ -12,6 +12,7 @@ var deepEql = _interopDefault(require('deep-eql'));
 require('deep-object-diff');
 var chokidar = _interopDefault(require('chokidar'));
 var matter = _interopDefault(require('gray-matter'));
+var removeMd = _interopDefault(require('remove-markdown'));
 
 const StoreSchema = {
 
@@ -26,10 +27,15 @@ const StoreSchema = {
     default: 'undefined'
   },
 
-  lastOpenedFile: {
+  lastOpenedFileId: {
     description: 'id of the last opened file.',
-    type: 'string',
-    default: 'undefined'
+    type: 'integer',
+    default: 0
+  },
+
+  selectedFolderId: {
+    type: 'integer',
+    default: 0
   },
 
   contents: { type: 'array', default: [] },
@@ -71,7 +77,7 @@ function reducers(state = initialState, action) {
       })
     case 'OPEN_FILE':
       return Object.assign({}, state, {
-        lastOpened: action.fileName
+        lastOpenedFileId: action.id
       })
     case 'SET_STARTUP_TIME':
       return Object.assign({}, state, {
@@ -86,6 +92,11 @@ function reducers(state = initialState, action) {
       return Object.assign({}, state, {
         contents: []
         // hierarchy: []
+      })
+    case 'SELECT_FOLDER':
+      console.log(action.id);
+      return Object.assign({}, state, {
+        selectedFolderId: action.id
       })
     default:
       return state
@@ -142,15 +153,12 @@ class GambierStore extends Store {
 
 const store = new GambierStore();
 
-// import directoryTree from 'directory-tree'
-// import { createFlatHierarchy } from 'hierarchy-js'
-
 class ProjectDirectory {
 
   constructor() {
     this.store;
     this.directory = '';
-    this.contents = [];
+    // this.contents = []
 
     this.watcher = chokidar.watch('', {
       ignored: /(^|[\/\\])\../, // Ignore dotfiles
@@ -172,21 +180,22 @@ class ProjectDirectory {
 
   async setup(store) {
 
+    // Save local 1) reference to store, and 2) value of directory
     this.store = store;
     this.directory = store.store.projectDirectory;
-
-    // Check if path is valid. 
-    // If yes, map directory, update store, and add watcher.
-    if (await this.isWorkingPath(this.directory)) {
-      await this.mapProjectContentsAsFlatArray(this.directory);
-      this.store.dispatch({ type: 'MAP_HIERARCHY', contents: this.contents });
-      this.watcher.add(this.directory);
-    }
 
     // Setup change listener for store
     this.store.onDidAnyChange((newState, oldState) => {
       this.onStoreChange(newState, oldState);
     });
+
+    // Check if path is valid. 
+    // If yes, map directory, update store, and add watcher.
+    if (await this.isWorkingPath(this.directory)) {
+      const contents = await this.mapDirectoryRecursively(this.directory);
+      this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
+      this.watcher.add(this.directory);
+    }
   }
 
   async isWorkingPath(directory) {
@@ -206,7 +215,7 @@ class ProjectDirectory {
 
     let newDir = newState.projectDirectory;
     let oldDir = oldState.projectDirectory;
-    
+
     // We update the local saved directory value
     this.directory = newDir;
 
@@ -219,8 +228,8 @@ class ProjectDirectory {
       // Check if path is valid. 
       // If yes, map directory, update store, and add watcher.
       if (await this.isWorkingPath(newDir)) {
-        await this.mapProjectContentsAsFlatArray(newDir);
-        this.store.dispatch({ type: 'MAP_HIERARCHY', contents: this.contents });
+        const contents = await this.mapDirectoryRecursively(newDir);
+        this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
         this.watcher.add(newDir);
       } else {
         // Else, if it doesn't exist, tell store to `RESET_HIERARCHY` (clears to `[]`)
@@ -229,26 +238,25 @@ class ProjectDirectory {
     }
   }
 
-  async mapProjectContentsAsFlatArray(directoryPath) {
-
-    // const obj = { contents: [] }
-    this.contents = [];
-    await this.mapDirectoryRecursively(directoryPath);
-    await this.getFilesDetails();
-  }
-
   /**
    * Populate this.contents with flat array of directory contents. One object for each directory and file found. Works recursively.
    * @param {*} directoryPath - Directory to look inside.
-   * @param {*} parentId - Left undefined (default) for top-level directory.
+   * @param {*} parentObj - If passed in, we 1) get parent id, and 2) increment its directory counter (assuming the directory ). Is left undefined (default) for the top-level directory.
    */
   async mapDirectoryRecursively(directoryPath, parentId = undefined) {
+
+    let arrayOfContents = [];
 
     let contents = await fsExtra.readdir(directoryPath, { withFileTypes: true });
 
     // Filter contents to (not-empty) directories, and markdown files.
     contents = contents.filter((c) => c.isDirectory() || c.name.includes('.md'));
-    if (contents.length == 0) return
+
+    // If the directory has no children we care about (.md files or directories), 
+    // we return an empty array.
+    if (contents.length == 0) {
+      return arrayOfContents
+    }
 
     // Get stats for directory
     const stats = await fsExtra.stat(directoryPath);
@@ -260,24 +268,26 @@ class ProjectDirectory {
       name: directoryPath.substring(directoryPath.lastIndexOf('/') + 1),
       path: directoryPath,
       modified: stats.mtime.toISOString(),
-      children: 0
+      childFileCount: 0,
+      childDirectoryCount: 0
     };
 
-    // If parentId argument was set, apply it to thisDir
-    if (parentId !== undefined) thisDir.parentId = parentId;
+    // If parentId was passed, set `thisDir.parentId` to it
+    if (parentId !== undefined) {
+      thisDir.parentId = parentId;
+    }
 
     for (let c of contents) {
-
-      // Increment children counter
-      thisDir.children++;
 
       // Get path
       const cPath = path.join(directoryPath, c.name);
 
       if (c.isFile()) {
-        
+        // Increment file counter
+        thisDir.childFileCount++;
+
         // Push new file object
-        this.contents.push({
+        arrayOfContents.push({
           type: 'file',
           name: c.name,
           path: cPath,
@@ -285,14 +295,22 @@ class ProjectDirectory {
         });
       } else if (c.isDirectory()) {
 
-        // Map child directory
-        await this.mapDirectoryRecursively(cPath, thisDir.id);
+        // Get child directory contents
+        // If not empty, increment counter and push to arrayOfContents
+        const subDirContents = await this.mapDirectoryRecursively(cPath, thisDir.id);
+        if (subDirContents.length !== 0) {
+          thisDir.childDirectoryCount++;
+          arrayOfContents = arrayOfContents.concat(subDirContents);
+        }
       }
-
     }
 
-    // Finally, push this directory to `this.contents`
-    this.contents.push(thisDir);
+    // Finally, if it is not empty, push thisDir to `arrayOfContents`
+    if (arrayOfContents.length !== 0) {
+      arrayOfContents.push(thisDir);
+    }
+
+    return arrayOfContents
   }
 
   /**
@@ -302,27 +320,28 @@ class ProjectDirectory {
 
     await Promise.all(
       this.contents.map(async (f) => {
-        
+
         // Ignore directories
         if (f.type == 'file') {
 
           // Return a promise ()
           return fsExtra.readFile(f.path, 'utf8').then(async str => {
-            
+
             // Get stats
             const stats = await fsExtra.stat(f.path);
-            
+
             // Get front matter
-            const md = matter(str, { excerpt: true });
-            const hasFrontMatter = md.hasOwnProperty('data');
-            
+            const md = matter(str, { excerpt: extractExcerpt });
+
             // Set fields from stats
             f.id = stats.ino;
             f.modified = stats.mtime.toISOString();
             f.created = stats.birthtime.toISOString();
+            f.excerpt = md.excerpt;
 
             // Set fields from front matter (if it exists)
-            if (hasFrontMatter) {
+            // gray-matter `isEmpty` property returns "true if front-matter is empty".
+            if (!f.isEmpty) {
 
               // If `tags` exists in front matter, use it. Else, set as empty `[]`.
               f.tags = md.data.hasOwnProperty('tags') ? md.data.tags : [];
@@ -341,19 +360,33 @@ class ProjectDirectory {
   }
 }
 
+function extractExcerpt(file) {
+
+  // gray-matter passes extract function the file.
+  // file.contents give us the input string, with front matter stripped.
+
+  // Remove h1, if it exists. Then trim to 200 characters.
+  let excerpt = file.content
+    .replace(/^# (.*)\n/gm, '')
+    .substring(0, 400);
+
+  // Remove markdown formatting. Start with remove-markdown rules.
+  // Per: https://github.com/stiang/remove-markdown/blob/master/index.js
+  // Then add whatever additional changes I want (e.g. new lines).
+  excerpt = removeMd(excerpt)
+    .replace(/^> /gm, '')         // Block quotes
+    .replace(/^\n/gm, '')         // New lines at start of line (usually doc)
+    .replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
+    .replace(/\t/gm, ' ')         // Artifact left from list replacement
+    .replace(/\[@.*?\]/gm, '')    // Citations
+    .replace(/:::.*?:::/gm, ' ')  // Bracketed spans
+    .replace(/\s{2,}/gm, ' ')     // Extra spaces
+    .substring(0, 200);            // Trim to 200 characters
+
+  file.excerpt = excerpt;
+}
+
 const projectDirectory = new ProjectDirectory();
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -610,7 +643,7 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
 // -------- Reload -------- //
 
 // Not sure how this works with our packaged build. Want it for dev, but not distribution.
-const watchAndHardReset = [
+const watchAndReload = [
   path.join(__dirname, '**/*.js'),
   path.join(__dirname, '**/*.html'),
   path.join(__dirname, '**/*.css'),
@@ -624,19 +657,21 @@ const watchAndHardReset = [
   // '**/*.jpg',
 ];
 
-require('electron-reload')(watchAndHardReset, {
+require('electron-reload')(watchAndReload, {
   // awaitWriteFinish: {
   //   stabilityThreshold: 10,
   //   pollInterval: 50
   // },
   electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-  argv: ['--inspect=5858'],
+  // argv: ['--inspect=5858'],
 });
 
 // -------- Create window -------- //
 
 // Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
 let win;
+
+console.log(`--------------- Startup ---------------`.bgYellow.black, `(Main.js)`.yellow);
 
 function createWindow() {
 
@@ -677,7 +712,7 @@ function createWindow() {
   // Send state to render process once dom is ready
   win.webContents.once('dom-ready', () => {
     console.log(`dom-ready`.bgBrightBlue.black, `(Main.js)`.brightBlue);
-    win.webContents.send('setInitialState', store.getCurrentState());
+    // win.webContents.send('setInitialState', store.getCurrentState())
   });
 
   // -------- TEMP DEVELOPMENT STUFF -------- //
@@ -686,14 +721,13 @@ function createWindow() {
   // This triggers a change event, which subscribers then receive
   // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
 
-  
   // setTimeout(() => {
   //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
   // }, 1000)
 
-  setTimeout(() => {
-    store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'});
-  }, 1000);
+  // setTimeout(() => {
+  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
+  // }, 1000)
 
   // setTimeout(() => {
   //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/arasd'})
@@ -741,7 +775,7 @@ electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
   return { path: filepath, exists: exists }
 });
 
-electron.ipcMain.handle('getStore', async (event) => {
+electron.ipcMain.handle('getState', async (event) => {
   return store.store
 });
 //# sourceMappingURL=main.js.map

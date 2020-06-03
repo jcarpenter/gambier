@@ -10,7 +10,7 @@ function reducers(state = initialState, action) {
       })
     case 'OPEN_FILE':
       return Object.assign({}, state, {
-        lastOpened: action.fileName
+        lastOpenedFileId: action.id
       })
     case 'SET_STARTUP_TIME':
       return Object.assign({}, state, {
@@ -25,6 +25,11 @@ function reducers(state = initialState, action) {
       return Object.assign({}, state, {
         contents: []
         // hierarchy: []
+      })
+    case 'SELECT_FOLDER':
+      console.log(action.id)
+      return Object.assign({}, state, {
+        selectedFolderId: action.id
       })
     default:
       return state

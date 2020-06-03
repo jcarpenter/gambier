@@ -8,7 +8,7 @@ let validSendChannels = ['updateProjectDirectoryStore', 'dispatch'];
 
 let validReceiveChannels = ['stateChanged', 'setInitialState'];
 
-let validInvokeChannels = ['readFile', 'ifPathExists', 'getStore'];
+let validInvokeChannels = ['readFile', 'ifPathExists', 'getState'];
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 electron.contextBridge.exposeInMainWorld(

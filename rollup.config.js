@@ -13,7 +13,7 @@ export default [
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'directory-tree', 'hierarchy-js', 'colors', 'deep-object-diff', 'deep-eql'],
+    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown'],
   },
 
   // Electron | Preload

@@ -23,14 +23,24 @@ body {
     color: var(--body-color);
 }
 
-nav {
-    grid-column: nav;
+#folders, #files {
     /* outline: 1px solid var(--debug-outline); */
-    background: var(--clr-gray-lightest);
     height: 100%;
-    padding: var(--grid);
-    padding-left: var(--grid-half);
+    // padding: var(--grid);
+    padding: var(--grid-half) 0;
     overflow-y: scroll;
+}
+
+#folders {
+    grid-column: folders;
+    background: var(--clr-gray-lightest);
+}
+
+#files {
+    grid-column: files;
+    background-color: white;
+    border-left: 1px solid lightgray;
+    border-right: 1px solid lightgray;
 }
 
 #editor {

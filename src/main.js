@@ -18,7 +18,7 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true
 // -------- Reload -------- //
 
 // Not sure how this works with our packaged build. Want it for dev, but not distribution.
-const watchAndHardReset = [
+const watchAndReload = [
   path.join(__dirname, '**/*.js'),
   path.join(__dirname, '**/*.html'),
   path.join(__dirname, '**/*.css'),
@@ -32,19 +32,21 @@ const watchAndHardReset = [
   // '**/*.jpg',
 ]
 
-require('electron-reload')(watchAndHardReset, {
+require('electron-reload')(watchAndReload, {
   // awaitWriteFinish: {
   //   stabilityThreshold: 10,
   //   pollInterval: 50
   // },
   electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-  argv: ['--inspect=5858'],
+  // argv: ['--inspect=5858'],
 })
 
 // -------- Create window -------- //
 
 // Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
 let win
+
+console.log(`--------------- Startup ---------------`.bgYellow.black, `(Main.js)`.yellow)
 
 function createWindow() {
 
@@ -85,7 +87,7 @@ function createWindow() {
   // Send state to render process once dom is ready
   win.webContents.once('dom-ready', () => {
     console.log(`dom-ready`.bgBrightBlue.black, `(Main.js)`.brightBlue)
-    win.webContents.send('setInitialState', store.getCurrentState())
+    // win.webContents.send('setInitialState', store.getCurrentState())
   })
 
   // -------- TEMP DEVELOPMENT STUFF -------- //
@@ -94,14 +96,13 @@ function createWindow() {
   // This triggers a change event, which subscribers then receive
   // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
 
-  
   // setTimeout(() => {
   //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
   // }, 1000)
 
-  setTimeout(() => {
-    store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
-  }, 1000)
+  // setTimeout(() => {
+  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
+  // }, 1000)
 
   // setTimeout(() => {
   //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/arasd'})
@@ -149,6 +150,6 @@ ipcMain.handle('ifPathExists', async (event, filepath) => {
   return { path: filepath, exists: exists }
 })
 
-ipcMain.handle('getStore', async (event) => {
+ipcMain.handle('getState', async (event) => {
   return store.store
 })

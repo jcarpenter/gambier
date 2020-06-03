@@ -1,67 +1,103 @@
 <script>
-    import File from './File.svelte';
+  import File from "./File.svelte";
+  import { onMount } from "svelte";
 
-    export let expanded = true;
-    export let hidden = false;
+  export let nestedDepth = 0;
+  export let expanded = true;
+  export let selected = false;
+  export let hidden = false;
+  export let details = {};
 
-    // export let typeOf;
-    export let name;
-    // export let path;
-    // export let created;
-    // export let modified;
-    export let children;
+  function select() {
+    window.api.send("dispatch", { type: "SELECT_FOLDER", id: details.id });
+  }
 
-    function toggle() {
-        expanded = !expanded;
-    }
+  function update(state) {
+    selected = state.selectedFolderId === details.id;
+  }
+
+  window.api.receive("stateChanged", state => {
+    update(state);
+  });
+
+  onMount(async () => {
+    const state = await window.api.invoke("getState");
+    update(state);
+  });
 </script>
 
 <style type="text/scss">
-    .expanded {
-        /* background-color: rgba(119, 196, 247, 0.2); */
-    } 
+//   .expanded {
+//   }
 
-    .test {
-        font-weight: 700;
+  .folder-icon {
+    width: 0.9em;
+    box-sizing: content-box;
+    padding-right: 0.5em;
+    flex-basis: 0;
+    opacity: 0.3;
+  }
+
+  [data-nested="1"] .folder-icon {
+      padding-left: 1em;
+  }
+
+  [data-nested="2"] .folder-icon {
+      padding-left: 2em;
+  }
+
+  [data-nested="3"] .folder-icon {
+      padding-left: 3em;
+  }
+
+  [data-nested="4"] .folder-icon {
+      padding-left: 4em;
+  }
+
+  ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    width: 100%;
+    /* border-left: 1px solid #eee; */
+  }
+
+  li {
+    align-items: center;
+    display: flex;
+    font-size: 0.8rem;
+    line-height: 1.4em;
+    padding: 0.4em 1em;
+
+    &.selected {
+      background-color: rgba(0, 0, 0, 0.05);
     }
 
-    ul {
-        padding: 0;
-        margin: 0;
-        list-style: none;
-        /* border-left: 1px solid #eee; */
+    &.childDirectory {
+      padding: 0;
+    //   padding-left: 1em;
     }
 
-    li {
-        font-size: 0.8rem;
-        padding: 0.5em 0;
-        border-top: 1px solid rgba(0, 0, 0, 0.2);
-        line-height: 1.4em;
-    
-        &:hover {
-            cursor: default;
-            // background-color: rgba(0, 0, 0, 0.2);
-        }
+    &:hover {
+      cursor: default;
     }
+  }
 </style>
 
-<!-- {#if !hidden }
-<span class:expanded on:click={toggle}>{name}</span>
-{/if} -->
-
 {#if expanded}
-	<ul>
-        {#if !hidden }
-            <li class:expanded class="test" on:click={toggle}>{name}</li>
-        {/if}
-		{#each children as file}
-			<li>
-                {#if file.typeOf === 'Directory'}
-					<svelte:self title={file.title} children={file.children} expanded/>
-				{:else}
-					<File path={file.path} title={file.title}/>
-				{/if}
-			</li>
-		{/each}
-	</ul>
+  <ul>
+    {#if !hidden}
+      <li data-nested={nestedDepth} class:selected on:click={select}>
+        <img src="images/folder.svg" class="folder-icon" />
+        {details.name}
+      </li>
+    {/if}
+    {#if details.children}
+      {#each details.children as childDirectory}
+        <li class="childDirectory">
+          <svelte:self details={childDirectory} nestedDepth={nestedDepth + 1} expanded />
+        </li>
+      {/each}
+    {/if}
+  </ul>
 {/if}

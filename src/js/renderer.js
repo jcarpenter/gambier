@@ -1,14 +1,25 @@
 import csl from 'citeproc'
-import Navigation from './Navigation.svelte';
+import NavFolders from './NavFolders.svelte';
+import NavFiles from './NavFiles.svelte';
 
 async function setup() {
 
   const tempHardCodedProjectPath = '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'
 
-  const navigation = new Navigation({
-    target: document.querySelector('nav'),
+  const navFolders = new NavFolders({
+    target: document.querySelector('#folders'),
     // props: { name: 'world' }
   })
+
+  const navFiles = new NavFiles({
+    target: document.querySelector('#files'),
+    // props: { name: 'world' }
+  })
+
+  // const navigation = new Navigation({
+  //   target: document.querySelector('nav'),
+  //   // props: { name: 'world' }
+  // })
 
   window.api.receive('setInitialState', (initialState) => {
     // console.log(initialState)

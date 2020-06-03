@@ -1,7 +1,6 @@
 :root {
   /* -------------- Layouts (CSS grid) -------------- */
-  --layout: [nav-start] minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [nav-end editor-start]
-        1fr [editor-end];
+  --layout: [folders-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [folders-end files-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [files-end editor-start] 1fr [editor-end];
   /* -------------- Colors -------------- */
   --clr-editorText: #24292e;
   --side-bar-bg-color: #fafafa;
@@ -97,14 +96,23 @@ body {
   color: var(--body-color);
 }
 
-nav {
-  grid-column: nav;
+#folders, #files {
   /* outline: 1px solid var(--debug-outline); */
-  background: var(--clr-gray-lightest);
   height: 100%;
-  padding: var(--grid);
-  padding-left: var(--grid-half);
+  padding: var(--grid-half) 0;
   overflow-y: scroll;
+}
+
+#folders {
+  grid-column: folders;
+  background: var(--clr-gray-lightest);
+}
+
+#files {
+  grid-column: files;
+  background-color: white;
+  border-left: 1px solid lightgray;
+  border-right: 1px solid lightgray;
 }
 
 #editor {

@@ -11,10 +11,15 @@ export const StoreSchema = {
     default: 'undefined'
   },
 
-  lastOpenedFile: {
+  lastOpenedFileId: {
     description: 'id of the last opened file.',
-    type: 'string',
-    default: 'undefined'
+    type: 'integer',
+    default: 0
+  },
+
+  selectedFolderId: {
+    type: 'integer',
+    default: 0
   },
 
   contents: { type: 'array', default: [] },
