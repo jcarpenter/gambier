@@ -1,22 +1,29 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, createEventDispatcher } from 'svelte';
 
-  export let title
-  export let excerpt
-  export let id
+  const dispatch = createEventDispatcher();
 
-  export let selected = false;
-
-  function openFile() {
-    window.api.send("dispatch", { type: "OPEN_FILE", id: id });
+  function forward() {
+    dispatch('clicked', {target: event.target, id: id});
   }
+
+  export let id;
+  export let title;
+  export let excerpt;
+  export let selected;
+  
+  export let parentSectionFocused = false;
+
 </script>
 
-<style type="text/scss">
-  div {
-    border-bottom: 1px solid lightgray;
-    padding: 0.5em;
+<style type='text/scss'>
+  .file {
+    padding: 0.5em 0.5em 0;
     cursor: default;
+
+    &:focus {
+      outline: none;
+    }
   }
 
   h2,
@@ -25,6 +32,7 @@
     line-height: 1.5em;
     margin: 0;
     padding: 0;
+    pointer-events: none;
   }
 
   p {
@@ -36,18 +44,29 @@
     overflow: hidden;
   }
 
+  hr {
+    margin: 0.5em 0 0;
+    height: 1px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 0;
+  }
+
   .selected {
-    background: rgb(45, 103, 250);
-    h2 {
-      color: white;
-    }
-    p {
-      color: rgba(255, 255, 255, 0.8);
+    background: var(--clr-gray-lightest);
+    &.parentSectionFocused {
+      background: rgb(45, 103, 250);
+      h2 {
+        color: white;
+      }
+      p {
+        color: rgba(255, 255, 255, 0.8);
+      }
     }
   }
 </style>
 
-<div class:selected on:click={openFile}>
+<div class='file' on:click={forward} class:selected class:parentSectionFocused tabindex='0'>
   <h2>{title}</h2>
   <p>{excerpt}</p>
+  <hr />
 </div>

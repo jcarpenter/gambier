@@ -7,8 +7,6 @@
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
     "sass": "node-sass --watch src/styles -o app/styles --source-map true --output-style expanded",
-    "watch:sass": "onchange 'src/styles/*.scss' -d 0 -- npm run sass",
-    "watch": "run-p watch:*",
     "rollup:dev": "rollup --config --watch",
     "rollup:build": "rollup --config",
     "dev": "run-p sass rollup:dev",
@@ -49,18 +47,17 @@
     "codemirror": "^5.54.0",
     "colors": "^1.4.0",
     "cpy-cli": "^3.1.1",
+    "electron": "8.2.5",
     "electron-builder": "^22.6.1",
     "electron-reload": "^1.5.0",
-    "electron": "8.2.5",
     "hierarchy-js": "^1.0.4",
     "node-sass": "^4.14.1",
     "npm-run-all": "^4.1.5",
-    "onchange": "^7.0.2",
-    "rollup-plugin-svelte": "^5.2.2",
     "rollup": "^2.10.2",
+    "rollup-plugin-svelte": "^5.2.2",
     "sass": "^1.26.5",
-    "svelte-preprocess": "^3.7.4",
     "svelte": "^3.22.3",
+    "svelte-preprocess": "^3.7.4",
     "xml-js": "^1.6.11"
   }
 }

@@ -27,8 +27,6 @@
 </script>
 
 <style type="text/scss">
-//   .expanded {
-//   }
 
   .folder-icon {
     width: 0.9em;
@@ -39,19 +37,19 @@
   }
 
   [data-nested="1"] .folder-icon {
-      padding-left: 1em;
+    padding-left: 1em;
   }
 
   [data-nested="2"] .folder-icon {
-      padding-left: 2em;
+    padding-left: 2em;
   }
 
   [data-nested="3"] .folder-icon {
-      padding-left: 3em;
+    padding-left: 3em;
   }
 
   [data-nested="4"] .folder-icon {
-      padding-left: 4em;
+    padding-left: 4em;
   }
 
   ul {
@@ -63,6 +61,7 @@
   }
 
   li {
+    // background-color: var(--clr-warning);
     align-items: center;
     display: flex;
     font-size: 0.8rem;
@@ -75,7 +74,7 @@
 
     &.childDirectory {
       padding: 0;
-    //   padding-left: 1em;
+      //   padding-left: 1em;
     }
 
     &:hover {
@@ -88,14 +87,17 @@
   <ul>
     {#if !hidden}
       <li data-nested={nestedDepth} class:selected on:click={select}>
-        <img src="images/folder.svg" class="folder-icon" />
+        <img src="images/folder.svg" class="folder-icon" alt="folder icon"/>
         {details.name}
       </li>
     {/if}
     {#if details.children}
       {#each details.children as childDirectory}
         <li class="childDirectory">
-          <svelte:self details={childDirectory} nestedDepth={nestedDepth + 1} expanded />
+          <svelte:self
+            details={childDirectory}
+            nestedDepth={nestedDepth + 1}
+            expanded />
         </li>
       {/each}
     {/if}

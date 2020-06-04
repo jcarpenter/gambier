@@ -38,6 +38,15 @@
 </script>
 
 <style type="text/scss">
+
+  #folders {
+    height: 100%;
+    overflow-y: scroll;
+    grid-column: folders;
+    background: var(--clr-gray-lightest);
+    padding: var(--grid-half) 0;
+  }
+
   h1 {
     font-size: 0.7em;
     color: rgba(0, 0, 0, 0.5);
@@ -47,8 +56,10 @@
   }
 </style>
 
-<h1>Folders</h1>
 
-{#if !isEmpty}
-  <Folder details={rootDir} nestedDepth={0}/>
-{/if}
+<div id="folders">
+  <h1>Folders</h1>
+  {#if !isEmpty}
+    <Folder details={rootDir} nestedDepth={0} />
+  {/if}
+</div>

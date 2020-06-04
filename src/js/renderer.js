@@ -1,25 +1,21 @@
 import csl from 'citeproc'
 import NavFolders from './NavFolders.svelte';
 import NavFiles from './NavFiles.svelte';
+import mountReplace from './mountReplace'
 
 async function setup() {
 
   const tempHardCodedProjectPath = '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'
 
-  const navFolders = new NavFolders({
+  mountReplace(NavFolders, {
     target: document.querySelector('#folders'),
     // props: { name: 'world' }
-  })
+  });
 
-  const navFiles = new NavFiles({
+  mountReplace(NavFiles, {
     target: document.querySelector('#files'),
     // props: { name: 'world' }
-  })
-
-  // const navigation = new Navigation({
-  //   target: document.querySelector('nav'),
-  //   // props: { name: 'world' }
-  // })
+  });
 
   window.api.receive('setInitialState', (initialState) => {
     // console.log(initialState)

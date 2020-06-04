@@ -686,6 +686,8 @@ function createWindow() {
     width: 1000,
     height: 800,
     webPreferences: {
+      scrollBounce: false,
+      // Security
       allowRunningInsecureContent: false,
       contextIsolation: true,
       enableRemoteModule: false,
@@ -697,6 +699,7 @@ function createWindow() {
       sandbox: true,
       webSecurity: true,
       webviewTag: false,
+      // Preload
       preload: path.join(__dirname, 'js/preload.js')
     }
   });
