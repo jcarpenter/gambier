@@ -26,17 +26,21 @@ body {
 }
 
 #editor {
+    height: 100%;
     display: flex;
     justify-content: center;
     grid-column: editor;
-    /* outline: 1px solid var(--debug-outline); */
+    background: white;
+    // padding: var(--grid-half) 0;
 }
 
 #editor .CodeMirror {
-    /* outline: 1px solid var(--debug-outline); */
-    max-width: 44em;
+    // min-width: 34em;
+    // max-width: 44em;
+    width: 44em;
     padding-top: var(--grid);
     height: auto;
+    border: 1px solid gray;
 }
 
 // @import "codemirror-theme";

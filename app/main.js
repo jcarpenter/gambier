@@ -772,11 +772,6 @@ electron.ipcMain.on('dispatch', (event, action) => {
 
 // -------- IPC: Invoke -------- //
 
-electron.ipcMain.handle('readFile', async (event, fileName, encoding) => {
-  let file = await fsExtra.readFile(path.join(__dirname, fileName), encoding);
-  return file
-});
-
 electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
   const exists = await fsExtra.pathExists(filepath);
   return { path: filepath, exists: exists }
@@ -784,5 +779,15 @@ electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
 
 electron.ipcMain.handle('getState', async (event) => {
   return store.store
+});
+
+electron.ipcMain.handle('getFileById', async (event, id, encoding) => {
+  
+  // Get path of file with matching id
+  const filePath = store.store.contents.find((f) => f.id == id).path;
+  
+  // Load file and return
+  let file = await fsExtra.readFile(filePath, encoding);
+  return file
 });
 //# sourceMappingURL=main.js.map

@@ -143,11 +143,6 @@ ipcMain.on('dispatch', (event, action) => {
 
 // -------- IPC: Invoke -------- //
 
-ipcMain.handle('readFile', async (event, fileName, encoding) => {
-  let file = await readFile(path.join(__dirname, fileName), encoding)
-  return file
-})
-
 ipcMain.handle('ifPathExists', async (event, filepath) => {
   const exists = await pathExists(filepath)
   return { path: filepath, exists: exists }
@@ -155,4 +150,14 @@ ipcMain.handle('ifPathExists', async (event, filepath) => {
 
 ipcMain.handle('getState', async (event) => {
   return store.store
+})
+
+ipcMain.handle('getFileById', async (event, id, encoding) => {
+  
+  // Get path of file with matching id
+  const filePath = store.store.contents.find((f) => f.id == id).path
+  
+  // Load file and return
+  let file = await readFile(filePath, encoding)
+  return file
 })

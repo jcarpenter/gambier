@@ -1,46 +1,26 @@
-import csl from 'citeproc'
-import NavFolders from './NavFolders.svelte';
-import NavFiles from './NavFiles.svelte';
-import mountReplace from './mountReplace'
+import csl, { citeEnd } from 'citeproc'
+import NavFolders from './component/NavFolders.svelte'
+import NavFiles from './component/NavFiles.svelte'
+import * as Editor from './editor/editor'
+import { mountReplace } from './utils'
 
-async function setup() {
+mountReplace(NavFolders, {
+  target: document.querySelector('#folders'),
+  // props: { name: 'world' }
+})
 
-  const tempHardCodedProjectPath = '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'
+mountReplace(NavFiles, {
+  target: document.querySelector('#files'),
+  // props: { name: 'world' }
+})
 
-  mountReplace(NavFolders, {
-    target: document.querySelector('#folders'),
-    // props: { name: 'world' }
-  });
+Editor.setup()
 
-  mountReplace(NavFiles, {
-    target: document.querySelector('#files'),
-    // props: { name: 'world' }
-  });
 
-  window.api.receive('setInitialState', (initialState) => {
-    // console.log(initialState)
-  })
+// async function setup() {
 
-  window.api.receive('stateChanged', (newState) => {
-    // console.log(newState)
-    return
-    console.log(newState.projectDirectory)
-    if (newState.projectDirectory === 'undefined') {
-      console.log('Renderer says: projectDirectory is undefined')
-      // window.api.send('dispatch', { type: 'SET_PROJECT_DIRECTORY', path: tempHardCodedProjectPath })
-    } else {
-      console.log(`Renderer says: projectDirectory is ${newState.projectDirectory}`)
-      if (newState.lastOpenedFile === 'undefined') {
-        // Load first file
-        // window.api.send('dispatch', { type: 'SET_PROJECT_DIRECTORY', path: 
-      }
-    }
+//   window.api.receive('stateChanged', (newState) => {
+//   })
+// }
 
-    // if (store.hierarchy && store.hierarchy[0] !== root) {
-    //   root = store.hierarchy[0]
-    // }
-  })
-
-}
-
-window.addEventListener('DOMContentLoaded', setup)
+// window.addEventListener('DOMContentLoaded', setup)

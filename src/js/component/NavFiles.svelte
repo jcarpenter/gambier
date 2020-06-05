@@ -1,7 +1,7 @@
 <script>
   import File from "./File.svelte";
   import { onMount, tick } from "svelte";
-  import hasChanged from "./hasChanged";
+  import { hasChanged } from "../utils";
 
   let files = [];
   let selectedFileId = 0;
@@ -11,20 +11,23 @@
   let sectionIsFocused = false;
 
   function handleKeydown(event) {
-    if (!sectionIsFocused) return
+    if (!sectionIsFocused) return;
     const key = event.key;
     switch (key) {
       case "Tab":
+        event.preventDefault();
         break;
       case "ArrowUp":
+        event.preventDefault();
         if (selectedFileIndex > 0) {
-          const prevFileId = files[selectedFileIndex - 1].id
+          const prevFileId = files[selectedFileIndex - 1].id;
           window.api.send("dispatch", { type: "OPEN_FILE", id: prevFileId });
         }
-      break;
+        break;
       case "ArrowDown":
+        event.preventDefault();
         if (selectedFileIndex < files.length - 1) {
-          const nextFileId = files[selectedFileIndex + 1].id
+          const nextFileId = files[selectedFileIndex + 1].id;
           window.api.send("dispatch", { type: "OPEN_FILE", id: nextFileId });
         }
         break;
@@ -43,29 +46,24 @@
    * Set `selected` property of each entry in files array.
    * Set all to false, except the one whose id == state.lastOpenedFileId.
    * Then make sure the selected file is scrolled into view.
-  */
+   */
   async function setSelectedFile(state) {
-
     files.forEach((f, index) => {
       f.selected = f.id == state.lastOpenedFileId;
-      if (f.selected) selectedFileIndex = index
-    })
+      if (f.selected) selectedFileIndex = index;
+    });
 
     // Tell Svelte that variable has changed. Makes view update.
     files = files;
-
-    // Wait for pending changes to be applied to component
-    // then get the new selectedEl, and scroll it into view.
-    await tick();
-    scrollFileIntoView(selectedEl);
   }
 
-  function scrollFileIntoView(element) {
+  function scrollFileIntoView(element, animate = true) {
+    const behavior = animate ? "smooth" : "auto"
     if (element) {
       element.scrollIntoView({
         block: "nearest",
         inline: "nearest",
-        behavior: "smooth"
+        behavior: behavior
       });
     }
   }
@@ -74,18 +72,24 @@
     const state = await window.api.invoke("getState");
     populateFiles(state);
     setSelectedFile(state);
+    await tick();
+    scrollFileIntoView(selectedEl, false);
   });
 
-  window.api.receive("stateChanged", (state, oldState) => {
+  window.api.receive("stateChanged", async (state, oldState) => {
     // If folder changed...
     if (hasChanged("selectedFolderId", state, oldState)) {
       populateFiles(state);
       setSelectedFile(state);
+      await tick();
+      scrollFileIntoView(selectedEl, true);
     }
 
     // If id changed...
     if (hasChanged("lastOpenedFileId", state, oldState)) {
       setSelectedFile(state);
+      await tick();
+      scrollFileIntoView(selectedEl, true);
     }
   });
 
@@ -95,7 +99,7 @@
 </script>
 
 <style type="text/scss">
-  @import "../styles/_variables.scss";
+  @import "../../styles/_variables.scss";
 
   #files {
     height: 100%;
@@ -157,31 +161,34 @@
 </style>
 
 <svelte:window
-  on:click={e => (sectionIsFocused = section.contains(e.target))} 
-  on:keydown|preventDefault={handleKeydown}
-  />
+  on:click={e => (sectionIsFocused = section.contains(e.target))}
+  on:keydown={handleKeydown} />
 
-<section
-  data-elastic
-  bind:this={section}
-  id="files">
+<section data-elastic bind:this={section} id="files">
   {#each files as file}
-      {#if file.selected}
-        <div bind:this={selectedEl} class='file selected' class:parentSectionFocused={sectionIsFocused} tabindex="0">
-          <h2>{file.title}</h2>
-          <p>{file.excerpt}</p>
-          <hr />
-        </div>
-      {:else}
-        <div class='file' on:click|preventDefault={() => clicked(file.id)} class:parentSectionFocused={sectionIsFocused} tabindex="0">
-          <h2>{file.title}</h2>
-          <p>{file.excerpt}</p>
-          <hr />
-        </div>
-      {/if}
-      
+    {#if file.selected}
+      <div
+        bind:this={selectedEl}
+        class="file selected"
+        class:parentSectionFocused={sectionIsFocused}
+        tabindex="0">
+        <h2>{file.title}</h2>
+        <p>{file.excerpt}</p>
+        <hr />
+      </div>
+    {:else}
+      <div
+        class="file"
+        on:click|preventDefault={() => clicked(file.id)}
+        class:parentSectionFocused={sectionIsFocused}
+        tabindex="0">
+        <h2>{file.title}</h2>
+        <p>{file.excerpt}</p>
+        <hr />
+      </div>
+    {/if}
 
-      <!-- <File
+    <!-- <File
         {...file}
         bind:this={selectedEl}
         parentSectionFocused={sectionIsFocused}

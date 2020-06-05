@@ -2,7 +2,7 @@
  * Define "Gambier" mode.
  * Per CodeMirror docs: https://codemirror.net/doc/manual.html#modeapi.
  */
-CodeMirror.defineMode("gambier", function (config, parserConfig) {
+export default GambierCodeMirrorMode = CodeMirror.defineMode("gambier", (config, parserConfig) => {
   var gambierOverlay = {
     startState: function () {
       return {
@@ -80,3 +80,4 @@ CodeMirror.defineMode("gambier", function (config, parserConfig) {
   }
   return CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "markdown" }), gambierOverlay)
 })
+
