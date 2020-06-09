@@ -6,7 +6,7 @@ let validSendChannels = ['updateProjectDirectoryStore', 'dispatch']
 
 let validReceiveChannels = ['stateChanged', 'setInitialState']
 
-let validInvokeChannels = ['ifPathExists', 'getState', 'getFileById']
+let validInvokeChannels = ['ifPathExists', 'getState', 'getFileById', 'pathJoin']
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 contextBridge.exposeInMainWorld(

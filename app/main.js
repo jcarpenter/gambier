@@ -157,25 +157,8 @@ class ProjectDirectory {
 
   constructor() {
     this.store;
+    this.watcher;
     this.directory = '';
-    // this.contents = []
-
-    this.watcher = chokidar.watch('', {
-      ignored: /(^|[\/\\])\../, // Ignore dotfiles
-      ignoreInitial: true,
-      persistent: true,
-      awaitWriteFinish: {
-        stabilityThreshold: 400,
-        pollInterval: 200
-      }
-    });
-
-    this.watcher.on('all', (event, path) => {
-      console.log('- - - - - - - -');
-      console.log(event);
-      console.log(path);
-      // this.mapProjectHierarchy(this.directory)
-    });
   }
 
   async setup(store) {
@@ -195,8 +178,26 @@ class ProjectDirectory {
       let contents = await this.mapDirectoryRecursively(this.directory);
       contents = await this.getFilesDetails(contents);
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
-      this.watcher.add(this.directory);
+      this.startWatching(this.directory);
     }
+  }
+
+  startWatching(directory) {
+    this.watcher = chokidar.watch(directory, {
+      ignored: /(^|[\/\\])\../, // Ignore dotfiles
+      ignoreInitial: true,
+      persistent: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 400,
+        pollInterval: 200
+      }
+    });
+
+    this.watcher.on('all', (event, path) => {
+      console.log('- - - - - - - -');
+      console.log(event);
+      console.log(path);
+    });
   }
 
   async isWorkingPath(directory) {
@@ -224,7 +225,10 @@ class ProjectDirectory {
     if (newDir !== oldDir) {
 
       // We unwatch the old directory (if it wasn't undefined)
-      if (oldDir !== 'undefined') this.watcher.unwatch(oldDir);
+      if (oldDir !== 'undefined') {
+        // this.watcher.unwatch(oldDir)
+        await this.watcher.close();
+      }
 
       // Check if path is valid. 
       // If yes, map directory, update store, and add watcher.
@@ -232,7 +236,7 @@ class ProjectDirectory {
         let contents = await this.mapDirectoryRecursively(newDir);
         contents = await this.getFilesDetails(contents);
         this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
-        this.watcher.add(newDir);
+        this.startWatching(newDir);
       } else {
         // Else, if it doesn't exist, tell store to `RESET_HIERARCHY` (clears to `[]`)
         this.store.dispatch({ type: 'RESET_HIERARCHY' });
@@ -359,7 +363,7 @@ class ProjectDirectory {
         }
       })
     );
-    console.log(contents);
+    // console.log(contents)
     return contents
   }
 }
@@ -391,71 +395,6 @@ function extractExcerpt(file) {
 }
 
 const projectDirectory = new ProjectDirectory();
-
-
-
-
-
-
-// // -------- Project directory -------- //
-
-// function Directory(name, path, children = []) {
-//   this.typeOf = 'Directory'
-//   this.name = name
-//   this.path = path
-//   this.children = children
-// }
-
-// function File(title, excerpt, path, created, modified) {
-//   this.typeOf = 'File'
-//   this.title = title
-//   this.excerpt = excerpt
-//   this.path = path
-//   this.created = created
-//   this.modified = modified
-// }
-
-// async function getDirectoryContents(directoryObject) {
-
-//   let directoryPath = directoryObject.path
-
-//   let contents = await readdir(directoryPath, { withFileTypes: true })
-
-//   // Remove .DS_Store files
-//   contents = contents.filter((c) => c.name !== '.DS_Store')
-
-//   for (let c of contents) {
-//     if (c.isDirectory()) {
-//       // console.log("--------------")
-//       // console.log(c.name)
-//       const subPath = path.join(directoryPath, c.name)
-//       const subDir = new Directory(c.name, subPath)
-//       const subDirContents = await getDirectoryContents(subDir)
-//       const hasFilesWeCareAbout = subDirContents.children.find((s) => s.name.includes('.md')) == undefined ? false : true
-//       if (hasFilesWeCareAbout)
-//         directoryObject.children.push(subDirContents)
-//     } else if (c.name.includes('.md')) {
-
-//       // console.log(`> ${c.name}`)
-//       const filePath = path.join(directoryPath, c.name)
-
-//       // Get title (and other front matter), contents and excerpt
-//       const md = matter.read(filePath, { excerpt: true })
-
-//       const hasFrontMatter = md.hasOwnProperty("data")
-//       console.log(hasFrontMatter)
-
-//       // Get created and modified times
-//       const stats = await stat(filePath)
-//       const created = stats.birthtime.toISOString()
-//       const modified = stats.mtime.toISOString()
-
-//       let file = new File(c.name, "Excerpt", filePath, created, modified)
-//       directoryObject.children.push(file)
-//     }
-//   }
-//   return directoryObject
-// }
 
 const app = electron__default.app;
 
@@ -789,5 +728,9 @@ electron.ipcMain.handle('getFileById', async (event, id, encoding) => {
   // Load file and return
   let file = await fsExtra.readFile(filePath, encoding);
   return file
+});
+
+electron.ipcMain.handle('pathJoin', async (event, path1, path2) => {
+  return path.join(path1, path2)
 });
 //# sourceMappingURL=main.js.map

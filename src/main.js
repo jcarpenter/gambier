@@ -161,3 +161,7 @@ ipcMain.handle('getFileById', async (event, id, encoding) => {
   let file = await readFile(filePath, encoding)
   return file
 })
+
+ipcMain.handle('pathJoin', async (event, path1, path2) => {
+  return path.join(path1, path2)
+})

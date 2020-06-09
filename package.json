@@ -31,6 +31,7 @@
   "homepage": "https://github.com/jcarpenter/gambier#readme",
   "dependencies": {
     "chokidar": "^3.4.0",
+    "codemirror-markdown-list-autoindent": "^1.0.1",
     "deep-eql": "^4.0.0",
     "deep-object-diff": "^1.1.0",
     "electron-store": "^5.1.1",

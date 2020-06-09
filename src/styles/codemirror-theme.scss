@@ -1,42 +1,131 @@
 .cm-s-gambier {
-    &.CodeMirror {
-        /* border: 1px solid #eee; */
-        font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
-        font-size: var(--font-base-size);
-        line-height: var(--baseLineHeight);
-        display: block;
+    background: #fff;
+    color: var(--clr-editorText);
+    display: block;
+    font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
+    font-size: var(--font-sml-1);
+    line-height: var(--baseLineHeight);
+
+    // -------------- Cursor -------------- //
+
+    .CodeMirror-cursor {
+        border-left: 1px solid gray;
     }
 
-    /* -------------- Frontmatter -------------- */
+    // -------------- Line -------------- //
 
-    .frontmatter span {
-        color: gray;
+    // Pad sides so there's room for header hashes (which hang left).
+    .CodeMirror-lines {
+        padding: 0 3em;
     }
 
-    pre.frontmatter {
+    // Add padding to bottom of doc, so that when we're at bottom of
+    // scroll, there's padding before edge of editor.
+    .CodeMirror-line:last-of-type {
+        margin-bottom: 8em;
+    }
+
+    // -------------- Lists -------------- //
+
+    .CodeMirror-line.list1,
+    .CodeMirror-line.list2,
+    .CodeMirror-line.list3,
+    .CodeMirror-line.list4 {
+        span[role="presentation"] {
+            position: relative;
+        }
+
+        & > span:before {
+            content: "*";
+            color: var(--clr-blue);
+            user-select: none;
+            position: absolute;
+            left: -1em;
+        }
+    }
+
+    .CodeMirror-line.list1 {
+        padding-left: 2em;
+    }
+    .CodeMirror-line.list2 {
+        padding-left: 4em;
+    }
+    .CodeMirror-line.list3 {
+        padding-left: 6em;
+    }
+    .CodeMirror-line.list4 {
+        padding-left: 8em;
+    }
+
+    /* -------------- Blockquote -------------- */
+
+    .CodeMirror-line.blockquote {
+        color: var(--clr-blue);
+        font-style: italic;
+        padding-left: 1em;
+        text-indent: -0.85em;
+
+        &::first-letter {
+            color: var(--clr-blue-light);
+        }
+    }
+
+    // -------------- Frontmatter -------------- //
+
+    .CodeMirror-line.frontmatter {
         background: rgba(0, 0, 0, 0.04);
     }
 
     /* -------------- Citation -------------- */
 
-    // .cm-citation {
-    //     color: palevioletred;
-
-    //     &.expand {
-    //         color: greenyellow;
-    //     }
-    // }
-
-    /* -------------- Wikilink -------------- */
-
-    .cm-wikilink {
-        color: turquoise;
+    .cm-citation {
+        color: palevioletred;
     }
 
-    /* -------------- Figure -------------- */
+    /* -------------- Headers -------------- */
 
-    .figure span {
-        color: pink;
+    .cm-header-hash {
+        color: var(--clr-gray-lighter);
+
+        &.cm-header-1 {
+            margin-left: -0.8em;
+        }
+
+        &.cm-header-2 {
+            margin-left: -1.4em;
+            font-weight: 500;
+        }
+
+        &.cm-header-3 {
+            margin-left: -2em;
+        }
+
+        &.cm-header-4 {
+            margin-left: -2.6em;
+        }
+
+        &.cm-header-5 {
+            margin-left: -3.2em;
+        }
+
+        &.cm-header-6 {
+            margin-left: -3.2em;
+        }
+    }
+
+    .cm-header-1 {
+        text-decoration: underline;
+        &::first-letter {
+            text-decoration: none;
+        }
+        &.cm-header-hash {
+            text-decoration: none;
+        }
+    }
+
+    .cm-header-3 {
+        font-weight: normal;
+        font-style: italic;
     }
 }
 
@@ -45,10 +134,6 @@
 OLD
 ========================================================
 */
-.cm-s-gambier.CodeMirror {
-    background: #fff;
-    color: var(--clr-editorText);
-}
 
 .cm-s-gambier .CodeMirror-gutters {
     background: #fff;
@@ -68,10 +153,6 @@ OLD
     padding: 0 16px 0 16px;
 }
 
-.cm-s-gambier .CodeMirror-cursor {
-    border-left: 1px solid #24292e;
-}
-
 .cm-s-gambier div.CodeMirror-selected,
 .cm-s-gambier .CodeMirror-line::selection,
 .cm-s-gambier .CodeMirror-line > span::selection,
@@ -89,11 +170,6 @@ OLD
 .cm-s-gambier .CodeMirror-matchingbracket {
     text-decoration: underline;
     color: #24292e !important;
-}
-
-.cm-s-gambier .CodeMirror-lines {
-    /* font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; */
-    background: #fff;
 }
 
 .cm-s-gambier .cm-comment {

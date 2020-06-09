@@ -25326,88 +25326,189 @@ class NavFiles extends SvelteComponent {
 	}
 }
 
+const yamlOverlay = {
+  startState: function () {
+    return {
+      // frontMatter: false,
+    }
+  },
+  token: function (stream, state) {
+    state.combineTokens = true;
+
+    if (stream.sol()) {
+      stream.next();
+      return "line-frontmatter"
+    }
+
+    while (stream.next() != null) { }
+
+    // If we don't do any of the above, return null (token does not need to be styled)
+    return null
+  }
+};
+
+const markdownOverlay = {
+  startState: function () {
+    return {
+      frontMatter: false,
+    }
+  },
+  token: function (stream, state) {
+
+    state.combineTokens = null;
+
+    let ch;
+
+    if (stream.match(/^(-|\*|\+)\s/)) {
+      // console.log("L1")
+      state.combineTokens = true;
+      return "line-list1"
+    } else if (stream.match(/^\s{2,3}(-|\*|\+)\s/)) {
+      // console.log("L2")
+      state.combineTokens = true;
+      return "line-list2"
+    } else if (stream.match(/^\s{4,5}(-|\*|\+)\s/)) {
+      // console.log("L3")
+      state.combineTokens = true;
+      return "line-list3"
+    } else if (stream.match(/^\s{6,7}(-|\*|\+)\s/)) {
+      state.combineTokens = true;
+      return "line-list4"
+    }
+
+    // Blockquote
+    if (stream.match(">")) {
+      // stream.skipToEnd()
+      stream.next();
+      return "line-blockquote"
+    }
+
+    // Header (hash tags)
+    // if (stream.sol() && stream.match("#")) {
+    if (stream.match("#")) {
+      state.combineTokens = true;
+      return "header-hash"
+    }
+
+    // Cite keys
+    if (stream.match("[@")) {
+      while ((ch = stream.next()) != null)
+        if (ch == "]") {
+          state.combineTokens = false;
+          return "citation"
+        }
+    }
+
+    // Wiki links
+    if (stream.match("[[")) {
+      while ((ch = stream.next()) != null)
+        if (ch == "]" && stream.next() == "]") {
+          stream.eat("]");
+          state.combineTokens = true;
+          return "wikilink"
+        }
+    }
+
+    // Figures
+    if (stream.match("![")) {
+      stream.skipToEnd();
+      return "figure"
+    }
+
+    // Links
+    // if (stream.match("[")) {
+    //   while ((ch = stream.next()) != null)
+    //     console.log(stream.baseToken())
+    //   if (ch == ")") {
+    //     // state.combineTokens = true
+    //     return "linkwrapper "
+    //   }
+    // }
+
+    while (
+      stream.next() != null
+      // Line
+      && !stream.match(">", false)
+      && !stream.match("#", false)
+      // Inline
+      && !stream.match("[@", false)
+      && !stream.match("![", false)
+      && !stream.match("[[", false)
+      // && !stream.match("[", false)
+    ) { }
+
+    // If we don't do any of the above, return null (token does not need to be styled)
+    return null
+  }
+};
+
 /**
  * Define "Gambier" mode.
  * Per CodeMirror docs: https://codemirror.net/doc/manual.html#modeapi.
  */
 GambierCodeMirrorMode = CodeMirror.defineMode("gambier", (config, parserConfig) => {
-  var gambierOverlay = {
+
+  const START = 0, FRONTMATTER = 1, BODY = 2;
+
+  const yamlMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "yaml" }), yamlOverlay);
+  const innerMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "markdown", tokenTypeOverrides: { code: 'code', list1: 'list1', list2: 'list2', list3: 'list3' } }), markdownOverlay);
+  // const innerMode = CodeMirror.getMode(config, { name: "markdown" })
+
+  function curMode(state) {
+    return state.state == BODY ? innerMode : yamlMode
+  }
+
+  return {
     startState: function () {
       return {
-        frontMatter: false,
+        state: START,
+        inner: CodeMirror.startState(yamlMode)
+      }
+    },
+    copyState: function (state) {
+      return {
+        state: state.state,
+        inner: CodeMirror.copyState(curMode(state), state.inner)
       }
     },
     token: function (stream, state) {
-
-      state.combineTokens = null;
-
-      let ch;
-
-      if (state.frontMatter == false && stream.match("---")) {
-        state.frontMatter = true;
-        return "line-frontmatter"
-      }
-
-      if (state.frontMatter == true) {
-
-        if (stream.match("---")) {
-          state.frontMatter = false;
+      if (state.state == START) {
+        if (stream.match(/---/, false)) {
+          state.state = FRONTMATTER;
+          return yamlMode.token(stream, state.inner)
+        } else {
+          state.state = BODY;
+          state.inner = CodeMirror.startState(innerMode);
+          return innerMode.token(stream, state.inner)
         }
-
-        stream.skipToEnd();
-        return "line-frontmatter"
+      } else if (state.state == FRONTMATTER) {
+        var end = stream.sol() && stream.match(/(---|\.\.\.)/, false);
+        var style = yamlMode.token(stream, state.inner);
+        if (end) {
+          state.state = BODY;
+          state.inner = CodeMirror.startState(innerMode);
+        }
+        return style
+      } else {
+        return innerMode.token(stream, state.inner)
       }
-
-      // Cite keys
-      if (stream.match("[@")) {
-        while ((ch = stream.next()) != null)
-          if (ch == "]") {
-            state.combineTokens = true;
-            return "citation"
-          }
-      }
-
-      // Wiki links
-      if (stream.match("[[")) {
-        while ((ch = stream.next()) != null)
-          if (ch == "]" && stream.next() == "]") {
-            stream.eat("]");
-            state.combineTokens = true;
-            return "wikilink"
-          }
-      }
-
-      // Figures
-      if (stream.match("![")) {
-        stream.skipToEnd();
-        return "line-figure"
-      }
-
-      // Links
-      // if (stream.match("[")) {
-      //   while ((ch = stream.next()) != null)
-      //     console.log(stream.baseToken())
-      //   if (ch == ")") {
-      //     // state.combineTokens = true
-      //     return "linkwrapper "
-      //   }
-      // }
-
-      while (
-        stream.next() != null
-        && !stream.match("---", false)
-        && !stream.match("[@", false)
-        && !stream.match("![", false)
-        && !stream.match("[[", false)
-        // && !stream.match("[", false)
-      ) { }
-
-      // If we don't do any of the above, return null (token does not need to be styled)
-      return null
+    },
+    innerMode: function (state) {
+      return { mode: curMode(state), state: state.inner }
+    },
+    blankLine: function (state) {
+      var mode = curMode(state);
+      if (mode.blankLine) return mode.blankLine(state.inner)
     }
-  };
-  return CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "markdown" }), gambierOverlay)
+  }
+
+
+  // return CodeMirror.getMode(config, "markdown")
 });
+
+// export default GambierCodeMirrorMode = CodeMirror.defineMode("gambier", (config, parserConfig) => {
+//   return CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "markdown" }), gambierOverlay)
+// })
 
 /**
  * Mark text and replace with specified element.
@@ -25438,8 +25539,8 @@ function getTextFromRange(editor, line, start, end) {
 
 function add_css$3() {
 	var style = element("style");
-	style.id = "svelte-12ibq5b-style";
-	style.textContent = ".link.svelte-12ibq5b{background:lightskyblue;border-radius:2px}";
+	style.id = "svelte-nv1j44-style";
+	style.textContent = ":root{--layout:[folders-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [folders-end files-start] minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.link.svelte-nv1j44{box-sizing:border-box;color:var(--clr-blue);background-color:var(--clr-blue-lighter);padding:0 0.2em;border-radius:0.15em;border:1px solid var(--clr-blue-light)}";
 	append(document.head, style);
 }
 
@@ -25451,7 +25552,7 @@ function create_fragment$3(ctx) {
 		c() {
 			span = element("span");
 			t = text(/*text*/ ctx[0]);
-			attr(span, "class", "link svelte-12ibq5b");
+			attr(span, "class", "link svelte-nv1j44");
 		},
 		m(target, anchor) {
 			insert(target, span, anchor);
@@ -25470,26 +25571,23 @@ function create_fragment$3(ctx) {
 
 function instance$3($$self, $$props, $$invalidate) {
 	let { text } = $$props;
-	let { url } = $$props;
 
 	$$self.$set = $$props => {
 		if ("text" in $$props) $$invalidate(0, text = $$props.text);
-		if ("url" in $$props) $$invalidate(1, url = $$props.url);
 	};
 
-	return [text, url];
+	return [text];
 }
 
 class Link extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-12ibq5b-style")) add_css$3();
-		init(this, options, instance$3, create_fragment$3, safe_not_equal, { text: 0, url: 1 });
+		if (!document.getElementById("svelte-nv1j44-style")) add_css$3();
+		init(this, options, instance$3, create_fragment$3, safe_not_equal, { text: 0 });
 	}
 }
 
-function Details(line) {
-  this.line = line;
+function Details() {
   this.start;
   this.end;
   this.textStart;
@@ -25504,12 +25602,10 @@ function Details(line) {
  * For the specified line, find links, and for each found, create a new object with their details, push it into an array, and return the array.
  * See Link object (above) for what is included.
  */
-function find(editor, lineHandle) {
+function find(editor, lineNo, tokens) {
 
   let hit;
   let hits = [];
-  const lineNum = lineHandle.lineNo();
-  const tokens = editor.getLineTokens(lineNum);
 
   // Find open and closing tokens
   for (const token of tokens) {
@@ -25518,14 +25614,14 @@ function find(editor, lineHandle) {
         switch (token.string) {
           case "[":
             // TODO: Get token at (token.end + 1). If it's '@', then don't create link.
-            hit = new Details(lineNum);
+            hit = new Details();
             hit.start = token.start;
             hit.textStart = token.start;
             hits.push(hit);
             break
           case "]":
             hit.textEnd = token.end;
-            hit.text = getTextFromRange(editor, hit.line, hit.textStart + 1, hit.textEnd - 1);
+            hit.text = getTextFromRange(editor, lineNo, hit.textStart + 1, hit.textEnd - 1);
             break
         }
       } else if (token.type.includes('url')) {
@@ -25536,7 +25632,7 @@ function find(editor, lineHandle) {
           case ")":
             hit.urlEnd = token.end;
             hit.end = token.end;
-            hit.url = getTextFromRange(editor, hit.line, hit.urlStart + 1, hit.urlEnd - 1);
+            hit.url = getTextFromRange(editor, lineNo, hit.urlStart + 1, hit.urlEnd - 1);
             break
         }
       }
@@ -25555,8 +25651,9 @@ function find(editor, lineHandle) {
 /**
  * Find and mark links for the given line
  */
-function markInlineLinks(editor, lineHandle) {
-  let links = find(editor, lineHandle);
+function markInlineLinks(editor, lineHandle, tokens) {
+  const line = lineHandle.lineNo();
+  const links = find(editor, line, tokens);
   if (links.length > 0) {
     links.map((l) => {
 
@@ -25570,21 +25667,178 @@ function markInlineLinks(editor, lineHandle) {
         }
       });
 
-      replaceMarkWithElement(editor, frag, l.line, l.start, l.end);
+      replaceMarkWithElement(editor, frag, line, l.start, l.end);
     });
   }
+}
+
+/* src/js/component/Figure.svelte generated by Svelte v3.22.3 */
+
+function add_css$4() {
+	var style = element("style");
+	style.id = "svelte-1jw57r3-style";
+	style.textContent = "@charset \"UTF-8\";figure.svelte-1jw57r3.svelte-1jw57r3{width:100%;margin:0;padding:0;display:inline-block;white-space:normal}figure.svelte-1jw57r3 img.svelte-1jw57r3{max-width:10em;display:inline-block;height:auto;border-radius:3px;text-indent:100%;white-space:nowrap;overflow:hidden;position:relative}figure.svelte-1jw57r3 img.svelte-1jw57r3:after{text-indent:0%;content:\"\" \" \" attr(src);color:#646464;background-color:#f0f0f0;white-space:normal;display:block;position:absolute;z-index:2;top:0;left:0;width:100%;height:100%}figure.svelte-1jw57r3 figcaption.svelte-1jw57r3{font-style:italic;color:gray}";
+	append(document.head, style);
+}
+
+function create_fragment$4(ctx) {
+	let figure;
+	let img;
+	let img_src_value;
+	let t0;
+	let figcaption;
+	let t1;
+
+	return {
+		c() {
+			figure = element("figure");
+			img = element("img");
+			t0 = space();
+			figcaption = element("figcaption");
+			t1 = text(/*caption*/ ctx[0]);
+			if (img.src !== (img_src_value = /*url*/ ctx[1])) attr(img, "src", img_src_value);
+			attr(img, "alt", /*alt*/ ctx[2]);
+			attr(img, "class", "svelte-1jw57r3");
+			attr(figcaption, "class", "svelte-1jw57r3");
+			attr(figure, "class", "svelte-1jw57r3");
+		},
+		m(target, anchor) {
+			insert(target, figure, anchor);
+			append(figure, img);
+			append(figure, t0);
+			append(figure, figcaption);
+			append(figcaption, t1);
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*url*/ 2 && img.src !== (img_src_value = /*url*/ ctx[1])) {
+				attr(img, "src", img_src_value);
+			}
+
+			if (dirty & /*alt*/ 4) {
+				attr(img, "alt", /*alt*/ ctx[2]);
+			}
+
+			if (dirty & /*caption*/ 1) set_data(t1, /*caption*/ ctx[0]);
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(figure);
+		}
+	};
+}
+
+function instance$4($$self, $$props, $$invalidate) {
+	let { caption } = $$props;
+	let { url } = $$props;
+	let { alt } = $$props;
+
+	$$self.$set = $$props => {
+		if ("caption" in $$props) $$invalidate(0, caption = $$props.caption);
+		if ("url" in $$props) $$invalidate(1, url = $$props.url);
+		if ("alt" in $$props) $$invalidate(2, alt = $$props.alt);
+	};
+
+	return [caption, url, alt];
+}
+
+class Figure extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-1jw57r3-style")) add_css$4();
+		init(this, options, instance$4, create_fragment$4, safe_not_equal, { caption: 0, url: 1, alt: 2 });
+	}
+}
+
+/**
+ * Find and mark links for the given line
+ */
+async function markFigures(editor, lineHandle, tokens, filePath) {
+
+  const text = lineHandle.text;
+  const line = lineHandle.lineNo();
+  const start = 0;
+  const end = tokens[tokens.length - 1].end;
+  
+  const caption = text.substring(2, text.lastIndexOf(']'));
+  let srcPath = text.substring(text.lastIndexOf('(') + 1, text.lastIndexOf('.') + 4);
+  srcPath = await window.api.invoke('pathJoin', filePath, srcPath);
+  let alt = text.substring(text.lastIndexOf('('), text.lastIndexOf(')'));
+  alt = alt.substring(alt.indexOf('"') + 1, alt.lastIndexOf('"'));
+
+  const frag = document.createDocumentFragment();
+
+  const component = new Figure({
+    target: frag,
+    props: {
+      caption: caption,
+      url: srcPath,
+      alt: alt
+    }
+  });
+
+  replaceMarkWithElement(editor, frag, line, start, end);
+}
+
+/**
+ * Find and mark list items
+ */
+async function markList(editor, lineHandle, tokens) {
+
+  const listMarker = lineHandle.text.trim().charAt(0);
+  const line = lineHandle.lineNo();
+  const start = 0;
+  const end = lineHandle.text.indexOf(listMarker) + 2;
+
+  const frag = document.createDocumentFragment();
+  const span = document.createElement('span');
+  // span.innerHTML = `${listMarker}`
+  // span.classList.add('list-marker')
+  // const marker = document.createElement('span')
+  // span.appendChild(marker)
+  frag.appendChild(span);
+
+  editor.markText({ line: line, ch: start }, { line: line, ch: end }, {
+    collapsed: true,
+    // replacedWith: frag,
+    // className: 'list-marker',
+    clearOnEnter: false,
+    selectLeft: false,
+    selectRight: true,
+    handleMouseEvents: false
+  });
+  
+
+  // const caption = text.substring(2, text.lastIndexOf(']'))
+  // let srcPath = text.substring(text.lastIndexOf('(') + 1, text.lastIndexOf('.') + 4)
+  // srcPath = await window.api.invoke('pathJoin', filePath, srcPath);
+  // let alt = text.substring(text.lastIndexOf('('), text.lastIndexOf(')'))
+  // alt = alt.substring(alt.indexOf('"') + 1, alt.lastIndexOf('"'))
+
+  // const frag = document.createDocumentFragment()
+
+  // const component = new Figure({
+  //   target: frag,
+  //   props: {
+  //     caption: caption,
+  //     url: srcPath,
+  //     alt: alt
+  //   }
+  // })
+
+  // replaceMarkWithElement(editor, frag, line, start, end)
 }
 
 // -------- SHARED VARIABLES -------- //
 
 let editor;
 let fileId;
+let filePath;
 let lastCursorLine = 0;
-
 
 // -------- SETUP -------- //
 
-async function makeEditor() {
+function makeEditor() {
 
   const textarea = document.querySelector('#editor textarea');
 
@@ -25594,6 +25848,13 @@ async function makeEditor() {
     lineWrapping: true,
     lineNumbers: false,
     theme: 'gambier',
+    // indentUnit: 2,
+    indentWithTabs: false,
+    extraKeys: {
+      'Enter': 'newlineAndIndentContinueMarkdownList',
+      'Tab': 'autoIndentMarkdownList',
+      'Shift-Tab': 'autoUnindentMarkdownList'
+    }
   });
 
   // Setup event listeners
@@ -25605,6 +25866,7 @@ async function makeEditor() {
  */
 function loadFile(file) {
   editor.setValue(file);
+  editor.clearHistory();
   // findAndMark()
 }
 
@@ -25614,11 +25876,20 @@ function loadFile(file) {
 function findAndMark() {
   editor.operation(() => {
     editor.eachLine((lineHandle) => {
-      // Mark links
-      markInlineLinks(editor, lineHandle);
+      const tokens = editor.getLineTokens(lineHandle.lineNo());
+      const isFigure = tokens.some((t) => t.type !== null && t.type.includes('figure'));
+      // const isFigure = tokens[0] !== undefined && tokens[0].type.includes('figure')
+      const isList = tokens[0] !== undefined && tokens[0].type !== null && tokens[0].type.includes('list');
 
-      // Mark citations
-      // markCitations(editor, lineHandle)
+      if (isFigure) {
+        markFigures(editor, lineHandle, tokens, filePath);
+      } else {
+        if (isList) {
+          markList(editor, lineHandle);
+        }
+        markInlineLinks(editor, lineHandle, tokens);
+        // markCitations(editor, lineHandle, tokens)
+      }
     });
   });
 }
@@ -25641,9 +25912,14 @@ async function setup() {
 
   const state = await window.api.invoke('getState', 'utf8');
   fileId = state.lastOpenedFileId;
+  filePath = state.contents.find((f) => f.id == fileId).path;
+  filePath = filePath.substring(0, filePath.lastIndexOf('/'));
   const file = await window.api.invoke('getFileById', fileId, 'utf8');
 
   window.api.receive('stateChanged', async (state, oldState) => {
+    if (hasChanged("projectDirectory", state, oldState)) {
+      filePath = state.projectDirectory;
+    }
     if (hasChanged("lastOpenedFileId", state, oldState)) {
       fileId = state.lastOpenedFileId;
       const file = await window.api.invoke('getFileById', fileId, 'utf8');
@@ -25651,7 +25927,7 @@ async function setup() {
     }
   });
 
-  await makeEditor();
+  makeEditor();
 
   loadFile(file);
 }

@@ -27,17 +27,23 @@ We use [electron-builder](https://www.electron.build) for the build. Per configu
 
 We use Rollup for bundling. See `rollup.config.js`.
 
-Main process:
+### Main process
 
 * `main.js` and `preload.js` are output as CJS modules.
 * Third-party dependencies are not bundled. They live in `node_modules`. Electron-builder `postinstall` takes care of copying the dependencies at build time (see notes above).
 * I use ES6 module syntax (import/export) for sake of consistency with Render process code, so I'm using same syntax project-wide. Rollup then transpiles back to CommonJS.
 
-Render process:
+### Render process
 
-* Output as ES6 modules. 
-* Third-party dependencies are bundled. E.g. citeproc. It 925kb, unminified and has no dependencies. It is only distributed as CJS module. We bundle with Rollup.
-* Except CodeMirror. It's only distributed as an IIFE. For now, I'm copying relevant files to `./js/third-party/codemirror/`, and linking to them from html `<script>` tags.
+Are either:
+
+1. Bundled by Rollup into `./js/renderer.hs` ES6 module and imported into index.html with script element. E.g. Citeproc. It 925kb, unminified and has no dependencies. It is only distributed as CJS module. We bundle with Rollup.
+2. Copied into `app/js/third-party/` and imported into index.html with script elements. E.g. CodeMirror. It's only distributed as an IIFE (so I don't want to deal with trying to bundle it into Rollup).
+
+To add a new dependency for Rollup to bundle:
+
+* Install as devDependency: `npm i -D colors`
+* Import into render process js file: `import colors from 'colors'`
 
 ## Security
 

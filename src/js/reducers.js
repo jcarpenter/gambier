@@ -1,5 +1,3 @@
-import * as Actions from './actions'
-
 const initialState = {}
 
 function reducers(state = initialState, action) {

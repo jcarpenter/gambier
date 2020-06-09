@@ -1,32 +1,124 @@
 .cm-s-gambier {
-  /* -------------- Frontmatter -------------- */
-  /* -------------- Citation -------------- */
-  /* -------------- Wikilink -------------- */
-  /* -------------- Figure -------------- */
-}
-
-.cm-s-gambier.CodeMirror {
-  /* border: 1px solid #eee; */
-  font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
-  font-size: var(--font-base-size);
-  line-height: var(--baseLineHeight);
+  background: #fff;
+  color: var(--clr-editorText);
   display: block;
+  font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
+  font-size: var(--font-sml-1);
+  line-height: var(--baseLineHeight);
+  /* -------------- Blockquote -------------- */
+  /* -------------- Citation -------------- */
+  /* -------------- Headers -------------- */
 }
 
-.cm-s-gambier .frontmatter span {
-  color: gray;
+.cm-s-gambier .CodeMirror-cursor {
+  border-left: 1px solid gray;
 }
 
-.cm-s-gambier pre.frontmatter {
+.cm-s-gambier .CodeMirror-lines {
+  padding: 0 3em;
+}
+
+.cm-s-gambier .CodeMirror-line:last-of-type {
+  margin-bottom: 8em;
+}
+
+.cm-s-gambier .CodeMirror-line.list1 span[role="presentation"],
+.cm-s-gambier .CodeMirror-line.list2 span[role="presentation"],
+.cm-s-gambier .CodeMirror-line.list3 span[role="presentation"],
+.cm-s-gambier .CodeMirror-line.list4 span[role="presentation"] {
+  position: relative;
+}
+
+.cm-s-gambier .CodeMirror-line.list1 > span:before,
+.cm-s-gambier .CodeMirror-line.list2 > span:before,
+.cm-s-gambier .CodeMirror-line.list3 > span:before,
+.cm-s-gambier .CodeMirror-line.list4 > span:before {
+  content: "*";
+  color: var(--clr-blue);
+  user-select: none;
+  position: absolute;
+  left: -1em;
+}
+
+.cm-s-gambier .CodeMirror-line.list1 {
+  padding-left: 2em;
+}
+
+.cm-s-gambier .CodeMirror-line.list2 {
+  padding-left: 4em;
+}
+
+.cm-s-gambier .CodeMirror-line.list3 {
+  padding-left: 6em;
+}
+
+.cm-s-gambier .CodeMirror-line.list4 {
+  padding-left: 8em;
+}
+
+.cm-s-gambier .CodeMirror-line.blockquote {
+  color: var(--clr-blue);
+  font-style: italic;
+  padding-left: 1em;
+  text-indent: -0.85em;
+}
+
+.cm-s-gambier .CodeMirror-line.blockquote::first-letter {
+  color: var(--clr-blue-light);
+}
+
+.cm-s-gambier .CodeMirror-line.frontmatter {
   background: rgba(0, 0, 0, 0.04);
 }
 
-.cm-s-gambier .cm-wikilink {
-  color: turquoise;
+.cm-s-gambier .cm-citation {
+  color: palevioletred;
 }
 
-.cm-s-gambier .figure span {
-  color: pink;
+.cm-s-gambier .cm-header-hash {
+  color: var(--clr-gray-lighter);
+}
+
+.cm-s-gambier .cm-header-hash.cm-header-1 {
+  margin-left: -0.8em;
+}
+
+.cm-s-gambier .cm-header-hash.cm-header-2 {
+  margin-left: -1.4em;
+  font-weight: 500;
+}
+
+.cm-s-gambier .cm-header-hash.cm-header-3 {
+  margin-left: -2em;
+}
+
+.cm-s-gambier .cm-header-hash.cm-header-4 {
+  margin-left: -2.6em;
+}
+
+.cm-s-gambier .cm-header-hash.cm-header-5 {
+  margin-left: -3.2em;
+}
+
+.cm-s-gambier .cm-header-hash.cm-header-6 {
+  margin-left: -3.2em;
+}
+
+.cm-s-gambier .cm-header-1 {
+  text-decoration: underline;
+}
+
+.cm-s-gambier .cm-header-1::first-letter {
+  text-decoration: none;
+}
+
+.cm-s-gambier .cm-header-1.cm-header-hash {
+  text-decoration: none;
+}
+
+.cm-s-gambier .cm-header-3 {
+  font-weight: normal;
+  font-style: italic;
 }
 
 /* 
@@ -34,11 +126,6 @@
 OLD
 ========================================================
 */
-.cm-s-gambier.CodeMirror {
-  background: #fff;
-  color: var(--clr-editorText);
-}
-
 .cm-s-gambier .CodeMirror-gutters {
   background: #fff;
   border-right-width: 0;
@@ -55,10 +142,6 @@ OLD
 .cm-s-gambier .CodeMirror-linenumber {
   color: #959da5;
   padding: 0 16px 0 16px;
-}
-
-.cm-s-gambier .CodeMirror-cursor {
-  border-left: 1px solid #24292e;
 }
 
 .cm-s-gambier div.CodeMirror-selected,
@@ -78,11 +161,6 @@ OLD
 .cm-s-gambier .CodeMirror-matchingbracket {
   text-decoration: underline;
   color: #24292e !important;
-}
-
-.cm-s-gambier .CodeMirror-lines {
-  /* font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; */
-  background: #fff;
 }
 
 .cm-s-gambier .cm-comment {

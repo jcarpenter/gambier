@@ -105,10 +105,9 @@ body {
 }
 
 #editor .CodeMirror {
-  width: 44em;
+  width: 48em;
   padding-top: var(--grid);
   height: auto;
-  border: 1px solid gray;
 }
 
 /*# sourceMappingURL=main.css.map */

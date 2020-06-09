@@ -37,10 +37,10 @@ body {
 #editor .CodeMirror {
     // min-width: 34em;
     // max-width: 44em;
-    width: 44em;
+    width: 48em;
     padding-top: var(--grid);
     height: auto;
-    border: 1px solid gray;
+    // border: 1px solid gray;
 }
 
 // @import "codemirror-theme";

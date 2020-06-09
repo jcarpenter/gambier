@@ -2,21 +2,23 @@ import { hasChanged } from "../utils";
 import GambierCodeMirrorMode from './gambierCodeMirrorMode'
 import markInlineLinks from './markInlineLinks'
 import markCitations from './markCitations'
+import markFigures from './markFigures'
+import markList from './markList'
 
 
 // -------- SHARED VARIABLES -------- //
 
 let editor
 let fileId
+let filePath
 let lastCursorLine = 0
 let locators
 let citeproc
 let citationItems
 
-
 // -------- SETUP -------- //
 
-async function makeEditor() {
+function makeEditor() {
 
   const textarea = document.querySelector('#editor textarea')
 
@@ -26,6 +28,13 @@ async function makeEditor() {
     lineWrapping: true,
     lineNumbers: false,
     theme: 'gambier',
+    // indentUnit: 2,
+    indentWithTabs: false,
+    extraKeys: {
+      'Enter': 'newlineAndIndentContinueMarkdownList',
+      'Tab': 'autoIndentMarkdownList',
+      'Shift-Tab': 'autoUnindentMarkdownList'
+    }
   })
 
   // Setup event listeners
@@ -37,6 +46,7 @@ async function makeEditor() {
  */
 function loadFile(file) {
   editor.setValue(file)
+  editor.clearHistory()
   // findAndMark()
 }
 
@@ -46,11 +56,20 @@ function loadFile(file) {
 function findAndMark() {
   editor.operation(() => {
     editor.eachLine((lineHandle) => {
-      // Mark links
-      markInlineLinks(editor, lineHandle)
+      const tokens = editor.getLineTokens(lineHandle.lineNo())
+      const isFigure = tokens.some((t) => t.type !== null && t.type.includes('figure'))
+      // const isFigure = tokens[0] !== undefined && tokens[0].type.includes('figure')
+      const isList = tokens[0] !== undefined && tokens[0].type !== null && tokens[0].type.includes('list')
 
-      // Mark citations
-      // markCitations(editor, lineHandle)
+      if (isFigure) {
+        markFigures(editor, lineHandle, tokens, filePath)
+      } else {
+        if (isList) {
+          markList(editor, lineHandle, tokens)
+        }
+        markInlineLinks(editor, lineHandle, tokens)
+        // markCitations(editor, lineHandle, tokens)
+      }
     })
   })
 }
@@ -73,9 +92,14 @@ async function setup() {
 
   const state = await window.api.invoke('getState', 'utf8');
   fileId = state.lastOpenedFileId
+  filePath = state.contents.find((f) => f.id == fileId).path
+  filePath = filePath.substring(0, filePath.lastIndexOf('/'))
   const file = await window.api.invoke('getFileById', fileId, 'utf8')
 
   window.api.receive('stateChanged', async (state, oldState) => {
+    if (hasChanged("projectDirectory", state, oldState)) {
+      filePath = state.projectDirectory
+    }
     if (hasChanged("lastOpenedFileId", state, oldState)) {
       fileId = state.lastOpenedFileId
       const file = await window.api.invoke('getFileById', fileId, 'utf8')
@@ -83,7 +107,7 @@ async function setup() {
     }
   })
 
-  await makeEditor()
+  makeEditor()
 
   loadFile(file)
 }

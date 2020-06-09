@@ -2,7 +2,7 @@
   //   import { onMount } from "svelte";
 
   export let text;
-  export let url;
+  // export let url;
 
   //   window.api.receive("stateChanged", state => {
   //     // update(state);
@@ -16,9 +16,9 @@
 
 <style type="text/scss">
   .link {
-    background: lightskyblue;
+    background: lightyellow;
     border-radius: 2px;
   }
 </style>
 
-<span class="link">{text}</span>
+<span class="link">c</span>
