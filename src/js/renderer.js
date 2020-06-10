@@ -1,4 +1,4 @@
-import csl, { citeEnd } from 'citeproc'
+// Bundled imports
 import NavFolders from './component/NavFolders.svelte'
 import NavFiles from './component/NavFiles.svelte'
 import * as Editor from './editor/editor'

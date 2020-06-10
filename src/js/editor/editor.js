@@ -1,5 +1,7 @@
-import { hasChanged } from "../utils";
-import GambierCodeMirrorMode from './gambierCodeMirrorMode'
+import TurndownService from '../third-party/turndown/turndown.es.js'
+
+import { hasChanged, isUrl } from "../utils";
+import defineGambierMode from './gambierCodeMirrorMode'
 import markInlineLinks from './markInlineLinks'
 import markCitations from './markCitations'
 import markFigures from './markFigures'
@@ -16,11 +18,16 @@ let locators
 let citeproc
 let citationItems
 
+const turndownService = new TurndownService()
+
 // -------- SETUP -------- //
 
 function makeEditor() {
 
   const textarea = document.querySelector('#editor textarea')
+
+  // 
+  defineGambierMode()
 
   // Create CodeMirror instance from textarea element. Original is replaced.
   editor = CodeMirror.fromTextArea(textarea, {
@@ -28,7 +35,6 @@ function makeEditor() {
     lineWrapping: true,
     lineNumbers: false,
     theme: 'gambier',
-    // indentUnit: 2,
     indentWithTabs: false,
     extraKeys: {
       'Enter': 'newlineAndIndentContinueMarkdownList',
@@ -39,6 +45,32 @@ function makeEditor() {
 
   // Setup event listeners
   editor.on("cursorActivity", onCursorActivity)
+
+  editor.on('beforeChange', async (cm, change) => {
+    if (change.origin === 'paste') {
+      const selection = editor.getSelection()
+      const isURL = isUrl(change.text)
+
+      if (isURL) {
+        if (selection) {
+          const text = selection
+          const url = change.text
+          const newText = change.text.map((line) => line = `[${text}](${url})`)
+          change.update(null, null, newText)
+        }
+      } else {
+        change.cancel()
+        const formats = await window.api.invoke('getFormatOfClipboard')
+        if (formats.length === 1 && formats[0] === 'text/plain') {
+          cm.replaceSelection(change.text.join('\n'))
+        } else if (formats.includes('text/html')) {
+          const html = await window.api.invoke('getHTMLFromClipboard')
+          const markdown = turndownService.turndown(html)
+          cm.replaceSelection(markdown)
+        }
+      }
+    }
+  })
 }
 
 /**

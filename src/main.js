@@ -1,5 +1,5 @@
 // External dependencies
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, clipboard } from 'electron'
 import path from 'path'
 import { readdir, readFile, pathExists, stat } from 'fs-extra'
 
@@ -164,4 +164,13 @@ ipcMain.handle('getFileById', async (event, id, encoding) => {
 
 ipcMain.handle('pathJoin', async (event, path1, path2) => {
   return path.join(path1, path2)
+})
+
+ipcMain.handle('getHTMLFromClipboard', (event) => {
+  console.log(clipboard.availableFormats())
+  return clipboard.readHTML()
+})
+
+ipcMain.handle('getFormatOfClipboard', (event) => {
+  return clipboard.availableFormats()
 })

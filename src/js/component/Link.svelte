@@ -20,7 +20,7 @@
     box-sizing: border-box;
     color: var(--clr-blue);
     background-color: var(--clr-blue-lighter);
-    padding: 0 0.2em;
+    padding: 0 0.2em 0 0.15em;
     border-radius: 0.15em;
     border: 1px solid var(--clr-blue-light);
   }

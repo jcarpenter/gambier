@@ -733,4 +733,13 @@ electron.ipcMain.handle('getFileById', async (event, id, encoding) => {
 electron.ipcMain.handle('pathJoin', async (event, path1, path2) => {
   return path.join(path1, path2)
 });
+
+electron.ipcMain.handle('getHTMLFromClipboard', (event) => {
+  console.log(electron.clipboard.availableFormats());
+  return electron.clipboard.readHTML()
+});
+
+electron.ipcMain.handle('getFormatOfClipboard', (event) => {
+  return electron.clipboard.availableFormats()
+});
 //# sourceMappingURL=main.js.map

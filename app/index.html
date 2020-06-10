@@ -7,22 +7,24 @@
         <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline' 'self'">
         <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
 
-        <!-- Code mirror -->
-        <link href="./js/third-party/codemirror/lib/codemirror.css" rel="stylesheet">
+        <!-- CodeMirror (UMD module, exports `CodeMirror` to global namespace) -->
         <script src="./js/third-party/codemirror/lib/codemirror.js"></script>
         <script src="./js/third-party/codemirror/addon/mode/overlay.js"></script>
         <script src="./js/third-party/codemirror/addon/edit/continuelist.js"></script>
         <script src="./js/third-party/codemirror/addon/edit/indentlist.js"></script>
         <script src="./js/third-party/codemirror/mode/markdown/markdown.js"></script>
         <script src="./js/third-party/codemirror/mode/yaml/yaml.js"></script>
+        <link href="./js/third-party/codemirror/lib/codemirror.css" rel="stylesheet">
 
-        <!--<script src="./js/third-party/codemirror/mode/xml/xml.js"></script>
-        <script src="./js/third-party/codemirror/mode/css/css.js"></script>
-        <script src="./js/third-party/codemirror/mode/javascript/javascript.js"></script>-->
+        <!-- Citeproc (raw JS, exports `CSL` to global namespace) -->
+        <script src="./js/third-party/citeproc/citeproc.js"></script>
 
+        <!-- Turndown (ES6 module) -->
+        <script src="./js/third-party/turndown/turndown.es.js" type="module"></script>
+
+        <!-- CSS -->
         <link rel="stylesheet" href="./styles/main.css">
         <link rel="stylesheet" href="./styles/codemirror-theme.css">
-
     </head>
     <body>
 
@@ -34,7 +36,6 @@
             <textarea style="display: none;"></textarea>
         </div>
 
-        <!-- You can also require other files to run in this process -->
-        <script src="./js/renderer.js"></script>
+        <script src="./js/renderer.js" type="module"></script>
     </body>
 </html>

@@ -34,6 +34,9 @@ export default [
       sourcemap: 'true',
       format: 'es',
       file: 'app/js/renderer.js',
+      // globals: {
+      //   test: 'test'
+      // }
     },
     plugins: [
       svelte({
@@ -50,6 +53,9 @@ export default [
       resolve(), 
       commonjs()
     ],
-    external: [],
+    external: [
+      './third-party/citeproc/citeproc.js',
+      '../third-party/turndown/turndown.es.js'
+    ]
   }
 ]

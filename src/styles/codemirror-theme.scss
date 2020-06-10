@@ -12,6 +12,26 @@
         border-left: 1px solid gray;
     }
 
+    // -------------- Selection -------------- //
+
+    // Only this one actually does anything? Not sure the others work...
+    .CodeMirror-selected {
+        background: #b4d7ff;
+    }
+    .CodeMirror-focused .CodeMirror-selected {
+        background: red;
+    }
+    .CodeMirror-line::selection,
+    .CodeMirror-line > span::selection,
+    .CodeMirror-line > span > span::selection {
+        background: yellow;
+    }
+    .CodeMirror-line::-moz-selection,
+    .CodeMirror-line > span::-moz-selection,
+    .CodeMirror-line > span > span::-moz-selection {
+        background: green;
+    }
+
     // -------------- Line -------------- //
 
     // Pad sides so there's room for header hashes (which hang left).
@@ -31,17 +51,30 @@
     .CodeMirror-line.list2,
     .CodeMirror-line.list3,
     .CodeMirror-line.list4 {
-        span[role="presentation"] {
+        .list-marker {
             position: relative;
         }
 
-        & > span:before {
-            content: "*";
+        .list-marker::before {
+            content: attr(data-marker);
             color: var(--clr-blue);
             user-select: none;
             position: absolute;
             left: -1em;
         }
+
+        // Solution 1:
+        // span[role="presentation"] {
+        //     position: relative;
+        // }
+
+        // & > span:before {
+        //     content: "*";
+        //     color: var(--clr-blue);
+        //     user-select: none;
+        //     position: absolute;
+        //     left: -1em;
+        // }
     }
 
     .CodeMirror-line.list1 {
@@ -80,6 +113,38 @@
 
     .cm-citation {
         color: palevioletred;
+    }
+
+    /* -------------- Strong -------------- */
+
+    .cm-strong {
+        color: var(--clr-blue);
+        &.cm-flank {
+            color: var(--clr-blue-light);
+        }
+    }
+
+    /* -------------- Emphasis -------------- */
+
+    .cm-em {
+        color: var(--clr-blue);
+        &.cm-flank {
+            color: var(--clr-blue-light);
+        }
+    }
+
+    /* -------------- Emphasis -------------- */
+
+    .cm-code {
+        color: #13570B;
+        background-color: #E7F9E8;
+        padding: 0.1em 0 0.2em;
+        font-size: 0.9em;
+        font-family: "SFMono-Regular";
+        // font-family: "SFMono-Regular";
+        &.cm-flank {
+            color: #92E290;
+        }
     }
 
     /* -------------- Headers -------------- */
