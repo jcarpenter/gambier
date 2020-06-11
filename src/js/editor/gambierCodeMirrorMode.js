@@ -84,7 +84,7 @@ const markdownOverlay = {
 
     // Cite keys
     if (stream.match("[@")) {
-      console.log("Citation found")
+      // console.log("Citation found")
       while ((ch = stream.next()) != null)
         if (ch == "]") {
           state.combineTokens = false
@@ -139,6 +139,9 @@ const markdownOverlay = {
   }
 }
 
+/**
+ * Define custom mode to be used with CodeMirror.
+ */
 function defineGambierMode() {
   CodeMirror.defineMode("gambier", (config, parserConfig) => {
 

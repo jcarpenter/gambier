@@ -34,4 +34,3 @@ electron.contextBridge.exposeInMainWorld(
     }
   }
 );
-//# sourceMappingURL=preload.js.map

@@ -1,10 +1,12 @@
 <script>
-  import File from "./File.svelte";
+  /**
+   * Render files in a folder as a vertical list
+   */
   import { onMount, tick } from "svelte";
   import { hasChanged } from "../utils";
 
   let files = [];
-  let selectedFileId = 0;
+  let selectedDirectoryId = 0
   let selectedFileIndex = 0;
   let selectedEl = 0;
   let section;
@@ -34,11 +36,13 @@
     }
   }
 
+  /**
+   * Rebuild files array, for new selected folder
+   * Filter to files with matching parentId, and type 'file'
+   */
   function populateFiles(state) {
-    // Rebuild files array, for new selected folder
-    // Filter to files with matching parentId, and type 'file'
     files = state.contents.filter((obj, index) => {
-      return obj.parentId === state.selectedFolderId && obj.type == "file";
+      return obj.parentId === selectedDirectoryId && obj.type == "file";
     });
   }
 
@@ -48,8 +52,10 @@
    * Then make sure the selected file is scrolled into view.
    */
   async function setSelectedFile(state) {
+    const selectedFolder = state.contents.find((d) => d.type == 'directory' && d.id == state.selectedFolderId)
+    console.log(selectedFolder)
     files.forEach((f, index) => {
-      f.selected = f.id == state.lastOpenedFileId;
+      f.selected = f.id == selectedFolder.selectedFileId;
       if (f.selected) selectedFileIndex = index;
     });
 
@@ -58,7 +64,7 @@
   }
 
   function scrollFileIntoView(element, animate = true) {
-    const behavior = animate ? "smooth" : "auto"
+    const behavior = animate ? "smooth" : "auto";
     if (element) {
       element.scrollIntoView({
         block: "nearest",
@@ -70,6 +76,7 @@
 
   onMount(async () => {
     const state = await window.api.invoke("getState");
+    selectedDirectoryId = state.selectedFolderId
     populateFiles(state);
     setSelectedFile(state);
     await tick();
@@ -77,15 +84,19 @@
   });
 
   window.api.receive("stateChanged", async (state, oldState) => {
-    // If folder changed...
+    
+    console.log("NAVFILES: STATE CHANGED")
+
+    // If selected folder changed...
     if (hasChanged("selectedFolderId", state, oldState)) {
+      selectedDirectoryId = state.selectedFolderId
       populateFiles(state);
       setSelectedFile(state);
       await tick();
       scrollFileIntoView(selectedEl, true);
     }
 
-    // If id changed...
+    // If selected file id changed...
     if (hasChanged("lastOpenedFileId", state, oldState)) {
       setSelectedFile(state);
       await tick();
@@ -94,7 +105,7 @@
   });
 
   function clicked(id) {
-    window.api.send("dispatch", { type: "OPEN_FILE", id: id });
+    window.api.send("dispatch", { type: "OPEN_FILE", parentId: selectedDirectoryId, fileId: id });
   }
 </script>
 
@@ -187,17 +198,5 @@
         <hr />
       </div>
     {/if}
-
-    <!-- <File
-        {...file}
-        bind:this={selectedEl}
-        parentSectionFocused={sectionIsFocused}
-        on:clicked={clicked} />
-    {:else}
-      <File
-        {...file}
-        parentSectionFocused={sectionIsFocused}
-        on:clicked={clicked} />
-    {/if} -->
   {/each}
 </section>

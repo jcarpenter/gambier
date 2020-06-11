@@ -110,4 +110,11 @@ body {
   height: auto;
 }
 
+#bracketsWidget {
+  background: pink;
+  padding: 0 0.5em;
+  position: absolute;
+  z-index: 10;
+}
+
 /*# sourceMappingURL=main.css.map */

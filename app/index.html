@@ -10,6 +10,7 @@
         <!-- CodeMirror (UMD module, exports `CodeMirror` to global namespace) -->
         <script src="./js/third-party/codemirror/lib/codemirror.js"></script>
         <script src="./js/third-party/codemirror/addon/mode/overlay.js"></script>
+        <script src="./js/third-party/codemirror/addon/edit/closebrackets.js"></script>
         <script src="./js/third-party/codemirror/addon/edit/continuelist.js"></script>
         <script src="./js/third-party/codemirror/addon/edit/indentlist.js"></script>
         <script src="./js/third-party/codemirror/mode/markdown/markdown.js"></script>
@@ -27,6 +28,8 @@
         <link rel="stylesheet" href="./styles/codemirror-theme.css">
     </head>
     <body>
+
+        <div id="bracketsWidget">Choose</div>
 
         <!--<span class="cm-citation-collapsed"><button class="icon"></button><div class="popup" tabindex="0"><header><h1>Citation</h1><span class="instructions"><span class="update">Enter to Update, </span>Esc to Cancel</span></header><p class="wrapper"></p><p contenteditable="true" class="input"></p></div><div class="tooltip"></div></span>-->
 

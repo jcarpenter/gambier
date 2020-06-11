@@ -1,9 +1,13 @@
-import { readdir, readFile, pathExists, stat } from 'fs-extra'
+import { readdir, readFile, stat } from 'fs-extra'
 import chokidar from 'chokidar'
 import path from 'path'
 import matter from 'gray-matter'
 import removeMd from 'remove-markdown'
+import { applyDiffs, isWorkingPath } from './utils-mainProcess'
 
+/**
+ * Map projectDirectory and save as a flattened hierarchy `contents` property of store (array).
+ */
 class ProjectDirectory {
 
   constructor() {
@@ -23,14 +27,11 @@ class ProjectDirectory {
       this.onStoreChange(newState, oldState)
     })
 
-    // Check if path is valid. 
-    // If yes, map directory, update store, and add watcher.
-    if (await this.isWorkingPath(this.directory)) {
-      let contents = await this.mapDirectoryRecursively(this.directory)
-      contents = await this.getFilesDetails(contents)
-      this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
-      this.startWatching(this.directory)
-    }
+    // Map project directory
+    this.mapProjectDirectory()
+
+    // Start watcher
+    this.startWatching(this.directory)
   }
 
   startWatching(directory) {
@@ -45,25 +46,14 @@ class ProjectDirectory {
     })
 
     this.watcher.on('all', (event, path) => {
-      console.log('- - - - - - - -')
-      console.log(event)
-      console.log(path)
+      console.log("startWatching: this.watcher.on")
+      this.mapProjectDirectory()
     })
   }
 
-  async isWorkingPath(directory) {
-
-    if (directory == 'undefined') {
-      return false
-    } else {
-      if (await pathExists(directory)) {
-        return true
-      } else {
-        return false
-      }
-    }
-  }
-
+  /**
+   * Remap directory and update watcher if projectDirectory changes
+   */
   async onStoreChange(newState, oldState) {
 
     let newDir = newState.projectDirectory
@@ -75,23 +65,35 @@ class ProjectDirectory {
     // If the directory has changed...
     if (newDir !== oldDir) {
 
-      // We unwatch the old directory (if it wasn't undefined)
+      // Unwatch the old directory
       if (oldDir !== 'undefined') {
-        // this.watcher.unwatch(oldDir)
         await this.watcher.close()
       }
 
-      // Check if path is valid. 
-      // If yes, map directory, update store, and add watcher.
-      if (await this.isWorkingPath(newDir)) {
-        let contents = await this.mapDirectoryRecursively(newDir)
-        contents = await this.getFilesDetails(contents)
-        this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
-        this.startWatching(newDir)
-      } else {
-        // Else, if it doesn't exist, tell store to `RESET_HIERARCHY` (clears to `[]`)
-        this.store.dispatch({ type: 'RESET_HIERARCHY' })
-      }
+      // Remap
+      this.mapProjectDirectory()
+
+      // Start watcher
+      this.startWatching(this.directory)
+    }
+  }
+
+  /**
+   * Check if path is valid. 
+   * If true, map directory, update store, and add watcher.
+   * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
+   */
+  async mapProjectDirectory() {
+    // console.log("mapProjectDirectory")
+    if (await isWorkingPath(this.directory)) {
+      // console.log("isWorkingPath", this.directory)
+      let contents = await this.mapDirectoryRecursively(this.directory)
+      contents = await this.getFilesDetails(contents)
+      contents = applyDiffs(this.store.store.contents, contents)
+      this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
+    } else {
+      // console.log("is NOT WorkingPath: ", this.directory)
+      this.store.dispatch({ type: 'RESET_HIERARCHY' })
     }
   }
 
@@ -126,7 +128,8 @@ class ProjectDirectory {
       path: directoryPath,
       modified: stats.mtime.toISOString(),
       childFileCount: 0,
-      childDirectoryCount: 0
+      childDirectoryCount: 0,
+      selectedFileId: 0
     }
 
     // If parentId was passed, set `thisDir.parentId` to it

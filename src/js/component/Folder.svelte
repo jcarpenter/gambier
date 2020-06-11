@@ -1,5 +1,9 @@
 <script>
-  import File from "./File.svelte";
+  /** 
+   * Render a single, folder and (recursively) any child folders.
+   * Recursion is achieved with `<svelte:self`
+   * Per https://svelte.dev/tutorial/svelte-self
+  */
   import { onMount } from "svelte";
 
   export let nestedDepth = 0;

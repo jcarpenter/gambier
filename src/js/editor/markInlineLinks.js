@@ -81,7 +81,14 @@ export default function markInlineLinks(editor, lineHandle, tokens) {
         }
       });
 
-      replaceMarkWithElement(editor, frag, line, l.start, l.end)
+      editor.markText({ line: line, ch: l.start }, { line: line, ch: l.end }, {
+        replacedWith: frag,
+        // addToHistory: true, // Doesn't do anything?
+        clearOnEnter: false,
+        inclusiveLeft: false,
+        inclusiveRight: false,
+        handleMouseEvents: false
+      })
     })
   }
 }

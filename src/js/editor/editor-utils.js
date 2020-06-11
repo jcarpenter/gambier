@@ -17,10 +17,20 @@ function replaceMarkWithElement(editor, element, line, start, end) {
 }
 
 /**
+ * Return a single character at the specified position
+ */
+function getCharAt(editor, line, ch = 0) {
+  return editor.getRange(
+    {line: line, ch: ch}, // from
+    {line: line, ch: ch + 1} // to
+  ) 
+}
+
+/**
  * A _slighty_ more compact snippet for getting text from a range.
  */
 function getTextFromRange(editor, line, start, end) {
   return editor.getRange({ line: line, ch: start }, { line: line, ch: end })
 }
 
-export { replaceMarkWithElement, getTextFromRange }
+export { getTextFromRange, getCharAt, replaceMarkWithElement }

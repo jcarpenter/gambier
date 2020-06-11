@@ -327,7 +327,7 @@ function get_each_context(ctx, list, i) {
 	return child_ctx;
 }
 
-// (70:0) {#if expanded}
+// (74:0) {#if expanded}
 function create_if_block(ctx) {
 	let ul;
 	let t;
@@ -404,7 +404,7 @@ function create_if_block(ctx) {
 	};
 }
 
-// (72:4) {#if !hidden}
+// (76:4) {#if !hidden}
 function create_if_block_2(ctx) {
 	let li;
 	let img;
@@ -453,7 +453,7 @@ function create_if_block_2(ctx) {
 	};
 }
 
-// (78:4) {#if details.children}
+// (82:4) {#if details.children}
 function create_if_block_1(ctx) {
 	let each_1_anchor;
 	let current;
@@ -537,7 +537,7 @@ function create_if_block_1(ctx) {
 	};
 }
 
-// (79:6) {#each details.children as childDirectory}
+// (83:6) {#each details.children as childDirectory}
 function create_each_block(ctx) {
 	let li;
 	let t;
@@ -868,7 +868,7 @@ function add_css$1() {
 	append(document.head, style);
 }
 
-// (59:2) {#if !isEmpty}
+// (62:2) {#if !isEmpty}
 function create_if_block$1(ctx) {
 	let current;
 
@@ -1018,10 +1018,17 @@ class NavFolders extends SvelteComponent {
 
 const urlRE = new RegExp(/^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i);
 
+/**
+ * Check if string is URL. Uses regexp from GitHub Flavored Markdown:
+ * https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L14
+ */
 function isUrl(string) {
   return urlRE.test(string)
 }
 
+/**
+ * Check if values of two object keys do not match.
+ */
 function hasChanged(key, newState, oldState) {
   return newState[key] !== oldState[key]
 }
@@ -1054,26 +1061,27 @@ function add_css$2() {
 
 function get_each_context$1(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[12] = list[i];
+	child_ctx[14] = list[i];
 	return child_ctx;
 }
 
-// (239:4) {:else}
+// (250:4) {:else}
 function create_else_block(ctx) {
 	let div;
 	let h2;
-	let t0_value = /*file*/ ctx[12].title + "";
+	let t0_value = /*file*/ ctx[14].title + "";
 	let t0;
 	let t1;
 	let p;
-	let t2_value = /*file*/ ctx[12].excerpt + "";
+	let t2_value = /*file*/ ctx[14].excerpt + "";
 	let t2;
 	let t3;
 	let hr;
+	let t4;
 	let dispose;
 
 	function click_handler_1(...args) {
-		return /*click_handler_1*/ ctx[10](/*file*/ ctx[12], ...args);
+		return /*click_handler_1*/ ctx[12](/*file*/ ctx[14], ...args);
 	}
 
 	return {
@@ -1086,6 +1094,7 @@ function create_else_block(ctx) {
 			t2 = text(t2_value);
 			t3 = space();
 			hr = element("hr");
+			t4 = space();
 			attr(h2, "class", "svelte-16x96ii");
 			attr(p, "class", "svelte-16x96ii");
 			attr(hr, "class", "svelte-16x96ii");
@@ -1102,13 +1111,14 @@ function create_else_block(ctx) {
 			append(p, t2);
 			append(div, t3);
 			append(div, hr);
+			append(div, t4);
 			if (remount) dispose();
 			dispose = listen(div, "click", prevent_default(click_handler_1));
 		},
 		p(new_ctx, dirty) {
 			ctx = new_ctx;
-			if (dirty & /*files*/ 1 && t0_value !== (t0_value = /*file*/ ctx[12].title + "")) set_data(t0, t0_value);
-			if (dirty & /*files*/ 1 && t2_value !== (t2_value = /*file*/ ctx[12].excerpt + "")) set_data(t2, t2_value);
+			if (dirty & /*files*/ 1 && t0_value !== (t0_value = /*file*/ ctx[14].title + "")) set_data(t0, t0_value);
+			if (dirty & /*files*/ 1 && t2_value !== (t2_value = /*file*/ ctx[14].excerpt + "")) set_data(t2, t2_value);
 
 			if (dirty & /*sectionIsFocused*/ 8) {
 				toggle_class(div, "parentSectionFocused", /*sectionIsFocused*/ ctx[3]);
@@ -1121,18 +1131,19 @@ function create_else_block(ctx) {
 	};
 }
 
-// (229:4) {#if file.selected}
+// (240:4) {#if file.selected}
 function create_if_block$2(ctx) {
 	let div;
 	let h2;
-	let t0_value = /*file*/ ctx[12].title + "";
+	let t0_value = /*file*/ ctx[14].title + "";
 	let t0;
 	let t1;
 	let p;
-	let t2_value = /*file*/ ctx[12].excerpt + "";
+	let t2_value = /*file*/ ctx[14].excerpt + "";
 	let t2;
 	let t3;
 	let hr;
+	let t4;
 
 	return {
 		c() {
@@ -1144,6 +1155,7 @@ function create_if_block$2(ctx) {
 			t2 = text(t2_value);
 			t3 = space();
 			hr = element("hr");
+			t4 = space();
 			attr(h2, "class", "svelte-16x96ii");
 			attr(p, "class", "svelte-16x96ii");
 			attr(hr, "class", "svelte-16x96ii");
@@ -1160,11 +1172,12 @@ function create_if_block$2(ctx) {
 			append(p, t2);
 			append(div, t3);
 			append(div, hr);
-			/*div_binding*/ ctx[9](div);
+			append(div, t4);
+			/*div_binding*/ ctx[11](div);
 		},
 		p(ctx, dirty) {
-			if (dirty & /*files*/ 1 && t0_value !== (t0_value = /*file*/ ctx[12].title + "")) set_data(t0, t0_value);
-			if (dirty & /*files*/ 1 && t2_value !== (t2_value = /*file*/ ctx[12].excerpt + "")) set_data(t2, t2_value);
+			if (dirty & /*files*/ 1 && t0_value !== (t0_value = /*file*/ ctx[14].title + "")) set_data(t0, t0_value);
+			if (dirty & /*files*/ 1 && t2_value !== (t2_value = /*file*/ ctx[14].excerpt + "")) set_data(t2, t2_value);
 
 			if (dirty & /*sectionIsFocused*/ 8) {
 				toggle_class(div, "parentSectionFocused", /*sectionIsFocused*/ ctx[3]);
@@ -1172,17 +1185,17 @@ function create_if_block$2(ctx) {
 		},
 		d(detaching) {
 			if (detaching) detach(div);
-			/*div_binding*/ ctx[9](null);
+			/*div_binding*/ ctx[11](null);
 		}
 	};
 }
 
-// (228:2) {#each files as file}
+// (239:2) {#each files as file}
 function create_each_block$1(ctx) {
-	let t;
+	let if_block_anchor;
 
 	function select_block_type(ctx, dirty) {
-		if (/*file*/ ctx[12].selected) return create_if_block$2;
+		if (/*file*/ ctx[14].selected) return create_if_block$2;
 		return create_else_block;
 	}
 
@@ -1192,11 +1205,11 @@ function create_each_block$1(ctx) {
 	return {
 		c() {
 			if_block.c();
-			t = space();
+			if_block_anchor = empty();
 		},
 		m(target, anchor) {
 			if_block.m(target, anchor);
-			insert(target, t, anchor);
+			insert(target, if_block_anchor, anchor);
 		},
 		p(ctx, dirty) {
 			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block) {
@@ -1207,13 +1220,13 @@ function create_each_block$1(ctx) {
 
 				if (if_block) {
 					if_block.c();
-					if_block.m(t.parentNode, t);
+					if_block.m(if_block_anchor.parentNode, if_block_anchor);
 				}
 			}
 		},
 		d(detaching) {
 			if_block.d(detaching);
-			if (detaching) detach(t);
+			if (detaching) detach(if_block_anchor);
 		}
 	};
 }
@@ -1247,16 +1260,16 @@ function create_fragment$2(ctx) {
 				each_blocks[i].m(section_1, null);
 			}
 
-			/*section_1_binding*/ ctx[11](section_1);
+			/*section_1_binding*/ ctx[13](section_1);
 			if (remount) run_all(dispose);
 
 			dispose = [
-				listen(window_1, "click", /*click_handler*/ ctx[8]),
+				listen(window_1, "click", /*click_handler*/ ctx[10]),
 				listen(window_1, "keydown", /*handleKeydown*/ ctx[4])
 			];
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*selectedEl, sectionIsFocused, files, clicked*/ 11) {
+			if (dirty & /*selectedEl, sectionIsFocused, files, clicked*/ 43) {
 				each_value = /*files*/ ctx[0];
 				let i;
 
@@ -1284,7 +1297,7 @@ function create_fragment$2(ctx) {
 		d(detaching) {
 			if (detaching) detach(section_1);
 			destroy_each(each_blocks, detaching);
-			/*section_1_binding*/ ctx[11](null);
+			/*section_1_binding*/ ctx[13](null);
 			run_all(dispose);
 		}
 	};
@@ -1302,12 +1315,9 @@ function scrollFileIntoView(element, animate = true) {
 	}
 }
 
-function clicked(id) {
-	window.api.send("dispatch", { type: "OPEN_FILE", id });
-}
-
 function instance$2($$self, $$props, $$invalidate) {
 	let files = [];
+	let selectedDirectoryId = 0;
 	let selectedFileIndex = 0;
 	let selectedEl = 0;
 	let section;
@@ -1338,11 +1348,13 @@ function instance$2($$self, $$props, $$invalidate) {
 		}
 	}
 
+	/**
+ * Rebuild files array, for new selected folder
+ * Filter to files with matching parentId, and type 'file'
+ */
 	function populateFiles(state) {
-		// Rebuild files array, for new selected folder
-		// Filter to files with matching parentId, and type 'file'
 		$$invalidate(0, files = state.contents.filter((obj, index) => {
-			return obj.parentId === state.selectedFolderId && obj.type == "file";
+			return obj.parentId === selectedDirectoryId && obj.type == "file";
 		}));
 	}
 
@@ -1352,8 +1364,11 @@ function instance$2($$self, $$props, $$invalidate) {
  * Then make sure the selected file is scrolled into view.
  */
 	async function setSelectedFile(state) {
+		const selectedFolder = state.contents.find(d => d.type == "directory" && d.id == state.selectedFolderId);
+		console.log(selectedFolder);
+
 		files.forEach((f, index) => {
-			f.selected = f.id == state.lastOpenedFileId;
+			f.selected = f.id == selectedFolder.selectedFileId;
 			if (f.selected) selectedFileIndex = index;
 		});
 
@@ -1363,6 +1378,7 @@ function instance$2($$self, $$props, $$invalidate) {
 
 	onMount(async () => {
 		const state = await window.api.invoke("getState");
+		selectedDirectoryId = state.selectedFolderId;
 		populateFiles(state);
 		setSelectedFile(state);
 		await tick();
@@ -1370,21 +1386,32 @@ function instance$2($$self, $$props, $$invalidate) {
 	});
 
 	window.api.receive("stateChanged", async (state, oldState) => {
-		// If folder changed...
+		console.log("NAVFILES: STATE CHANGED");
+
+		// If selected folder changed...
 		if (hasChanged("selectedFolderId", state, oldState)) {
+			selectedDirectoryId = state.selectedFolderId;
 			populateFiles(state);
 			setSelectedFile(state);
 			await tick();
 			scrollFileIntoView(selectedEl, true);
 		}
 
-		// If id changed...
+		// If selected file id changed...
 		if (hasChanged("lastOpenedFileId", state, oldState)) {
 			setSelectedFile(state);
 			await tick();
 			scrollFileIntoView(selectedEl, true);
 		}
 	});
+
+	function clicked(id) {
+		window.api.send("dispatch", {
+			type: "OPEN_FILE",
+			parentId: selectedDirectoryId,
+			fileId: id
+		});
+	}
 
 	const click_handler = e => $$invalidate(3, sectionIsFocused = section.contains(e.target));
 
@@ -1408,6 +1435,8 @@ function instance$2($$self, $$props, $$invalidate) {
 		section,
 		sectionIsFocused,
 		handleKeydown,
+		clicked,
+		selectedDirectoryId,
 		selectedFileIndex,
 		populateFiles,
 		setSelectedFile,
@@ -1512,7 +1541,7 @@ const markdownOverlay = {
 
     // Cite keys
     if (stream.match("[@")) {
-      console.log("Citation found");
+      // console.log("Citation found")
       while ((ch = stream.next()) != null)
         if (ch == "]") {
           state.combineTokens = false;
@@ -1567,6 +1596,9 @@ const markdownOverlay = {
   }
 };
 
+/**
+ * Define custom mode to be used with CodeMirror.
+ */
 function defineGambierMode() {
   CodeMirror.defineMode("gambier", (config, parserConfig) => {
 
@@ -1641,6 +1673,16 @@ function replaceMarkWithElement(editor, element, line, start, end) {
     inclusiveRight: false,
     handleMouseEvents: false
   });
+}
+
+/**
+ * Return a single character at the specified position
+ */
+function getCharAt(editor, line, ch = 0) {
+  return editor.getRange(
+    {line: line, ch: ch}, // from
+    {line: line, ch: ch + 1} // to
+  ) 
 }
 
 /**
@@ -1782,21 +1824,143 @@ function markInlineLinks(editor, lineHandle, tokens) {
         }
       });
 
-      replaceMarkWithElement(editor, frag, line, l.start, l.end);
+      editor.markText({ line: line, ch: l.start }, { line: line, ch: l.end }, {
+        replacedWith: frag,
+        // addToHistory: true, // Doesn't do anything?
+        clearOnEnter: false,
+        inclusiveLeft: false,
+        inclusiveRight: false,
+        handleMouseEvents: false
+      });
+    });
+  }
+}
+
+/* src/js/component/Citation.svelte generated by Svelte v3.22.3 */
+
+function add_css$4() {
+	var style = element("style");
+	style.id = "svelte-iwvlsn-style";
+	style.textContent = ".link.svelte-iwvlsn{background:lightyellow;border-radius:2px}";
+	append(document.head, style);
+}
+
+function create_fragment$4(ctx) {
+	let span;
+
+	return {
+		c() {
+			span = element("span");
+			span.textContent = "c";
+			attr(span, "class", "link svelte-iwvlsn");
+		},
+		m(target, anchor) {
+			insert(target, span, anchor);
+		},
+		p: noop,
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(span);
+		}
+	};
+}
+
+function instance$4($$self, $$props, $$invalidate) {
+	let { text } = $$props;
+
+	$$self.$set = $$props => {
+		if ("text" in $$props) $$invalidate(0, text = $$props.text);
+	};
+
+	return [text];
+}
+
+class Citation extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-iwvlsn-style")) add_css$4();
+		init(this, options, instance$4, create_fragment$4, safe_not_equal, { text: 0 });
+	}
+}
+
+function Details$1() {
+  this.start;
+  this.end;
+  this.textStart;
+  this.textEnd;
+  this.text;
+}
+
+/**
+ * For the specified line, find links, and for each found, create a new object with their details, push it into an array, and return the array.
+ * See Link object (above) for what is included.
+ */
+function find$1(editor, lineNo, tokens) {
+
+  let hit;
+  let hits = [];
+
+  // Find open and closing tokens
+  for (const token of tokens) {
+    if (token.type !== null) {
+      if (token.type.includes('citation')) {
+        // console.log(token)
+        switch (token.string) {
+          case "[":
+            hit = new Details$1();
+            hit.start = token.start;
+            hit.textStart = token.start;
+            hits.push(hit);
+            break
+          case "]":
+            hit.textEnd = token.end;
+            hit.text = getTextFromRange(editor, lineNo, hit.textStart + 1, hit.textEnd - 1);
+            break
+        }
+      }
+    }
+  }
+
+  return hits
+}
+
+
+/**
+ * Find and mark links for the given line
+ */
+function markCitations(editor, lineHandle, tokens) {
+  
+  const line = lineHandle.lineNo();
+  const citations = find$1(editor, line, tokens);
+  // console.log(citations)
+  if (citations.length > 0) {
+    citations.map((c) => {
+
+      const frag = document.createDocumentFragment();
+
+      const component = new Citation({
+        target: frag,
+        props: {
+          text: c.text,
+        }
+      });
+
+      replaceMarkWithElement(editor, frag, line, c.start, c.end);
     });
   }
 }
 
 /* src/js/component/Figure.svelte generated by Svelte v3.22.3 */
 
-function add_css$4() {
+function add_css$5() {
 	var style = element("style");
 	style.id = "svelte-1jw57r3-style";
 	style.textContent = "@charset \"UTF-8\";figure.svelte-1jw57r3.svelte-1jw57r3{width:100%;margin:0;padding:0;display:inline-block;white-space:normal}figure.svelte-1jw57r3 img.svelte-1jw57r3{max-width:10em;display:inline-block;height:auto;border-radius:3px;text-indent:100%;white-space:nowrap;overflow:hidden;position:relative}figure.svelte-1jw57r3 img.svelte-1jw57r3:after{text-indent:0%;content:\"\" \" \" attr(src);color:#646464;background-color:#f0f0f0;white-space:normal;display:block;position:absolute;z-index:2;top:0;left:0;width:100%;height:100%}figure.svelte-1jw57r3 figcaption.svelte-1jw57r3{font-style:italic;color:gray}";
 	append(document.head, style);
 }
 
-function create_fragment$4(ctx) {
+function create_fragment$5(ctx) {
 	let figure;
 	let img;
 	let img_src_value;
@@ -1843,7 +2007,7 @@ function create_fragment$4(ctx) {
 	};
 }
 
-function instance$4($$self, $$props, $$invalidate) {
+function instance$5($$self, $$props, $$invalidate) {
 	let { caption } = $$props;
 	let { url } = $$props;
 	let { alt } = $$props;
@@ -1860,8 +2024,8 @@ function instance$4($$self, $$props, $$invalidate) {
 class Figure extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1jw57r3-style")) add_css$4();
-		init(this, options, instance$4, create_fragment$4, safe_not_equal, { caption: 0, url: 1, alt: 2 });
+		if (!document.getElementById("svelte-1jw57r3-style")) add_css$5();
+		init(this, options, instance$5, create_fragment$5, safe_not_equal, { caption: 0, url: 1, alt: 2 });
 	}
 }
 
@@ -1920,68 +2084,124 @@ async function markList(editor, lineHandle, tokens) {
   });
 }
 
+/* src/js/component/BracketsWidget.svelte generated by Svelte v3.22.3 */
+
+function add_css$6() {
+	var style = element("style");
+	style.id = "svelte-u5l30k-style";
+	style.textContent = ":root{--layout:[folders-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [folders-end files-start] minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.link.svelte-u5l30k{position:absolute;box-sizing:border-box;color:var(--clr-blue);background-color:var(--clr-blue-lighter);padding:0 0.2em 0 0.15em;border-radius:0.15em;border:1px solid var(--clr-blue-light);z-index:10;transform:translate(50%, 0%)}";
+	append(document.head, style);
+}
+
+function create_fragment$6(ctx) {
+	let div;
+	let t;
+
+	return {
+		c() {
+			div = element("div");
+			t = text(/*input*/ ctx[1]);
+			attr(div, "class", "link svelte-u5l30k");
+		},
+		m(target, anchor) {
+			insert(target, div, anchor);
+			append(div, t);
+			/*div_binding*/ ctx[4](div);
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*input*/ 2) set_data(t, /*input*/ ctx[1]);
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(div);
+			/*div_binding*/ ctx[4](null);
+		}
+	};
+}
+
+function instance$6($$self, $$props, $$invalidate) {
+	let { element } = $$props;
+	let { input } = $$props;
+	let { visible = false } = $$props;
+
+	const show = () => {
+		$$invalidate(1, input = "");
+		$$invalidate(2, visible = true);
+	};
+
+	function div_binding($$value) {
+		binding_callbacks[$$value ? "unshift" : "push"](() => {
+			$$invalidate(0, element = $$value);
+		});
+	}
+
+	$$self.$set = $$props => {
+		if ("element" in $$props) $$invalidate(0, element = $$props.element);
+		if ("input" in $$props) $$invalidate(1, input = $$props.input);
+		if ("visible" in $$props) $$invalidate(2, visible = $$props.visible);
+	};
+
+	return [element, input, visible, show, div_binding];
+}
+
+class BracketsWidget extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-u5l30k-style")) add_css$6();
+
+		init(this, options, instance$6, create_fragment$6, safe_not_equal, {
+			element: 0,
+			input: 1,
+			visible: 2,
+			show: 3
+		});
+	}
+
+	get element() {
+		return this.$$.ctx[0];
+	}
+
+	set element(element) {
+		this.$set({ element });
+		flush();
+	}
+
+	get input() {
+		return this.$$.ctx[1];
+	}
+
+	set input(input) {
+		this.$set({ input });
+		flush();
+	}
+
+	get visible() {
+		return this.$$.ctx[2];
+	}
+
+	set visible(visible) {
+		this.$set({ visible });
+		flush();
+	}
+
+	get show() {
+		return this.$$.ctx[3];
+	}
+}
+
 // -------- SHARED VARIABLES -------- //
 
 let editor;
 let fileId;
 let filePath;
+let bracketsWidget;
+
 let lastCursorLine = 0;
 
 const turndownService = new TurndownService();
 
 // -------- SETUP -------- //
-
-function makeEditor() {
-
-  const textarea = document.querySelector('#editor textarea');
-
-  // 
-  defineGambierMode();
-
-  // Create CodeMirror instance from textarea element. Original is replaced.
-  editor = CodeMirror.fromTextArea(textarea, {
-    mode: 'gambier',
-    lineWrapping: true,
-    lineNumbers: false,
-    theme: 'gambier',
-    // indentUnit: 2,
-    indentWithTabs: false,
-    extraKeys: {
-      'Enter': 'newlineAndIndentContinueMarkdownList',
-      'Tab': 'autoIndentMarkdownList',
-      'Shift-Tab': 'autoUnindentMarkdownList'
-    }
-  });
-
-  // Setup event listeners
-  editor.on("cursorActivity", onCursorActivity);
-
-  editor.on('beforeChange', async (cm, change) => {
-    if (change.origin === 'paste') {
-      const selection = editor.getSelection();
-      const isURL = isUrl(change.text);
-
-      if (isURL) {
-        if (selection) {
-          const text = selection;
-          const url = change.text;
-          const newText = change.text.map((line) => line = `[${text}](${url})`);
-          change.update(null, null, newText);
-        }
-      } else {
-        change.cancel();
-        const formats = await window.api.invoke('getFormatOfClipboard');
-        if (formats.length === 1 && formats[0] === 'text/plain') {
-          cm.replaceSelection(change.text.join('\n'));
-        } else if (formats.includes('text/html')) {
-          const html = await window.api.invoke('getHTMLFromClipboard');
-          const markdown = turndownService.turndown(html);
-          cm.replaceSelection(markdown);
-        }
-      }
-    }
-  });
-}
 
 /**
  * Load file contents into CodeMirror
@@ -2010,38 +2230,145 @@ function findAndMark() {
           markList(editor, lineHandle);
         }
         markInlineLinks(editor, lineHandle, tokens);
-        // markCitations(editor, lineHandle, tokens)
+        markCitations(editor, lineHandle, tokens);
       }
     });
   });
 }
 
 
-// -------- EVENTS -------- //
+// -------- EVENT HANDLERS -------- //
 
 /**
  * Every time cursor updates, check last line it was in for citations. We have to do this, because TODO... (along lines of: citations open/close when they're clicked into and out-of)
  */
 function onCursorActivity() {
   lastCursorLine = editor.getCursor().line;
+  // editor.addWidget(editor.getCursor(), el)
   findAndMark();
 }
 
+function onChange(cm, change) {
+  const text = change.text[0];
+  // const from = { line: change.from.line, ch: change.from.ch }
+  // const to = { line: change.to.line, ch: change.to.ch }
+  // console.log(from.ch, to.ch)
+
+  // const isBracketsCreated = text.charAt(0) == '[' && text.slice(text.length - 1) == ']'
+  // if (isBracketsCreated) {
+  //   const insideLeftBracket = { line: change.from.line, ch: change.from.ch + 1}
+  //   cm.addWidget(insideLeftBracket , bracketsWidget.element)
+  //   bracketsWidget.show()
+  //   bracketsWidget.from = insideLeftBracket
+  // }
+
+  const typedAmpersand = change.text[0] == '@';
+  const insideBracket = getCharAt(cm, change.from.line, change.from.ch - 1) == '[';
+  const startedCitation = typedAmpersand && insideBracket;
+  if (startedCitation) {
+    const currentPos = editor.getCursor();
+    cm.addWidget(currentPos, bracketsWidget.element);
+    bracketsWidget.from = currentPos;
+    bracketsWidget.show();
+  }
+
+  if (bracketsWidget.visible) {
+    let insideRightBracket = { line: change.to.line, ch: 0 };
+    insideRightBracket.ch = change.origin == '+delete' ? change.from.ch : change.to.ch + 1;
+    bracketsWidget.input = editor.getRange(bracketsWidget.from, insideRightBracket);
+  }
+}
+
+async function onBeforeChange(cm, change) {
+  if (change.origin === 'paste') {
+    const selection = editor.getSelection();
+    const isURL = isUrl(change.text);
+
+    if (isURL) {
+      if (selection) {
+        const text = selection;
+        const url = change.text;
+        const newText = change.text.map((line) => line = `[${text}](${url})`);
+        change.update(null, null, newText);
+      }
+    } else {
+      change.cancel();
+      const formats = await window.api.invoke('getFormatOfClipboard');
+      if (formats.length === 1 && formats[0] === 'text/plain') {
+        cm.replaceSelection(change.text.join('\n'));
+      } else if (formats.includes('text/html')) {
+        const html = await window.api.invoke('getHTMLFromClipboard');
+        const markdown = turndownService.turndown(html);
+        cm.replaceSelection(markdown);
+      }
+    }
+  }
+}
+
+// function onInputRead(cm, change) {
+//   console.log(change)
+// }
 
 // -------- SETUP -------- //
 
+function makeEditor() {
+
+  // Brackets widget
+  bracketsWidget = mountReplace(BracketsWidget, {
+    target: document.querySelector('#bracketsWidget'),
+    // props: {  }
+  });
+
+  console.log(bracketsWidget.element);
+
+  // Define "gambier" CodeMirror mode
+  defineGambierMode();
+
+  // Create CodeMirror instance from `<textarea>` (which is replaced).
+  const textarea = document.querySelector('#editor textarea');
+  editor = CodeMirror.fromTextArea(textarea, {
+    mode: 'gambier',
+    lineWrapping: true,
+    lineNumbers: false,
+    theme: 'gambier',
+    indentWithTabs: false,
+    autoCloseBrackets: true,
+    extraKeys: {
+      'Enter': 'newlineAndIndentContinueMarkdownList',
+      'Tab': 'autoIndentMarkdownList',
+      'Shift-Tab': 'autoUnindentMarkdownList'
+    }
+  });
+
+  // Setup event listeners
+  editor.on("cursorActivity", onCursorActivity);
+  editor.on("change", onChange);
+  editor.on('beforeChange', onBeforeChange);
+  // editor.on("inputRead", onInputRead)
+}
+
 async function setup() {
 
+  // Get file to load
   const state = await window.api.invoke('getState', 'utf8');
   fileId = state.lastOpenedFileId;
   filePath = state.contents.find((f) => f.id == fileId).path;
   filePath = filePath.substring(0, filePath.lastIndexOf('/'));
   const file = await window.api.invoke('getFileById', fileId, 'utf8');
 
+  // Make editor, and load file
+  makeEditor();
+  loadFile(file);
+
+  // Setup change listeners
   window.api.receive('stateChanged', async (state, oldState) => {
-    if (hasChanged("projectDirectory", state, oldState)) {
-      filePath = state.projectDirectory;
-    }
+
+    // If directory has changed...
+    // 06/10: I think this code is both unnecessary??
+    // if (hasChanged("projectDirectory", state, oldState)) {
+    // }
+
+    // If selected file has changed...
     if (hasChanged("lastOpenedFileId", state, oldState)) {
       fileId = state.lastOpenedFileId;
       const file = await window.api.invoke('getFileById', fileId, 'utf8');
@@ -2049,9 +2376,6 @@ async function setup() {
     }
   });
 
-  makeEditor();
-
-  loadFile(file);
 }
 
 // Bundled imports
@@ -2065,8 +2389,6 @@ mountReplace(NavFiles, {
   target: document.querySelector('#files'),
   // props: { name: 'world' }
 });
-
-console.log(CSL);
 
 setup();
 

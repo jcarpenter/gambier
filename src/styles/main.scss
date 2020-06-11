@@ -1,4 +1,6 @@
 @import "variables";
+// @import "codemirror-theme";
+// @import "citation-collapsed";
 
 * {
     box-sizing: border-box;
@@ -43,5 +45,9 @@ body {
     // border: 1px solid gray;
 }
 
-// @import "codemirror-theme";
-// @import "citation-collapsed";
+#bracketsWidget {
+    background: pink;
+    padding: 0 0.5em;
+    position: absolute;
+    z-index: 10;
+}

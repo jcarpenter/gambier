@@ -11,18 +11,12 @@ export const StoreSchema = {
     default: 'undefined'
   },
 
-  lastOpenedFileId: {
-    description: 'id of the last opened file.',
-    type: 'integer',
-    default: 0
-  },
+  contents: { type: 'array', default: [] },
 
   selectedFolderId: {
     type: 'integer',
-    default: 0
+    default: 0,
   },
-
-  contents: { type: 'array', default: [] },
 
   // hierarchy: {
   //   description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',

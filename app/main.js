@@ -13,6 +13,7 @@ require('deep-object-diff');
 var chokidar = _interopDefault(require('chokidar'));
 var matter = _interopDefault(require('gray-matter'));
 var removeMd = _interopDefault(require('remove-markdown'));
+var diff = _interopDefault(require('deep-diff'));
 
 const StoreSchema = {
 
@@ -27,18 +28,12 @@ const StoreSchema = {
     default: 'undefined'
   },
 
-  lastOpenedFileId: {
-    description: 'id of the last opened file.',
-    type: 'integer',
-    default: 0
-  },
+  contents: { type: 'array', default: [] },
 
   selectedFolderId: {
     type: 'integer',
-    default: 0
+    default: 0,
   },
-
-  contents: { type: 'array', default: [] },
 
   // hierarchy: {
   //   description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',
@@ -76,9 +71,12 @@ function reducers(state = initialState, action) {
         projectDirectory: action.path
       })
     case 'OPEN_FILE':
-      return Object.assign({}, state, {
-        lastOpenedFileId: action.id
-      })
+      const newState = Object.assign({}, state, {
+        lastOpenedFileId: action.fileId
+      });
+      const directory = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId);
+      directory.selectedFileId = action.fileId;
+      return newState
     case 'SET_STARTUP_TIME':
       return Object.assign({}, state, {
         appStartupTime: action.time
@@ -86,15 +84,13 @@ function reducers(state = initialState, action) {
     case 'MAP_HIERARCHY':
       return Object.assign({}, state, {
         contents: action.contents
-        // hierarchy: action.contents
       })
     case 'RESET_HIERARCHY':
       return Object.assign({}, state, {
         contents: []
-        // hierarchy: []
       })
     case 'SELECT_FOLDER':
-      console.log(action.id);
+      // console.log(action.id)
       return Object.assign({}, state, {
         selectedFolderId: action.id
       })
@@ -153,6 +149,35 @@ class GambierStore extends Store {
 
 const store = new GambierStore();
 
+async function isWorkingPath(pth) {
+
+  if (pth == 'undefined') {
+    return false
+  } else {
+    if (await fsExtra.pathExists(pth)) {
+      return true
+    } else {
+      return false
+    }
+  }
+}
+
+function applyDiffs(oldContents, newContents) {
+
+  diff.observableDiff(oldContents, newContents, (d) => {
+    console.log(d);
+    // Apply all changes except to the name property...
+    // if (d.path[d.path.length - 1] !== 'name') {
+    // }
+    diff.applyChange(oldContents, newContents, d);
+  });
+
+  return oldContents
+}
+
+/**
+ * Map projectDirectory and save as a flattened hierarchy `contents` property of store (array).
+ */
 class ProjectDirectory {
 
   constructor() {
@@ -172,14 +197,11 @@ class ProjectDirectory {
       this.onStoreChange(newState, oldState);
     });
 
-    // Check if path is valid. 
-    // If yes, map directory, update store, and add watcher.
-    if (await this.isWorkingPath(this.directory)) {
-      let contents = await this.mapDirectoryRecursively(this.directory);
-      contents = await this.getFilesDetails(contents);
-      this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
-      this.startWatching(this.directory);
-    }
+    // Map project directory
+    this.mapProjectDirectory();
+
+    // Start watcher
+    this.startWatching(this.directory);
   }
 
   startWatching(directory) {
@@ -194,25 +216,14 @@ class ProjectDirectory {
     });
 
     this.watcher.on('all', (event, path) => {
-      console.log('- - - - - - - -');
-      console.log(event);
-      console.log(path);
+      console.log("startWatching: this.watcher.on");
+      this.mapProjectDirectory();
     });
   }
 
-  async isWorkingPath(directory) {
-
-    if (directory == 'undefined') {
-      return false
-    } else {
-      if (await fsExtra.pathExists(directory)) {
-        return true
-      } else {
-        return false
-      }
-    }
-  }
-
+  /**
+   * Remap directory and update watcher if projectDirectory changes
+   */
   async onStoreChange(newState, oldState) {
 
     let newDir = newState.projectDirectory;
@@ -224,23 +235,35 @@ class ProjectDirectory {
     // If the directory has changed...
     if (newDir !== oldDir) {
 
-      // We unwatch the old directory (if it wasn't undefined)
+      // Unwatch the old directory
       if (oldDir !== 'undefined') {
-        // this.watcher.unwatch(oldDir)
         await this.watcher.close();
       }
 
-      // Check if path is valid. 
-      // If yes, map directory, update store, and add watcher.
-      if (await this.isWorkingPath(newDir)) {
-        let contents = await this.mapDirectoryRecursively(newDir);
-        contents = await this.getFilesDetails(contents);
-        this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
-        this.startWatching(newDir);
-      } else {
-        // Else, if it doesn't exist, tell store to `RESET_HIERARCHY` (clears to `[]`)
-        this.store.dispatch({ type: 'RESET_HIERARCHY' });
-      }
+      // Remap
+      this.mapProjectDirectory();
+
+      // Start watcher
+      this.startWatching(this.directory);
+    }
+  }
+
+  /**
+   * Check if path is valid. 
+   * If true, map directory, update store, and add watcher.
+   * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
+   */
+  async mapProjectDirectory() {
+    // console.log("mapProjectDirectory")
+    if (await isWorkingPath(this.directory)) {
+      // console.log("isWorkingPath", this.directory)
+      let contents = await this.mapDirectoryRecursively(this.directory);
+      contents = await this.getFilesDetails(contents);
+      contents = applyDiffs(this.store.store.contents, contents);
+      this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
+    } else {
+      // console.log("is NOT WorkingPath: ", this.directory)
+      this.store.dispatch({ type: 'RESET_HIERARCHY' });
     }
   }
 
@@ -275,7 +298,8 @@ class ProjectDirectory {
       path: directoryPath,
       modified: stats.mtime.toISOString(),
       childFileCount: 0,
-      childDirectoryCount: 0
+      childDirectoryCount: 0,
+      selectedFileId: 0
     };
 
     // If parentId was passed, set `thisDir.parentId` to it
@@ -622,8 +646,8 @@ function createWindow() {
 
   // Create the browser window.
   win = new electron.BrowserWindow({
-    width: 1000,
-    height: 800,
+    width: 1600,
+    height: 900,
     webPreferences: {
       scrollBounce: false,
       // Security

@@ -1,4 +1,8 @@
 <script>
+  /**
+   * Render project directory contents as tree of folders.
+   * Folder component does most of the work here.
+   */
   import Folder from "./Folder.svelte";
   import { onMount } from "svelte";
   import { createTreeHierarchy } from "hierarchy-js";
@@ -38,7 +42,6 @@
 </script>
 
 <style type="text/scss">
-
   #folders {
     height: 100%;
     overflow-y: scroll;
@@ -55,7 +58,6 @@
     padding: 0 1em;
   }
 </style>
-
 
 <div id="folders">
   <h1>Folders</h1>

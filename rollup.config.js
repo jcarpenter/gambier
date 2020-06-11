@@ -9,18 +9,18 @@ export default [
   {
     input: 'src/main.js',
     output: {
-      sourcemap: 'true',
+      sourcemap: true,
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown'],
+    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff'],
   },
 
   // Electron | Preload
   {
     input: 'src/js/preload.js',
     output: {
-      sourcemap: 'false',
+      sourcemap: false,
       format: 'cjs',
       file: 'app/js/preload.js',
     },
@@ -31,7 +31,7 @@ export default [
   {
     input: 'src/js/renderer.js',
     output: {
-      sourcemap: 'true',
+      sourcemap: true,
       format: 'es',
       file: 'app/js/renderer.js',
       // globals: {

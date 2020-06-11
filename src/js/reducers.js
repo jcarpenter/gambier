@@ -7,9 +7,12 @@ function reducers(state = initialState, action) {
         projectDirectory: action.path
       })
     case 'OPEN_FILE':
-      return Object.assign({}, state, {
-        lastOpenedFileId: action.id
+      const newState = Object.assign({}, state, {
+        lastOpenedFileId: action.fileId
       })
+      const directory = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId)
+      directory.selectedFileId = action.fileId
+      return newState
     case 'SET_STARTUP_TIME':
       return Object.assign({}, state, {
         appStartupTime: action.time
@@ -17,15 +20,13 @@ function reducers(state = initialState, action) {
     case 'MAP_HIERARCHY':
       return Object.assign({}, state, {
         contents: action.contents
-        // hierarchy: action.contents
       })
     case 'RESET_HIERARCHY':
       return Object.assign({}, state, {
         contents: []
-        // hierarchy: []
       })
     case 'SELECT_FOLDER':
-      console.log(action.id)
+      // console.log(action.id)
       return Object.assign({}, state, {
         selectedFolderId: action.id
       })
