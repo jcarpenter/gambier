@@ -4,6 +4,7 @@ import path from 'path'
 import matter from 'gray-matter'
 import removeMd from 'remove-markdown'
 import { applyDiffs, isWorkingPath } from './utils-mainProcess'
+import diff from 'deep-diff'
 
 /**
  * Map projectDirectory and save as a flattened hierarchy `contents` property of store (array).
@@ -47,6 +48,8 @@ class ProjectDirectory {
 
     this.watcher.on('all', (event, path) => {
       console.log("startWatching: this.watcher.on")
+      console.log(event)
+      console.log(path)
       this.mapProjectDirectory()
     })
   }
@@ -89,12 +92,25 @@ class ProjectDirectory {
       // console.log("isWorkingPath", this.directory)
       let contents = await this.mapDirectoryRecursively(this.directory)
       contents = await this.getFilesDetails(contents)
-      contents = applyDiffs(this.store.store.contents, contents)
+      contents = this.applyDiffs(this.store.store.contents, contents)
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
     } else {
       // console.log("is NOT WorkingPath: ", this.directory)
       this.store.dispatch({ type: 'RESET_HIERARCHY' })
     }
+  }
+
+  applyDiffs(oldContents, newContents) {
+
+    diff.observableDiff(oldContents, newContents, (d) => {
+      console.log(d)
+      // Apply all changes except to the name property...
+      if (d.path[d.path.length - 1] !== 'selectedFileId') {
+        diff.applyChange(oldContents, newContents, d);
+      }
+    })
+  
+    return oldContents
   }
 
   /**

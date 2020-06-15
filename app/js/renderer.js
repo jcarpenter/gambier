@@ -649,7 +649,7 @@ function instance($$self, $$props, $$invalidate) {
 	let { details = {} } = $$props;
 
 	function select() {
-		window.api.send("dispatch", { type: "SELECT_FOLDER", id: details.id });
+		window.api.send("dispatch", { type: "OPEN_FOLDER", id: details.id });
 	}
 
 	function update(state) {
@@ -1065,7 +1065,7 @@ function get_each_context$1(ctx, list, i) {
 	return child_ctx;
 }
 
-// (250:4) {:else}
+// (264:4) {:else}
 function create_else_block(ctx) {
 	let div;
 	let h2;
@@ -1131,7 +1131,7 @@ function create_else_block(ctx) {
 	};
 }
 
-// (240:4) {#if file.selected}
+// (254:4) {#if file.selected}
 function create_if_block$2(ctx) {
 	let div;
 	let h2;
@@ -1190,7 +1190,7 @@ function create_if_block$2(ctx) {
 	};
 }
 
-// (239:2) {#each files as file}
+// (253:2) {#each files as file}
 function create_each_block$1(ctx) {
 	let if_block_anchor;
 
@@ -1354,7 +1354,7 @@ function instance$2($$self, $$props, $$invalidate) {
  */
 	function populateFiles(state) {
 		$$invalidate(0, files = state.contents.filter((obj, index) => {
-			return obj.parentId === selectedDirectoryId && obj.type == "file";
+			return obj.type == "file" && obj.parentId == selectedDirectoryId;
 		}));
 	}
 
@@ -1364,11 +1364,19 @@ function instance$2($$self, $$props, $$invalidate) {
  * Then make sure the selected file is scrolled into view.
  */
 	async function setSelectedFile(state) {
-		const selectedFolder = state.contents.find(d => d.type == "directory" && d.id == state.selectedFolderId);
-		console.log(selectedFolder);
+		// Get selectedFileId for selectedFolder
+		let selectedFileId = state.contents.find(d => d.type == "directory" && d.id == state.selectedFolderId).selectedFileId;
 
+		// If it's 0 (the default, meaning "nothing"), set selectFileId to first of files
+		if (selectedFileId == 0) {
+			selectedFileId = files[0].id;
+		}
+
+		// Find the file whose id == selectedFileId, 
+		// and set selected true, and `selectedFileIndex = index`
+		// Set all other files unselected
 		files.forEach((f, index) => {
-			f.selected = f.id == selectedFolder.selectedFileId;
+			f.selected = f.id == selectedFileId;
 			if (f.selected) selectedFileIndex = index;
 		});
 
@@ -2368,8 +2376,11 @@ async function setup() {
     // if (hasChanged("projectDirectory", state, oldState)) {
     // }
 
+    console.log("Editor: Something has changed");
+
     // If selected file has changed...
     if (hasChanged("lastOpenedFileId", state, oldState)) {
+      console.log("Editor: lastOpenedFileId has changed");
       fileId = state.lastOpenedFileId;
       const file = await window.api.invoke('getFileById', fileId, 'utf8');
       loadFile(file);

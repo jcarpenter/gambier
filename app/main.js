@@ -32,7 +32,7 @@ const StoreSchema = {
 
   selectedFolderId: {
     type: 'integer',
-    default: 0,
+    default: 'undefined',
   },
 
   // hierarchy: {
@@ -66,34 +66,50 @@ const initialState = {};
 
 function reducers(state = initialState, action) {
   switch (action.type) {
-    case 'SET_PROJECT_DIRECTORY':
+
+    case 'SET_PROJECT_DIRECTORY': {
       return Object.assign({}, state, {
         projectDirectory: action.path
       })
-    case 'OPEN_FILE':
+    }
+
+    case 'OPEN_FOLDER': {
+      const newState = Object.assign({}, state, {
+        selectedFolderId: action.id
+      });
+      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.id);
+      newState.lastOpenedFileId = selectedFolder.selectedFileId;
+      console.log(newState.lastOpenedFileId);
+      return newState
+    }
+
+    case 'OPEN_FILE': {
       const newState = Object.assign({}, state, {
         lastOpenedFileId: action.fileId
       });
-      const directory = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId);
-      directory.selectedFileId = action.fileId;
+      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId);
+      selectedFolder.selectedFileId = action.fileId;
       return newState
-    case 'SET_STARTUP_TIME':
+    }
+
+    case 'SET_STARTUP_TIME': {
       return Object.assign({}, state, {
         appStartupTime: action.time
       })
-    case 'MAP_HIERARCHY':
+    }
+
+    case 'MAP_HIERARCHY': {
       return Object.assign({}, state, {
         contents: action.contents
       })
-    case 'RESET_HIERARCHY':
+    }
+
+    case 'RESET_HIERARCHY': {
       return Object.assign({}, state, {
         contents: []
       })
-    case 'SELECT_FOLDER':
-      // console.log(action.id)
-      return Object.assign({}, state, {
-        selectedFolderId: action.id
-      })
+    }
+    
     default:
       return state
   }
@@ -162,19 +178,6 @@ async function isWorkingPath(pth) {
   }
 }
 
-function applyDiffs(oldContents, newContents) {
-
-  diff.observableDiff(oldContents, newContents, (d) => {
-    console.log(d);
-    // Apply all changes except to the name property...
-    // if (d.path[d.path.length - 1] !== 'name') {
-    // }
-    diff.applyChange(oldContents, newContents, d);
-  });
-
-  return oldContents
-}
-
 /**
  * Map projectDirectory and save as a flattened hierarchy `contents` property of store (array).
  */
@@ -217,6 +220,8 @@ class ProjectDirectory {
 
     this.watcher.on('all', (event, path) => {
       console.log("startWatching: this.watcher.on");
+      console.log(event);
+      console.log(path);
       this.mapProjectDirectory();
     });
   }
@@ -259,12 +264,25 @@ class ProjectDirectory {
       // console.log("isWorkingPath", this.directory)
       let contents = await this.mapDirectoryRecursively(this.directory);
       contents = await this.getFilesDetails(contents);
-      contents = applyDiffs(this.store.store.contents, contents);
+      contents = this.applyDiffs(this.store.store.contents, contents);
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
     } else {
       // console.log("is NOT WorkingPath: ", this.directory)
       this.store.dispatch({ type: 'RESET_HIERARCHY' });
     }
+  }
+
+  applyDiffs(oldContents, newContents) {
+
+    diff.observableDiff(oldContents, newContents, (d) => {
+      console.log(d);
+      // Apply all changes except to the name property...
+      if (d.path[d.path.length - 1] !== 'selectedFileId') {
+        diff.applyChange(oldContents, newContents, d);
+      }
+    });
+  
+    return oldContents
   }
 
   /**

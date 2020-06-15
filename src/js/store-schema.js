@@ -15,7 +15,7 @@ export const StoreSchema = {
 
   selectedFolderId: {
     type: 'integer',
-    default: 0,
+    default: 'undefined',
   },
 
   // hierarchy: {

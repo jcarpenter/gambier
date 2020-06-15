@@ -13,7 +13,7 @@
   export let details = {};
 
   function select() {
-    window.api.send("dispatch", { type: "SELECT_FOLDER", id: details.id });
+    window.api.send("dispatch", { type: "OPEN_FOLDER", id: details.id });
   }
 
   function update(state) {

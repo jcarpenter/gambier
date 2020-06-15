@@ -193,8 +193,11 @@ async function setup() {
     // if (hasChanged("projectDirectory", state, oldState)) {
     // }
 
+    console.log("Editor: Something has changed")
+
     // If selected file has changed...
     if (hasChanged("lastOpenedFileId", state, oldState)) {
+      console.log("Editor: lastOpenedFileId has changed")
       fileId = state.lastOpenedFileId
       const file = await window.api.invoke('getFileById', fileId, 'utf8')
       loadFile(file)

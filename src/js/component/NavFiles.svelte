@@ -6,7 +6,7 @@
   import { hasChanged } from "../utils";
 
   let files = [];
-  let selectedDirectoryId = 0
+  let selectedDirectoryId = 0;
   let selectedFileIndex = 0;
   let selectedEl = 0;
   let section;
@@ -42,7 +42,7 @@
    */
   function populateFiles(state) {
     files = state.contents.filter((obj, index) => {
-      return obj.parentId === selectedDirectoryId && obj.type == "file";
+      return obj.type == "file" && obj.parentId == selectedDirectoryId;
     });
   }
 
@@ -52,10 +52,21 @@
    * Then make sure the selected file is scrolled into view.
    */
   async function setSelectedFile(state) {
-    const selectedFolder = state.contents.find((d) => d.type == 'directory' && d.id == state.selectedFolderId)
-    console.log(selectedFolder)
+    // Get selectedFileId for selectedFolder
+    let selectedFileId = state.contents.find(
+      d => d.type == "directory" && d.id == state.selectedFolderId
+    ).selectedFileId;
+
+    // If it's 0 (the default, meaning "nothing"), set selectFileId to first of files
+    if (selectedFileId == 0) {
+      selectedFileId = files[0].id;
+    }
+
+    // Find the file whose id == selectedFileId, 
+    // and set selected true, and `selectedFileIndex = index`
+    // Set all other files unselected
     files.forEach((f, index) => {
-      f.selected = f.id == selectedFolder.selectedFileId;
+      f.selected = f.id == selectedFileId;
       if (f.selected) selectedFileIndex = index;
     });
 
@@ -76,7 +87,7 @@
 
   onMount(async () => {
     const state = await window.api.invoke("getState");
-    selectedDirectoryId = state.selectedFolderId
+    selectedDirectoryId = state.selectedFolderId;
     populateFiles(state);
     setSelectedFile(state);
     await tick();
@@ -84,12 +95,11 @@
   });
 
   window.api.receive("stateChanged", async (state, oldState) => {
-    
-    console.log("NAVFILES: STATE CHANGED")
+    console.log("NAVFILES: STATE CHANGED");
 
     // If selected folder changed...
     if (hasChanged("selectedFolderId", state, oldState)) {
-      selectedDirectoryId = state.selectedFolderId
+      selectedDirectoryId = state.selectedFolderId;
       populateFiles(state);
       setSelectedFile(state);
       await tick();
@@ -105,7 +115,11 @@
   });
 
   function clicked(id) {
-    window.api.send("dispatch", { type: "OPEN_FILE", parentId: selectedDirectoryId, fileId: id });
+    window.api.send("dispatch", {
+      type: "OPEN_FILE",
+      parentId: selectedDirectoryId,
+      fileId: id
+    });
   }
 </script>
 
