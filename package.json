@@ -11,7 +11,7 @@
     "rollup:build": "rollup --config",
     "dev": "run-p sass rollup:dev",
     "build": "run-p sass rollup:build",
-    "start": "electron --inspect=5858 .",
+    "start": "electron .",
     "pack": "electron-builder --dir",
     "release": "electron-builder"
   },
@@ -53,6 +53,7 @@
     "electron": "8.2.5",
     "electron-builder": "^22.6.1",
     "electron-reload": "^1.5.0",
+    "fuse.js": "^6.0.4",
     "hierarchy-js": "^1.0.4",
     "node-sass": "^4.14.1",
     "npm-run-all": "^4.1.5",

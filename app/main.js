@@ -16,24 +16,38 @@ var removeMd = _interopDefault(require('remove-markdown'));
 var diff = _interopDefault(require('deep-diff'));
 
 const StoreSchema = {
+  
+  // appStartupTime: {
+  //   type: 'string',
+  //   default: 'undefined'
+  // },
 
-  appStartupTime: {
+  changed: { type: 'array', default: [] },
+
+  selectedFolderId: {
+    type: 'integer',
+    default: 0,
+  },
+
+  selectedFileId: {
+    type: 'integer',
+    default: 0,
+  },
+
+  projectDirectory: {
+    descrition: 'User specified path to directory containing their project files',
     type: 'string',
     default: 'undefined'
   },
-  
-  projectDirectory: {
-    descrition: 'User specified directory that contains their project files',
+
+  projectCitations: {
+    descrition: 'User specified path to CSL-JSON file containing their citatons',
     type: 'string',
     default: 'undefined'
   },
 
   contents: { type: 'array', default: [] },
 
-  selectedFolderId: {
-    type: 'integer',
-    default: 'undefined',
-  },
 
   // hierarchy: {
   //   description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',
@@ -62,57 +76,116 @@ const StoreSchema = {
   // }
 };
 
-const initialState = {};
+function getRootDir(contents) {
+  return contents.find((d) => d.type == 'directory' && d.isRoot)
+}
 
-function reducers(state = initialState, action) {
+function getFirstFileInDirectory(contents, directoryId) {
+  const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId);
+  return files[0]
+}
+
+/**
+ * Check if contents contains item by type and id
+ */
+function hasContentById(contents, type, id) {
+  return contents.some((d) => d.type == type && d.id == id)
+}
+
+/**
+ * `state = {}` gives us a default, for possible first run 'undefined'.
+ */
+function reducers(state = {}, action) {
+
+  const newState = Object.assign({}, state);
+
+  newState.lastAction = action.type;
+  newState.changed = []; // Reset on every action 
+
   switch (action.type) {
 
     case 'SET_PROJECT_DIRECTORY': {
-      return Object.assign({}, state, {
-        projectDirectory: action.path
-      })
-    }
-
-    case 'OPEN_FOLDER': {
-      const newState = Object.assign({}, state, {
-        selectedFolderId: action.id
-      });
-      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.id);
-      newState.lastOpenedFileId = selectedFolder.selectedFileId;
-      console.log(newState.lastOpenedFileId);
-      return newState
-    }
-
-    case 'OPEN_FILE': {
-      const newState = Object.assign({}, state, {
-        lastOpenedFileId: action.fileId
-      });
-      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId);
-      selectedFolder.selectedFileId = action.fileId;
-      return newState
-    }
-
-    case 'SET_STARTUP_TIME': {
-      return Object.assign({}, state, {
-        appStartupTime: action.time
-      })
+      newState.projectDirectory = action.path;
+      newState.changed.push('projectDirectory');
+      break
     }
 
     case 'MAP_HIERARCHY': {
-      return Object.assign({}, state, {
-        contents: action.contents
-      })
+      newState.contents = action.contents;
+
+      // Handle first run and error conditions:
+      // If a folder has not been selected yet, or if the previously-selected 
+      // folder does not exist in updated contents, select root directory.
+      if (
+        newState.selectedFolderId == 0 ||
+        !hasContentById(newState.contents, 'directory', newState.selectedFolderId)
+      ) {
+        
+        // Set `selectedFolderId`
+        const rootDir = getRootDir(newState.contents);
+        newState.selectedFolderId = rootDir.id;
+
+        // If rootDir has child files, set `selectedFileId` to first one.
+        // Else, set `selectedFileId` to zero (effectively means 'undefined')
+        if (rootDir.childFileCount > 0) {
+          const firstFile = getFirstFileInDirectory(newState.contents, newState.selectedFolderId);
+          newState.selectedFileId = firstFile.id;
+        } else {
+          newState.selectedFileId = 0;
+        }
+        
+        newState.changed.push('selectedFolderId');
+        newState.changed.push('selectedFileId');
+      }
+
+      newState.changed.push('contents');
+      break
+    }
+
+    case 'OPEN_FOLDER': {
+
+      // Set `state.selectedFolderId`
+      newState.selectedFolderId = action.id;
+
+      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.id);
+
+      // Set `state.selectedFileId` to folder's selected file
+      newState.selectedFileId = selectedFolder.selectedFileId;
+
+      newState.changed.push('selectedFolderId');
+      newState.changed.push('selectedFileId');
+
+      break
+    }
+
+    case 'OPEN_FILE': {
+      newState.selectedFileId = action.fileId;
+
+      // Find directory that contains selected file, 
+      // and set its `selectedFileId` property.
+      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId);
+      selectedFolder.selectedFileId = action.fileId;
+
+      newState.changed.push('selectedFileId');
+      newState.changed.push('selectedFolder.selectedFileId');
+
+      break
+    }
+
+    case 'SET_STARTUP_TIME': {
+      newState.appStartupTime = action.time;
+      newState.changed.push('appStartupTime');
+      break
     }
 
     case 'RESET_HIERARCHY': {
-      return Object.assign({}, state, {
-        contents: []
-      })
+      newState.contents = [];
+      newState.changed.push('contents');
+      break
     }
-    
-    default:
-      return state
   }
+
+  return newState
 }
 
 class GambierStore extends Store {
@@ -208,6 +281,8 @@ class ProjectDirectory {
   }
 
   startWatching(directory) {
+    if (directory == 'undefined') return
+
     this.watcher = chokidar.watch(directory, {
       ignored: /(^|[\/\\])\../, // Ignore dotfiles
       ignoreInitial: true,
@@ -259,15 +334,15 @@ class ProjectDirectory {
    * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
    */
   async mapProjectDirectory() {
-    // console.log("mapProjectDirectory")
+    
+    if (this.directory == 'undefined' || '') return
+
     if (await isWorkingPath(this.directory)) {
-      // console.log("isWorkingPath", this.directory)
       let contents = await this.mapDirectoryRecursively(this.directory);
       contents = await this.getFilesDetails(contents);
       contents = this.applyDiffs(this.store.store.contents, contents);
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
     } else {
-      // console.log("is NOT WorkingPath: ", this.directory)
       this.store.dispatch({ type: 'RESET_HIERARCHY' });
     }
   }
@@ -275,9 +350,14 @@ class ProjectDirectory {
   applyDiffs(oldContents, newContents) {
 
     diff.observableDiff(oldContents, newContents, (d) => {
-      console.log(d);
+      // console.log(d)
+      // console.log(d.path)
       // Apply all changes except to the name property...
-      if (d.path[d.path.length - 1] !== 'selectedFileId') {
+      if (d.path !== undefined) {
+        if (d.path[d.path.length - 1] !== 'selectedFileId') {
+          diff.applyChange(oldContents, newContents, d);
+        }
+      } else {
         diff.applyChange(oldContents, newContents, d);
       }
     });
@@ -317,12 +397,16 @@ class ProjectDirectory {
       modified: stats.mtime.toISOString(),
       childFileCount: 0,
       childDirectoryCount: 0,
-      selectedFileId: 0
+      selectedFileId: 0,
+      isRoot: false,
     };
 
     // If parentId was passed, set `thisDir.parentId` to it
+    // Else this directory is the root, so set `isRoot: true`
     if (parentId !== undefined) {
       thisDir.parentId = parentId;
+    } else {
+      thisDir.isRoot = true;
     }
 
     for (let c of contents) {
@@ -437,6 +521,50 @@ function extractExcerpt(file) {
 }
 
 const projectDirectory = new ProjectDirectory();
+
+class ProjectCitations {
+  constructor() {
+    this.store;
+    this.watcher;
+    this.citationsPath = '';
+  }
+
+  async setup(store) {
+    // console.log("projectCitations: setup".bgRed)
+    this.citationsPath = store.store.projectCitations;
+    // console.log(this.citationsPath.bgRed)
+  }
+
+  startWatching() {
+    // console.log("projectCitations: startWatching".bgRed)
+    this.watcher = chokidar.watch(this.citationsPath, {
+      ignored: /(^|[\/\\])\../, // Ignore dotfiles
+      ignoreInitial: true,
+      persistent: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 400,
+        pollInterval: 200
+      }
+    });
+
+    this.watcher.on('all', (event, path) => {
+      // console.log("startWatching: this.watcher.on".bgRed)
+      console.log(event);
+      console.log(path);
+      this.onCitationsEvent();
+    });
+  }
+
+  onCitationsEvent() {
+    // console.log("projectCitations: onCitationsEvent".bgRed)
+  }
+
+  getCitations() {
+    return "Some citations for you to enjoy"
+  }
+}
+
+const projectCitations = new ProjectCitations();
 
 const app = electron__default.app;
 
@@ -642,14 +770,14 @@ const watchAndReload = [
   // '**/*.jpg',
 ];
 
-require('electron-reload')(watchAndReload, {
-  // awaitWriteFinish: {
-  //   stabilityThreshold: 10,
-  //   pollInterval: 50
-  // },
-  electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-  // argv: ['--inspect=5858'],
-});
+// require('electron-reload')(watchAndReload, {
+//   // awaitWriteFinish: {
+//   //   stabilityThreshold: 10,
+//   //   pollInterval: 50
+//   // },
+//   electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+//   // argv: ['--inspect=5858'],
+// })
 
 // -------- Create window -------- //
 
@@ -664,6 +792,7 @@ function createWindow() {
 
   // Create the browser window.
   win = new electron.BrowserWindow({
+    show: false,
     width: 1600,
     height: 900,
     webPreferences: {
@@ -686,7 +815,7 @@ function createWindow() {
   });
 
   // Open DevTools
-  win.webContents.openDevTools();
+  // win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'));
@@ -694,13 +823,13 @@ function createWindow() {
   // Populate OS menus
   create();
 
-  // Setup project directory
+  // Setup project directory and citations
   projectDirectory.setup(store);
+  projectCitations.setup(store);
 
   // Send state to render process once dom is ready
-  win.webContents.once('dom-ready', () => {
-    console.log(`dom-ready`.bgBrightBlue.black, `(Main.js)`.brightBlue);
-    // win.webContents.send('setInitialState', store.getCurrentState())
+  win.once('ready-to-show', () => {
+    console.log(`ready-to-show`.bgBrightBlue.black, `(Main.js)`.brightBlue);
   });
 
   // -------- TEMP DEVELOPMENT STUFF -------- //
@@ -746,6 +875,26 @@ store.onDidAnyChange((newState, oldState) => {
 
 // -------- IPC: Send/Receive -------- //
 
+electron.ipcMain.on('showWindow', (event) => {
+  console.log("win.show()".yellow);
+  win.show();
+});
+
+electron.ipcMain.on('hideWindow', (event) => {
+  console.log("win.hide()".yellow);
+  win.hide();
+});
+
+electron.ipcMain.on('selectProjectDirectory', async (event) => {
+  const selection = await electron.dialog.showOpenDialog(win, {
+    title: 'Select Project Directory',
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (!selection.canceled) {
+    store.dispatch({ type: 'SET_PROJECT_DIRECTORY', path: selection.filePaths[0] });
+  }
+});
+
 electron.ipcMain.on('dispatch', (event, action) => {
   store.dispatch(action);
 });
@@ -759,25 +908,32 @@ electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
 });
 
 electron.ipcMain.handle('getState', async (event) => {
+  console.log("getState");
   return store.store
 });
 
+electron.ipcMain.handle('getCitations', (event) => {
+  return projectCitations.getCitations()
+});
+
 electron.ipcMain.handle('getFileById', async (event, id, encoding) => {
-  
+
   // Get path of file with matching id
   const filePath = store.store.contents.find((f) => f.id == id).path;
-  
+
   // Load file and return
   let file = await fsExtra.readFile(filePath, encoding);
   return file
 });
 
 electron.ipcMain.handle('pathJoin', async (event, path1, path2) => {
+  // console.log(path1)
+  // console.log(path2)
   return path.join(path1, path2)
 });
 
 electron.ipcMain.handle('getHTMLFromClipboard', (event) => {
-  console.log(electron.clipboard.availableFormats());
+  // console.log(clipboard.availableFormats())
   return electron.clipboard.readHTML()
 });
 

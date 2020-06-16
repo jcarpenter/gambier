@@ -8,7 +8,7 @@
   let files = [];
   let selectedDirectoryId = 0;
   let selectedFileIndex = 0;
-  let selectedEl = 0;
+  let selectedEl = undefined;
   let section;
   let sectionIsFocused = false;
 
@@ -52,6 +52,8 @@
    * Then make sure the selected file is scrolled into view.
    */
   async function setSelectedFile(state) {
+    if (files.length == 0) return;
+
     // Get selectedFileId for selectedFolder
     let selectedFileId = state.contents.find(
       d => d.type == "directory" && d.id == state.selectedFolderId
@@ -62,7 +64,7 @@
       selectedFileId = files[0].id;
     }
 
-    // Find the file whose id == selectedFileId, 
+    // Find the file whose id == selectedFileId,
     // and set selected true, and `selectedFileIndex = index`
     // Set all other files unselected
     files.forEach((f, index) => {
@@ -72,6 +74,10 @@
 
     // Tell Svelte that variable has changed. Makes view update.
     files = files;
+
+    // Await tick, then scroll file into view
+    await tick();
+    scrollFileIntoView(selectedEl, true);
   }
 
   function scrollFileIntoView(element, animate = true) {
@@ -85,36 +91,25 @@
     }
   }
 
+  window.api.receive("stateChanged", async (state, oldState) => {
+    if (
+      state.changed.includes("selectedFolderId") ||
+      state.changed.includes("selectedFileId")
+    ) {
+      selectedDirectoryId = state.selectedFolderId;
+      populateFiles(state);
+      setSelectedFile(state);
+    }
+  });
+
   onMount(async () => {
     const state = await window.api.invoke("getState");
     selectedDirectoryId = state.selectedFolderId;
     populateFiles(state);
     setSelectedFile(state);
-    await tick();
-    scrollFileIntoView(selectedEl, false);
   });
 
-  window.api.receive("stateChanged", async (state, oldState) => {
-    console.log("NAVFILES: STATE CHANGED");
-
-    // If selected folder changed...
-    if (hasChanged("selectedFolderId", state, oldState)) {
-      selectedDirectoryId = state.selectedFolderId;
-      populateFiles(state);
-      setSelectedFile(state);
-      await tick();
-      scrollFileIntoView(selectedEl, true);
-    }
-
-    // If selected file id changed...
-    if (hasChanged("lastOpenedFileId", state, oldState)) {
-      setSelectedFile(state);
-      await tick();
-      scrollFileIntoView(selectedEl, true);
-    }
-  });
-
-  function clicked(id) {
+  function openFile(id) {
     window.api.send("dispatch", {
       type: "OPEN_FILE",
       parentId: selectedDirectoryId,
@@ -204,7 +199,7 @@
     {:else}
       <div
         class="file"
-        on:click|preventDefault={() => clicked(file.id)}
+        on:click|preventDefault={() => openFile(file.id)}
         class:parentSectionFocused={sectionIsFocused}
         tabindex="0">
         <h2>{file.title}</h2>

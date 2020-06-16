@@ -20,6 +20,9 @@
         <!-- Citeproc (raw JS, exports `CSL` to global namespace) -->
         <script src="./js/third-party/citeproc/citeproc.js"></script>
 
+        <!-- Fuse.js (ES6 module) -->
+        <script src="./js/third-party/fuse/fuse.esm.js" type="module"></script>
+
         <!-- Turndown (ES6 module) -->
         <script src="./js/third-party/turndown/turndown.es.js" type="module"></script>
 
@@ -29,7 +32,13 @@
     </head>
     <body>
 
-        <div id="bracketsWidget">Choose</div>
+        <div id="bracketsWidget" style="display: none">Choose</div>
+
+        <div id="firstrun" class="hidden">
+            <h1>Gambier</h1>
+            <h2>Get started</h2>
+            <button>Choose Project Folder...</button>
+        </div>
 
         <!--<span class="cm-citation-collapsed"><button class="icon"></button><div class="popup" tabindex="0"><header><h1>Citation</h1><span class="instructions"><span class="update">Enter to Update, </span>Esc to Cancel</span></header><p class="wrapper"></p><p contenteditable="true" class="input"></p></div><div class="tooltip"></div></span>-->
 

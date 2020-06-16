@@ -2,25 +2,35 @@
 import NavFolders from './component/NavFolders.svelte'
 import NavFiles from './component/NavFiles.svelte'
 import * as Editor from './editor/editor'
+import * as FirstRun from './firstRun'
 import { mountReplace } from './utils'
+// import Fuse from './third-party/fuse/fuse.esm.js'
 
-mountReplace(NavFolders, {
-  target: document.querySelector('#folders'),
-  // props: { name: 'world' }
-})
+async function setup() {
+  
+  const initialState = await window.api.invoke('getState', 'utf8');
+  
+  FirstRun.setup(initialState)
 
-mountReplace(NavFiles, {
-  target: document.querySelector('#files'),
-  // props: { name: 'world' }
-})
+  mountReplace(NavFolders, {
+    target: document.querySelector('#folders'),
+    // props: { name: 'world' }
+  })
+  
+  mountReplace(NavFiles, {
+    target: document.querySelector('#files'),
+    // props: { name: 'world' }
+  })
+  
+  Editor.setup(initialState)
+  
+  window.api.send('showWindow') 
 
-Editor.setup()
+}
+window.addEventListener('DOMContentLoaded', setup)
 
-
-// async function setup() {
-
-//   window.api.receive('stateChanged', (newState) => {
-//   })
+// function reloading() {
+//   window.api.send('hideWindow')
 // }
 
-// window.addEventListener('DOMContentLoaded', setup)
+// window.addEventListener('beforeunload', reloading)

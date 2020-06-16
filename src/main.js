@@ -1,11 +1,12 @@
 // External dependencies
-import { app, BrowserWindow, ipcMain, clipboard } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import path from 'path'
 import { readdir, readFile, pathExists, stat } from 'fs-extra'
 
 // Bundled dependencies
 import { store } from './js/GambierStore'
 import { projectDirectory } from './js/projectDirectory'
+import { projectCitations } from './js/projectCitations'
 import * as mainMenu from './js/mainMenu'
 
 // Dev only
@@ -32,14 +33,14 @@ const watchAndReload = [
   // '**/*.jpg',
 ]
 
-require('electron-reload')(watchAndReload, {
-  // awaitWriteFinish: {
-  //   stabilityThreshold: 10,
-  //   pollInterval: 50
-  // },
-  electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-  // argv: ['--inspect=5858'],
-})
+// require('electron-reload')(watchAndReload, {
+//   // awaitWriteFinish: {
+//   //   stabilityThreshold: 10,
+//   //   pollInterval: 50
+//   // },
+//   electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+//   // argv: ['--inspect=5858'],
+// })
 
 // -------- Create window -------- //
 
@@ -54,6 +55,7 @@ function createWindow() {
 
   // Create the browser window.
   win = new BrowserWindow({
+    show: false,
     width: 1600,
     height: 900,
     webPreferences: {
@@ -76,7 +78,7 @@ function createWindow() {
   })
 
   // Open DevTools
-  win.webContents.openDevTools();
+  // win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'))
@@ -84,13 +86,13 @@ function createWindow() {
   // Populate OS menus
   mainMenu.create()
 
-  // Setup project directory
+  // Setup project directory and citations
   projectDirectory.setup(store)
+  projectCitations.setup(store)
 
   // Send state to render process once dom is ready
-  win.webContents.once('dom-ready', () => {
-    console.log(`dom-ready`.bgBrightBlue.black, `(Main.js)`.brightBlue)
-    // win.webContents.send('setInitialState', store.getCurrentState())
+  win.once('ready-to-show', () => {
+    console.log(`ready-to-show`.bgBrightBlue.black, `(Main.js)`.brightBlue)
   })
 
   // -------- TEMP DEVELOPMENT STUFF -------- //
@@ -136,6 +138,26 @@ store.onDidAnyChange((newState, oldState) => {
 
 // -------- IPC: Send/Receive -------- //
 
+ipcMain.on('showWindow', (event) => {
+  console.log("win.show()".yellow)
+  win.show()
+})
+
+ipcMain.on('hideWindow', (event) => {
+  console.log("win.hide()".yellow)
+  win.hide()
+})
+
+ipcMain.on('selectProjectDirectory', async (event) => {
+  const selection = await dialog.showOpenDialog(win, {
+    title: 'Select Project Directory',
+    properties: ['openDirectory', 'createDirectory']
+  })
+  if (!selection.canceled) {
+    store.dispatch({ type: 'SET_PROJECT_DIRECTORY', path: selection.filePaths[0] })
+  }
+})
+
 ipcMain.on('dispatch', (event, action) => {
   store.dispatch(action)
 })
@@ -149,25 +171,32 @@ ipcMain.handle('ifPathExists', async (event, filepath) => {
 })
 
 ipcMain.handle('getState', async (event) => {
+  console.log("getState")
   return store.store
 })
 
+ipcMain.handle('getCitations', (event) => {
+  return projectCitations.getCitations()
+})
+
 ipcMain.handle('getFileById', async (event, id, encoding) => {
-  
+
   // Get path of file with matching id
   const filePath = store.store.contents.find((f) => f.id == id).path
-  
+
   // Load file and return
   let file = await readFile(filePath, encoding)
   return file
 })
 
 ipcMain.handle('pathJoin', async (event, path1, path2) => {
+  // console.log(path1)
+  // console.log(path2)
   return path.join(path1, path2)
 })
 
 ipcMain.handle('getHTMLFromClipboard', (event) => {
-  console.log(clipboard.availableFormats())
+  // console.log(clipboard.availableFormats())
   return clipboard.readHTML()
 })
 

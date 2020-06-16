@@ -1,22 +1,36 @@
 export const StoreSchema = {
+  
+  // appStartupTime: {
+  //   type: 'string',
+  //   default: 'undefined'
+  // },
 
-  appStartupTime: {
+  changed: { type: 'array', default: [] },
+
+  selectedFolderId: {
+    type: 'integer',
+    default: 0,
+  },
+
+  selectedFileId: {
+    type: 'integer',
+    default: 0,
+  },
+
+  projectDirectory: {
+    descrition: 'User specified path to directory containing their project files',
     type: 'string',
     default: 'undefined'
   },
-  
-  projectDirectory: {
-    descrition: 'User specified directory that contains their project files',
+
+  projectCitations: {
+    descrition: 'User specified path to CSL-JSON file containing their citatons',
     type: 'string',
     default: 'undefined'
   },
 
   contents: { type: 'array', default: [] },
 
-  selectedFolderId: {
-    type: 'integer',
-    default: 'undefined',
-  },
 
   // hierarchy: {
   //   description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',

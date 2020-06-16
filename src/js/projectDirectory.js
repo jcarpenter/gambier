@@ -36,6 +36,8 @@ class ProjectDirectory {
   }
 
   startWatching(directory) {
+    if (directory == 'undefined') return
+
     this.watcher = chokidar.watch(directory, {
       ignored: /(^|[\/\\])\../, // Ignore dotfiles
       ignoreInitial: true,
@@ -87,15 +89,15 @@ class ProjectDirectory {
    * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
    */
   async mapProjectDirectory() {
-    // console.log("mapProjectDirectory")
+    
+    if (this.directory == 'undefined' || '') return
+
     if (await isWorkingPath(this.directory)) {
-      // console.log("isWorkingPath", this.directory)
       let contents = await this.mapDirectoryRecursively(this.directory)
       contents = await this.getFilesDetails(contents)
       contents = this.applyDiffs(this.store.store.contents, contents)
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
     } else {
-      // console.log("is NOT WorkingPath: ", this.directory)
       this.store.dispatch({ type: 'RESET_HIERARCHY' })
     }
   }
@@ -103,9 +105,14 @@ class ProjectDirectory {
   applyDiffs(oldContents, newContents) {
 
     diff.observableDiff(oldContents, newContents, (d) => {
-      console.log(d)
+      // console.log(d)
+      // console.log(d.path)
       // Apply all changes except to the name property...
-      if (d.path[d.path.length - 1] !== 'selectedFileId') {
+      if (d.path !== undefined) {
+        if (d.path[d.path.length - 1] !== 'selectedFileId') {
+          diff.applyChange(oldContents, newContents, d);
+        }
+      } else {
         diff.applyChange(oldContents, newContents, d);
       }
     })
@@ -145,12 +152,16 @@ class ProjectDirectory {
       modified: stats.mtime.toISOString(),
       childFileCount: 0,
       childDirectoryCount: 0,
-      selectedFileId: 0
+      selectedFileId: 0,
+      isRoot: false,
     }
 
     // If parentId was passed, set `thisDir.parentId` to it
+    // Else this directory is the root, so set `isRoot: true`
     if (parentId !== undefined) {
       thisDir.parentId = parentId
+    } else {
+      thisDir.isRoot = true
     }
 
     for (let c of contents) {

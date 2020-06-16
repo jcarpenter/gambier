@@ -327,7 +327,7 @@ function get_each_context(ctx, list, i) {
 	return child_ctx;
 }
 
-// (74:0) {#if expanded}
+// (79:0) {#if expanded}
 function create_if_block(ctx) {
 	let ul;
 	let t;
@@ -404,7 +404,7 @@ function create_if_block(ctx) {
 	};
 }
 
-// (76:4) {#if !hidden}
+// (81:4) {#if !hidden}
 function create_if_block_2(ctx) {
 	let li;
 	let img;
@@ -433,7 +433,7 @@ function create_if_block_2(ctx) {
 			append(li, t0);
 			append(li, t1);
 			if (remount) dispose();
-			dispose = listen(li, "click", /*select*/ ctx[5]);
+			dispose = listen(li, "click", /*openFolder*/ ctx[5]);
 		},
 		p(ctx, dirty) {
 			if (dirty & /*details*/ 16 && t1_value !== (t1_value = /*details*/ ctx[4].name + "")) set_data(t1, t1_value);
@@ -453,7 +453,7 @@ function create_if_block_2(ctx) {
 	};
 }
 
-// (82:4) {#if details.children}
+// (87:4) {#if details.children}
 function create_if_block_1(ctx) {
 	let each_1_anchor;
 	let current;
@@ -537,7 +537,7 @@ function create_if_block_1(ctx) {
 	};
 }
 
-// (83:6) {#each details.children as childDirectory}
+// (88:6) {#each details.children as childDirectory}
 function create_each_block(ctx) {
 	let li;
 	let t;
@@ -648,22 +648,24 @@ function instance($$self, $$props, $$invalidate) {
 	let { hidden = false } = $$props;
 	let { details = {} } = $$props;
 
-	function select() {
-		window.api.send("dispatch", { type: "OPEN_FOLDER", id: details.id });
-	}
-
-	function update(state) {
+	function setSelected(state) {
 		$$invalidate(0, selected = state.selectedFolderId === details.id);
 	}
 
-	window.api.receive("stateChanged", state => {
-		update(state);
+	window.api.receive("stateChanged", (state, oldState) => {
+		if (state.changed.includes("selectedFolderId") || state.changed.includes("contents")) {
+			setSelected(state);
+		}
 	});
 
 	onMount(async () => {
 		const state = await window.api.invoke("getState");
-		update(state);
+		setSelected(state);
 	});
+
+	function openFolder() {
+		window.api.send("dispatch", { type: "OPEN_FOLDER", id: details.id });
+	}
 
 	$$self.$set = $$props => {
 		if ("nestedDepth" in $$props) $$invalidate(1, nestedDepth = $$props.nestedDepth);
@@ -673,7 +675,7 @@ function instance($$self, $$props, $$invalidate) {
 		if ("details" in $$props) $$invalidate(4, details = $$props.details);
 	};
 
-	return [selected, nestedDepth, expanded, hidden, details, select];
+	return [selected, nestedDepth, expanded, hidden, details, openFolder];
 }
 
 class Folder extends SvelteComponent {
@@ -868,7 +870,7 @@ function add_css$1() {
 	append(document.head, style);
 }
 
-// (62:2) {#if !isEmpty}
+// (68:2) {#if !isEmpty}
 function create_if_block$1(ctx) {
 	let current;
 
@@ -976,7 +978,7 @@ function instance$1($$self, $$props, $$invalidate) {
 	let isEmpty = true;
 	let rootDir = {};
 
-	function update(state) {
+	function buildTree(state) {
 		// If state.contents are empty, return
 		if (state.contents.length == 0) {
 			$$invalidate(0, isEmpty = true);
@@ -997,12 +999,15 @@ function instance$1($$self, $$props, $$invalidate) {
 	}
 
 	window.api.receive("stateChanged", state => {
-		update(state);
+		if (state.changed.includes("selectedFolderId") || state.changed.includes("contents")) {
+			buildTree(state);
+		}
 	});
 
 	onMount(async () => {
+		console.log("OnMount");
 		const state = await window.api.invoke("getState");
-		update(state);
+		buildTree(state);
 	});
 
 	return [isEmpty, rootDir];
@@ -1024,13 +1029,6 @@ const urlRE = new RegExp(/^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|atta
  */
 function isUrl(string) {
   return urlRE.test(string)
-}
-
-/**
- * Check if values of two object keys do not match.
- */
-function hasChanged(key, newState, oldState) {
-  return newState[key] !== oldState[key]
 }
 
 /**
@@ -1065,7 +1063,7 @@ function get_each_context$1(ctx, list, i) {
 	return child_ctx;
 }
 
-// (264:4) {:else}
+// (259:4) {:else}
 function create_else_block(ctx) {
 	let div;
 	let h2;
@@ -1131,7 +1129,7 @@ function create_else_block(ctx) {
 	};
 }
 
-// (254:4) {#if file.selected}
+// (249:4) {#if file.selected}
 function create_if_block$2(ctx) {
 	let div;
 	let h2;
@@ -1190,7 +1188,7 @@ function create_if_block$2(ctx) {
 	};
 }
 
-// (253:2) {#each files as file}
+// (248:2) {#each files as file}
 function create_each_block$1(ctx) {
 	let if_block_anchor;
 
@@ -1269,7 +1267,7 @@ function create_fragment$2(ctx) {
 			];
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*selectedEl, sectionIsFocused, files, clicked*/ 43) {
+			if (dirty & /*selectedEl, sectionIsFocused, files, openFile*/ 43) {
 				each_value = /*files*/ ctx[0];
 				let i;
 
@@ -1319,7 +1317,7 @@ function instance$2($$self, $$props, $$invalidate) {
 	let files = [];
 	let selectedDirectoryId = 0;
 	let selectedFileIndex = 0;
-	let selectedEl = 0;
+	let selectedEl = undefined;
 	let section;
 	let sectionIsFocused = false;
 
@@ -1364,6 +1362,8 @@ function instance$2($$self, $$props, $$invalidate) {
  * Then make sure the selected file is scrolled into view.
  */
 	async function setSelectedFile(state) {
+		if (files.length == 0) return;
+
 		// Get selectedFileId for selectedFolder
 		let selectedFileId = state.contents.find(d => d.type == "directory" && d.id == state.selectedFolderId).selectedFileId;
 
@@ -1372,7 +1372,7 @@ function instance$2($$self, $$props, $$invalidate) {
 			selectedFileId = files[0].id;
 		}
 
-		// Find the file whose id == selectedFileId, 
+		// Find the file whose id == selectedFileId,
 		// and set selected true, and `selectedFileIndex = index`
 		// Set all other files unselected
 		files.forEach((f, index) => {
@@ -1382,38 +1382,29 @@ function instance$2($$self, $$props, $$invalidate) {
 
 		// Tell Svelte that variable has changed. Makes view update.
 		$$invalidate(0, files);
+
+		// Await tick, then scroll file into view
+		await tick();
+
+		scrollFileIntoView(selectedEl, true);
 	}
+
+	window.api.receive("stateChanged", async (state, oldState) => {
+		if (state.changed.includes("selectedFolderId") || state.changed.includes("selectedFileId")) {
+			selectedDirectoryId = state.selectedFolderId;
+			populateFiles(state);
+			setSelectedFile(state);
+		}
+	});
 
 	onMount(async () => {
 		const state = await window.api.invoke("getState");
 		selectedDirectoryId = state.selectedFolderId;
 		populateFiles(state);
 		setSelectedFile(state);
-		await tick();
-		scrollFileIntoView(selectedEl, false);
 	});
 
-	window.api.receive("stateChanged", async (state, oldState) => {
-		console.log("NAVFILES: STATE CHANGED");
-
-		// If selected folder changed...
-		if (hasChanged("selectedFolderId", state, oldState)) {
-			selectedDirectoryId = state.selectedFolderId;
-			populateFiles(state);
-			setSelectedFile(state);
-			await tick();
-			scrollFileIntoView(selectedEl, true);
-		}
-
-		// If selected file id changed...
-		if (hasChanged("lastOpenedFileId", state, oldState)) {
-			setSelectedFile(state);
-			await tick();
-			scrollFileIntoView(selectedEl, true);
-		}
-	});
-
-	function clicked(id) {
+	function openFile(id) {
 		window.api.send("dispatch", {
 			type: "OPEN_FILE",
 			parentId: selectedDirectoryId,
@@ -1429,7 +1420,7 @@ function instance$2($$self, $$props, $$invalidate) {
 		});
 	}
 
-	const click_handler_1 = file => clicked(file.id);
+	const click_handler_1 = file => openFile(file.id);
 
 	function section_1_binding($$value) {
 		binding_callbacks[$$value ? "unshift" : "push"](() => {
@@ -1443,7 +1434,7 @@ function instance$2($$self, $$props, $$invalidate) {
 		section,
 		sectionIsFocused,
 		handleKeydown,
-		clicked,
+		openFile,
 		selectedDirectoryId,
 		selectedFileIndex,
 		populateFiles,
@@ -1844,131 +1835,16 @@ function markInlineLinks(editor, lineHandle, tokens) {
   }
 }
 
-/* src/js/component/Citation.svelte generated by Svelte v3.22.3 */
-
-function add_css$4() {
-	var style = element("style");
-	style.id = "svelte-iwvlsn-style";
-	style.textContent = ".link.svelte-iwvlsn{background:lightyellow;border-radius:2px}";
-	append(document.head, style);
-}
-
-function create_fragment$4(ctx) {
-	let span;
-
-	return {
-		c() {
-			span = element("span");
-			span.textContent = "c";
-			attr(span, "class", "link svelte-iwvlsn");
-		},
-		m(target, anchor) {
-			insert(target, span, anchor);
-		},
-		p: noop,
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(span);
-		}
-	};
-}
-
-function instance$4($$self, $$props, $$invalidate) {
-	let { text } = $$props;
-
-	$$self.$set = $$props => {
-		if ("text" in $$props) $$invalidate(0, text = $$props.text);
-	};
-
-	return [text];
-}
-
-class Citation extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-iwvlsn-style")) add_css$4();
-		init(this, options, instance$4, create_fragment$4, safe_not_equal, { text: 0 });
-	}
-}
-
-function Details$1() {
-  this.start;
-  this.end;
-  this.textStart;
-  this.textEnd;
-  this.text;
-}
-
-/**
- * For the specified line, find links, and for each found, create a new object with their details, push it into an array, and return the array.
- * See Link object (above) for what is included.
- */
-function find$1(editor, lineNo, tokens) {
-
-  let hit;
-  let hits = [];
-
-  // Find open and closing tokens
-  for (const token of tokens) {
-    if (token.type !== null) {
-      if (token.type.includes('citation')) {
-        // console.log(token)
-        switch (token.string) {
-          case "[":
-            hit = new Details$1();
-            hit.start = token.start;
-            hit.textStart = token.start;
-            hits.push(hit);
-            break
-          case "]":
-            hit.textEnd = token.end;
-            hit.text = getTextFromRange(editor, lineNo, hit.textStart + 1, hit.textEnd - 1);
-            break
-        }
-      }
-    }
-  }
-
-  return hits
-}
-
-
-/**
- * Find and mark links for the given line
- */
-function markCitations(editor, lineHandle, tokens) {
-  
-  const line = lineHandle.lineNo();
-  const citations = find$1(editor, line, tokens);
-  // console.log(citations)
-  if (citations.length > 0) {
-    citations.map((c) => {
-
-      const frag = document.createDocumentFragment();
-
-      const component = new Citation({
-        target: frag,
-        props: {
-          text: c.text,
-        }
-      });
-
-      replaceMarkWithElement(editor, frag, line, c.start, c.end);
-    });
-  }
-}
-
 /* src/js/component/Figure.svelte generated by Svelte v3.22.3 */
 
-function add_css$5() {
+function add_css$4() {
 	var style = element("style");
 	style.id = "svelte-1jw57r3-style";
 	style.textContent = "@charset \"UTF-8\";figure.svelte-1jw57r3.svelte-1jw57r3{width:100%;margin:0;padding:0;display:inline-block;white-space:normal}figure.svelte-1jw57r3 img.svelte-1jw57r3{max-width:10em;display:inline-block;height:auto;border-radius:3px;text-indent:100%;white-space:nowrap;overflow:hidden;position:relative}figure.svelte-1jw57r3 img.svelte-1jw57r3:after{text-indent:0%;content:\"\" \" \" attr(src);color:#646464;background-color:#f0f0f0;white-space:normal;display:block;position:absolute;z-index:2;top:0;left:0;width:100%;height:100%}figure.svelte-1jw57r3 figcaption.svelte-1jw57r3{font-style:italic;color:gray}";
 	append(document.head, style);
 }
 
-function create_fragment$5(ctx) {
+function create_fragment$4(ctx) {
 	let figure;
 	let img;
 	let img_src_value;
@@ -2015,7 +1891,7 @@ function create_fragment$5(ctx) {
 	};
 }
 
-function instance$5($$self, $$props, $$invalidate) {
+function instance$4($$self, $$props, $$invalidate) {
 	let { caption } = $$props;
 	let { url } = $$props;
 	let { alt } = $$props;
@@ -2032,8 +1908,8 @@ function instance$5($$self, $$props, $$invalidate) {
 class Figure extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1jw57r3-style")) add_css$5();
-		init(this, options, instance$5, create_fragment$5, safe_not_equal, { caption: 0, url: 1, alt: 2 });
+		if (!document.getElementById("svelte-1jw57r3-style")) add_css$4();
+		init(this, options, instance$4, create_fragment$4, safe_not_equal, { caption: 0, url: 1, alt: 2 });
 	}
 }
 
@@ -2094,14 +1970,14 @@ async function markList(editor, lineHandle, tokens) {
 
 /* src/js/component/BracketsWidget.svelte generated by Svelte v3.22.3 */
 
-function add_css$6() {
+function add_css$5() {
 	var style = element("style");
 	style.id = "svelte-u5l30k-style";
 	style.textContent = ":root{--layout:[folders-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [folders-end files-start] minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.link.svelte-u5l30k{position:absolute;box-sizing:border-box;color:var(--clr-blue);background-color:var(--clr-blue-lighter);padding:0 0.2em 0 0.15em;border-radius:0.15em;border:1px solid var(--clr-blue-light);z-index:10;transform:translate(50%, 0%)}";
 	append(document.head, style);
 }
 
-function create_fragment$6(ctx) {
+function create_fragment$5(ctx) {
 	let div;
 	let t;
 
@@ -2128,7 +2004,7 @@ function create_fragment$6(ctx) {
 	};
 }
 
-function instance$6($$self, $$props, $$invalidate) {
+function instance$5($$self, $$props, $$invalidate) {
 	let { element } = $$props;
 	let { input } = $$props;
 	let { visible = false } = $$props;
@@ -2156,9 +2032,9 @@ function instance$6($$self, $$props, $$invalidate) {
 class BracketsWidget extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-u5l30k-style")) add_css$6();
+		if (!document.getElementById("svelte-u5l30k-style")) add_css$5();
 
-		init(this, options, instance$6, create_fragment$6, safe_not_equal, {
+		init(this, options, instance$5, create_fragment$5, safe_not_equal, {
 			element: 0,
 			input: 1,
 			visible: 2,
@@ -2238,7 +2114,7 @@ function findAndMark() {
           markList(editor, lineHandle);
         }
         markInlineLinks(editor, lineHandle, tokens);
-        markCitations(editor, lineHandle, tokens);
+        // markCitations(editor, lineHandle, tokens)
       }
     });
   });
@@ -2327,8 +2203,6 @@ function makeEditor() {
     // props: {  }
   });
 
-  console.log(bracketsWidget.element);
-
   // Define "gambier" CodeMirror mode
   defineGambierMode();
 
@@ -2355,60 +2229,105 @@ function makeEditor() {
   // editor.on("inputRead", onInputRead)
 }
 
-async function setup() {
+async function setup(initialState) {
 
-  // Get file to load
-  const state = await window.api.invoke('getState', 'utf8');
-  fileId = state.lastOpenedFileId;
-  filePath = state.contents.find((f) => f.id == fileId).path;
-  filePath = filePath.substring(0, filePath.lastIndexOf('/'));
-  const file = await window.api.invoke('getFileById', fileId, 'utf8');
-
-  // Make editor, and load file
+  // Make editor
   makeEditor();
-  loadFile(file);
 
   // Setup change listeners
   window.api.receive('stateChanged', async (state, oldState) => {
 
-    // If directory has changed...
-    // 06/10: I think this code is both unnecessary??
-    // if (hasChanged("projectDirectory", state, oldState)) {
-    // }
-
-    console.log("Editor: Something has changed");
-
-    // If selected file has changed...
-    if (hasChanged("lastOpenedFileId", state, oldState)) {
-      console.log("Editor: lastOpenedFileId has changed");
-      fileId = state.lastOpenedFileId;
+    if (state.changed.includes('selectedFileId')) {
+      console.log(state.selectedFileId);
+      fileId = state.selectedFileId;
       const file = await window.api.invoke('getFileById', fileId, 'utf8');
       loadFile(file);
     }
   });
 
+  // Check if projectDirectory defined. If no, exit.
+  if (
+    initialState.projectDirectory == 'undefined' ||
+    initialState.selectedFileId == 0
+  ) {
+    console.log("No project directory defined");
+    return
+  }
+
+  // Get file to load, and load
+  fileId = initialState.selectedFileId;
+  filePath = initialState.contents.find((f) => f.id == fileId).path;
+  filePath = filePath.substring(0, filePath.lastIndexOf('/'));
+  const file = await window.api.invoke('getFileById', fileId, 'utf8');
+  loadFile(file);
+}
+
+let el;
+let selectProjectDirectory;
+
+function setVisibility(projectDirectory) {
+  if (projectDirectory == 'undefined') {
+    if (el.classList.contains('hidden')) {
+      el.classList.remove('hidden');
+    }
+  } else {
+    if (!el.classList.contains('hidden')) {
+      el.classList.add('hidden');
+      console.log("hiding firstRun");
+    }
+  }
+}
+
+async function setup$1(initialState) {
+  
+  el = document.querySelector('#firstrun');
+  selectProjectDirectory = el.querySelector('button');
+  
+  // Create button click event handler
+  selectProjectDirectory.onclick = () => {
+    window.api.send('selectProjectDirectory');
+  };
+
+  // Setup change listeners
+  window.api.receive('stateChanged', async (state, oldState) => {
+    if (state.changed.includes('projectDirectory')) {
+      setVisibility(state.projectDirectory);
+    }
+  });
+
+  // Set initial visibility
+  setVisibility(initialState.projectDirectory);
 }
 
 // Bundled imports
+// import Fuse from './third-party/fuse/fuse.esm.js'
 
-mountReplace(NavFolders, {
-  target: document.querySelector('#folders'),
-  // props: { name: 'world' }
-});
+async function setup$2() {
+  
+  const initialState = await window.api.invoke('getState', 'utf8');
+  
+  setup$1(initialState);
 
-mountReplace(NavFiles, {
-  target: document.querySelector('#files'),
-  // props: { name: 'world' }
-});
+  mountReplace(NavFolders, {
+    target: document.querySelector('#folders'),
+    // props: { name: 'world' }
+  });
+  
+  mountReplace(NavFiles, {
+    target: document.querySelector('#files'),
+    // props: { name: 'world' }
+  });
+  
+  setup(initialState);
+  
+  window.api.send('showWindow'); 
 
-setup();
+}
+window.addEventListener('DOMContentLoaded', setup$2);
 
-
-// async function setup() {
-
-//   window.api.receive('stateChanged', (newState) => {
-//   })
+// function reloading() {
+//   window.api.send('hideWindow')
 // }
 
-// window.addEventListener('DOMContentLoaded', setup)
+// window.addEventListener('beforeunload', reloading)
 //# sourceMappingURL=renderer.js.map

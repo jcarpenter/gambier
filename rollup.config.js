@@ -55,6 +55,7 @@ export default [
     ],
     external: [
       './third-party/citeproc/citeproc.js',
+      './third-party/fuse/fuse.esm.js',
       '../third-party/turndown/turndown.es.js'
     ]
   }

@@ -55,7 +55,7 @@ function findAndMark() {
           markList(editor, lineHandle, tokens)
         }
         markInlineLinks(editor, lineHandle, tokens)
-        markCitations(editor, lineHandle, tokens)
+        // markCitations(editor, lineHandle, tokens)
       }
     })
   })
@@ -144,8 +144,6 @@ function makeEditor() {
     // props: {  }
   })
 
-  console.log(bracketsWidget.element)
-
   // Define "gambier" CodeMirror mode
   defineGambierMode()
 
@@ -172,38 +170,37 @@ function makeEditor() {
   // editor.on("inputRead", onInputRead)
 }
 
-async function setup() {
+async function setup(initialState) {
 
-  // Get file to load
-  const state = await window.api.invoke('getState', 'utf8');
-  fileId = state.lastOpenedFileId
-  filePath = state.contents.find((f) => f.id == fileId).path
-  filePath = filePath.substring(0, filePath.lastIndexOf('/'))
-  const file = await window.api.invoke('getFileById', fileId, 'utf8')
-
-  // Make editor, and load file
+  // Make editor
   makeEditor()
-  loadFile(file)
 
   // Setup change listeners
   window.api.receive('stateChanged', async (state, oldState) => {
 
-    // If directory has changed...
-    // 06/10: I think this code is both unnecessary??
-    // if (hasChanged("projectDirectory", state, oldState)) {
-    // }
-
-    console.log("Editor: Something has changed")
-
-    // If selected file has changed...
-    if (hasChanged("lastOpenedFileId", state, oldState)) {
-      console.log("Editor: lastOpenedFileId has changed")
-      fileId = state.lastOpenedFileId
+    if (state.changed.includes('selectedFileId')) {
+      console.log(state.selectedFileId)
+      fileId = state.selectedFileId
       const file = await window.api.invoke('getFileById', fileId, 'utf8')
       loadFile(file)
     }
   })
 
+  // Check if projectDirectory defined. If no, exit.
+  if (
+    initialState.projectDirectory == 'undefined' ||
+    initialState.selectedFileId == 0
+  ) {
+    console.log("No project directory defined")
+    return
+  }
+
+  // Get file to load, and load
+  fileId = initialState.selectedFileId
+  filePath = initialState.contents.find((f) => f.id == fileId).path
+  filePath = filePath.substring(0, filePath.lastIndexOf('/'))
+  const file = await window.api.invoke('getFileById', fileId, 'utf8')
+  loadFile(file)
 }
 
 export { setup }

@@ -2,11 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // Whitelist channels
 
-let validSendChannels = ['updateProjectDirectoryStore', 'dispatch']
+let validSendChannels = ['hideWindow', 'showWindow', 'selectProjectDirectory', 'dispatch']
 
 let validReceiveChannels = ['stateChanged', 'setInitialState']
 
-let validInvokeChannels = ['ifPathExists', 'getState', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard']
+let validInvokeChannels = ['ifPathExists', 'getState', 'getCitations', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard']
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 contextBridge.exposeInMainWorld(

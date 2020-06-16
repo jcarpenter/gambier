@@ -10,7 +10,7 @@
   let isEmpty = true;
   let rootDir = {};
 
-  function update(state) {
+  function buildTree(state) {
     // If state.contents are empty, return
     if (state.contents.length == 0) {
       isEmpty = true;
@@ -32,12 +32,18 @@
   }
 
   window.api.receive("stateChanged", state => {
-    update(state);
+    if (
+      state.changed.includes("selectedFolderId") ||
+      state.changed.includes("contents")
+    ) {
+      buildTree(state);
+    }
   });
 
   onMount(async () => {
+    console.log("OnMount")
     const state = await window.api.invoke("getState");
-    update(state);
+    buildTree(state);
   });
 </script>
 

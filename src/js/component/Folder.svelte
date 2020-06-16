@@ -1,9 +1,9 @@
 <script>
-  /** 
+  /**
    * Render a single, folder and (recursively) any child folders.
    * Recursion is achieved with `<svelte:self`
    * Per https://svelte.dev/tutorial/svelte-self
-  */
+   */
   import { onMount } from "svelte";
 
   export let nestedDepth = 0;
@@ -12,26 +12,30 @@
   export let hidden = false;
   export let details = {};
 
-  function select() {
-    window.api.send("dispatch", { type: "OPEN_FOLDER", id: details.id });
-  }
-
-  function update(state) {
+  function setSelected(state) {
     selected = state.selectedFolderId === details.id;
   }
 
-  window.api.receive("stateChanged", state => {
-    update(state);
+  window.api.receive("stateChanged", (state, oldState) => {
+    if (
+      state.changed.includes("selectedFolderId") ||
+      state.changed.includes("contents")
+    ) {
+      setSelected(state);
+    }
   });
 
   onMount(async () => {
     const state = await window.api.invoke("getState");
-    update(state);
+    setSelected(state);
   });
+
+  function openFolder() {
+    window.api.send("dispatch", { type: "OPEN_FOLDER", id: details.id });
+  }
 </script>
 
 <style type="text/scss">
-
   .folder-icon {
     width: 0.9em;
     box-sizing: content-box;
@@ -90,8 +94,8 @@
 {#if expanded}
   <ul>
     {#if !hidden}
-      <li data-nested={nestedDepth} class:selected on:click={select}>
-        <img src="images/folder.svg" class="folder-icon" alt="folder icon"/>
+      <li data-nested={nestedDepth} class:selected on:click={openFolder}>
+        <img src="images/folder.svg" class="folder-icon" alt="folder icon" />
         {details.name}
       </li>
     {/if}
