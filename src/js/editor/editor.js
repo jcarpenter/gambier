@@ -186,12 +186,12 @@ async function setup(initialState) {
     }
   })
 
-  // Check if projectDirectory defined. If no, exit.
+  // Check if projectPath defined. If no, exit.
   if (
-    initialState.projectDirectory == 'undefined' ||
+    initialState.projectPath == '' ||
     initialState.selectedFileId == 0
   ) {
-    console.log("No project directory defined")
+    console.log("No project path defined")
     return
   }
 

@@ -6,6 +6,7 @@
   export let element
   export let input
   export let visible = false
+  export let from = { line: 0, ch: 0 }
 
   export const show = () => {
       input = ""

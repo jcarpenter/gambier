@@ -122,10 +122,10 @@
   @import "../../styles/_variables.scss";
 
   #files {
+    width: 100%;
     height: 100%;
-    overflow-y: scroll;
-    grid-column: files;
     background-color: white;
+    overflow-y: scroll;
     border-left: 1px solid lightgray;
     border-right: 1px solid lightgray;
     padding: 0;
@@ -184,7 +184,7 @@
   on:click={e => (sectionIsFocused = section.contains(e.target))}
   on:keydown={handleKeydown} />
 
-<section data-elastic bind:this={section} id="files">
+<div bind:this={section} id="files">
   {#each files as file}
     {#if file.selected}
       <div
@@ -208,4 +208,4 @@
       </div>
     {/if}
   {/each}
-</section>
+</div>

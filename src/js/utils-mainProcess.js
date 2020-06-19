@@ -3,7 +3,7 @@ import diff from 'deep-diff'
 
 async function isWorkingPath(pth) {
 
-  if (pth == 'undefined') {
+  if (pth == '') {
     return false
   } else {
     if (await pathExists(pth)) {

@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // Whitelist channels
 
-let validSendChannels = ['hideWindow', 'showWindow', 'selectProjectDirectory', 'dispatch']
+let validSendChannels = ['hideWindow', 'showWindow', 'selectProjectPath', 'dispatch']
 
 let validReceiveChannels = ['stateChanged', 'setInitialState']
 

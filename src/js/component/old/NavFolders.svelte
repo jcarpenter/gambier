@@ -48,11 +48,12 @@
 </script>
 
 <style type="text/scss">
-  #folders {
+  nav {
     height: 100%;
     overflow-y: scroll;
-    grid-column: folders;
-    background: var(--clr-gray-lightest);
+    grid-column: nav;
+    // background: var(--clr-gray-lightest);
+    background-color: transparent;
     padding: var(--grid-half) 0;
   }
 
@@ -65,9 +66,15 @@
   }
 </style>
 
-<div id="folders">
-  <h1>Folders</h1>
-  {#if !isEmpty}
-    <Folder details={rootDir} nestedDepth={0} />
-  {/if}
-</div>
+<nav>
+  <section>
+    <h1>Files</h1>
+    {#if !isEmpty}
+      <Folder details={rootDir} nestedDepth={0} />
+    {/if}
+  </section>
+  <section>
+    <h1>Citations</h1>
+    <p>All</p>
+  </section>
+</nav>

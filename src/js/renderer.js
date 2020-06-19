@@ -1,30 +1,35 @@
-// Bundled imports
-import NavFolders from './component/NavFolders.svelte'
-import NavFiles from './component/NavFiles.svelte'
-import * as Editor from './editor/editor'
-import * as FirstRun from './firstRun'
 import { mountReplace } from './utils'
+// import * as Editor from './editor/editor'
+// import * as FirstRun from './firstRun'
+import Layout from './component/Layout.svelte'
 // import Fuse from './third-party/fuse/fuse.esm.js'
 
 async function setup() {
-  
-  const initialState = await window.api.invoke('getState', 'utf8');
-  
-  FirstRun.setup(initialState)
 
-  mountReplace(NavFolders, {
-    target: document.querySelector('#folders'),
-    // props: { name: 'world' }
-  })
-  
-  mountReplace(NavFiles, {
-    target: document.querySelector('#files'),
-    // props: { name: 'world' }
-  })
-  
-  Editor.setup(initialState)
-  
-  window.api.send('showWindow') 
+  const initialState = await window.api.invoke('getState');
+
+  const layout = new Layout({
+    target: document.querySelector('#layout'),
+    props: { state: initialState }
+  });
+
+  window.api.receive("stateChanged", (newState, oldState) => {
+    console.log("State changed")
+    console.log(layout.state)
+    console.log(newState)
+    console.log("----")
+    layout.state = newState
+  });
+
+  window.api.send('showWindow')
+
+
+  // Editor.setup(initialState)
+
+  // // Set variable colors
+  // let test = getComputedStyle(document.documentElement)
+  //   .getPropertyValue('--clr-blue'); // #999999
+  //   console.log(test)
 
 }
 window.addEventListener('DOMContentLoaded', setup)

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="18px" height="18px" viewBox="0 0 18 18" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 62 (91390) - https://sketch.com -->
+    <title>sidebar-default-icon</title>
+    <desc>Created with Sketch.</desc>
+    <g id="sidebar-default-icon" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <line x1="3.66393742" y1="3.66393742" x2="14.3360626" y2="14.3360626" id="Line" stroke="#979797"></line>
+        <line x1="14.3360626" y1="3.66393742" x2="3.66393742" y2="14.3360626" id="Line-2" stroke="#979797"></line>
+        <rect id="Rectangle" stroke="#979797" x="0.5" y="0.5" width="17" height="17"></rect>
+    </g>
+</svg>

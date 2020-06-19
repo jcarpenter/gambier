@@ -1,7 +1,67 @@
+/* -------------- Font mixins -------------- */
+
+// Labels - Normal
+@mixin label-normal-small {
+    font: caption;
+    font-weight: normal;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 0.07px;
+}
+
+@mixin label-normal-small-bold {
+    font: caption;
+    font-weight: bold;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 0.07px;
+}
+
+@mixin label-normal {
+    font: caption;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: 15px;
+    letter-spacing: -0.08px;
+}
+
+// Labels - Large
+@mixin label-large-bold {
+    font-family: 'SF Pro Display';
+    font-weight: bold;
+    font-size: 20px;
+    line-height: 24px;
+    letter-spacing: -0.12px;
+}
+
+// Columns
+@mixin column {
+    font: caption;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: -0.07px;
+}
+
+/* -------------- Layout mixins -------------- */
+@mixin absolute-vertical-center {
+    position: absolute;
+    top: 50%;
+    transform: translate(0, -50%);
+}
+
+@mixin unstyled-button {
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+}
+
 :root {
     /* -------------- Layouts (CSS grid) -------------- */
 
-    --layout: [folders-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [folders-end files-start] minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];
+    --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]
+        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];
 
     /* -------------- Colors -------------- */
 
@@ -11,7 +71,7 @@
     --control-text-color: #777;
     --body-color: rgb(51, 51, 51);
     --body-color-light: rgb(96, 96, 96);
-    
+
     --clr-warning: rgba(255, 50, 50, 0.4);
     --clr-warning-dark: rgba(255, 50, 50, 0.75);
 
@@ -22,10 +82,10 @@
     --clr-gray-light: hsl(0, 0%, 70%);
     --clr-gray-lighter: hsl(0, 0%, 85%);
     --clr-gray-lightest: hsl(0, 0%, 92.5%);
-    
+
     --clr-blue: rgb(13, 103, 220);
     --clr-blue-light: #b9d0ee;
-    --clr-blue-lighter:rgb(232, 242, 255);
+    --clr-blue-lighter: rgb(232, 242, 255);
 
     /* -------------- Type sizes -------------- */
 

@@ -2,7 +2,7 @@ let el
 let selectProjectDirectory
 
 function setVisibility(projectDirectory) {
-  if (projectDirectory == 'undefined') {
+  if (projectDirectory == '') {
     if (el.classList.contains('hidden')) {
       el.classList.remove('hidden')
     }

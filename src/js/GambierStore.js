@@ -42,16 +42,16 @@ class GambierStore extends Store {
     )
   }
 
-  logTheDiff(current, next) {
-    const hasChanged = !deepEql(current, next)
+  logTheDiff(currentState, nextState) {
+    const hasChanged = !deepEql(currentState, nextState)
     if (hasChanged) {
-      // const diff = detailedDiff(current, next)
+      // const diff = detailedDiff(currentState, nextState)
       // console.log(diff)
-      console.log('Has changed'.yellow)
+      console.log(`Changed: ${nextState.changed}`.yellow)
     } else {
       console.log('No changes')
     }
   }
 }
 
-export const store = new GambierStore()
+export { GambierStore }

@@ -1,0 +1,77 @@
+// Used for the content of controls
+@mixin controlContentFont {
+    font: caption;
+    font-size: 12px;
+    line-height: 14.1px;
+}
+
+// Used for standard interface labels
+@mixin labelFont {
+    font: caption;
+    font-size: 10px;
+    line-height: 11.8px;
+}
+
+// Used for menu items
+@mixin menuFont {
+    font: caption;
+    font-size: 10px;
+    line-height: 11.8px;
+}
+
+// Used for menu bar items
+@mixin menuBarFont {
+    font: caption;
+    font-size: 14px;
+    line-height: 16.5px;
+}
+
+// Used for standard interface items, such as button labels and menu items
+@mixin messageFont {
+    font: caption;
+    font-size: 13px;
+    line-height: 15.3px;
+}
+
+// Used for window title bars
+@mixin titleBarFont {
+    font: caption;
+    font-size: 13px;
+    line-height: 15.3px;
+}
+
+// Used for tool tips labels
+@mixin toolTipsFont {
+    font: caption;
+    font-size: 11px;
+    line-height: 13px;
+}
+
+// Used for default for documents and other text under the user’s control (that is, text whose font the user can normally change).
+@mixin userFont {
+    font-family: 'Helvetica';
+    font-size: 12px;
+    line-height: 12px;
+}
+
+// Used by default for documents and other text under the user’s control (that is, text whose font the user can normally change), when that font should be fixed-pitch.
+@mixin userFixedPitchFont {
+    font-family: 'Menlo-Regular';
+    font-size: 11px;
+    line-height: 12.8px;
+}
+
+// The standard system font in boldface type
+@mixin boldSystemFont {
+    font: caption;
+    font-weight: bold;
+    font-size: 13.0px;
+    line-height: 15.3px;
+}
+
+// The standard system font
+@mixin systemFont {
+    font: caption;
+    font-size: 13.0px;
+    line-height: 15.3px;
+}

@@ -4,13 +4,20 @@ import path from 'path'
 import { readdir, readFile, pathExists, stat } from 'fs-extra'
 
 // Bundled dependencies
-import { store } from './js/GambierStore'
-import { projectDirectory } from './js/projectDirectory'
-import { projectCitations } from './js/projectCitations'
+import { GambierStore } from './js/GambierStore'
+import { GambierContents } from './js/GambierContents'
+// import { projectCitations } from './js/projectCitations'
 import * as mainMenu from './js/mainMenu'
 
 // Dev only
 import colors from 'colors'
+
+// -------- Variables -------- //
+
+// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
+let win = undefined
+let store = undefined
+let contents = undefined
 
 // -------- Process variables -------- //
 
@@ -33,31 +40,35 @@ const watchAndReload = [
   // '**/*.jpg',
 ]
 
-// require('electron-reload')(watchAndReload, {
-//   // awaitWriteFinish: {
-//   //   stabilityThreshold: 10,
-//   //   pollInterval: 50
-//   // },
-//   electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-//   // argv: ['--inspect=5858'],
-// })
+require('electron-reload')(watchAndReload, {
+  // awaitWriteFinish: {
+  //   stabilityThreshold: 10,
+  //   pollInterval: 50
+  // },
+  electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+  // argv: ['--inspect=5858'],
+})
+
+// -------- Setup -------- //
+
+console.log(`Setup`.bgYellow.black, `(Main.js)`.yellow)
+
+store = new GambierStore()
+contents = new GambierContents(store)
+// projectPath.setup(store)
+// projectCitations.setup(store)
 
 // -------- Create window -------- //
-
-// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
-let win
-
-console.log(`--------------- Startup ---------------`.bgYellow.black, `(Main.js)`.yellow)
 
 function createWindow() {
 
   console.log(`Create window`.bgBrightBlue.black, `(Main.js)`.brightBlue)
 
-  // Create the browser window.
   win = new BrowserWindow({
-    show: false,
+    show: true,
     width: 1600,
     height: 900,
+    vibrancy: 'sidebar',
     webPreferences: {
       scrollBounce: false,
       // Security
@@ -78,17 +89,13 @@ function createWindow() {
   })
 
   // Open DevTools
-  // win.webContents.openDevTools();
+  win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'))
 
   // Populate OS menus
   mainMenu.create()
-
-  // Setup project directory and citations
-  projectDirectory.setup(store)
-  projectCitations.setup(store)
 
   // Send state to render process once dom is ready
   win.once('ready-to-show', () => {
@@ -139,18 +146,16 @@ store.onDidAnyChange((newState, oldState) => {
 // -------- IPC: Send/Receive -------- //
 
 ipcMain.on('showWindow', (event) => {
-  console.log("win.show()".yellow)
   win.show()
 })
 
 ipcMain.on('hideWindow', (event) => {
-  console.log("win.hide()".yellow)
   win.hide()
 })
 
-ipcMain.on('selectProjectDirectory', async (event) => {
+ipcMain.on('selectProjectPath', async (event) => {
   const selection = await dialog.showOpenDialog(win, {
-    title: 'Select Project Directory',
+    title: 'Select Project Folder',
     properties: ['openDirectory', 'createDirectory']
   })
   if (!selection.canceled) {
@@ -171,7 +176,6 @@ ipcMain.handle('ifPathExists', async (event, filepath) => {
 })
 
 ipcMain.handle('getState', async (event) => {
-  console.log("getState")
   return store.store
 })
 
@@ -190,13 +194,10 @@ ipcMain.handle('getFileById', async (event, id, encoding) => {
 })
 
 ipcMain.handle('pathJoin', async (event, path1, path2) => {
-  // console.log(path1)
-  // console.log(path2)
   return path.join(path1, path2)
 })
 
 ipcMain.handle('getHTMLFromClipboard', (event) => {
-  // console.log(clipboard.availableFormats())
   return clipboard.readHTML()
 })
 

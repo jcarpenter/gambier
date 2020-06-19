@@ -7,6 +7,7 @@ var electron__default = _interopDefault(electron);
 var path = _interopDefault(require('path'));
 var fsExtra = require('fs-extra');
 var Store = _interopDefault(require('electron-store'));
+require('svelte/internal');
 require('colors');
 var deepEql = _interopDefault(require('deep-eql'));
 require('deep-object-diff');
@@ -16,7 +17,7 @@ var removeMd = _interopDefault(require('remove-markdown'));
 var diff = _interopDefault(require('deep-diff'));
 
 const StoreSchema = {
-  
+
   // appStartupTime: {
   //   type: 'string',
   //   default: 'undefined'
@@ -24,26 +25,111 @@ const StoreSchema = {
 
   changed: { type: 'array', default: [] },
 
-  selectedFolderId: {
-    type: 'integer',
-    default: 0,
+  // TODO: For `searchInElement`, add enum of possible elements, matching CodeMirror mode assignments.
+  filesSearchCriteria: {
+    type: 'object',
+    properties: {
+      lookInFolderId: { type: 'string', default: '' },
+      includeChildren: { type: 'boolean', default: false },
+      searchFor: { type: 'string', default: '' },
+      searchInElement: { type: 'string', default: '*' },
+      matchWholeWord: { type: 'boolean', default: false },
+      matchCase: { type: 'boolean', default: false },
+      filterDateModified: { type: 'boolean', default: false },
+      fromDateModified: { type: 'string', format: 'date-time' },
+      toDateModified: { type: 'string', format: 'date-time' },
+      filterDateCreated: { type: 'boolean', default: false },
+      fromDateCreated: { type: 'string', format: 'date-time' },
+      toDateCreated: { type: 'string', format: 'date-time' },
+      tags: { type: 'array', default: [] }
+    },
+    default: {
+      lookInFolderId: '',
+      includeChildren: false,
+      searchFor: '',
+      searchInElement: '*',
+      matchWholeWord: false,
+      matchCase: false,
+      filterDateModified: false,
+      filterDateCreated: false,
+      tags: []
+    }
+  },
+
+  sideBar: {
+    type: 'object',
+    properties: {
+      show: { type: 'boolean', default: 'true' },
+      selectedItemId: { type: 'string', default: '' },
+      items: { type: 'array', default: '' },
+    },
+    default: {
+      show: true,
+      selectedItemId: '',
+      items: [
+        { 
+          label: 'Files',
+          children: [
+            {
+              label: 'All',
+              id: 'all',
+              icon: 'images/sidebar-default-icon.svg',
+              showFilesList: true,
+              filesSearchParams: {},
+              lastSelectedFileId: '',
+              children: [] 
+            },
+            {
+              label: 'Most Recent',
+              id: 'most-recent',
+              icon: 'images/folder.svg',
+              showFilesList: true,
+              filesSearchParams: {},
+              lastSelectedFileId: '',
+              children: [] 
+            }
+          ]
+        },
+        { 
+          label: 'Citations',
+          children: [
+            {
+              label: 'Citations',
+              id: 'citations',
+              icon: 'images/sidebar-default-icon.svg',
+              showFilesList: false,
+            }
+          ]
+        }
+      ]
+    }
   },
 
   selectedFileId: {
-    type: 'integer',
-    default: 0,
+    type: 'string',
+    default: '',
   },
 
-  projectDirectory: {
+  showFilesList: {
+    type: 'boolean',
+    default: true
+  },
+
+  rootFolderId: {
+    type: 'string',
+    default: ''
+  },
+
+  projectPath: {
     descrition: 'User specified path to directory containing their project files',
     type: 'string',
-    default: 'undefined'
+    default: ''
   },
 
   projectCitations: {
     descrition: 'User specified path to CSL-JSON file containing their citatons',
     type: 'string',
-    default: 'undefined'
+    default: ''
   },
 
   contents: { type: 'array', default: [] },
@@ -76,87 +162,117 @@ const StoreSchema = {
   // }
 };
 
-function getRootDir(contents) {
+function getRootFolder(contents) {
   return contents.find((d) => d.type == 'directory' && d.isRoot)
 }
 
-function getFirstFileInDirectory(contents, directoryId) {
-  const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId);
-  return files[0]
-}
-
 /**
- * Check if contents contains item by type and id
- */
-function hasContentById(contents, type, id) {
-  return contents.some((d) => d.type == type && d.id == id)
-}
-
-/**
- * `state = {}` gives us a default, for possible first run 'undefined'.
+ * `state = {}` gives us a default, for possible first run empty '' value.
  */
 function reducers(state = {}, action) {
 
   const newState = Object.assign({}, state);
 
-  newState.lastAction = action.type;
+  // newState.lastAction = action.type
   newState.changed = []; // Reset on every action 
 
   switch (action.type) {
 
     case 'SET_PROJECT_DIRECTORY': {
-      newState.projectDirectory = action.path;
-      newState.changed.push('projectDirectory');
+      newState.projectPath = action.path;
+
+      // Handle first run and error conditions:
+      // If SideBar item has not been selected yet, select All 
+      // if (state.sideBar.selectedItemId == '') {
+      //   console.log("SET IT UPPPPP")
+      //   state.sideBar.selectedItemId = 'all'
+      //   newState.showFilesList = true
+      //   newState.filesSearchCriteria.lookInFolderId = newState.rootFolderId
+      //   newState.filesSearchCriteria.includeChildren = true
+      //   newState.changed.push('sideBar')
+      // }
+
+      newState.changed.push('projectPath');
       break
     }
 
     case 'MAP_HIERARCHY': {
       newState.contents = action.contents;
 
+      // Set `rootDirId`
+      const rootFolder = getRootFolder(newState.contents);
+      newState.rootFolderId = rootFolder.id;
+
+      // Handle case of previously-selected folder no longer existing, since remap.
+      // Check if selected item is folder, and if it no longer exists in content.
+      // If conditions met, 
+      // if (
+      //   state.sideBar.selectedItemId.includes('folder') &&
+      //   !contentContainsItemById(newState.contents, 'directory', state.sideBar.selectedItemId)
+      // ) {
+      //   state.sideBar.selectedItemId = 'all'
+      //   newState.showFilesList = true
+      //   newState.filesSearchCriteria = {
+      //     lookInFolderId: newState.rootFolderId,
+      //     includeChildren: true,
+      //   }
+      //   // newState.selectedFileId = newState.contents.find((c) => c.type == 'file')
+      //   newState.changed.push('sideBar', 'selectedFileId')
+      // }
+
+
+
       // Handle first run and error conditions:
       // If a folder has not been selected yet, or if the previously-selected 
       // folder does not exist in updated contents, select root directory.
-      if (
-        newState.selectedFolderId == 0 ||
-        !hasContentById(newState.contents, 'directory', newState.selectedFolderId)
-      ) {
-        
-        // Set `selectedFolderId`
-        const rootDir = getRootDir(newState.contents);
-        newState.selectedFolderId = rootDir.id;
+      // if (
+      //   state.sideBar.selectedItemId == '' ||
+      //   !hasContentById(newState.contents, 'directory', state.sideBar.selectedItemId)
+      // ) {
 
-        // If rootDir has child files, set `selectedFileId` to first one.
-        // Else, set `selectedFileId` to zero (effectively means 'undefined')
-        if (rootDir.childFileCount > 0) {
-          const firstFile = getFirstFileInDirectory(newState.contents, newState.selectedFolderId);
-          newState.selectedFileId = firstFile.id;
-        } else {
-          newState.selectedFileId = 0;
-        }
-        
-        newState.changed.push('selectedFolderId');
-        newState.changed.push('selectedFileId');
-      }
+      //   // Set sideBar selected item
+      //   state.sideBar.selectedItemId = newState.rootFolderId
+
+      //   // If `rootDir` has child files, set `selectedFileId` to first one. Else, set `selectedFileId` to '' (empty)
+      //   if (rootFolder.childFileCount > 0) {
+      //     const firstFile = getFirstFileInDirectory(newState.contents, newState.selectedFolderId)
+      //     newState.selectedFileId = firstFile.id
+      //   } else {
+      //     newState.selectedFileId = ''
+      //   }
+
+      //   newState.changed.push('selectedFolderId', 'selectedFileId', 'rootFolderId')
+      // }
 
       newState.changed.push('contents');
       break
     }
 
-    case 'OPEN_FOLDER': {
-
-      // Set `state.selectedFolderId`
-      newState.selectedFolderId = action.id;
-
-      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.id);
-
-      // Set `state.selectedFileId` to folder's selected file
-      newState.selectedFileId = selectedFolder.selectedFileId;
-
-      newState.changed.push('selectedFolderId');
-      newState.changed.push('selectedFileId');
-
+    case 'SELECT_SIDEBAR_ITEM': {
+      // if (action.filesSearchCriteria) {
+      //   newState.filesSearchCriteria = action.filesSearchCriteria
+      //   newState.changed.push('filesSearchCriteria')
+      // }
+      // newState.showFilesList = action.showFilesList
+      state.sideBar.selectedItemId = action.id;
+      newState.changed.push('sideBar');
       break
     }
+
+    // case 'OPEN_FOLDER': {
+
+    //   // Set `state.selectedFolderId`
+    //   newState.selectedFolderId = action.id
+
+    //   const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.id)
+
+    //   // Set `state.selectedFileId` to folder's selected file
+    //   newState.selectedFileId = selectedFolder.selectedFileId
+
+    //   newState.changed.push('selectedFolderId', 'selectedFileId')
+
+    //   break
+    // }
 
     case 'OPEN_FILE': {
       newState.selectedFileId = action.fileId;
@@ -166,8 +282,7 @@ function reducers(state = {}, action) {
       const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId);
       selectedFolder.selectedFileId = action.fileId;
 
-      newState.changed.push('selectedFileId');
-      newState.changed.push('selectedFolder.selectedFileId');
+      newState.changed.push('selectedFileId', 'selectedFolder.selectedFileId');
 
       break
     }
@@ -224,23 +339,21 @@ class GambierStore extends Store {
     );
   }
 
-  logTheDiff(current, next) {
-    const hasChanged = !deepEql(current, next);
+  logTheDiff(currentState, nextState) {
+    const hasChanged = !deepEql(currentState, nextState);
     if (hasChanged) {
-      // const diff = detailedDiff(current, next)
+      // const diff = detailedDiff(currentState, nextState)
       // console.log(diff)
-      console.log('Has changed'.yellow);
+      console.log(`Changed: ${nextState.changed}`.yellow);
     } else {
       console.log('No changes');
     }
   }
 }
 
-const store = new GambierStore();
-
 async function isWorkingPath(pth) {
 
-  if (pth == 'undefined') {
+  if (pth == '') {
     return false
   } else {
     if (await fsExtra.pathExists(pth)) {
@@ -252,38 +365,41 @@ async function isWorkingPath(pth) {
 }
 
 /**
- * Map projectDirectory and save as a flattened hierarchy `contents` property of store (array).
+ * Map projectPath and save as a flattened hierarchy `contents` property of store (array).
  */
-class ProjectDirectory {
+class GambierContents {
 
-  constructor() {
-    this.store;
-    this.watcher;
-    this.directory = '';
-  }
-
-  async setup(store) {
-
-    // Save local 1) reference to store, and 2) value of directory
+  constructor(store) {
     this.store = store;
-    this.directory = store.store.projectDirectory;
+    this.projectPath = store.store.projectPath;
+    this.watcher = undefined;
 
     // Setup change listener for store
     this.store.onDidAnyChange((newState, oldState) => {
-      this.onStoreChange(newState, oldState);
+      // console.log(newState)
+      if (newState.changed.includes('projectPath')) {
+        this.projectPath = newState.projectPath;
+        this.mapProjectPath();
+        this.startWatching();
+      }
     });
 
-    // Map project directory
-    this.mapProjectDirectory();
-
-    // Start watcher
-    this.startWatching(this.directory);
+    // Map project path and start watching
+    this.mapProjectPath();
+    this.startWatching();
   }
 
-  startWatching(directory) {
-    if (directory == 'undefined') return
 
-    this.watcher = chokidar.watch(directory, {
+  async startWatching() {
+    if (this.projectPath == '') return
+
+    // Close existing watcher.
+    // This will only be called if projectPath has changed.
+    if (this.watcher !== undefined) {
+      await this.watcher.close();
+    }
+
+    this.watcher = chokidar.watch(this.projectPath, {
       ignored: /(^|[\/\\])\../, // Ignore dotfiles
       ignoreInitial: true,
       persistent: true,
@@ -297,35 +413,8 @@ class ProjectDirectory {
       console.log("startWatching: this.watcher.on");
       console.log(event);
       console.log(path);
-      this.mapProjectDirectory();
+      this.mapProjectPath();
     });
-  }
-
-  /**
-   * Remap directory and update watcher if projectDirectory changes
-   */
-  async onStoreChange(newState, oldState) {
-
-    let newDir = newState.projectDirectory;
-    let oldDir = oldState.projectDirectory;
-
-    // We update the local saved directory value
-    this.directory = newDir;
-
-    // If the directory has changed...
-    if (newDir !== oldDir) {
-
-      // Unwatch the old directory
-      if (oldDir !== 'undefined') {
-        await this.watcher.close();
-      }
-
-      // Remap
-      this.mapProjectDirectory();
-
-      // Start watcher
-      this.startWatching(this.directory);
-    }
   }
 
   /**
@@ -333,12 +422,11 @@ class ProjectDirectory {
    * If true, map directory, update store, and add watcher.
    * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
    */
-  async mapProjectDirectory() {
-    
-    if (this.directory == 'undefined' || '') return
+  async mapProjectPath() {
+    if (this.projectPath == '') return
 
-    if (await isWorkingPath(this.directory)) {
-      let contents = await this.mapDirectoryRecursively(this.directory);
+    if (await isWorkingPath(this.projectPath)) {
+      let contents = await this.mapDirectoryRecursively(this.projectPath);
       contents = await this.getFilesDetails(contents);
       contents = this.applyDiffs(this.store.store.contents, contents);
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
@@ -350,8 +438,6 @@ class ProjectDirectory {
   applyDiffs(oldContents, newContents) {
 
     diff.observableDiff(oldContents, newContents, (d) => {
-      // console.log(d)
-      // console.log(d.path)
       // Apply all changes except to the name property...
       if (d.path !== undefined) {
         if (d.path[d.path.length - 1] !== 'selectedFileId') {
@@ -361,7 +447,7 @@ class ProjectDirectory {
         diff.applyChange(oldContents, newContents, d);
       }
     });
-  
+
     return oldContents
   }
 
@@ -391,7 +477,7 @@ class ProjectDirectory {
     // Create object for directory
     const thisDir = {
       type: 'directory',
-      id: stats.ino,
+      id: `folder-${stats.ino}`,
       name: directoryPath.substring(directoryPath.lastIndexOf('/') + 1),
       path: directoryPath,
       modified: stats.mtime.toISOString(),
@@ -466,8 +552,8 @@ class ProjectDirectory {
             const md = matter(str, { excerpt: extractExcerpt });
 
             // Set fields from stats
-            f.id = stats.ino;
-            f.modified = stats.mtime.toISOString();
+            f.id = `file-${stats.ino}`,
+              f.modified = stats.mtime.toISOString();
             f.created = stats.birthtime.toISOString();
             f.excerpt = md.excerpt;
 
@@ -519,52 +605,6 @@ function extractExcerpt(file) {
 
   file.excerpt = excerpt;
 }
-
-const projectDirectory = new ProjectDirectory();
-
-class ProjectCitations {
-  constructor() {
-    this.store;
-    this.watcher;
-    this.citationsPath = '';
-  }
-
-  async setup(store) {
-    // console.log("projectCitations: setup".bgRed)
-    this.citationsPath = store.store.projectCitations;
-    // console.log(this.citationsPath.bgRed)
-  }
-
-  startWatching() {
-    // console.log("projectCitations: startWatching".bgRed)
-    this.watcher = chokidar.watch(this.citationsPath, {
-      ignored: /(^|[\/\\])\../, // Ignore dotfiles
-      ignoreInitial: true,
-      persistent: true,
-      awaitWriteFinish: {
-        stabilityThreshold: 400,
-        pollInterval: 200
-      }
-    });
-
-    this.watcher.on('all', (event, path) => {
-      // console.log("startWatching: this.watcher.on".bgRed)
-      console.log(event);
-      console.log(path);
-      this.onCitationsEvent();
-    });
-  }
-
-  onCitationsEvent() {
-    // console.log("projectCitations: onCitationsEvent".bgRed)
-  }
-
-  getCitations() {
-    return "Some citations for you to enjoy"
-  }
-}
-
-const projectCitations = new ProjectCitations();
 
 const app = electron__default.app;
 
@@ -749,6 +789,13 @@ function create() {
 
 // External dependencies
 
+// -------- Variables -------- //
+
+// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
+let win = undefined;
+let store = undefined;
+let contents = undefined;
+
 // -------- Process variables -------- //
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
@@ -770,31 +817,35 @@ const watchAndReload = [
   // '**/*.jpg',
 ];
 
-// require('electron-reload')(watchAndReload, {
-//   // awaitWriteFinish: {
-//   //   stabilityThreshold: 10,
-//   //   pollInterval: 50
-//   // },
-//   electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-//   // argv: ['--inspect=5858'],
-// })
+require('electron-reload')(watchAndReload, {
+  // awaitWriteFinish: {
+  //   stabilityThreshold: 10,
+  //   pollInterval: 50
+  // },
+  electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+  // argv: ['--inspect=5858'],
+});
+
+// -------- Setup -------- //
+
+console.log(`Setup`.bgYellow.black, `(Main.js)`.yellow);
+
+store = new GambierStore();
+contents = new GambierContents(store);
+// projectPath.setup(store)
+// projectCitations.setup(store)
 
 // -------- Create window -------- //
-
-// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
-let win;
-
-console.log(`--------------- Startup ---------------`.bgYellow.black, `(Main.js)`.yellow);
 
 function createWindow() {
 
   console.log(`Create window`.bgBrightBlue.black, `(Main.js)`.brightBlue);
 
-  // Create the browser window.
   win = new electron.BrowserWindow({
-    show: false,
+    show: true,
     width: 1600,
     height: 900,
+    vibrancy: 'sidebar',
     webPreferences: {
       scrollBounce: false,
       // Security
@@ -815,17 +866,13 @@ function createWindow() {
   });
 
   // Open DevTools
-  // win.webContents.openDevTools();
+  win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'));
 
   // Populate OS menus
   create();
-
-  // Setup project directory and citations
-  projectDirectory.setup(store);
-  projectCitations.setup(store);
 
   // Send state to render process once dom is ready
   win.once('ready-to-show', () => {
@@ -876,18 +923,16 @@ store.onDidAnyChange((newState, oldState) => {
 // -------- IPC: Send/Receive -------- //
 
 electron.ipcMain.on('showWindow', (event) => {
-  console.log("win.show()".yellow);
   win.show();
 });
 
 electron.ipcMain.on('hideWindow', (event) => {
-  console.log("win.hide()".yellow);
   win.hide();
 });
 
-electron.ipcMain.on('selectProjectDirectory', async (event) => {
+electron.ipcMain.on('selectProjectPath', async (event) => {
   const selection = await electron.dialog.showOpenDialog(win, {
-    title: 'Select Project Directory',
+    title: 'Select Project Folder',
     properties: ['openDirectory', 'createDirectory']
   });
   if (!selection.canceled) {
@@ -908,7 +953,6 @@ electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
 });
 
 electron.ipcMain.handle('getState', async (event) => {
-  console.log("getState");
   return store.store
 });
 
@@ -927,13 +971,10 @@ electron.ipcMain.handle('getFileById', async (event, id, encoding) => {
 });
 
 electron.ipcMain.handle('pathJoin', async (event, path1, path2) => {
-  // console.log(path1)
-  // console.log(path2)
   return path.join(path1, path2)
 });
 
 electron.ipcMain.handle('getHTMLFromClipboard', (event) => {
-  // console.log(clipboard.availableFormats())
   return electron.clipboard.readHTML()
 });
 

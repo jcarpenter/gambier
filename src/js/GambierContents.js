@@ -7,38 +7,41 @@ import { applyDiffs, isWorkingPath } from './utils-mainProcess'
 import diff from 'deep-diff'
 
 /**
- * Map projectDirectory and save as a flattened hierarchy `contents` property of store (array).
+ * Map projectPath and save as a flattened hierarchy `contents` property of store (array).
  */
-class ProjectDirectory {
+class GambierContents {
 
-  constructor() {
-    this.store
-    this.watcher
-    this.directory = ''
-  }
-
-  async setup(store) {
-
-    // Save local 1) reference to store, and 2) value of directory
+  constructor(store) {
     this.store = store
-    this.directory = store.store.projectDirectory
+    this.projectPath = store.store.projectPath
+    this.watcher = undefined
 
     // Setup change listener for store
     this.store.onDidAnyChange((newState, oldState) => {
-      this.onStoreChange(newState, oldState)
+      // console.log(newState)
+      if (newState.changed.includes('projectPath')) {
+        this.projectPath = newState.projectPath
+        this.mapProjectPath()
+        this.startWatching()
+      }
     })
 
-    // Map project directory
-    this.mapProjectDirectory()
-
-    // Start watcher
-    this.startWatching(this.directory)
+    // Map project path and start watching
+    this.mapProjectPath()
+    this.startWatching()
   }
 
-  startWatching(directory) {
-    if (directory == 'undefined') return
 
-    this.watcher = chokidar.watch(directory, {
+  async startWatching() {
+    if (this.projectPath == '') return
+
+    // Close existing watcher.
+    // This will only be called if projectPath has changed.
+    if (this.watcher !== undefined) {
+      await this.watcher.close()
+    }
+
+    this.watcher = chokidar.watch(this.projectPath, {
       ignored: /(^|[\/\\])\../, // Ignore dotfiles
       ignoreInitial: true,
       persistent: true,
@@ -52,35 +55,8 @@ class ProjectDirectory {
       console.log("startWatching: this.watcher.on")
       console.log(event)
       console.log(path)
-      this.mapProjectDirectory()
+      this.mapProjectPath()
     })
-  }
-
-  /**
-   * Remap directory and update watcher if projectDirectory changes
-   */
-  async onStoreChange(newState, oldState) {
-
-    let newDir = newState.projectDirectory
-    let oldDir = oldState.projectDirectory
-
-    // We update the local saved directory value
-    this.directory = newDir
-
-    // If the directory has changed...
-    if (newDir !== oldDir) {
-
-      // Unwatch the old directory
-      if (oldDir !== 'undefined') {
-        await this.watcher.close()
-      }
-
-      // Remap
-      this.mapProjectDirectory()
-
-      // Start watcher
-      this.startWatching(this.directory)
-    }
   }
 
   /**
@@ -88,12 +64,11 @@ class ProjectDirectory {
    * If true, map directory, update store, and add watcher.
    * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
    */
-  async mapProjectDirectory() {
-    
-    if (this.directory == 'undefined' || '') return
+  async mapProjectPath() {
+    if (this.projectPath == '') return
 
-    if (await isWorkingPath(this.directory)) {
-      let contents = await this.mapDirectoryRecursively(this.directory)
+    if (await isWorkingPath(this.projectPath)) {
+      let contents = await this.mapDirectoryRecursively(this.projectPath)
       contents = await this.getFilesDetails(contents)
       contents = this.applyDiffs(this.store.store.contents, contents)
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
@@ -105,8 +80,6 @@ class ProjectDirectory {
   applyDiffs(oldContents, newContents) {
 
     diff.observableDiff(oldContents, newContents, (d) => {
-      // console.log(d)
-      // console.log(d.path)
       // Apply all changes except to the name property...
       if (d.path !== undefined) {
         if (d.path[d.path.length - 1] !== 'selectedFileId') {
@@ -116,7 +89,7 @@ class ProjectDirectory {
         diff.applyChange(oldContents, newContents, d);
       }
     })
-  
+
     return oldContents
   }
 
@@ -146,7 +119,7 @@ class ProjectDirectory {
     // Create object for directory
     const thisDir = {
       type: 'directory',
-      id: stats.ino,
+      id: `folder-${stats.ino}`,
       name: directoryPath.substring(directoryPath.lastIndexOf('/') + 1),
       path: directoryPath,
       modified: stats.mtime.toISOString(),
@@ -221,8 +194,8 @@ class ProjectDirectory {
             const md = matter(str, { excerpt: extractExcerpt })
 
             // Set fields from stats
-            f.id = stats.ino
-            f.modified = stats.mtime.toISOString()
+            f.id = `file-${stats.ino}`,
+              f.modified = stats.mtime.toISOString()
             f.created = stats.birthtime.toISOString()
             f.excerpt = md.excerpt
 
@@ -275,4 +248,4 @@ function extractExcerpt(file) {
   file.excerpt = excerpt
 }
 
-export const projectDirectory = new ProjectDirectory()
+export { GambierContents }

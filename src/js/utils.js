@@ -1,3 +1,9 @@
+// Copied from:
+// https://github.com/Rich-Harris/yootils/blob/master/src/number/clamp.ts
+function clamp(num, min, max) {
+  return num < min ? min : num > max ? max : num;
+}
+
 const htmlRE = new RegExp(/<\/?[a-z][\s\S]*>/)
 
 /**
@@ -40,4 +46,4 @@ function mountReplace(Component, options) {
   return component;
 }
 
-export { mountReplace, hasChanged, isUrl, containsHTML }
+export { mountReplace, hasChanged, isUrl, containsHTML, clamp }

@@ -5,6 +5,7 @@
    * Per https://svelte.dev/tutorial/svelte-self
    */
   import { onMount } from "svelte";
+  import SideBarItem from "./";
 
   export let nestedDepth = 0;
   export let expanded = true;
