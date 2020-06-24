@@ -1,3 +1,9 @@
+#editor .CodeMirror {
+    width: 100%;
+    height: 100%;
+
+}
+
 .cm-s-gambier {
     background: #fff;
     color: var(--clr-editorText);
@@ -36,13 +42,17 @@
 
     // Pad sides so there's room for header hashes (which hang left).
     .CodeMirror-lines {
+        margin: var(--grid) auto;
+        min-width: 30em;
+        max-width: 48em;
         padding: 0 3em;
+        cursor: default;
     }
 
     // Add padding to bottom of doc, so that when we're at bottom of
     // scroll, there's padding before edge of editor.
     .CodeMirror-line:last-of-type {
-        margin-bottom: 8em;
+        margin-bottom: 18em;
     }
 
     // -------------- Lists -------------- //
@@ -136,14 +146,14 @@
     /* -------------- Emphasis -------------- */
 
     .cm-code {
-        color: #13570B;
-        background-color: #E7F9E8;
+        color: #13570b;
+        background-color: #e7f9e8;
         padding: 0.1em 0 0.2em;
         font-size: 0.9em;
         font-family: "SFMono-Regular";
         // font-family: "SFMono-Regular";
         &.cm-flank {
-            color: #92E290;
+            color: #92e290;
         }
     }
 
@@ -193,6 +203,16 @@
         font-style: italic;
     }
 }
+
+
+
+
+
+
+
+
+
+
 
 /* 
 ========================================================

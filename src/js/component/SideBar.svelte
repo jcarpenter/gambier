@@ -1,48 +1,26 @@
 <script>
+  import { createTreeHierarchy } from "hierarchy-js";
   import SideBarItem from "./SideBarItem.svelte";
   import SideBarFolders from "./SideBarFolders.svelte";
   import { onMount } from "svelte";
 
   export let state = {};
   export let focused;
+  
+  let tree = {}
 
-  // $: shortcuts = [
-  //   {
-  //     label: "All",
-  //     id: "all",
-  //     showFilesList: true,
-  //     filesSearchCriteria: {
-  //       lookInFolderId: state.rootFolderId,
-  //       includeChildren: true
-  //     }
-  //   },
-  //   {
-  //     label: "Most Recent",
-  //     id: "most-recent",
-  //     showFilesList: true,
-  //     filesSearchCriteria: {
-  //       lookInFolderId: state.rootFolderId,
-  //       includeChildren: true,
-  //       filterDateModified: true,
-  //       fromDateModified: new Date().toISOString(),
-  //       toDateModified: new Date(
-  //         Date.now() - 7 * 24 * 60 * 60 * 1000
-  //       ).toISOString()
-  //     }
-  //   },
-  //   {
-  //     label: "Favorites",
-  //     id: "favorites",
-  //     showFilesList: true,
-  //     filesSearchCriteria: {
-  //       lookInFolderId: state.rootFolderId,
-  //       includeChildren: true,
-  //       tags: ["favorite"]
-  //     }
-  //   }
-  // ];
+  $: {
+    if (
+      state.changed.includes("sideBar") ||
+      state.changed.includes("contents")
+    ) {
+      buildTree()
+    }
+  }
 
   onMount(() => {
+    buildTree()
+
     if (state.sideBar.selectedItemId == '') {
       window.api.send("dispatch", {
         type: "SELECT_SIDEBAR_ITEM",
@@ -50,6 +28,12 @@
       });
     }
   });
+
+  function buildTree() {
+    tree = createTreeHierarchy(state.sideBar.items);
+  }
+
+
 </script>
 
 <style type="text/scss">
@@ -80,30 +64,16 @@
 </style>
 
 <div id="sidebar" class:focused>
-  {#each state.sideBar.items as group}
-    <h1 class="title">{group.label}</h1>
-    {#each group.children as item}
-      <SideBarItem
-        label={item.label}
-        id={item.id}
-        selected={item.id == state.sideBar.selectedItemId} />
-    {/each}
+  {#each tree as topLevelItem}
+    {#if topLevelItem.type == 'group'}
+      <h1 class="title">{topLevelItem.label}</h1>
+      {#each topLevelItem.children as item}
+        <SideBarItem
+          state={state}
+          id={item.id}
+          children={item.children ? item.children : []}
+          />
+      {/each}
+    {/if}
   {/each}
-
-  <!-- {#each shortcuts as item}
-    <SideBarItem
-      {state}
-      {...item}
-      selected={state.sideBar.selectedItemId == item.id} />
-  {/each}
-
-  <SideBarFolders {state} />
-
-  <h1 class="title">Citations</h1>
-  <SideBarItem
-    {state}
-    label={'All'}
-    id="all-citations"
-    selected={state.sideBar.selectedItemId == 'all-citations'}
-    showFilesList={false} /> -->
 </div>

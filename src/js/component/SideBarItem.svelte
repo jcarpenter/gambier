@@ -2,27 +2,33 @@
   import { onMount } from "svelte";
 
   export let state = {};
-  export let label = "Label";
   export let id;
-  export let children = [];
-  export let showFilesList = false;
-  export let filesSearchCriteria = undefined;
-  export let icon = "images/sidebar-default-icon.svg";
-  export let selected = false;
-  export let expanded;
+  export let children = []
   export let nestDepth = 0;
+  
+  let selected = false;
 
-  $: expandable = children.length > 0;
+  let sideBarItem
+
+  $: sideBarItem = state.sideBar.items.find((i) => i.id == id)
+  $: expandable = children.length > 0
+  $: expanded = sideBarItem.expanded
+  $: selected = state.sideBar.selectedItemId == sideBarItem.id
 
   function clicked() {
     if (selected) return;
 
-    const action = {
+    window.api.send("dispatch", {
       type: "SELECT_SIDEBAR_ITEM",
       id: id,
-    };
-    
-    window.api.send("dispatch", action);
+    });
+  }
+
+  function toggleExpanded() {
+    window.api.send("dispatch", {
+      type: "TOGGLE_SIDEBAR_ITEM_EXPANDED",
+      id: sideBarItem.id,
+    });
   }
 </script>
 
@@ -58,6 +64,10 @@
       display: none;
     }
 
+    &.expandable img {
+      display: inline;
+    }
+
     &.expanded img {
       transform: rotate(90deg);
     }
@@ -75,10 +85,6 @@
     margin-left: calc(4px + calc(16px * 3));
   }
 
-  .expandable #disclosure-triangle img {
-    display: inline;
-  }
-
   #icon {
     margin-left: 4px;
     width: 18px;
@@ -90,35 +96,41 @@
     margin-left: 6px;
     flex: 1;
   }
+
+  // Children
+  #children {
+    height: 0;
+    
+    &.expanded {
+      height: auto;
+    }
+  }
 </style>
 
-<div id="container" class:expandable class:selected data-nestDepth={nestDepth}>
+<div id="container" class:selected data-nestDepth={nestDepth}>
   <div id="flex-row" on:click={clicked}>
     <button
+      class:expandable
+      class:expanded
       id="disclosure-triangle"
       alt="Expand"
-      class:expanded
-      on:click|stopPropagation={() => (expanded = !expanded)}>
+      on:click|stopPropagation={toggleExpanded}>
       <img src="images/mac/disclosure-triangle.svg" alt="Collapse/Expand" />
     </button>
-    <img src={icon} id="icon" alt="Icon" />
-    <span id="label">{label}</span>
+    <img src={sideBarItem.icon} id="icon" alt="Icon" />
+    <span id="label">{sideBarItem.label}</span>
   </div>
 
   <!-- Recursive children nesting -->
   {#if children.length > 0}
-    {#each children as item}
-      <svelte:self
-        state={state}
-        label={item.name}
-        id={item.id}
-        selected={state.sideBar.selectedItemId == item.id}
-        children={item.children ? item.children : []}
-        icon={'images/folder.svg'}
-        filesSearchCriteria={item.filesSearchCriteria}
-        showFilesList={true}
-        nestDepth={nestDepth + 1}
-        expanded />
-    {/each}
+    <div id="children" class:expanded>
+      {#each children as item}
+        <svelte:self
+          state={state}
+          id={item.id}
+          children={item.children ? item.children : []}
+          nestDepth={nestDepth + 1} />
+      {/each}
+    </div>
   {/if}
 </div>

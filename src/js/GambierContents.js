@@ -52,7 +52,6 @@ class GambierContents {
     })
 
     this.watcher.on('all', (event, path) => {
-      console.log("startWatching: this.watcher.on")
       console.log(event)
       console.log(path)
       this.mapProjectPath()
@@ -61,14 +60,14 @@ class GambierContents {
 
   /**
    * Check if path is valid. 
-   * If true, map directory, update store, and add watcher.
+   * If true, map folder, update store, and add watcher.
    * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
    */
   async mapProjectPath() {
     if (this.projectPath == '') return
 
     if (await isWorkingPath(this.projectPath)) {
-      let contents = await this.mapDirectoryRecursively(this.projectPath)
+      let contents = await this.mapFolderRecursively(this.projectPath)
       contents = await this.getFilesDetails(contents)
       contents = this.applyDiffs(this.store.store.contents, contents)
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
@@ -94,43 +93,43 @@ class GambierContents {
   }
 
   /**
-   * Populate this.contents with flat array of directory contents. One object for each directory and file found. Works recursively.
-   * @param {*} directoryPath - Directory to look inside.
-   * @param {*} parentObj - If passed in, we 1) get parent id, and 2) increment its directory counter (assuming the directory ). Is left undefined (default) for the top-level directory.
+   * Populate this.contents with flat array of folder contents. One object for each folder and file found. Works recursively.
+   * @param {*} folderPath - folder to look inside.
+   * @param {*} parentObj - If passed in, we 1) get parent id, and 2) increment its folder counter. Is left undefined (default) for the top-level folder.
    */
-  async mapDirectoryRecursively(directoryPath, parentId = undefined) {
+  async mapFolderRecursively(folderPath, parentId = undefined) {
 
     let arrayOfContents = []
 
-    let contents = await readdir(directoryPath, { withFileTypes: true })
+    let contents = await readdir(folderPath, { withFileTypes: true })
 
     // Filter contents to (not-empty) directories, and markdown files.
     contents = contents.filter((c) => c.isDirectory() || c.name.includes('.md'))
 
-    // If the directory has no children we care about (.md files or directories), 
+    // If the folder has no children we care about (.md files or directories), 
     // we return an empty array.
     if (contents.length == 0) {
       return arrayOfContents
     }
 
-    // Get stats for directory
-    const stats = await stat(directoryPath)
+    // Get stats for folder
+    const stats = await stat(folderPath)
 
-    // Create object for directory
+    // Create object for folder
     const thisDir = {
-      type: 'directory',
+      type: 'folder',
       id: `folder-${stats.ino}`,
-      name: directoryPath.substring(directoryPath.lastIndexOf('/') + 1),
-      path: directoryPath,
+      name: folderPath.substring(folderPath.lastIndexOf('/') + 1),
+      path: folderPath,
       modified: stats.mtime.toISOString(),
       childFileCount: 0,
-      childDirectoryCount: 0,
+      childFolderCount: 0,
       selectedFileId: 0,
       isRoot: false,
     }
 
     // If parentId was passed, set `thisDir.parentId` to it
-    // Else this directory is the root, so set `isRoot: true`
+    // Else this folder is the root, so set `isRoot: true`
     if (parentId !== undefined) {
       thisDir.parentId = parentId
     } else {
@@ -140,7 +139,7 @@ class GambierContents {
     for (let c of contents) {
 
       // Get path
-      const cPath = path.join(directoryPath, c.name)
+      const cPath = path.join(folderPath, c.name)
 
       if (c.isFile()) {
         // Increment file counter
@@ -155,12 +154,12 @@ class GambierContents {
         })
       } else if (c.isDirectory()) {
 
-        // Get child directory contents
+        // Get child folder contents
         // If not empty, increment counter and push to arrayOfContents
-        const subDirContents = await this.mapDirectoryRecursively(cPath, thisDir.id)
-        if (subDirContents.length !== 0) {
-          thisDir.childDirectoryCount++
-          arrayOfContents = arrayOfContents.concat(subDirContents)
+        const childFolderContents = await this.mapFolderRecursively(cPath, thisDir.id)
+        if (childFolderContents.length !== 0) {
+          thisDir.childFolderCount++
+          arrayOfContents = arrayOfContents.concat(childFolderContents)
         }
       }
     }

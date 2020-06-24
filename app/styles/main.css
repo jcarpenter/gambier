@@ -97,17 +97,4 @@ body {
   padding: 0;
 }
 
-#editor .CodeMirror {
-  width: 48em;
-  padding-top: var(--grid);
-  height: auto;
-}
-
-#bracketsWidget {
-  background: pink;
-  padding: 0 0.5em;
-  position: absolute;
-  z-index: 10;
-}
-
 /*# sourceMappingURL=main.css.map */

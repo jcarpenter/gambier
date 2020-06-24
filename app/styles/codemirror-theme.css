@@ -1,3 +1,8 @@
+#editor .CodeMirror {
+  width: 100%;
+  height: 100%;
+}
+
 .cm-s-gambier {
   background: #fff;
   color: var(--clr-editorText);
@@ -38,11 +43,15 @@
 }
 
 .cm-s-gambier .CodeMirror-lines {
+  margin: var(--grid) auto;
+  min-width: 30em;
+  max-width: 48em;
   padding: 0 3em;
+  cursor: default;
 }
 
 .cm-s-gambier .CodeMirror-line:last-of-type {
-  margin-bottom: 8em;
+  margin-bottom: 18em;
 }
 
 .cm-s-gambier .CodeMirror-line.list1 .list-marker,
@@ -115,15 +124,15 @@
 }
 
 .cm-s-gambier .cm-code {
-  color: #13570B;
-  background-color: #E7F9E8;
+  color: #13570b;
+  background-color: #e7f9e8;
   padding: 0.1em 0 0.2em;
   font-size: 0.9em;
   font-family: "SFMono-Regular";
 }
 
 .cm-s-gambier .cm-code.cm-flank {
-  color: #92E290;
+  color: #92e290;
 }
 
 .cm-s-gambier .cm-header-hash {

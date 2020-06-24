@@ -1,7 +1,19 @@
+import TurndownService from './third-party/turndown/turndown.es.js';
+
 // Copied from:
 // https://github.com/Rich-Harris/yootils/blob/master/src/number/clamp.ts
 function clamp(num, min, max) {
   return num < min ? min : num > max ? max : num;
+}
+
+const urlRE = new RegExp(/^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i);
+
+/**
+ * Check if string is URL. Uses regexp from GitHub Flavored Markdown:
+ * https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L14
+ */
+function isUrl(string) {
+  return urlRE.test(string)
 }
 
 function noop() { }
@@ -615,26 +627,194 @@ class FlexPanel extends SvelteComponent {
 	}
 }
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var createCopy = function createCopy(item) {
+  if (!item || (typeof item === 'undefined' ? 'undefined' : _typeof(item)) !== 'object') return item;
+
+  var accumulator = Array.isArray(item) ? [] : {};
+  return iterator(item, accumulator, createCopy);
+};
+
+var iterator = function iterator(iterable, accumulator, callback) {
+  for (var key in iterable) {
+    if (iterable.hasOwnProperty(key)) {
+      accumulator[key] = callback(iterable[key]);
+    }
+  }
+  return accumulator;
+};
+
+var createCopy_1 = { createCopy: createCopy, iterator: iterator };
+
+var constants = {
+  id: 'id',
+  parentId: 'parentId',
+  children: 'children',
+  excludeParent: false,
+  saveExtractedChildren: false
+};
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+
+
+var OPTIONS = {};
+
+var id = function id(item) {
+  return item && item[OPTIONS.id];
+};
+var parentId = function parentId(item) {
+  return item && item[OPTIONS.parentId];
+};
+var childrenKey = function childrenKey() {
+  return OPTIONS.children;
+};
+
+var mergeOptionsBeforeCreateHierarchy = function mergeOptionsBeforeCreateHierarchy() {
+  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  OPTIONS = _extends({}, constants, options);
+  return OPTIONS;
+};
+
+var options = { id: id, parentId: parentId, childrenKey: childrenKey, mergeOptionsBeforeCreateHierarchy: mergeOptionsBeforeCreateHierarchy };
+
+var createCopy$1 = createCopy_1.createCopy;
+
+var id$1 = options.id,
+    childrenKey$1 = options.childrenKey,
+    parentId$1 = options.parentId,
+    mergeOptionsBeforeCreateHierarchy$1 = options.mergeOptionsBeforeCreateHierarchy;
+
+var hasParent = function hasParent(parentId, items) {
+  return items.some(function (item) {
+    return id$1(item) === parentId;
+  });
+};
+
+var hasChildren = function hasChildren(item) {
+  var key = childrenKey$1();
+  return !!(item && item[key] && item[key].length);
+};
+
+var getParents = function getParents() {
+  var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+
+  return items.filter(function (item) {
+    return id$1(item) && !hasParent(parentId$1(item), items);
+  });
+};
+
+var getChildren = function getChildren(child, items) {
+  var childId = id$1(child);
+  return childId ? items.filter(function (item) {
+    return parentId$1(item) === childId;
+  }) : [];
+};
+
+var getParentChildren = function getParentChildren(parent) {
+  var key = childrenKey$1();
+  return Array.isArray(parent[key]) ? parent[key].slice() : [];
+};
+
+var mergeChildren = function mergeChildren(parent, children) {
+  if (children) {
+    var parentChildren = getParentChildren(parent);
+    parent[childrenKey$1()] = parentChildren.concat(children);
+  }
+  return parent;
+};
+
+var createHierarchy = function createHierarchy(method) {
+  return function (array, options) {
+    if (array && array.length) {
+      var OPTIONS = mergeOptionsBeforeCreateHierarchy$1(options);
+      return method(createCopy$1(array), null, OPTIONS);
+    }
+  };
+};
+
+var common = { getParents: getParents, getChildren: getChildren, mergeChildren: mergeChildren, hasChildren: hasChildren, childrenKey: childrenKey$1, createHierarchy: createHierarchy };
+
+var getParents$1 = common.getParents,
+    getChildren$1 = common.getChildren,
+    mergeChildren$1 = common.mergeChildren;
+
+var createTreeHierarchy = function createTreeHierarchy(items, parent) {
+  var children = [];
+
+  if (parent) children = getChildren$1(parent, items);else children = getParents$1(items);
+
+  if (children.length) {
+    parent && mergeChildren$1(parent, children);
+    children.forEach(function (item) {
+      return createTreeHierarchy(items, item);
+    });
+  }
+  return children;
+};
+
+var createTreeHierarchy_1 = { createTreeHierarchy: createTreeHierarchy };
+
+var hasChildren$1 = common.hasChildren,
+    childrenKey$2 = common.childrenKey;
+
+var createFlatHierarchy = function createFlatHierarchy(items, parent) {
+  var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+  var flatList = [];
+
+  items.forEach(function (item) {
+    if (hasChildren$1(item)) {
+      var key = childrenKey$2();
+      var children = createFlatHierarchy(item[key]);
+
+      !options.saveExtractedChildren && delete item[key];
+      !options.excludeParent && children.unshift(item);
+
+      flatList = flatList.concat(children);
+    } else {
+      !options.excludeParent && flatList.push(item);
+    }
+  });
+  return flatList;
+};
+
+var createFlatHierarchy_1 = { createFlatHierarchy: createFlatHierarchy };
+
+var createHierarchy$1 = common.createHierarchy;
+
+var createTreeHierarchy$1 = createTreeHierarchy_1.createTreeHierarchy;
+
+var createFlatHierarchy$1 = createFlatHierarchy_1.createFlatHierarchy;
+
+var lib = {
+  createTreeHierarchy: createHierarchy$1(createTreeHierarchy$1),
+  createFlatHierarchy: createHierarchy$1(createFlatHierarchy$1)
+};
+var lib_1 = lib.createTreeHierarchy;
+
 /* src/js/component/SideBarItem.svelte generated by Svelte v3.22.3 */
 
 function add_css$2() {
 	var style = element("style");
-	style.id = "svelte-1u3p0qf-style";
-	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}#container.svelte-1u3p0qf.svelte-1u3p0qf{overflow:hidden;position:relative}#flex-row.svelte-1u3p0qf.svelte-1u3p0qf{margin-top:2px;height:24px;display:flex;align-items:center}.selected.svelte-1u3p0qf>#flex-row.svelte-1u3p0qf{background-color:rgba(0, 0, 0, 0.1)}#disclosure-triangle.svelte-1u3p0qf.svelte-1u3p0qf{border:none;outline:none;padding:0;margin:0;margin-left:4px;width:13px;height:13px;background-color:transparent}#disclosure-triangle.svelte-1u3p0qf img.svelte-1u3p0qf{width:100%;height:100%;display:none}#disclosure-triangle.expanded.svelte-1u3p0qf img.svelte-1u3p0qf{transform:rotate(90deg)}[data-nestDepth=\"1\"].svelte-1u3p0qf #disclosure-triangle.svelte-1u3p0qf{margin-left:calc(4px + calc(16px * 1))}[data-nestDepth=\"2\"].svelte-1u3p0qf #disclosure-triangle.svelte-1u3p0qf{margin-left:calc(4px + calc(16px * 2))}[data-nestDepth=\"3\"].svelte-1u3p0qf #disclosure-triangle.svelte-1u3p0qf{margin-left:calc(4px + calc(16px * 3))}.expandable.svelte-1u3p0qf #disclosure-triangle img.svelte-1u3p0qf{display:inline}#icon.svelte-1u3p0qf.svelte-1u3p0qf{margin-left:4px;width:18px;height:18px}#label.svelte-1u3p0qf.svelte-1u3p0qf{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;margin-left:6px;flex:1}";
+	style.id = "svelte-15dk33n-style";
+	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}#container.svelte-15dk33n.svelte-15dk33n{overflow:hidden;position:relative}#flex-row.svelte-15dk33n.svelte-15dk33n{margin-top:2px;height:24px;display:flex;align-items:center}.selected.svelte-15dk33n>#flex-row.svelte-15dk33n{background-color:rgba(0, 0, 0, 0.1)}#disclosure-triangle.svelte-15dk33n.svelte-15dk33n{border:none;outline:none;padding:0;margin:0;margin-left:4px;width:13px;height:13px;background-color:transparent}#disclosure-triangle.svelte-15dk33n img.svelte-15dk33n{width:100%;height:100%;display:none}#disclosure-triangle.expandable.svelte-15dk33n img.svelte-15dk33n{display:inline}#disclosure-triangle.expanded.svelte-15dk33n img.svelte-15dk33n{transform:rotate(90deg)}[data-nestDepth=\"1\"].svelte-15dk33n #disclosure-triangle.svelte-15dk33n{margin-left:calc(4px + calc(16px * 1))}[data-nestDepth=\"2\"].svelte-15dk33n #disclosure-triangle.svelte-15dk33n{margin-left:calc(4px + calc(16px * 2))}[data-nestDepth=\"3\"].svelte-15dk33n #disclosure-triangle.svelte-15dk33n{margin-left:calc(4px + calc(16px * 3))}#icon.svelte-15dk33n.svelte-15dk33n{margin-left:4px;width:18px;height:18px}#label.svelte-15dk33n.svelte-15dk33n{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;margin-left:6px;flex:1}#children.svelte-15dk33n.svelte-15dk33n{height:0}#children.expanded.svelte-15dk33n.svelte-15dk33n{height:auto}";
 	append(document.head, style);
 }
 
 function get_each_context(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[13] = list[i];
+	child_ctx[10] = list[i];
 	return child_ctx;
 }
 
-// (177:2) {#if children.length > 0}
+// (188:2) {#if children.length > 0}
 function create_if_block(ctx) {
-	let each_1_anchor;
+	let div;
 	let current;
-	let each_value = /*children*/ ctx[3];
+	let each_value = /*children*/ ctx[1];
 	let each_blocks = [];
 
 	for (let i = 0; i < each_value.length; i += 1) {
@@ -647,23 +827,28 @@ function create_if_block(ctx) {
 
 	return {
 		c() {
+			div = element("div");
+
 			for (let i = 0; i < each_blocks.length; i += 1) {
 				each_blocks[i].c();
 			}
 
-			each_1_anchor = empty();
+			attr(div, "id", "children");
+			attr(div, "class", "svelte-15dk33n");
+			toggle_class(div, "expanded", /*expanded*/ ctx[6]);
 		},
 		m(target, anchor) {
+			insert(target, div, anchor);
+
 			for (let i = 0; i < each_blocks.length; i += 1) {
-				each_blocks[i].m(target, anchor);
+				each_blocks[i].m(div, null);
 			}
 
-			insert(target, each_1_anchor, anchor);
 			current = true;
 		},
 		p(ctx, dirty) {
-			if (dirty & /*state, children, nestDepth*/ 74) {
-				each_value = /*children*/ ctx[3];
+			if (dirty & /*state, children, nestDepth*/ 7) {
+				each_value = /*children*/ ctx[1];
 				let i;
 
 				for (i = 0; i < each_value.length; i += 1) {
@@ -676,7 +861,7 @@ function create_if_block(ctx) {
 						each_blocks[i] = create_each_block(child_ctx);
 						each_blocks[i].c();
 						transition_in(each_blocks[i], 1);
-						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+						each_blocks[i].m(div, null);
 					}
 				}
 
@@ -687,6 +872,10 @@ function create_if_block(ctx) {
 				}
 
 				check_outros();
+			}
+
+			if (dirty & /*expanded*/ 64) {
+				toggle_class(div, "expanded", /*expanded*/ ctx[6]);
 			}
 		},
 		i(local) {
@@ -708,30 +897,24 @@ function create_if_block(ctx) {
 			current = false;
 		},
 		d(detaching) {
+			if (detaching) detach(div);
 			destroy_each(each_blocks, detaching);
-			if (detaching) detach(each_1_anchor);
 		}
 	};
 }
 
-// (178:4) {#each children as item}
+// (190:6) {#each children as item}
 function create_each_block(ctx) {
 	let current;
 
 	const sidebaritem = new SideBarItem({
 			props: {
-				state: /*state*/ ctx[1],
-				label: /*item*/ ctx[13].name,
-				id: /*item*/ ctx[13].id,
-				selected: /*state*/ ctx[1].sideBar.selectedItemId == /*item*/ ctx[13].id,
-				children: /*item*/ ctx[13].children
-				? /*item*/ ctx[13].children
+				state: /*state*/ ctx[0],
+				id: /*item*/ ctx[10].id,
+				children: /*item*/ ctx[10].children
+				? /*item*/ ctx[10].children
 				: [],
-				icon: "images/folder.svg",
-				filesSearchCriteria: /*item*/ ctx[13].filesSearchCriteria,
-				showFilesList: true,
-				nestDepth: /*nestDepth*/ ctx[6] + 1,
-				expanded: true
+				nestDepth: /*nestDepth*/ ctx[2] + 1
 			}
 		});
 
@@ -745,17 +928,14 @@ function create_each_block(ctx) {
 		},
 		p(ctx, dirty) {
 			const sidebaritem_changes = {};
-			if (dirty & /*state*/ 2) sidebaritem_changes.state = /*state*/ ctx[1];
-			if (dirty & /*children*/ 8) sidebaritem_changes.label = /*item*/ ctx[13].name;
-			if (dirty & /*children*/ 8) sidebaritem_changes.id = /*item*/ ctx[13].id;
-			if (dirty & /*state, children*/ 10) sidebaritem_changes.selected = /*state*/ ctx[1].sideBar.selectedItemId == /*item*/ ctx[13].id;
+			if (dirty & /*state*/ 1) sidebaritem_changes.state = /*state*/ ctx[0];
+			if (dirty & /*children*/ 2) sidebaritem_changes.id = /*item*/ ctx[10].id;
 
-			if (dirty & /*children*/ 8) sidebaritem_changes.children = /*item*/ ctx[13].children
-			? /*item*/ ctx[13].children
+			if (dirty & /*children*/ 2) sidebaritem_changes.children = /*item*/ ctx[10].children
+			? /*item*/ ctx[10].children
 			: [];
 
-			if (dirty & /*children*/ 8) sidebaritem_changes.filesSearchCriteria = /*item*/ ctx[13].filesSearchCriteria;
-			if (dirty & /*nestDepth*/ 64) sidebaritem_changes.nestDepth = /*nestDepth*/ ctx[6] + 1;
+			if (dirty & /*nestDepth*/ 4) sidebaritem_changes.nestDepth = /*nestDepth*/ ctx[2] + 1;
 			sidebaritem.$set(sidebaritem_changes);
 		},
 		i(local) {
@@ -782,42 +962,43 @@ function create_fragment$2(ctx) {
 	let img1_src_value;
 	let t1;
 	let span;
+	let t2_value = /*sideBarItem*/ ctx[4].label + "";
 	let t2;
 	let t3;
 	let current;
 	let dispose;
-	let if_block = /*children*/ ctx[3].length > 0 && create_if_block(ctx);
+	let if_block = /*children*/ ctx[1].length > 0 && create_if_block(ctx);
 
 	return {
 		c() {
 			div1 = element("div");
 			div0 = element("div");
 			button = element("button");
-			button.innerHTML = `<img src="images/mac/disclosure-triangle.svg" alt="Collapse/Expand" class="svelte-1u3p0qf">`;
+			button.innerHTML = `<img src="images/mac/disclosure-triangle.svg" alt="Collapse/Expand" class="svelte-15dk33n">`;
 			t0 = space();
 			img1 = element("img");
 			t1 = space();
 			span = element("span");
-			t2 = text(/*label*/ ctx[2]);
+			t2 = text(t2_value);
 			t3 = space();
 			if (if_block) if_block.c();
 			attr(button, "id", "disclosure-triangle");
 			attr(button, "alt", "Expand");
-			attr(button, "class", "svelte-1u3p0qf");
-			toggle_class(button, "expanded", /*expanded*/ ctx[0]);
-			if (img1.src !== (img1_src_value = /*icon*/ ctx[4])) attr(img1, "src", img1_src_value);
+			attr(button, "class", "svelte-15dk33n");
+			toggle_class(button, "expandable", /*expandable*/ ctx[5]);
+			toggle_class(button, "expanded", /*expanded*/ ctx[6]);
+			if (img1.src !== (img1_src_value = /*sideBarItem*/ ctx[4].icon)) attr(img1, "src", img1_src_value);
 			attr(img1, "id", "icon");
 			attr(img1, "alt", "Icon");
-			attr(img1, "class", "svelte-1u3p0qf");
+			attr(img1, "class", "svelte-15dk33n");
 			attr(span, "id", "label");
-			attr(span, "class", "svelte-1u3p0qf");
+			attr(span, "class", "svelte-15dk33n");
 			attr(div0, "id", "flex-row");
-			attr(div0, "class", "svelte-1u3p0qf");
+			attr(div0, "class", "svelte-15dk33n");
 			attr(div1, "id", "container");
-			attr(div1, "data-nestdepth", /*nestDepth*/ ctx[6]);
-			attr(div1, "class", "svelte-1u3p0qf");
-			toggle_class(div1, "expandable", /*expandable*/ ctx[7]);
-			toggle_class(div1, "selected", /*selected*/ ctx[5]);
+			attr(div1, "data-nestdepth", /*nestDepth*/ ctx[2]);
+			attr(div1, "class", "svelte-15dk33n");
+			toggle_class(div1, "selected", /*selected*/ ctx[3]);
 		},
 		m(target, anchor, remount) {
 			insert(target, div1, anchor);
@@ -834,26 +1015,30 @@ function create_fragment$2(ctx) {
 			if (remount) run_all(dispose);
 
 			dispose = [
-				listen(button, "click", stop_propagation(/*click_handler*/ ctx[12])),
-				listen(div0, "click", /*clicked*/ ctx[8])
+				listen(button, "click", stop_propagation(/*toggleExpanded*/ ctx[8])),
+				listen(div0, "click", /*clicked*/ ctx[7])
 			];
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*expanded*/ 1) {
-				toggle_class(button, "expanded", /*expanded*/ ctx[0]);
+			if (dirty & /*expandable*/ 32) {
+				toggle_class(button, "expandable", /*expandable*/ ctx[5]);
 			}
 
-			if (!current || dirty & /*icon*/ 16 && img1.src !== (img1_src_value = /*icon*/ ctx[4])) {
+			if (dirty & /*expanded*/ 64) {
+				toggle_class(button, "expanded", /*expanded*/ ctx[6]);
+			}
+
+			if (!current || dirty & /*sideBarItem*/ 16 && img1.src !== (img1_src_value = /*sideBarItem*/ ctx[4].icon)) {
 				attr(img1, "src", img1_src_value);
 			}
 
-			if (!current || dirty & /*label*/ 4) set_data(t2, /*label*/ ctx[2]);
+			if ((!current || dirty & /*sideBarItem*/ 16) && t2_value !== (t2_value = /*sideBarItem*/ ctx[4].label + "")) set_data(t2, t2_value);
 
-			if (/*children*/ ctx[3].length > 0) {
+			if (/*children*/ ctx[1].length > 0) {
 				if (if_block) {
 					if_block.p(ctx, dirty);
 
-					if (dirty & /*children*/ 8) {
+					if (dirty & /*children*/ 2) {
 						transition_in(if_block, 1);
 					}
 				} else {
@@ -872,16 +1057,12 @@ function create_fragment$2(ctx) {
 				check_outros();
 			}
 
-			if (!current || dirty & /*nestDepth*/ 64) {
-				attr(div1, "data-nestdepth", /*nestDepth*/ ctx[6]);
+			if (!current || dirty & /*nestDepth*/ 4) {
+				attr(div1, "data-nestdepth", /*nestDepth*/ ctx[2]);
 			}
 
-			if (dirty & /*expandable*/ 128) {
-				toggle_class(div1, "expandable", /*expandable*/ ctx[7]);
-			}
-
-			if (dirty & /*selected*/ 32) {
-				toggle_class(div1, "selected", /*selected*/ ctx[5]);
+			if (dirty & /*selected*/ 8) {
+				toggle_class(div1, "selected", /*selected*/ ctx[3]);
 			}
 		},
 		i(local) {
@@ -903,78 +1084,76 @@ function create_fragment$2(ctx) {
 
 function instance$2($$self, $$props, $$invalidate) {
 	let { state = {} } = $$props;
-	let { label = "Label" } = $$props;
 	let { id } = $$props;
 	let { children = [] } = $$props;
-	let { showFilesList = false } = $$props;
-	let { filesSearchCriteria = undefined } = $$props;
-	let { icon = "images/sidebar-default-icon.svg" } = $$props;
-	let { selected = false } = $$props;
-	let { expanded } = $$props;
 	let { nestDepth = 0 } = $$props;
+	let selected = false;
+	let sideBarItem;
 
 	function clicked() {
 		if (selected) return;
-		const action = { type: "SELECT_SIDEBAR_ITEM", id };
-		window.api.send("dispatch", action);
+		window.api.send("dispatch", { type: "SELECT_SIDEBAR_ITEM", id });
 	}
 
-	const click_handler = () => $$invalidate(0, expanded = !expanded);
+	function toggleExpanded() {
+		window.api.send("dispatch", {
+			type: "TOGGLE_SIDEBAR_ITEM_EXPANDED",
+			id: sideBarItem.id
+		});
+	}
 
 	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(1, state = $$props.state);
-		if ("label" in $$props) $$invalidate(2, label = $$props.label);
+		if ("state" in $$props) $$invalidate(0, state = $$props.state);
 		if ("id" in $$props) $$invalidate(9, id = $$props.id);
-		if ("children" in $$props) $$invalidate(3, children = $$props.children);
-		if ("showFilesList" in $$props) $$invalidate(10, showFilesList = $$props.showFilesList);
-		if ("filesSearchCriteria" in $$props) $$invalidate(11, filesSearchCriteria = $$props.filesSearchCriteria);
-		if ("icon" in $$props) $$invalidate(4, icon = $$props.icon);
-		if ("selected" in $$props) $$invalidate(5, selected = $$props.selected);
-		if ("expanded" in $$props) $$invalidate(0, expanded = $$props.expanded);
-		if ("nestDepth" in $$props) $$invalidate(6, nestDepth = $$props.nestDepth);
+		if ("children" in $$props) $$invalidate(1, children = $$props.children);
+		if ("nestDepth" in $$props) $$invalidate(2, nestDepth = $$props.nestDepth);
 	};
 
 	let expandable;
+	let expanded;
 
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*children*/ 8) {
-			 $$invalidate(7, expandable = children.length > 0);
+		if ($$self.$$.dirty & /*state, id*/ 513) {
+			 $$invalidate(4, sideBarItem = state.sideBar.items.find(i => i.id == id));
+		}
+
+		if ($$self.$$.dirty & /*children*/ 2) {
+			 $$invalidate(5, expandable = children.length > 0);
+		}
+
+		if ($$self.$$.dirty & /*sideBarItem*/ 16) {
+			 $$invalidate(6, expanded = sideBarItem.expanded);
+		}
+
+		if ($$self.$$.dirty & /*state, sideBarItem*/ 17) {
+			 $$invalidate(3, selected = state.sideBar.selectedItemId == sideBarItem.id);
 		}
 	};
 
 	return [
-		expanded,
 		state,
-		label,
 		children,
-		icon,
-		selected,
 		nestDepth,
+		selected,
+		sideBarItem,
 		expandable,
+		expanded,
 		clicked,
-		id,
-		showFilesList,
-		filesSearchCriteria,
-		click_handler
+		toggleExpanded,
+		id
 	];
 }
 
 class SideBarItem extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1u3p0qf-style")) add_css$2();
+		if (!document.getElementById("svelte-15dk33n-style")) add_css$2();
 
 		init(this, options, instance$2, create_fragment$2, safe_not_equal, {
-			state: 1,
-			label: 2,
+			state: 0,
 			id: 9,
-			children: 3,
-			showFilesList: 10,
-			filesSearchCriteria: 11,
-			icon: 4,
-			selected: 5,
-			expanded: 0,
-			nestDepth: 6
+			children: 1,
+			nestDepth: 2
 		});
 	}
 }
@@ -990,67 +1169,25 @@ function add_css$3() {
 
 function get_each_context_1(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[5] = list[i];
+	child_ctx[7] = list[i];
 	return child_ctx;
 }
 
 function get_each_context$1(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[2] = list[i];
+	child_ctx[4] = list[i];
 	return child_ctx;
 }
 
-// (158:4) {#each group.children as item}
-function create_each_block_1(ctx) {
-	let current;
-
-	const sidebaritem = new SideBarItem({
-			props: {
-				label: /*item*/ ctx[5].label,
-				id: /*item*/ ctx[5].id,
-				selected: /*item*/ ctx[5].id == /*state*/ ctx[0].sideBar.selectedItemId
-			}
-		});
-
-	return {
-		c() {
-			create_component(sidebaritem.$$.fragment);
-		},
-		m(target, anchor) {
-			mount_component(sidebaritem, target, anchor);
-			current = true;
-		},
-		p(ctx, dirty) {
-			const sidebaritem_changes = {};
-			if (dirty & /*state*/ 1) sidebaritem_changes.label = /*item*/ ctx[5].label;
-			if (dirty & /*state*/ 1) sidebaritem_changes.id = /*item*/ ctx[5].id;
-			if (dirty & /*state*/ 1) sidebaritem_changes.selected = /*item*/ ctx[5].id == /*state*/ ctx[0].sideBar.selectedItemId;
-			sidebaritem.$set(sidebaritem_changes);
-		},
-		i(local) {
-			if (current) return;
-			transition_in(sidebaritem.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(sidebaritem.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			destroy_component(sidebaritem, detaching);
-		}
-	};
-}
-
-// (156:2) {#each state.sideBar.items as group}
-function create_each_block$1(ctx) {
+// (141:4) {#if topLevelItem.type == 'group'}
+function create_if_block$1(ctx) {
 	let h1;
-	let t0_value = /*group*/ ctx[2].label + "";
+	let t0_value = /*topLevelItem*/ ctx[4].label + "";
 	let t0;
 	let t1;
 	let each_1_anchor;
 	let current;
-	let each_value_1 = /*group*/ ctx[2].children;
+	let each_value_1 = /*topLevelItem*/ ctx[4].children;
 	let each_blocks = [];
 
 	for (let i = 0; i < each_value_1.length; i += 1) {
@@ -1087,10 +1224,10 @@ function create_each_block$1(ctx) {
 			current = true;
 		},
 		p(ctx, dirty) {
-			if ((!current || dirty & /*state*/ 1) && t0_value !== (t0_value = /*group*/ ctx[2].label + "")) set_data(t0, t0_value);
+			if ((!current || dirty & /*tree*/ 4) && t0_value !== (t0_value = /*topLevelItem*/ ctx[4].label + "")) set_data(t0, t0_value);
 
-			if (dirty & /*state*/ 1) {
-				each_value_1 = /*group*/ ctx[2].children;
+			if (dirty & /*state, tree*/ 5) {
+				each_value_1 = /*topLevelItem*/ ctx[4].children;
 				let i;
 
 				for (i = 0; i < each_value_1.length; i += 1) {
@@ -1143,10 +1280,108 @@ function create_each_block$1(ctx) {
 	};
 }
 
+// (143:6) {#each topLevelItem.children as item}
+function create_each_block_1(ctx) {
+	let current;
+
+	const sidebaritem = new SideBarItem({
+			props: {
+				state: /*state*/ ctx[0],
+				id: /*item*/ ctx[7].id,
+				children: /*item*/ ctx[7].children ? /*item*/ ctx[7].children : []
+			}
+		});
+
+	return {
+		c() {
+			create_component(sidebaritem.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(sidebaritem, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const sidebaritem_changes = {};
+			if (dirty & /*state*/ 1) sidebaritem_changes.state = /*state*/ ctx[0];
+			if (dirty & /*tree*/ 4) sidebaritem_changes.id = /*item*/ ctx[7].id;
+			if (dirty & /*tree*/ 4) sidebaritem_changes.children = /*item*/ ctx[7].children ? /*item*/ ctx[7].children : [];
+			sidebaritem.$set(sidebaritem_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(sidebaritem.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(sidebaritem.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(sidebaritem, detaching);
+		}
+	};
+}
+
+// (140:2) {#each tree as topLevelItem}
+function create_each_block$1(ctx) {
+	let if_block_anchor;
+	let current;
+	let if_block = /*topLevelItem*/ ctx[4].type == "group" && create_if_block$1(ctx);
+
+	return {
+		c() {
+			if (if_block) if_block.c();
+			if_block_anchor = empty();
+		},
+		m(target, anchor) {
+			if (if_block) if_block.m(target, anchor);
+			insert(target, if_block_anchor, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			if (/*topLevelItem*/ ctx[4].type == "group") {
+				if (if_block) {
+					if_block.p(ctx, dirty);
+
+					if (dirty & /*tree*/ 4) {
+						transition_in(if_block, 1);
+					}
+				} else {
+					if_block = create_if_block$1(ctx);
+					if_block.c();
+					transition_in(if_block, 1);
+					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+				}
+			} else if (if_block) {
+				group_outros();
+
+				transition_out(if_block, 1, 1, () => {
+					if_block = null;
+				});
+
+				check_outros();
+			}
+		},
+		i(local) {
+			if (current) return;
+			transition_in(if_block);
+			current = true;
+		},
+		o(local) {
+			transition_out(if_block);
+			current = false;
+		},
+		d(detaching) {
+			if (if_block) if_block.d(detaching);
+			if (detaching) detach(if_block_anchor);
+		}
+	};
+}
+
 function create_fragment$3(ctx) {
 	let div;
 	let current;
-	let each_value = /*state*/ ctx[0].sideBar.items;
+	let each_value = /*tree*/ ctx[2];
 	let each_blocks = [];
 
 	for (let i = 0; i < each_value.length; i += 1) {
@@ -1179,8 +1414,8 @@ function create_fragment$3(ctx) {
 			current = true;
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*state*/ 1) {
-				each_value = /*state*/ ctx[0].sideBar.items;
+			if (dirty & /*tree, state*/ 5) {
+				each_value = /*tree*/ ctx[2];
 				let i;
 
 				for (i = 0; i < each_value.length; i += 1) {
@@ -1238,54 +1473,36 @@ function create_fragment$3(ctx) {
 function instance$3($$self, $$props, $$invalidate) {
 	let { state = {} } = $$props;
 	let { focused } = $$props;
+	let tree = {};
 
-	// $: shortcuts = [
-	//   {
-	//     label: "All",
-	//     id: "all",
-	//     showFilesList: true,
-	//     filesSearchCriteria: {
-	//       lookInFolderId: state.rootFolderId,
-	//       includeChildren: true
-	//     }
-	//   },
-	//   {
-	//     label: "Most Recent",
-	//     id: "most-recent",
-	//     showFilesList: true,
-	//     filesSearchCriteria: {
-	//       lookInFolderId: state.rootFolderId,
-	//       includeChildren: true,
-	//       filterDateModified: true,
-	//       fromDateModified: new Date().toISOString(),
-	//       toDateModified: new Date(
-	//         Date.now() - 7 * 24 * 60 * 60 * 1000
-	//       ).toISOString()
-	//     }
-	//   },
-	//   {
-	//     label: "Favorites",
-	//     id: "favorites",
-	//     showFilesList: true,
-	//     filesSearchCriteria: {
-	//       lookInFolderId: state.rootFolderId,
-	//       includeChildren: true,
-	//       tags: ["favorite"]
-	//     }
-	//   }
-	// ];
 	onMount(() => {
+		buildTree();
+
 		if (state.sideBar.selectedItemId == "") {
 			window.api.send("dispatch", { type: "SELECT_SIDEBAR_ITEM", id: "all" });
 		}
 	});
+
+	function buildTree() {
+		$$invalidate(2, tree = lib_1(state.sideBar.items));
+	}
 
 	$$self.$set = $$props => {
 		if ("state" in $$props) $$invalidate(0, state = $$props.state);
 		if ("focused" in $$props) $$invalidate(1, focused = $$props.focused);
 	};
 
-	return [state, focused];
+	$$self.$$.update = () => {
+		if ($$self.$$.dirty & /*state*/ 1) {
+			 {
+				if (state.changed.includes("sideBar") || state.changed.includes("contents")) {
+					buildTree();
+				}
+			}
+		}
+	};
+
+	return [state, focused, tree];
 }
 
 class SideBar extends SvelteComponent {
@@ -1296,58 +1513,38 @@ class SideBar extends SvelteComponent {
 	}
 }
 
-/* src/js/component/FileList.svelte generated by Svelte v3.22.3 */
-
-const { window: window_1 } = globals;
+/* src/js/component/FileListItem.svelte generated by Svelte v3.22.3 */
 
 function add_css$4() {
 	var style = element("style");
-	style.id = "svelte-51zhvt-style";
-	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}#files.svelte-51zhvt.svelte-51zhvt{width:100%;height:100%;background-color:white;overflow-y:scroll;border-right:1px solid black;padding:0;user-select:none}.file.svelte-51zhvt.svelte-51zhvt{padding:0.5em 1em 0}.file.svelte-51zhvt.svelte-51zhvt:focus{outline:none}h2.svelte-51zhvt.svelte-51zhvt,p.svelte-51zhvt.svelte-51zhvt{margin:0;padding:0;pointer-events:none;word-break:break-word}h2.svelte-51zhvt.svelte-51zhvt{font:caption;font-weight:500;font-size:12px;line-height:16px;letter-spacing:-0.07px}p.svelte-51zhvt.svelte-51zhvt{font:caption;font-weight:500;font-size:12px;line-height:16px;letter-spacing:-0.07px;color:gray;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}hr.svelte-51zhvt.svelte-51zhvt{margin:0.5em 0 0;height:1px;background-color:rgba(0, 0, 0, 0.2);border:0}.selected.svelte-51zhvt.svelte-51zhvt{background:var(--clr-gray-lightest)}.focused.svelte-51zhvt .selected.svelte-51zhvt{background:#2d67fa}.focused.svelte-51zhvt .selected h2.svelte-51zhvt{color:white}.focused.svelte-51zhvt .selected p.svelte-51zhvt{color:rgba(255, 255, 255, 0.8)}";
+	style.id = "svelte-rs57v1-style";
+	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.file.svelte-rs57v1.svelte-rs57v1{padding:0.5em 1em 0.5em;overflow-y:hidden;border-bottom:1px solid gray;contain:content}.file.svelte-rs57v1.svelte-rs57v1:focus{outline:none}h2.svelte-rs57v1.svelte-rs57v1,p.svelte-rs57v1.svelte-rs57v1{margin:0;padding:0;pointer-events:none;word-break:break-word}h2.svelte-rs57v1.svelte-rs57v1{font:caption;font-weight:500;font-size:12px;line-height:16px;letter-spacing:-0.07px}p.svelte-rs57v1.svelte-rs57v1{font:caption;font-weight:500;font-size:12px;line-height:16px;letter-spacing:-0.07px;color:gray;height:4em;overflow:hidden}.selected.svelte-rs57v1.svelte-rs57v1{background-color:var(--clr-gray-lightest)}.focused.selected.svelte-rs57v1.svelte-rs57v1{background-color:#2d67fa}.focused.selected.svelte-rs57v1 h2.svelte-rs57v1{color:white}.focused.selected.svelte-rs57v1 p.svelte-rs57v1{color:rgba(255, 255, 255, 0.8)}";
 	append(document.head, style);
 }
 
-function get_each_context$2(ctx, list, i) {
-	const child_ctx = ctx.slice();
-	child_ctx[12] = list[i];
-	return child_ctx;
-}
-
-// (369:4) {:else}
-function create_else_block(ctx) {
+function create_fragment$4(ctx) {
 	let div;
 	let h2;
-	let t0_value = /*file*/ ctx[12].title + "";
 	let t0;
 	let t1;
 	let p;
-	let t2_value = /*file*/ ctx[12].excerpt + "";
 	let t2;
-	let t3;
-	let hr;
-	let t4;
 	let dispose;
-
-	function click_handler(...args) {
-		return /*click_handler*/ ctx[11](/*file*/ ctx[12], ...args);
-	}
 
 	return {
 		c() {
 			div = element("div");
 			h2 = element("h2");
-			t0 = text(t0_value);
+			t0 = text(/*title*/ ctx[1]);
 			t1 = space();
 			p = element("p");
-			t2 = text(t2_value);
-			t3 = space();
-			hr = element("hr");
-			t4 = space();
-			attr(h2, "class", "svelte-51zhvt");
-			attr(p, "class", "svelte-51zhvt");
-			attr(hr, "class", "svelte-51zhvt");
-			attr(div, "class", "file svelte-51zhvt");
+			t2 = text(/*excerpt*/ ctx[2]);
+			attr(h2, "class", "svelte-rs57v1");
+			attr(p, "class", "svelte-rs57v1");
+			attr(div, "class", "file svelte-rs57v1");
 			attr(div, "tabindex", "0");
+			toggle_class(div, "focused", /*focused*/ ctx[3]);
+			toggle_class(div, "selected", /*selected*/ ctx[0]);
 		},
 		m(target, anchor, remount) {
 			insert(target, div, anchor);
@@ -1356,17 +1553,23 @@ function create_else_block(ctx) {
 			append(div, t1);
 			append(div, p);
 			append(p, t2);
-			append(div, t3);
-			append(div, hr);
-			append(div, t4);
 			if (remount) dispose();
-			dispose = listen(div, "click", prevent_default(click_handler));
+			dispose = listen(div, "click", prevent_default(/*click_handler*/ ctx[5]));
 		},
-		p(new_ctx, dirty) {
-			ctx = new_ctx;
-			if (dirty & /*files*/ 2 && t0_value !== (t0_value = /*file*/ ctx[12].title + "")) set_data(t0, t0_value);
-			if (dirty & /*files*/ 2 && t2_value !== (t2_value = /*file*/ ctx[12].excerpt + "")) set_data(t2, t2_value);
+		p(ctx, [dirty]) {
+			if (dirty & /*title*/ 2) set_data(t0, /*title*/ ctx[1]);
+			if (dirty & /*excerpt*/ 4) set_data(t2, /*excerpt*/ ctx[2]);
+
+			if (dirty & /*focused*/ 8) {
+				toggle_class(div, "focused", /*focused*/ ctx[3]);
+			}
+
+			if (dirty & /*selected*/ 1) {
+				toggle_class(div, "selected", /*selected*/ ctx[0]);
+			}
 		},
+		i: noop,
+		o: noop,
 		d(detaching) {
 			if (detaching) detach(div);
 			dispose();
@@ -1374,110 +1577,130 @@ function create_else_block(ctx) {
 	};
 }
 
-// (363:4) {#if file.selected}
-function create_if_block$1(ctx) {
-	let div;
-	let h2;
-	let t0_value = /*file*/ ctx[12].title + "";
-	let t0;
-	let t1;
-	let p;
-	let t2_value = /*file*/ ctx[12].excerpt + "";
-	let t2;
-	let t3;
-	let hr;
-	let t4;
+function instance$4($$self, $$props, $$invalidate) {
+	let { state = {} } = $$props;
+	let { selected = false } = $$props;
+	let { title = "" } = $$props;
+	let { excerpt = "" } = $$props;
 
-	return {
-		c() {
-			div = element("div");
-			h2 = element("h2");
-			t0 = text(t0_value);
-			t1 = space();
-			p = element("p");
-			t2 = text(t2_value);
-			t3 = space();
-			hr = element("hr");
-			t4 = space();
-			attr(h2, "class", "svelte-51zhvt");
-			attr(p, "class", "svelte-51zhvt");
-			attr(hr, "class", "svelte-51zhvt");
-			attr(div, "class", "file selected svelte-51zhvt");
-			attr(div, "tabindex", "0");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			append(div, h2);
-			append(h2, t0);
-			append(div, t1);
-			append(div, p);
-			append(p, t2);
-			append(div, t3);
-			append(div, hr);
-			append(div, t4);
-			/*div_binding*/ ctx[10](div);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*files*/ 2 && t0_value !== (t0_value = /*file*/ ctx[12].title + "")) set_data(t0, t0_value);
-			if (dirty & /*files*/ 2 && t2_value !== (t2_value = /*file*/ ctx[12].excerpt + "")) set_data(t2, t2_value);
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-			/*div_binding*/ ctx[10](null);
-		}
-	};
-}
-
-// (362:2) {#each files as file}
-function create_each_block$2(ctx) {
-	let if_block_anchor;
-
-	function select_block_type(ctx, dirty) {
-		if (/*file*/ ctx[12].selected) return create_if_block$1;
-		return create_else_block;
+	function click_handler(event) {
+		bubble($$self, event);
 	}
 
-	let current_block_type = select_block_type(ctx);
-	let if_block = current_block_type(ctx);
+	$$self.$set = $$props => {
+		if ("state" in $$props) $$invalidate(4, state = $$props.state);
+		if ("selected" in $$props) $$invalidate(0, selected = $$props.selected);
+		if ("title" in $$props) $$invalidate(1, title = $$props.title);
+		if ("excerpt" in $$props) $$invalidate(2, excerpt = $$props.excerpt);
+	};
+
+	let focused;
+
+	$$self.$$.update = () => {
+		if ($$self.$$.dirty & /*state*/ 16) {
+			 $$invalidate(3, focused = state.focusedLayoutSection == "navigation");
+		}
+	};
+
+	return [selected, title, excerpt, focused, state, click_handler];
+}
+
+class FileListItem extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-rs57v1-style")) add_css$4();
+
+		init(this, options, instance$4, create_fragment$4, safe_not_equal, {
+			state: 4,
+			selected: 0,
+			title: 1,
+			excerpt: 2
+		});
+	}
+}
+
+/* src/js/component/FileList.svelte generated by Svelte v3.22.3 */
+
+const { window: window_1 } = globals;
+
+function add_css$5() {
+	var style = element("style");
+	style.id = "svelte-1l8xtls-style";
+	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}#files.svelte-1l8xtls{width:100%;height:100%;background-color:white;overflow-y:scroll;border-right:1px solid black;padding:0;user-select:none}";
+	append(document.head, style);
+}
+
+function get_each_context$2(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[15] = list[i];
+	return child_ctx;
+}
+
+// (324:2) {#each files as file}
+function create_each_block$2(ctx) {
+	let current;
+
+	function click_handler(...args) {
+		return /*click_handler*/ ctx[13](/*file*/ ctx[15], ...args);
+	}
+
+	const filelistitem = new FileListItem({
+			props: {
+				state: /*state*/ ctx[1],
+				title: /*file*/ ctx[15].title,
+				excerpt: /*file*/ ctx[15].excerpt,
+				selected: /*file*/ ctx[15].id == /*sideBarItem*/ ctx[4].selectedFileId
+			}
+		});
+
+	filelistitem.$on("click", click_handler);
 
 	return {
 		c() {
-			if_block.c();
-			if_block_anchor = empty();
+			create_component(filelistitem.$$.fragment);
 		},
 		m(target, anchor) {
-			if_block.m(target, anchor);
-			insert(target, if_block_anchor, anchor);
+			mount_component(filelistitem, target, anchor);
+			current = true;
 		},
-		p(ctx, dirty) {
-			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block) {
-				if_block.p(ctx, dirty);
-			} else {
-				if_block.d(1);
-				if_block = current_block_type(ctx);
-
-				if (if_block) {
-					if_block.c();
-					if_block.m(if_block_anchor.parentNode, if_block_anchor);
-				}
-			}
+		p(new_ctx, dirty) {
+			ctx = new_ctx;
+			const filelistitem_changes = {};
+			if (dirty & /*state*/ 2) filelistitem_changes.state = /*state*/ ctx[1];
+			if (dirty & /*files*/ 4) filelistitem_changes.title = /*file*/ ctx[15].title;
+			if (dirty & /*files*/ 4) filelistitem_changes.excerpt = /*file*/ ctx[15].excerpt;
+			if (dirty & /*files, sideBarItem*/ 20) filelistitem_changes.selected = /*file*/ ctx[15].id == /*sideBarItem*/ ctx[4].selectedFileId;
+			filelistitem.$set(filelistitem_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(filelistitem.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(filelistitem.$$.fragment, local);
+			current = false;
 		},
 		d(detaching) {
-			if_block.d(detaching);
-			if (detaching) detach(if_block_anchor);
+			destroy_component(filelistitem, detaching);
 		}
 	};
 }
 
-function create_fragment$4(ctx) {
+function create_fragment$5(ctx) {
 	let div;
+	let current;
 	let dispose;
-	let each_value = /*files*/ ctx[1];
+	let each_value = /*files*/ ctx[2];
 	let each_blocks = [];
 
 	for (let i = 0; i < each_value.length; i += 1) {
 		each_blocks[i] = create_each_block$2(get_each_context$2(ctx, each_value, i));
 	}
+
+	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+		each_blocks[i] = null;
+	});
 
 	return {
 		c() {
@@ -1488,7 +1711,7 @@ function create_fragment$4(ctx) {
 			}
 
 			attr(div, "id", "files");
-			attr(div, "class", "svelte-51zhvt");
+			attr(div, "class", "svelte-1l8xtls");
 			toggle_class(div, "focused", /*focused*/ ctx[0]);
 		},
 		m(target, anchor, remount) {
@@ -1498,12 +1721,14 @@ function create_fragment$4(ctx) {
 				each_blocks[i].m(div, null);
 			}
 
+			/*div_binding*/ ctx[14](div);
+			current = true;
 			if (remount) dispose();
-			dispose = listen(window_1, "keydown", /*handleKeydown*/ ctx[3]);
+			dispose = listen(window_1, "keydown", /*handleKeydown*/ ctx[5]);
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*selectedEl, files, openFile*/ 6) {
-				each_value = /*files*/ ctx[1];
+			if (dirty & /*state, files, sideBarItem, selectFile*/ 22) {
+				each_value = /*files*/ ctx[2];
 				let i;
 
 				for (i = 0; i < each_value.length; i += 1) {
@@ -1511,71 +1736,119 @@ function create_fragment$4(ctx) {
 
 					if (each_blocks[i]) {
 						each_blocks[i].p(child_ctx, dirty);
+						transition_in(each_blocks[i], 1);
 					} else {
 						each_blocks[i] = create_each_block$2(child_ctx);
 						each_blocks[i].c();
+						transition_in(each_blocks[i], 1);
 						each_blocks[i].m(div, null);
 					}
 				}
 
-				for (; i < each_blocks.length; i += 1) {
-					each_blocks[i].d(1);
+				group_outros();
+
+				for (i = each_value.length; i < each_blocks.length; i += 1) {
+					out(i);
 				}
 
-				each_blocks.length = each_value.length;
+				check_outros();
 			}
 
 			if (dirty & /*focused*/ 1) {
 				toggle_class(div, "focused", /*focused*/ ctx[0]);
 			}
 		},
-		i: noop,
-		o: noop,
+		i(local) {
+			if (current) return;
+
+			for (let i = 0; i < each_value.length; i += 1) {
+				transition_in(each_blocks[i]);
+			}
+
+			current = true;
+		},
+		o(local) {
+			each_blocks = each_blocks.filter(Boolean);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				transition_out(each_blocks[i]);
+			}
+
+			current = false;
+		},
 		d(detaching) {
 			if (detaching) detach(div);
 			destroy_each(each_blocks, detaching);
+			/*div_binding*/ ctx[14](null);
 			dispose();
 		}
 	};
 }
 
-function scrollFileIntoView(element, animate = true) {
-	const behavior = animate ? "smooth" : "auto";
-
+async function scrollElementIntoView(element, animate = true) {
 	if (element) {
 		element.scrollIntoView({
 			block: "nearest",
 			inline: "nearest",
-			behavior
+			behavior: animate ? "smooth" : "auto"
 		});
 	}
 }
 
-function openFile(id) {
-	window.api.send("dispatch", {
-		type: "OPEN_FILE",
-		// parentId: selectedFolderId,
-		fileId: id
-	});
+function selectFile(id) {
+	window.api.send("dispatch", { type: "SELECT_FILE", fileId: id });
 }
 
-function instance$4($$self, $$props, $$invalidate) {
+function instance$5($$self, $$props, $$invalidate) {
 	let { state = {} } = $$props;
+	let { oldState = {} } = $$props;
 	let { focused } = $$props;
+
+	// Files
 	let files = [];
-	let selectedFileIndex = 0;
-	let selectedEl = undefined;
+
+	let fileEl;
 
 	onMount(async () => {
-		$$invalidate(1, files = getFiles());
+		getFiles();
 		sortFiles();
+		restoreSideBarItemScrollPosition();
+		restoreFileSelection();
 	});
+
+	/** 
+ * Restore the previous SideBar file selection.
+ * Unless it's empty (never set). In which case, select the first of `files`
+ * Unless it's -also- empty, in which case, do not select anything
+*/
+	function restoreFileSelection() {
+		if (files.length > 0) {
+			selectFile(sideBarItem.selectedFileId !== ""
+			? sideBarItem.selectedFileId
+			: files[0].id);
+		}
+	}
+
+	function saveOutgoingSideBarItemScrollPosition() {
+		if (!fileEl || oldState.sideBar.selectedItemId == "") return;
+
+		window.api.send("dispatch", {
+			type: "SAVE_SIDEBAR_SCROLL_POSITION",
+			sideBarItemId: oldState.sideBar.selectedItemId,
+			scrollposition: fileEl.scrollTop
+		});
+	}
+
+	async function restoreSideBarItemScrollPosition() {
+		await tick();
+		$$invalidate(3, fileEl.scrollTop = sideBarItem.scrollPosition, fileEl);
+	}
 
 	function getChildFolderIds(parentFolder) {
 		let ids = [];
 
 		const children = state.contents.map(c => {
-			if (c.type == "directory" && c.parentId == parentFolder.id) {
+			if (c.type == "folder" && c.parentId == parentFolder.id) {
 				// Push id of child folder
 				ids.push(c.id);
 
@@ -1590,19 +1863,22 @@ function instance$4($$self, $$props, $$invalidate) {
 	}
 
 	function getFiles() {
-		if (state.projectPath == "" || !state.contents.length > 0 || !state.filesSearchCriteria) return [];
-		let files = [];
-		const folderId = state.filesSearchCriteria.lookInFolderId;
-		const includeChildren = state.filesSearchCriteria.includeChildren;
-		const tags = state.filesSearchCriteria.tags;
-		const filterDateModified = state.filesSearchCriteria.filterDateModified;
-		const filterDateCreated = state.filesSearchCriteria.filterDateCreated;
+		if (state.projectPath == "" || !state.contents.length > 0) {
+			return [];
+		}
+
+		const searchParams = sideBarItem.filesSearchParams;
+		const folderId = searchParams.lookInFolderId;
+		const includeChildren = searchParams.includeChildren;
+		const tags = searchParams.tags;
+		const filterDateModified = searchParams.filterDateModified;
+		const filterDateCreated = searchParams.filterDateCreated;
 
 		// Get selected folder
-		const folder = state.contents.find(c => c.type == "directory" && c.id == folderId);
+		const folder = state.contents.find(c => c.type == "folder" && c.id == folderId);
 
 		// Get all files for selected folder
-		files = state.contents.filter(c => c.type == "file" && c.parentId == folderId);
+		$$invalidate(2, files = state.contents.filter(c => c.type == "file" && c.parentId == folderId));
 
 		// If `includeChildren`, add files of child folders
 		if (includeChildren) {
@@ -1621,87 +1897,50 @@ function instance$4($$self, $$props, $$invalidate) {
 
 		// Filter by tags
 		if (tags && tags.length > 0) {
-			files = files.filter(f => {
+			$$invalidate(2, files = files.filter(f => {
 				return tags.some(t => {
 					if (f.tags.includes(t)) {
 						return true;
 					}
 				});
-			});
+			}));
 		}
 
 		// Filter by date modified
 		if (filterDateModified) {
-			const from = new Date(state.filesSearchCriteria.fromDateModified);
-			const to = new Date(state.filesSearchCriteria.toDateModified);
+			const from = new Date(searchParams.fromDateModified);
+			const to = new Date(searchParams.toDateModified);
 
-			files = files.filter(f => {
+			$$invalidate(2, files = files.filter(f => {
 				const modified = new Date(f.modified);
 
 				if (modified < from && modified > to) {
 					return f;
 				}
-			});
+			}));
 		}
 
 		// Filter by date modified
 		if (filterDateCreated) {
-			const from = new Date(state.filesSearchCriteria.fromDateCreated);
-			const to = new Date(state.filesSearchCriteria.toDateCreated);
+			const from = new Date(searchParams.fromDateCreated);
+			const to = new Date(searchParams.toDateCreated);
 
-			files = files.filter(f => {
+			$$invalidate(2, files = files.filter(f => {
 				const created = new Date(f.created);
 
 				if (created < from && created > to) {
 					return f;
 				}
-			});
+			}));
 		}
-
-		return files;
 	}
 
 	function sortFiles() {
-		if (!files) return;
-
 		{
 			{
 				files.sort((a, b) => a.title.localeCompare(b.title));
 			}
 		}
-	}
-
-	/**
- * Set `selected` property of each entry in files array.
- * Set all to false, except the one whose id == state.lastOpenedFileId.
- * Then make sure the selected file is scrolled into view.
- */
-	async function setSelectedFile(state) {
-		if (files.length == 0) return;
-
-		// Get selectedFileId for selectedFolder
-		let selectedFileId = state.contents.find(d => d.type == "directory" && d.id == state.selectedFolderId).selectedFileId;
-
-		// If it's 0 (the default, meaning "nothing"), set selectFileId to first of files
-		if (selectedFileId == "") {
-			selectedFileId = files[0].id;
-		}
-
-		// Find the file whose id == selectedFileId,
-		// and set selected true, and `selectedFileIndex = index`
-		// Set all other files unselected
-		files.forEach((f, index) => {
-			f.selected = f.id == selectedFileId;
-			if (f.selected) selectedFileIndex = index;
-		});
-
-		// Tell Svelte that variable has changed. Makes view update.
-		($$invalidate(1, files), $$invalidate(4, state));
-
-		// Await tick, then scroll file into view
-		await tick();
-
-		scrollFileIntoView(selectedEl, true);
 	}
 
 	/**
@@ -1717,41 +1956,74 @@ function instance$4($$self, $$props, $$invalidate) {
 				event.preventDefault();
 				break;
 			case "ArrowUp":
-				event.preventDefault();
-				if (selectedFileIndex > 0) {
-					const prevFileId = files[selectedFileIndex - 1].id;
-					window.api.send("dispatch", { type: "OPEN_FILE", id: prevFileId });
+				{
+					event.preventDefault();
+					const currentIndex = files.findIndex(f => f.id == sideBarItem.selectedFileId);
+
+					if (currentIndex > 0) {
+						const prevFileId = files[currentIndex - 1].id;
+						const prevFileEl = fileEl.querySelector(".selected").previousSibling;
+						selectFile(prevFileId);
+						scrollElementIntoView(prevFileEl, true);
+					}
+
+					break;
 				}
-				break;
 			case "ArrowDown":
-				event.preventDefault();
-				if (selectedFileIndex < files.length - 1) {
-					const nextFileId = files[selectedFileIndex + 1].id;
-					window.api.send("dispatch", { type: "OPEN_FILE", id: nextFileId });
+				{
+					event.preventDefault();
+					const currentIndex = files.findIndex(f => f.id == sideBarItem.selectedFileId);
+
+					if (currentIndex < files.length - 1) {
+						const nextFileId = files[currentIndex + 1].id;
+						const nextFileEl = fileEl.querySelector(".selected").nextSibling;
+						selectFile(nextFileId);
+						scrollElementIntoView(nextFileEl, true);
+					}
+
+					break;
 				}
-				break;
 		}
 	}
 
+	const click_handler = file => {
+		if (file.id !== sideBarItem.selectedFileId) selectFile(file.id);
+	};
+
 	function div_binding($$value) {
 		binding_callbacks[$$value ? "unshift" : "push"](() => {
-			$$invalidate(2, selectedEl = $$value);
+			$$invalidate(3, fileEl = $$value);
 		});
 	}
 
-	const click_handler = file => openFile(file.id);
-
 	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(4, state = $$props.state);
+		if ("state" in $$props) $$invalidate(1, state = $$props.state);
+		if ("oldState" in $$props) $$invalidate(6, oldState = $$props.oldState);
 		if ("focused" in $$props) $$invalidate(0, focused = $$props.focused);
 	};
 
+	let sideBarItem;
+
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*state*/ 16) {
+		if ($$self.$$.dirty & /*state*/ 2) {
+			 $$invalidate(4, sideBarItem = state.sideBar.items.find(i => i.id == state.sideBar.selectedItemId));
+		}
+
+		if ($$self.$$.dirty & /*state*/ 2) {
+			 $$invalidate(0, focused = state.focusedLayoutSection == "navigation");
+		}
+
+		if ($$self.$$.dirty & /*state*/ 2) {
 			 {
-				if (state.changed.includes("contents") || state.changed.includes("filesSearchCriteria") || state.changed.includes("selectedFileId")) {
-					$$invalidate(1, files = getFiles());
+				if (state.changed.includes("sideBar.selectedItemId")) {
+					saveOutgoingSideBarItemScrollPosition();
+				}
+
+				if (state.changed.includes("sideBar.selectedItemId") || state.changed.includes("contents")) {
+					getFiles();
 					sortFiles();
+					restoreSideBarItemScrollPosition();
+					restoreFileSelection();
 				}
 			}
 		}
@@ -1759,53 +2031,735 @@ function instance$4($$self, $$props, $$invalidate) {
 
 	return [
 		focused,
-		files,
-		selectedEl,
-		handleKeydown,
 		state,
-		selectedFileIndex,
+		files,
+		fileEl,
+		sideBarItem,
+		handleKeydown,
+		oldState,
+		restoreFileSelection,
+		saveOutgoingSideBarItemScrollPosition,
+		restoreSideBarItemScrollPosition,
 		getChildFolderIds,
 		getFiles,
 		sortFiles,
-		setSelectedFile,
-		div_binding,
-		click_handler
+		click_handler,
+		div_binding
 	];
 }
 
 class FileList extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-51zhvt-style")) add_css$4();
-		init(this, options, instance$4, create_fragment$4, safe_not_equal, { state: 4, focused: 0 });
+		if (!document.getElementById("svelte-1l8xtls-style")) add_css$5();
+		init(this, options, instance$5, create_fragment$5, safe_not_equal, { state: 1, oldState: 6, focused: 0 });
 	}
+}
+
+const yamlOverlay = {
+  startState: function () {
+    return {
+      // frontMatter: false,
+    }
+  },
+  token: function (stream, state) {
+    state.combineTokens = true;
+
+    if (stream.sol()) {
+      stream.next();
+      return "line-frontmatter"
+    }
+
+    while (stream.next() != null) { }
+
+    // If we don't do any of the above, return null (token does not need to be styled)
+    return null
+  }
+};
+
+const markdownOverlay = {
+  startState: function () {
+    return {
+      frontMatter: false,
+    }
+  },
+  token: function (stream, state) {
+
+    state.combineTokens = null;
+
+    let ch;
+
+    // Demo: https://regex101.com/r/1MR7Tg/1
+    if (stream.sol()) {
+      if (stream.match(/^(-|\*|\+)\s/)) {
+        // console.log("L1")
+        state.combineTokens = true;
+        return "line-list1"
+      } else if (stream.match(/^\s{2,3}(-|\*|\+)\s/)) {
+        // console.log("L2")
+        state.combineTokens = true;
+        return "line-list2"
+      } else if (stream.match(/^\s{4,5}(-|\*|\+)\s/)) {
+        // console.log("L3")
+        state.combineTokens = true;
+        return "line-list3"
+      } else if (stream.match(/^\s{6,7}(-|\*|\+)\s/)) {
+        state.combineTokens = true;
+        return "line-list4"
+      }
+    }
+
+    // Blockquote 
+    if (stream.sol() && stream.match(/^>\s/)) {
+      // stream.skipToEnd()
+      stream.next();
+      return "line-blockquote"
+    }
+
+    // Strong - Flanking ** characters
+    if (stream.match('**')) {
+      state.combineTokens = true;
+      return 'flank'
+    }
+
+    // Emphasis - Flanking _ characters
+    if (stream.match(' _') || stream.match('_ ')) {
+      state.combineTokens = true;
+      return 'flank'
+    }
+
+    // Code - Flanking ` characters
+    if (stream.match('`')) {
+      state.combineTokens = true;
+      return 'flank'
+    }
+
+    // Header (hash tags)
+    if (stream.sol() && stream.match(/^#{1,5}/)) {
+      state.combineTokens = true;
+      return "header-hash"
+    }
+
+    // Cite keys
+    if (stream.match("[@")) {
+      // console.log("Citation found")
+      while ((ch = stream.next()) != null)
+        if (ch == "]") {
+          state.combineTokens = false;
+          return "citation"
+        }
+    }
+
+    // Wiki links
+    if (stream.match("[[")) {
+      while ((ch = stream.next()) != null)
+        if (ch == "]" && stream.next() == "]") {
+          stream.eat("]");
+          state.combineTokens = true;
+          return "wikilink"
+        }
+    }
+
+    // Figures
+    if (stream.match("![")) {
+      stream.skipToEnd();
+      return "figure"
+    }
+
+    // Links
+    // if (stream.match("[")) {
+    //   while ((ch = stream.next()) != null)
+    //     console.log(stream.baseToken())
+    //   if (ch == ")") {
+    //     // state.combineTokens = true
+    //     return "linkwrapper "
+    //   }
+    // }
+
+    while (
+      stream.next() != null
+      // Line
+      && !stream.match(">", false)
+      && !stream.match("#", false)
+      // Inline
+      && !stream.match("**", false)
+      && !stream.match(" _", false)
+      && !stream.match("_ ", false)
+      && !stream.match("`", false)
+      && !stream.match("[@", false)
+      && !stream.match("![", false)
+      && !stream.match("[[", false)
+      // && !stream.match("[", false)
+    ) { }
+
+    // If we don't do any of the above, return null (token does not need to be styled)
+    return null
+  }
+};
+
+/**
+ * Define custom mode to be used with CodeMirror.
+ */
+function defineGambierMode() {
+  CodeMirror.defineMode("gambier", (config, parserConfig) => {
+
+    const START = 0, FRONTMATTER = 1, BODY = 2;
+
+    const yamlMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "yaml" }), yamlOverlay);
+    const innerMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "markdown", highlightFormatting: false, tokenTypeOverrides: { code: 'code', list1: 'list', list2: 'list', list3: 'list' } }), markdownOverlay);
+
+    function curMode(state) {
+      return state.state == BODY ? innerMode : yamlMode
+    }
+
+    return {
+      startState: function () {
+        return {
+          state: START,
+          inner: CodeMirror.startState(yamlMode)
+        }
+      },
+      copyState: function (state) {
+        return {
+          state: state.state,
+          inner: CodeMirror.copyState(curMode(state), state.inner)
+        }
+      },
+      token: function (stream, state) {
+        if (state.state == START) {
+          if (stream.match(/---/, false)) {
+            state.state = FRONTMATTER;
+            return yamlMode.token(stream, state.inner)
+          } else {
+            state.state = BODY;
+            state.inner = CodeMirror.startState(innerMode);
+            return innerMode.token(stream, state.inner)
+          }
+        } else if (state.state == FRONTMATTER) {
+          var end = stream.sol() && stream.match(/(---|\.\.\.)/, false);
+          var style = yamlMode.token(stream, state.inner);
+          if (end) {
+            state.state = BODY;
+            state.inner = CodeMirror.startState(innerMode);
+          }
+          return style
+        } else {
+          return innerMode.token(stream, state.inner)
+        }
+      },
+      innerMode: function (state) {
+        return { mode: curMode(state), state: state.inner }
+      },
+      blankLine: function (state) {
+        var mode = curMode(state);
+        if (mode.blankLine) return mode.blankLine(state.inner)
+      }
+    }
+  });
+}
+
+/**
+ * Mark text and replace with specified element.
+ * @param {*} editor - Instance
+ * @param {*} element - To render where the marked text used to be
+ * @param {*} line - Of text to mark
+ * @param {*} start - Of text to mark
+ * @param {*} end - Of text to mark
+ */
+function replaceMarkWithElement(editor, element, line, start, end) {
+  editor.markText({ line: line, ch: start }, { line: line, ch: end }, {
+    replacedWith: element,
+    clearOnEnter: false,
+    inclusiveLeft: false,
+    inclusiveRight: false,
+    handleMouseEvents: false
+  });
+}
+
+/**
+ * A _slighty_ more compact snippet for getting text from a range.
+ */
+function getTextFromRange(editor, line, start, end) {
+  return editor.getRange({ line: line, ch: start }, { line: line, ch: end })
+}
+
+/* src/js/component/Link.svelte generated by Svelte v3.22.3 */
+
+function add_css$6() {
+	var style = element("style");
+	style.id = "svelte-giy5sl-style";
+	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.link.svelte-giy5sl{box-sizing:border-box;color:var(--clr-blue);background-color:var(--clr-blue-lighter);padding:0 0.2em 0 0.15em;border-radius:0.15em;border:1px solid var(--clr-blue-light)}";
+	append(document.head, style);
+}
+
+function create_fragment$6(ctx) {
+	let span;
+	let t;
+
+	return {
+		c() {
+			span = element("span");
+			t = text(/*text*/ ctx[0]);
+			attr(span, "class", "link svelte-giy5sl");
+		},
+		m(target, anchor) {
+			insert(target, span, anchor);
+			append(span, t);
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*text*/ 1) set_data(t, /*text*/ ctx[0]);
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(span);
+		}
+	};
+}
+
+function instance$6($$self, $$props, $$invalidate) {
+	let { text } = $$props;
+
+	$$self.$set = $$props => {
+		if ("text" in $$props) $$invalidate(0, text = $$props.text);
+	};
+
+	return [text];
+}
+
+class Link extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-giy5sl-style")) add_css$6();
+		init(this, options, instance$6, create_fragment$6, safe_not_equal, { text: 0 });
+	}
+}
+
+function Details() {
+  this.start;
+  this.end;
+  this.textStart;
+  this.textEnd;
+  this.text;
+  this.urlStart;
+  this.urlEnd;
+  this.url;
+}
+
+/**
+ * For the specified line, find links, and for each found, create a new object with their details, push it into an array, and return the array.
+ * See Link object (above) for what is included.
+ */
+function find(editor, lineNo, tokens) {
+
+  let hit;
+  let hits = [];
+
+  // Find open and closing tokens
+  for (const token of tokens) {
+    if (token.type !== null) {
+      if (token.type.includes('link')) {
+        switch (token.string) {
+          case "[":
+            // TODO: Get token at (token.end + 1). If it's '@', then don't create link.
+            hit = new Details();
+            hit.start = token.start;
+            hit.textStart = token.start;
+            hits.push(hit);
+            break
+          case "]":
+            hit.textEnd = token.end;
+            hit.text = getTextFromRange(editor, lineNo, hit.textStart + 1, hit.textEnd - 1);
+            break
+        }
+      } else if (token.type.includes('url')) {
+        switch (token.string) {
+          case "(":
+            hit.urlStart = token.start;
+            break
+          case ")":
+            hit.urlEnd = token.end;
+            hit.end = token.end;
+            hit.url = getTextFromRange(editor, lineNo, hit.urlStart + 1, hit.urlEnd - 1);
+            break
+        }
+      }
+    }
+  }
+
+  // Remove "links" that don't have urls. 
+  // Otherwise we can get false positives with `[Hi there]` sections
+  // (which I) shouldn't be using in my markdown, to begin with
+  hits = hits.filter((h) => h.url !== undefined);
+
+  return hits
+}
+
+
+/**
+ * Find and mark links for the given line
+ */
+function markInlineLinks(editor, lineHandle, tokens) {
+  const line = lineHandle.lineNo();
+  const links = find(editor, line, tokens);
+  if (links.length > 0) {
+    links.map((l) => {
+
+      const frag = document.createDocumentFragment();
+
+      const component = new Link({
+        target: frag,
+        props: {
+          text: l.text,
+          url: l.url
+        }
+      });
+
+      editor.markText({ line: line, ch: l.start }, { line: line, ch: l.end }, {
+        replacedWith: frag,
+        // addToHistory: true, // Doesn't do anything?
+        clearOnEnter: false,
+        inclusiveLeft: false,
+        inclusiveRight: false,
+        handleMouseEvents: false
+      });
+    });
+  }
+}
+
+/* src/js/component/Figure.svelte generated by Svelte v3.22.3 */
+
+function add_css$7() {
+	var style = element("style");
+	style.id = "svelte-1jw57r3-style";
+	style.textContent = "@charset \"UTF-8\";figure.svelte-1jw57r3.svelte-1jw57r3{width:100%;margin:0;padding:0;display:inline-block;white-space:normal}figure.svelte-1jw57r3 img.svelte-1jw57r3{max-width:10em;display:inline-block;height:auto;border-radius:3px;text-indent:100%;white-space:nowrap;overflow:hidden;position:relative}figure.svelte-1jw57r3 img.svelte-1jw57r3:after{text-indent:0%;content:\"\" \" \" attr(src);color:#646464;background-color:#f0f0f0;white-space:normal;display:block;position:absolute;z-index:2;top:0;left:0;width:100%;height:100%}figure.svelte-1jw57r3 figcaption.svelte-1jw57r3{font-style:italic;color:gray}";
+	append(document.head, style);
+}
+
+function create_fragment$7(ctx) {
+	let figure;
+	let img;
+	let img_src_value;
+	let t0;
+	let figcaption;
+	let t1;
+
+	return {
+		c() {
+			figure = element("figure");
+			img = element("img");
+			t0 = space();
+			figcaption = element("figcaption");
+			t1 = text(/*caption*/ ctx[0]);
+			if (img.src !== (img_src_value = /*url*/ ctx[1])) attr(img, "src", img_src_value);
+			attr(img, "alt", /*alt*/ ctx[2]);
+			attr(img, "class", "svelte-1jw57r3");
+			attr(figcaption, "class", "svelte-1jw57r3");
+			attr(figure, "class", "svelte-1jw57r3");
+		},
+		m(target, anchor) {
+			insert(target, figure, anchor);
+			append(figure, img);
+			append(figure, t0);
+			append(figure, figcaption);
+			append(figcaption, t1);
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*url*/ 2 && img.src !== (img_src_value = /*url*/ ctx[1])) {
+				attr(img, "src", img_src_value);
+			}
+
+			if (dirty & /*alt*/ 4) {
+				attr(img, "alt", /*alt*/ ctx[2]);
+			}
+
+			if (dirty & /*caption*/ 1) set_data(t1, /*caption*/ ctx[0]);
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(figure);
+		}
+	};
+}
+
+function instance$7($$self, $$props, $$invalidate) {
+	let { caption } = $$props;
+	let { url } = $$props;
+	let { alt } = $$props;
+
+	$$self.$set = $$props => {
+		if ("caption" in $$props) $$invalidate(0, caption = $$props.caption);
+		if ("url" in $$props) $$invalidate(1, url = $$props.url);
+		if ("alt" in $$props) $$invalidate(2, alt = $$props.alt);
+	};
+
+	return [caption, url, alt];
+}
+
+class Figure extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-1jw57r3-style")) add_css$7();
+		init(this, options, instance$7, create_fragment$7, safe_not_equal, { caption: 0, url: 1, alt: 2 });
+	}
+}
+
+/**
+ * Find and mark links for the given line
+ */
+async function markFigures(editor, lineHandle, tokens, filePath) {
+
+  const text = lineHandle.text;
+  const line = lineHandle.lineNo();
+  const start = 0;
+  const end = tokens[tokens.length - 1].end;
+  
+  const caption = text.substring(2, text.lastIndexOf(']'));
+  let srcPath = text.substring(text.lastIndexOf('(') + 1, text.lastIndexOf('.') + 4);
+  srcPath = await window.api.invoke('pathJoin', filePath, srcPath);
+  let alt = text.substring(text.lastIndexOf('('), text.lastIndexOf(')'));
+  alt = alt.substring(alt.indexOf('"') + 1, alt.lastIndexOf('"'));
+
+  const frag = document.createDocumentFragment();
+
+  const component = new Figure({
+    target: frag,
+    props: {
+      caption: caption,
+      url: srcPath,
+      alt: alt
+    }
+  });
+
+  replaceMarkWithElement(editor, frag, line, start, end);
+}
+
+/**
+ * Find and mark list items
+ */
+async function markList(editor, lineHandle, tokens) {
+
+  const listMarker = lineHandle.text.trim().charAt(0);
+  const line = lineHandle.lineNo();
+  const start = 0;
+  const end = lineHandle.text.indexOf(listMarker) + 2;
+
+  const frag = document.createDocumentFragment();
+  const span = document.createElement('span');
+  span.setAttribute('data-marker', listMarker);
+  span.classList.add('list-marker');
+  frag.appendChild(span);
+
+  editor.markText({ line: line, ch: start }, { line: line, ch: end }, {
+    replacedWith: frag,
+    clearOnEnter: false,
+    selectLeft: false,
+    selectRight: true,
+    handleMouseEvents: false
+  });
+}
+
+// -------- SHARED VARIABLES -------- //
+
+let state = {};
+
+let editor;
+let filePath;
+
+const turndownService = new TurndownService();
+
+
+// -------- SETUP -------- //
+
+/**
+ * Load file contents into CodeMirror
+ * If id param is empty, start new doc. This can happen when opening an empty SideBar item (e.g. Favorites, if there are no files with `favorite` tag.)
+ */
+async function loadFile(fileId) {
+  if (fileId == '') {
+    // This
+    startNewDoc();
+  } else {
+    const file = await window.api.invoke('getFileById', fileId, 'utf8');
+    filePath = state.contents.find((f) => f.id == fileId).path;
+    filePath = filePath.substring(0, filePath.lastIndexOf('/'));
+    editor.setValue(file);
+    editor.clearHistory();
+    findAndMark();
+  }
+}
+
+function startNewDoc() {
+  editor.setValue();
+  editor.clearHistory();
+}
+
+/**
+ * Find each citation in the specified line, and collape + replace them.
+ */
+function findAndMark() {
+  editor.operation(() => {
+    editor.eachLine((lineHandle) => {
+      const tokens = editor.getLineTokens(lineHandle.lineNo());
+      const isFigure = tokens.some((t) => t.type !== null && t.type.includes('figure'));
+      // const isFigure = tokens[0] !== undefined && tokens[0].type.includes('figure')
+      const isList = tokens[0] !== undefined && tokens[0].type !== null && tokens[0].type.includes('list');
+
+      if (isFigure) {
+        markFigures(editor, lineHandle, tokens, filePath);
+      } else {
+        if (isList) {
+          markList(editor, lineHandle);
+        }
+        markInlineLinks(editor, lineHandle, tokens);
+        // markCitations(editor, lineHandle, tokens)
+      }
+    });
+  });
+}
+
+
+// -------- EVENT HANDLERS -------- //
+
+/**
+ * Every time cursor updates, check last line it was in for citations. We have to do this, because TODO... (along lines of: citations open/close when they're clicked into and out-of)
+ */
+function onCursorActivity() {
+  // lastCursorLine = editor.getCursor().line
+  // editor.addWidget(editor.getCursor(), el)
+
+  // TODO: June 23: Revisit this. Turned off temporarily.
+  // findAndMark()
+}
+
+
+/**
+ * Handle paste operations
+ * If URL, generate link.
+ * Else, if HTML, convert to markdown} cm 
+ */
+async function onBeforeChange(cm, change) {
+
+  if (change.origin === 'paste') {
+    const selection = editor.getSelection();
+    const isURL = isUrl(change.text);
+
+    if (isURL) {
+      if (selection) {
+        const text = selection;
+        const url = change.text;
+        const newText = change.text.map((line) => line = `[${text}](${url})`);
+        change.update(null, null, newText);
+      }
+    } else {
+      change.cancel();
+      const formats = await window.api.invoke('getFormatOfClipboard');
+      if (formats.length === 1 && formats[0] === 'text/plain') {
+        cm.replaceSelection(change.text.join('\n'));
+      } else if (formats.includes('text/html')) {
+        const html = await window.api.invoke('getHTMLFromClipboard');
+        const markdown = turndownService.turndown(html);
+        cm.replaceSelection(markdown);
+      }
+    }
+  }
+}
+
+// -------- SETUP -------- //
+
+function makeEditor(textarea) {
+
+  // Brackets widget
+  // bracketsWidget = mountReplace(BracketsWidget, {
+  //   target: document.querySelector('#bracketsWidget'),
+  //   // props: {  }
+  // })
+
+  // Define "gambier" CodeMirror mode
+  defineGambierMode();
+
+  // Create CodeMirror instance from textarea element (which is replaced).
+  editor = CodeMirror.fromTextArea(textarea, {
+    mode: 'gambier',
+    lineWrapping: true,
+    lineNumbers: false,
+    theme: 'gambier',
+    indentWithTabs: false,
+    autoCloseBrackets: true,
+    extraKeys: {
+      'Enter': 'newlineAndIndentContinueMarkdownList',
+      'Tab': 'autoIndentMarkdownList',
+      'Shift-Tab': 'autoUnindentMarkdownList'
+    }
+  });
+
+  // Setup event listeners
+  editor.on("cursorActivity", onCursorActivity);
+  // editor.on("change", onChange)
+
+  /**
+   * "This event is fired before a change is applied, and its handler may choose to modify or cancel the change"
+   * See: https://codemirror.net/doc/manual.html#event_beforeChange
+   */
+  editor.on('beforeChange', onBeforeChange);
+}
+
+async function setup(textarea, initialState) {
+
+  state = initialState;
+
+  // Make editor
+  makeEditor(textarea);
+
+  // Setup change listeners
+  window.api.receive('stateChanged', async (newState, oldState) => {
+    if (newState.changed.includes('selectedFileId')) {
+      state = newState;
+      loadFile(state.selectedFileId);
+    }
+  });
+
+  window.api.receive('keyboardShortcut', (shortcut) => {
+    const filePath = state.contents.find((c) => c.id == state.selectedFileId).path;
+    window.api.send('saveFile', filePath, editor.getValue());
+  });
+
+  // Load file
+  loadFile(initialState.selectedFileId);
 }
 
 /* src/js/component/Editor.svelte generated by Svelte v3.22.3 */
 
-function add_css$5() {
+function add_css$8() {
 	var style = element("style");
-	style.id = "svelte-1jlvyx7-style";
-	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}#editor.svelte-1jlvyx7{flex:1 1 1600px;background-color:aliceblue}#editor.focused.svelte-1jlvyx7{background-color:red}";
+	style.id = "svelte-bayd9h-style";
+	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}#editor.svelte-bayd9h{width:100%;height:100%;background-color:white;display:flex;justify-content:center}";
 	append(document.head, style);
 }
 
-function create_fragment$5(ctx) {
+function create_fragment$8(ctx) {
 	let div;
+	let textarea_1;
 	let dispose;
 
 	return {
 		c() {
 			div = element("div");
-			div.innerHTML = `<p class="svelte-1jlvyx7">Editor</p>`;
+			textarea_1 = element("textarea");
+			set_style(textarea_1, "display", "none");
+			textarea_1.value = "Editor initial text";
+			attr(textarea_1, "class", "svelte-bayd9h");
 			attr(div, "id", "editor");
-			attr(div, "class", "svelte-1jlvyx7");
+			attr(div, "class", "svelte-bayd9h");
 			toggle_class(div, "focused", /*focused*/ ctx[0]);
 		},
 		m(target, anchor, remount) {
 			insert(target, div, anchor);
+			append(div, textarea_1);
+			/*textarea_1_binding*/ ctx[4](textarea_1);
 			if (remount) dispose();
-			dispose = listen(div, "click", /*click_handler*/ ctx[1]);
+			dispose = listen(div, "click", /*click_handler*/ ctx[3]);
 		},
 		p(ctx, [dirty]) {
 			if (dirty & /*focused*/ 1) {
@@ -1816,50 +2770,64 @@ function create_fragment$5(ctx) {
 		o: noop,
 		d(detaching) {
 			if (detaching) detach(div);
+			/*textarea_1_binding*/ ctx[4](null);
 			dispose();
 		}
 	};
 }
 
-function instance$5($$self, $$props, $$invalidate) {
+function instance$8($$self, $$props, $$invalidate) {
 	let { focused } = $$props;
+	let { state = {} } = $$props;
+	let textarea;
+
+	onMount(() => {
+		setup(textarea, state);
+	});
 
 	function click_handler(event) {
 		bubble($$self, event);
 	}
 
+	function textarea_1_binding($$value) {
+		binding_callbacks[$$value ? "unshift" : "push"](() => {
+			$$invalidate(1, textarea = $$value);
+		});
+	}
+
 	$$self.$set = $$props => {
 		if ("focused" in $$props) $$invalidate(0, focused = $$props.focused);
+		if ("state" in $$props) $$invalidate(2, state = $$props.state);
 	};
 
-	return [focused, click_handler];
+	return [focused, textarea, state, click_handler, textarea_1_binding];
 }
 
 class Editor extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1jlvyx7-style")) add_css$5();
-		init(this, options, instance$5, create_fragment$5, safe_not_equal, { focused: 0 });
+		if (!document.getElementById("svelte-bayd9h-style")) add_css$8();
+		init(this, options, instance$8, create_fragment$8, safe_not_equal, { focused: 0, state: 2 });
 	}
 }
 
 /* src/js/component/Layout.svelte generated by Svelte v3.22.3 */
 
-function add_css$6() {
+function add_css$9() {
 	var style = element("style");
 	style.id = "svelte-1v0a37p-style";
 	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.flexLayout.svelte-1v0a37p{display:flex;width:100%;height:100%}";
 	append(document.head, style);
 }
 
-// (103:0) {:else}
-function create_else_block$1(ctx) {
+// (112:0) {:else}
+function create_else_block(ctx) {
 	let div;
 	let t0;
 	let t1;
 	let current;
 
-	const flexpanel0 = new FlexPanel({
+	const flexpanel = new FlexPanel({
 			props: {
 				visible: /*state*/ ctx[0].sideBar.show,
 				min: 160,
@@ -1870,92 +2838,90 @@ function create_else_block$1(ctx) {
 			}
 		});
 
-	flexpanel0.$on("click", /*click_handler*/ ctx[2]);
-
-	const flexpanel1 = new FlexPanel({
-			props: {
-				visible: /*state*/ ctx[0].showFilesList,
-				min: 260,
-				max: 320,
-				start: 280,
-				$$slots: { default: [create_default_slot] },
-				$$scope: { ctx }
-			}
-		});
-
-	flexpanel1.$on("click", /*click_handler_1*/ ctx[3]);
-
-	const editor = new Editor({
-			props: {
-				focused: /*focusedSection*/ ctx[1] == "Editor"
-			}
-		});
-
-	editor.$on("click", /*click_handler_2*/ ctx[4]);
+	flexpanel.$on("click", /*click_handler*/ ctx[4]);
+	let if_block = /*state*/ ctx[0].showFilesList && create_if_block_1(ctx);
+	const editor = new Editor({ props: { state: /*state*/ ctx[0] } });
+	editor.$on("click", /*click_handler_2*/ ctx[6]);
 
 	return {
 		c() {
 			div = element("div");
-			create_component(flexpanel0.$$.fragment);
+			create_component(flexpanel.$$.fragment);
 			t0 = space();
-			create_component(flexpanel1.$$.fragment);
+			if (if_block) if_block.c();
 			t1 = space();
 			create_component(editor.$$.fragment);
 			attr(div, "class", "flexLayout svelte-1v0a37p");
 		},
 		m(target, anchor) {
 			insert(target, div, anchor);
-			mount_component(flexpanel0, div, null);
+			mount_component(flexpanel, div, null);
 			append(div, t0);
-			mount_component(flexpanel1, div, null);
+			if (if_block) if_block.m(div, null);
 			append(div, t1);
 			mount_component(editor, div, null);
 			current = true;
 		},
 		p(ctx, dirty) {
-			const flexpanel0_changes = {};
-			if (dirty & /*state*/ 1) flexpanel0_changes.visible = /*state*/ ctx[0].sideBar.show;
+			const flexpanel_changes = {};
+			if (dirty & /*state*/ 1) flexpanel_changes.visible = /*state*/ ctx[0].sideBar.show;
 
-			if (dirty & /*$$scope, state, focusedSection*/ 35) {
-				flexpanel0_changes.$$scope = { dirty, ctx };
+			if (dirty & /*$$scope, state*/ 129) {
+				flexpanel_changes.$$scope = { dirty, ctx };
 			}
 
-			flexpanel0.$set(flexpanel0_changes);
-			const flexpanel1_changes = {};
-			if (dirty & /*state*/ 1) flexpanel1_changes.visible = /*state*/ ctx[0].showFilesList;
+			flexpanel.$set(flexpanel_changes);
 
-			if (dirty & /*$$scope, state, focusedSection*/ 35) {
-				flexpanel1_changes.$$scope = { dirty, ctx };
+			if (/*state*/ ctx[0].showFilesList) {
+				if (if_block) {
+					if_block.p(ctx, dirty);
+
+					if (dirty & /*state*/ 1) {
+						transition_in(if_block, 1);
+					}
+				} else {
+					if_block = create_if_block_1(ctx);
+					if_block.c();
+					transition_in(if_block, 1);
+					if_block.m(div, t1);
+				}
+			} else if (if_block) {
+				group_outros();
+
+				transition_out(if_block, 1, 1, () => {
+					if_block = null;
+				});
+
+				check_outros();
 			}
 
-			flexpanel1.$set(flexpanel1_changes);
 			const editor_changes = {};
-			if (dirty & /*focusedSection*/ 2) editor_changes.focused = /*focusedSection*/ ctx[1] == "Editor";
+			if (dirty & /*state*/ 1) editor_changes.state = /*state*/ ctx[0];
 			editor.$set(editor_changes);
 		},
 		i(local) {
 			if (current) return;
-			transition_in(flexpanel0.$$.fragment, local);
-			transition_in(flexpanel1.$$.fragment, local);
+			transition_in(flexpanel.$$.fragment, local);
+			transition_in(if_block);
 			transition_in(editor.$$.fragment, local);
 			current = true;
 		},
 		o(local) {
-			transition_out(flexpanel0.$$.fragment, local);
-			transition_out(flexpanel1.$$.fragment, local);
+			transition_out(flexpanel.$$.fragment, local);
+			transition_out(if_block);
 			transition_out(editor.$$.fragment, local);
 			current = false;
 		},
 		d(detaching) {
 			if (detaching) detach(div);
-			destroy_component(flexpanel0);
-			destroy_component(flexpanel1);
+			destroy_component(flexpanel);
+			if (if_block) if_block.d();
 			destroy_component(editor);
 		}
 	};
 }
 
-// (101:0) {#if state.projectPath == ''}
+// (110:0) {#if state.projectPath == ''}
 function create_if_block$2(ctx) {
 	let current;
 	const firstrun = new FirstRun({});
@@ -1984,16 +2950,10 @@ function create_if_block$2(ctx) {
 	};
 }
 
-// (105:4) <FlexPanel       visible={state.sideBar.show}       min={160}       max={220}       start={180}       on:click={() => (focusedSection = 'Navigation')}>
+// (114:4) <FlexPanel       visible={state.sideBar.show}       min={160}       max={220}       start={180}       on:click={() => setLayoutFocus('navigation')}>
 function create_default_slot_1(ctx) {
 	let current;
-
-	const sidebar = new SideBar({
-			props: {
-				state: /*state*/ ctx[0],
-				focused: /*focusedSection*/ ctx[1] == "Navigation"
-			}
-		});
+	const sidebar = new SideBar({ props: { state: /*state*/ ctx[0] } });
 
 	return {
 		c() {
@@ -2006,7 +2966,6 @@ function create_default_slot_1(ctx) {
 		p(ctx, dirty) {
 			const sidebar_changes = {};
 			if (dirty & /*state*/ 1) sidebar_changes.state = /*state*/ ctx[0];
-			if (dirty & /*focusedSection*/ 2) sidebar_changes.focused = /*focusedSection*/ ctx[1] == "Navigation";
 			sidebar.$set(sidebar_changes);
 		},
 		i(local) {
@@ -2024,14 +2983,62 @@ function create_default_slot_1(ctx) {
 	};
 }
 
-// (113:4) <FlexPanel       visible={state.showFilesList}       min={260}       max={320}       start={280}       on:click={() => (focusedSection = 'Navigation')}>
+// (122:4) {#if state.showFilesList}
+function create_if_block_1(ctx) {
+	let current;
+
+	const flexpanel = new FlexPanel({
+			props: {
+				min: 260,
+				max: 320,
+				start: 280,
+				$$slots: { default: [create_default_slot] },
+				$$scope: { ctx }
+			}
+		});
+
+	flexpanel.$on("click", /*click_handler_1*/ ctx[5]);
+
+	return {
+		c() {
+			create_component(flexpanel.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(flexpanel, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const flexpanel_changes = {};
+
+			if (dirty & /*$$scope, state, oldState*/ 131) {
+				flexpanel_changes.$$scope = { dirty, ctx };
+			}
+
+			flexpanel.$set(flexpanel_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(flexpanel.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(flexpanel.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(flexpanel, detaching);
+		}
+	};
+}
+
+// (123:6) <FlexPanel         min={260}         max={320}         start={280}         on:click={() => setLayoutFocus('navigation')}>
 function create_default_slot(ctx) {
 	let current;
 
 	const filelist = new FileList({
 			props: {
 				state: /*state*/ ctx[0],
-				focused: /*focusedSection*/ ctx[1] == "Navigation"
+				oldState: /*oldState*/ ctx[1]
 			}
 		});
 
@@ -2046,7 +3053,7 @@ function create_default_slot(ctx) {
 		p(ctx, dirty) {
 			const filelist_changes = {};
 			if (dirty & /*state*/ 1) filelist_changes.state = /*state*/ ctx[0];
-			if (dirty & /*focusedSection*/ 2) filelist_changes.focused = /*focusedSection*/ ctx[1] == "Navigation";
+			if (dirty & /*oldState*/ 2) filelist_changes.oldState = /*oldState*/ ctx[1];
 			filelist.$set(filelist_changes);
 		},
 		i(local) {
@@ -2064,12 +3071,12 @@ function create_default_slot(ctx) {
 	};
 }
 
-function create_fragment$6(ctx) {
+function create_fragment$9(ctx) {
 	let current_block_type_index;
 	let if_block;
 	let if_block_anchor;
 	let current;
-	const if_block_creators = [create_if_block$2, create_else_block$1];
+	const if_block_creators = [create_if_block$2, create_else_block];
 	const if_blocks = [];
 
 	function select_block_type(ctx, dirty) {
@@ -2131,25 +3138,41 @@ function create_fragment$6(ctx) {
 	};
 }
 
-function instance$6($$self, $$props, $$invalidate) {
+function instance$9($$self, $$props, $$invalidate) {
 	let { state = {} } = $$props;
+	let { oldState = {} } = $$props;
 	let focusedSection;
-	const click_handler = () => $$invalidate(1, focusedSection = "Navigation");
-	const click_handler_1 = () => $$invalidate(1, focusedSection = "Navigation");
-	const click_handler_2 = () => $$invalidate(1, focusedSection = "Editor");
+
+	function setLayoutFocus(section) {
+		if (state.focusedLayoutSection == section) return;
+		window.api.send("dispatch", { type: "SET_LAYOUT_FOCUS", section });
+	}
+
+	const click_handler = () => setLayoutFocus("navigation");
+	const click_handler_1 = () => setLayoutFocus("navigation");
+	const click_handler_2 = () => setLayoutFocus("editor");
 
 	$$self.$set = $$props => {
 		if ("state" in $$props) $$invalidate(0, state = $$props.state);
+		if ("oldState" in $$props) $$invalidate(1, oldState = $$props.oldState);
 	};
 
-	return [state, focusedSection, click_handler, click_handler_1, click_handler_2];
+	return [
+		state,
+		oldState,
+		setLayoutFocus,
+		focusedSection,
+		click_handler,
+		click_handler_1,
+		click_handler_2
+	];
 }
 
 class Layout extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1v0a37p-style")) add_css$6();
-		init(this, options, instance$6, create_fragment$6, safe_not_equal, { state: 0 });
+		if (!document.getElementById("svelte-1v0a37p-style")) add_css$9();
+		init(this, options, instance$9, create_fragment$9, safe_not_equal, { state: 0, oldState: 1 });
 	}
 
 	get state() {
@@ -2160,25 +3183,37 @@ class Layout extends SvelteComponent {
 		this.$set({ state });
 		flush();
 	}
+
+	get oldState() {
+		return this.$$.ctx[1];
+	}
+
+	set oldState(oldState) {
+		this.$set({ oldState });
+		flush();
+	}
 }
 
 // import Fuse from './third-party/fuse/fuse.esm.js'
 
-async function setup() {
+async function setup$1() {
 
   const initialState = await window.api.invoke('getState');
 
   const layout = new Layout({
     target: document.querySelector('#layout'),
-    props: { state: initialState }
+    props: { 
+      state: initialState,
+      oldState: initialState,
+    }
   });
 
   window.api.receive("stateChanged", (newState, oldState) => {
-    console.log("State changed");
-    console.log(layout.state);
-    console.log(newState);
-    console.log("----");
+    // console.log("State changed")
+    // console.log(layout.state)
+    // console.log("----")
     layout.state = newState;
+    layout.oldState = oldState;
   });
 
   window.api.send('showWindow');
@@ -2192,7 +3227,7 @@ async function setup() {
   //   console.log(test)
 
 }
-window.addEventListener('DOMContentLoaded', setup);
+window.addEventListener('DOMContentLoaded', setup$1);
 
 // function reloading() {
 //   window.api.send('hideWindow')

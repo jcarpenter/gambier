@@ -25,8 +25,7 @@ We use [electron-builder](https://www.electron.build) for the build. Per configu
 
 ## Security
 
-Main and preload access sensitive low-level dependencies (electron, node, third party packages, etc). Render process code does not. It is isolated. It requests what it needs from main process via IPC channels exposed in preload. Render process code also cannot  
-`require` NPM packages.
+Main and preload access sensitive low-level dependencies (electron, node, third party packages, etc). Render process code does not. It is isolated. It requests what it needs from main process via IPC channels exposed in preload. Render process code also cannot  `require` NPM packages.
 
 ## Main process dependencies
 

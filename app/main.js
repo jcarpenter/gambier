@@ -5,6 +5,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var electron = require('electron');
 var electron__default = _interopDefault(electron);
 var path = _interopDefault(require('path'));
+var electronLocalshortcut = _interopDefault(require('electron-localshortcut'));
 var fsExtra = require('fs-extra');
 var Store = _interopDefault(require('electron-store'));
 require('svelte/internal');
@@ -26,35 +27,35 @@ const StoreSchema = {
   changed: { type: 'array', default: [] },
 
   // TODO: For `searchInElement`, add enum of possible elements, matching CodeMirror mode assignments.
-  filesSearchCriteria: {
-    type: 'object',
-    properties: {
-      lookInFolderId: { type: 'string', default: '' },
-      includeChildren: { type: 'boolean', default: false },
-      searchFor: { type: 'string', default: '' },
-      searchInElement: { type: 'string', default: '*' },
-      matchWholeWord: { type: 'boolean', default: false },
-      matchCase: { type: 'boolean', default: false },
-      filterDateModified: { type: 'boolean', default: false },
-      fromDateModified: { type: 'string', format: 'date-time' },
-      toDateModified: { type: 'string', format: 'date-time' },
-      filterDateCreated: { type: 'boolean', default: false },
-      fromDateCreated: { type: 'string', format: 'date-time' },
-      toDateCreated: { type: 'string', format: 'date-time' },
-      tags: { type: 'array', default: [] }
-    },
-    default: {
-      lookInFolderId: '',
-      includeChildren: false,
-      searchFor: '',
-      searchInElement: '*',
-      matchWholeWord: false,
-      matchCase: false,
-      filterDateModified: false,
-      filterDateCreated: false,
-      tags: []
-    }
-  },
+  // filesSearchCriteria: {
+  //   type: 'object',
+  //   properties: {
+  //     lookInFolderId: { type: 'string', default: '' },
+  //     includeChildren: { type: 'boolean', default: false },
+  //     searchFor: { type: 'string', default: '*' },
+  //     searchInElement: { type: 'string', default: '*' },
+  //     matchWholeWord: { type: 'boolean', default: false },
+  //     matchCase: { type: 'boolean', default: false },
+  //     filterDateModified: { type: 'boolean', default: false },
+  //     fromDateModified: { type: 'string', format: 'date-time' },
+  //     toDateModified: { type: 'string', format: 'date-time' },
+  //     filterDateCreated: { type: 'boolean', default: false },
+  //     fromDateCreated: { type: 'string', format: 'date-time' },
+  //     toDateCreated: { type: 'string', format: 'date-time' },
+  //     tags: { type: 'array', default: [] }
+  //   },
+  //   default: {
+  //     lookInFolderId: '',
+  //     includeChildren: false,
+  //     searchFor: '',
+  //     searchInElement: '*',
+  //     matchWholeWord: false,
+  //     matchCase: false,
+  //     filterDateModified: false,
+  //     filterDateCreated: false,
+  //     tags: []
+  //   }
+  // },
 
   sideBar: {
     type: 'object',
@@ -67,42 +68,95 @@ const StoreSchema = {
       show: true,
       selectedItemId: '',
       items: [
-        { 
+        {
           label: 'Files',
-          children: [
-            {
-              label: 'All',
-              id: 'all',
-              icon: 'images/sidebar-default-icon.svg',
-              showFilesList: true,
-              filesSearchParams: {},
-              lastSelectedFileId: '',
-              children: [] 
-            },
-            {
-              label: 'Most Recent',
-              id: 'most-recent',
-              icon: 'images/folder.svg',
-              showFilesList: true,
-              filesSearchParams: {},
-              lastSelectedFileId: '',
-              children: [] 
-            }
-          ]
+          id: 'files-group',
+          type: 'group'
         },
-        { 
+        {
+          label: 'All',
+          id: 'all',
+          parentId: 'files-group',
+          type: 'filesFilter',
+          icon: 'images/sidebar-default-icon.svg',
+          showFilesList: true,
+          filesSearchParams: {
+            lookInFolderId: 'root',
+            includeChildren: true,
+          },
+          selectedFileId: '',
+          scrollPosition: '0'
+        },
+        {
+          label: 'Favorites',
+          id: 'favorites',
+          parentId: 'files-group',
+          type: 'filesFilter',
+          icon: 'images/sidebar-default-icon.svg',
+          showFilesList: true,
+          filesSearchParams: {
+            lookInFolderId: 'root',
+            includeChildren: true,
+            tags: ['favorite']    
+          },
+          selectedFileId: '',
+          scrollPosition: '0'
+        },
+        {
+          label: 'Most Recent',
+          id: 'most-recent',
+          parentId: 'files-group',
+          type: 'filesFilter',
+          icon: 'images/sidebar-default-icon.svg',
+          showFilesList: true,
+          filesSearchParams: {
+            lookInFolderId: 'root',
+            includeChildren: true,
+            filterDateModified: true,
+            fromDateModified: 'today',
+            toDateModified: '7-days-ago'
+          },
+          selectedFileId: '',
+          scrollPosition: '0'
+        },
+        {
+          label: '',
+          id: '',
+          isRoot: true,
+          parentId: 'files-group',
+          type: 'filesFolder',
+          icon: 'images/folder.svg',
+          showFilesList: true,
+          filesSearchParams: {
+            lookInFolderId: 'root',
+            includeChildren: false,
+            filterDateModified: false,
+          },
+          selectedFileId: '',
+          scrollPosition: '0',
+          expanded: true
+        },
+        {
           label: 'Citations',
-          children: [
-            {
-              label: 'Citations',
-              id: 'citations',
-              icon: 'images/sidebar-default-icon.svg',
-              showFilesList: false,
-            }
-          ]
+          id: 'citations-group',
+          type: 'group'
+        },
+        {
+          label: 'Citations',
+          id: 'citations',
+          parentId: 'citations-group',
+          type: 'other',
+          icon: 'images/sidebar-default-icon.svg',
+          showFilesList: false,
+          scrollPosition: '0'
         }
       ]
     }
+  },
+
+  focusedLayoutSection: {
+    type: 'string',
+    default: 'navigation',
   },
 
   selectedFileId: {
@@ -121,7 +175,7 @@ const StoreSchema = {
   },
 
   projectPath: {
-    descrition: 'User specified path to directory containing their project files',
+    descrition: 'User specified path to folder containing their project files',
     type: 'string',
     default: ''
   },
@@ -137,8 +191,8 @@ const StoreSchema = {
 
   // hierarchy: {
   //   description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',
-  //   $schema: "http://json-schema.org/draft-07/schema#",
-  //   $id: "anything-could-go-here",
+  //   $schema: 'http://json-schema.org/draft-07/schema#',
+  //   $id: 'anything-could-go-here',
   //   definitions: {
   //     'fileOrDirectory': {
   //       type: 'object',
@@ -162,9 +216,103 @@ const StoreSchema = {
   // }
 };
 
+/**
+ * Check if contents contains item by type and id
+ */
+// function contentContainsItemById(contents, type, id) {
+//   return contents.some((d) => d.type == type && d.id == id)
+// }
+
+// function getDirectoryById(contents, id) {
+//   return contents.find((d) => d.type == 'directory' && d.id == id)
+// }
+
+// function getFirstFileInDirectory(contents, directoryId) {
+//   const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId)
+//   return files[0]
+// }
+
 function getRootFolder(contents) {
-  return contents.find((d) => d.type == 'directory' && d.isRoot)
+  return contents.find((d) => d.type == 'folder' && d.isRoot)
 }
+
+function getSideBarItem(sideBarItems, id) {
+  return sideBarItems.find((i) => i.id == id)
+}
+
+
+
+
+
+
+
+
+function updateSideBarItems(newState) {
+
+  const rootFolder = getRootFolder(newState.contents);
+
+  // Update `filesFilter` type items. 
+  // Specifically, their lookInFolder values, to point to correct `contents` id.
+  newState.sideBar.items.forEach((i) => {
+    if (i.type == 'filesFilter') {
+      i.filesSearchParams.lookInFolderId = rootFolder.id;
+    }
+  });
+
+  // Update root folder item values. This item holds the project file hierarchy, in the UI.
+  const rootFolderItem = newState.sideBar.items.find((i) => i.type == 'filesFolder' && i.isRoot);
+  rootFolderItem.label = rootFolder.name;
+  rootFolderItem.id = rootFolder.id;
+  rootFolderItem.filesSearchParams.lookInFolderId = rootFolder.id;
+
+  // Remove existing child folder items.
+  newState.sideBar.items = newState.sideBar.items.filter((i) => i.isRoot || i.type !== 'filesFolder');
+
+  // Add child folder items.
+  // For each, set parent item as root folder item, and push into items array.
+  if (rootFolder.childFolderCount > 0) {
+    createAndInsertChildFolderItems(rootFolder);
+  }
+
+  function createAndInsertChildFolderItems(folder) {
+
+    // For the given folder in contents, find it's children,
+    // create a new sideBar item for each, and recursively do 
+    // the same for their children, in turn
+
+    newState.contents.map((c) => {
+      if (c.type == 'folder' && c.parentId == folder.id) {
+
+        const childFolderItem = {
+          label: c.name,
+          id: c.id,
+          parentId: folder.id,
+          type: 'filesFolder',
+          isRoot: false,
+          icon: 'images/folder.svg',
+          showFilesList: true,
+          filesSearchParams: {
+            lookInFolderId: c.id,
+            includeChildren: false
+          },
+          selectedFileId: ''
+        };
+
+        newState.sideBar.items.push(childFolderItem);
+
+        // Recursive loop
+        if (c.childFolderCount > 0) {
+          createAndInsertChildFolderItems(c);
+        }
+      }
+    });
+  }
+}
+
+
+
+
+
 
 /**
  * `state = {}` gives us a default, for possible first run empty '' value.
@@ -178,20 +326,21 @@ function reducers(state = {}, action) {
 
   switch (action.type) {
 
-    case 'SET_PROJECT_DIRECTORY': {
+    case 'SET_LAYOUT_FOCUS': {
+      newState.focusedLayoutSection = action.section;
+      newState.changed.push('focusedLayoutSection');
+      break
+    }
+
+    case 'TOGGLE_SIDEBAR_ITEM_EXPANDED': {
+      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id);
+      sideBarItem.expanded = !sideBarItem.expanded;
+      newState.changed.push('sideBar item expanded');
+      break
+    }
+
+    case 'SET_PROJECT_PATH': {
       newState.projectPath = action.path;
-
-      // Handle first run and error conditions:
-      // If SideBar item has not been selected yet, select All 
-      // if (state.sideBar.selectedItemId == '') {
-      //   console.log("SET IT UPPPPP")
-      //   state.sideBar.selectedItemId = 'all'
-      //   newState.showFilesList = true
-      //   newState.filesSearchCriteria.lookInFolderId = newState.rootFolderId
-      //   newState.filesSearchCriteria.includeChildren = true
-      //   newState.changed.push('sideBar')
-      // }
-
       newState.changed.push('projectPath');
       break
     }
@@ -203,86 +352,53 @@ function reducers(state = {}, action) {
       const rootFolder = getRootFolder(newState.contents);
       newState.rootFolderId = rootFolder.id;
 
-      // Handle case of previously-selected folder no longer existing, since remap.
-      // Check if selected item is folder, and if it no longer exists in content.
-      // If conditions met, 
-      // if (
-      //   state.sideBar.selectedItemId.includes('folder') &&
-      //   !contentContainsItemById(newState.contents, 'directory', state.sideBar.selectedItemId)
-      // ) {
-      //   state.sideBar.selectedItemId = 'all'
-      //   newState.showFilesList = true
-      //   newState.filesSearchCriteria = {
-      //     lookInFolderId: newState.rootFolderId,
-      //     includeChildren: true,
-      //   }
-      //   // newState.selectedFileId = newState.contents.find((c) => c.type == 'file')
-      //   newState.changed.push('sideBar', 'selectedFileId')
-      // }
+      updateSideBarItems(newState);
 
-
-
-      // Handle first run and error conditions:
-      // If a folder has not been selected yet, or if the previously-selected 
-      // folder does not exist in updated contents, select root directory.
-      // if (
-      //   state.sideBar.selectedItemId == '' ||
-      //   !hasContentById(newState.contents, 'directory', state.sideBar.selectedItemId)
-      // ) {
-
-      //   // Set sideBar selected item
-      //   state.sideBar.selectedItemId = newState.rootFolderId
-
-      //   // If `rootDir` has child files, set `selectedFileId` to first one. Else, set `selectedFileId` to '' (empty)
-      //   if (rootFolder.childFileCount > 0) {
-      //     const firstFile = getFirstFileInDirectory(newState.contents, newState.selectedFolderId)
-      //     newState.selectedFileId = firstFile.id
-      //   } else {
-      //     newState.selectedFileId = ''
-      //   }
-
-      //   newState.changed.push('selectedFolderId', 'selectedFileId', 'rootFolderId')
-      // }
-
-      newState.changed.push('contents');
+      newState.changed.push('sideBar', 'contents');
       break
     }
 
     case 'SELECT_SIDEBAR_ITEM': {
-      // if (action.filesSearchCriteria) {
-      //   newState.filesSearchCriteria = action.filesSearchCriteria
-      //   newState.changed.push('filesSearchCriteria')
-      // }
-      // newState.showFilesList = action.showFilesList
-      state.sideBar.selectedItemId = action.id;
-      newState.changed.push('sideBar');
+      
+      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id);
+      
+      // Update FileList visibility
+      newState.showFilesList = sideBarItem.showFilesList;
+      newState.changed.push('showFilesList');
+      
+      // Update selected SideBar item
+      newState.sideBar.selectedItemId = action.id;
+      newState.changed.push('sideBar.selectedItemId');
+
+      // Update selected file
+      newState.selectedFileId = sideBarItem.selectedFileId;
+      newState.changed.push('selectedFileId');
+      
       break
     }
 
-    // case 'OPEN_FOLDER': {
+    // This is set on the _outgoing_ item, when the user is switching SideBar items.
+    // 
+    case 'SAVE_SIDEBAR_SCROLL_POSITION': {
+      const sideBarItem = getSideBarItem(newState.sideBar.items, action.sideBarItemId);
+      sideBarItem.scrollPosition = action.scrollposition;
+      newState.changed.push('sideBar scrollposition');
+      break
+    }
 
-    //   // Set `state.selectedFolderId`
-    //   newState.selectedFolderId = action.id
+    case 'SELECT_FILE': {
 
-    //   const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.id)
+      // Update the `selectedItemId` value of the active sideBar item
+      const sideBarItem = getSideBarItem(newState.sideBar.items, newState.sideBar.selectedItemId);
 
-    //   // Set `state.selectedFileId` to folder's selected file
-    //   newState.selectedFileId = selectedFolder.selectedFileId
+      if (sideBarItem.type == 'filesFolder' || sideBarItem.type == 'filesFilter') {
+        sideBarItem.selectedFileId = action.fileId;
+      }
 
-    //   newState.changed.push('selectedFolderId', 'selectedFileId')
-
-    //   break
-    // }
-
-    case 'OPEN_FILE': {
+      // Update the `selectedFileId`
       newState.selectedFileId = action.fileId;
 
-      // Find directory that contains selected file, 
-      // and set its `selectedFileId` property.
-      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId);
-      selectedFolder.selectedFileId = action.fileId;
-
-      newState.changed.push('selectedFileId', 'selectedFolder.selectedFileId');
+      newState.changed.push('selectedFileId');
 
       break
     }
@@ -320,11 +436,13 @@ class GambierStore extends Store {
 
   dispatch(action) {
 
+    // Optional: Log the changes (useful for debug)
+    this.logTheAction(action);
+    
     // Get next state
     const nextState = reducers(this.getCurrentState(), action);
 
-    // Optional: Log the changes (useful for debug)
-    this.logTheAction(action);
+    // Optional: Log the diff (useful for debug)
     this.logTheDiff(this.getCurrentState(), nextState);
 
     // Set the next state
@@ -346,7 +464,7 @@ class GambierStore extends Store {
       // console.log(diff)
       console.log(`Changed: ${nextState.changed}`.yellow);
     } else {
-      console.log('No changes');
+      console.log('No changes'.yellow);
     }
   }
 }
@@ -410,7 +528,6 @@ class GambierContents {
     });
 
     this.watcher.on('all', (event, path) => {
-      console.log("startWatching: this.watcher.on");
       console.log(event);
       console.log(path);
       this.mapProjectPath();
@@ -419,14 +536,14 @@ class GambierContents {
 
   /**
    * Check if path is valid. 
-   * If true, map directory, update store, and add watcher.
+   * If true, map folder, update store, and add watcher.
    * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
    */
   async mapProjectPath() {
     if (this.projectPath == '') return
 
     if (await isWorkingPath(this.projectPath)) {
-      let contents = await this.mapDirectoryRecursively(this.projectPath);
+      let contents = await this.mapFolderRecursively(this.projectPath);
       contents = await this.getFilesDetails(contents);
       contents = this.applyDiffs(this.store.store.contents, contents);
       this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents });
@@ -452,43 +569,43 @@ class GambierContents {
   }
 
   /**
-   * Populate this.contents with flat array of directory contents. One object for each directory and file found. Works recursively.
-   * @param {*} directoryPath - Directory to look inside.
-   * @param {*} parentObj - If passed in, we 1) get parent id, and 2) increment its directory counter (assuming the directory ). Is left undefined (default) for the top-level directory.
+   * Populate this.contents with flat array of folder contents. One object for each folder and file found. Works recursively.
+   * @param {*} folderPath - folder to look inside.
+   * @param {*} parentObj - If passed in, we 1) get parent id, and 2) increment its folder counter. Is left undefined (default) for the top-level folder.
    */
-  async mapDirectoryRecursively(directoryPath, parentId = undefined) {
+  async mapFolderRecursively(folderPath, parentId = undefined) {
 
     let arrayOfContents = [];
 
-    let contents = await fsExtra.readdir(directoryPath, { withFileTypes: true });
+    let contents = await fsExtra.readdir(folderPath, { withFileTypes: true });
 
     // Filter contents to (not-empty) directories, and markdown files.
     contents = contents.filter((c) => c.isDirectory() || c.name.includes('.md'));
 
-    // If the directory has no children we care about (.md files or directories), 
+    // If the folder has no children we care about (.md files or directories), 
     // we return an empty array.
     if (contents.length == 0) {
       return arrayOfContents
     }
 
-    // Get stats for directory
-    const stats = await fsExtra.stat(directoryPath);
+    // Get stats for folder
+    const stats = await fsExtra.stat(folderPath);
 
-    // Create object for directory
+    // Create object for folder
     const thisDir = {
-      type: 'directory',
+      type: 'folder',
       id: `folder-${stats.ino}`,
-      name: directoryPath.substring(directoryPath.lastIndexOf('/') + 1),
-      path: directoryPath,
+      name: folderPath.substring(folderPath.lastIndexOf('/') + 1),
+      path: folderPath,
       modified: stats.mtime.toISOString(),
       childFileCount: 0,
-      childDirectoryCount: 0,
+      childFolderCount: 0,
       selectedFileId: 0,
       isRoot: false,
     };
 
     // If parentId was passed, set `thisDir.parentId` to it
-    // Else this directory is the root, so set `isRoot: true`
+    // Else this folder is the root, so set `isRoot: true`
     if (parentId !== undefined) {
       thisDir.parentId = parentId;
     } else {
@@ -498,7 +615,7 @@ class GambierContents {
     for (let c of contents) {
 
       // Get path
-      const cPath = path.join(directoryPath, c.name);
+      const cPath = path.join(folderPath, c.name);
 
       if (c.isFile()) {
         // Increment file counter
@@ -513,12 +630,12 @@ class GambierContents {
         });
       } else if (c.isDirectory()) {
 
-        // Get child directory contents
+        // Get child folder contents
         // If not empty, increment counter and push to arrayOfContents
-        const subDirContents = await this.mapDirectoryRecursively(cPath, thisDir.id);
-        if (subDirContents.length !== 0) {
-          thisDir.childDirectoryCount++;
-          arrayOfContents = arrayOfContents.concat(subDirContents);
+        const childFolderContents = await this.mapFolderRecursively(cPath, thisDir.id);
+        if (childFolderContents.length !== 0) {
+          thisDir.childFolderCount++;
+          arrayOfContents = arrayOfContents.concat(childFolderContents);
         }
       }
     }
@@ -608,10 +725,6 @@ function extractExcerpt(file) {
 
 const app = electron__default.app;
 
-// const { Menu } = require('electron')
-// const electron = require('electron')
-// const app = electron.app
-
 const template = [
   {
     label: 'Edit',
@@ -634,9 +747,9 @@ const template = [
       {
         role: 'paste'
       },
-      {
-        role: 'pasteandmatchstyle'
-      },
+      // {
+      //   role: 'pasteandmatchstyle'
+      // },
       {
         role: 'delete'
       },
@@ -871,8 +984,13 @@ function createWindow() {
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'));
 
-  // Populate OS menus
+  // OS menus
   create();
+
+  // Keyboard shortcuts
+  electronLocalshortcut.register(win, 'Cmd+S', () => {
+    win.webContents.send('keyboardShortcut', 'Cmd+S');
+  });
 
   // Send state to render process once dom is ready
   win.once('ready-to-show', () => {
@@ -886,19 +1004,19 @@ function createWindow() {
   // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
   // }, 1000)
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
   // }, 1000)
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/arasd'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/arasd'})
   // }, 4000)
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Notes'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Notes'})
   // }, 6000)
 }
 
@@ -922,6 +1040,12 @@ store.onDidAnyChange((newState, oldState) => {
 
 // -------- IPC: Send/Receive -------- //
 
+electron.ipcMain.on('saveFile', async (event, filePath, fileContents) => {
+  console.log(filePath);
+  console.log(fileContents);
+  await fsExtra.writeFile(filePath, fileContents, 'utf8');
+});
+
 electron.ipcMain.on('showWindow', (event) => {
   win.show();
 });
@@ -936,7 +1060,7 @@ electron.ipcMain.on('selectProjectPath', async (event) => {
     properties: ['openDirectory', 'createDirectory']
   });
   if (!selection.canceled) {
-    store.dispatch({ type: 'SET_PROJECT_DIRECTORY', path: selection.filePaths[0] });
+    store.dispatch({ type: 'SET_PROJECT_PATH', path: selection.filePaths[0] });
   }
 });
 

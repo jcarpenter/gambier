@@ -43,27 +43,3 @@ body {
 //     padding: 0;
 // }
 
-// #editor {
-//     height: 100%;
-//     display: flex;
-//     justify-content: center;
-//     grid-column: editor;
-//     background: white;
-//     // padding: var(--grid-half) 0;
-// }
-
-#editor .CodeMirror {
-    // min-width: 34em;
-    // max-width: 44em;
-    width: 48em;
-    padding-top: var(--grid);
-    height: auto;
-    // border: 1px solid gray;
-}
-
-#bracketsWidget {
-    background: pink;
-    padding: 0 0.5em;
-    position: absolute;
-    z-index: 10;
-}

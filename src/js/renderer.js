@@ -10,15 +10,18 @@ async function setup() {
 
   const layout = new Layout({
     target: document.querySelector('#layout'),
-    props: { state: initialState }
+    props: { 
+      state: initialState,
+      oldState: initialState,
+    }
   });
 
   window.api.receive("stateChanged", (newState, oldState) => {
-    console.log("State changed")
-    console.log(layout.state)
-    console.log(newState)
-    console.log("----")
+    // console.log("State changed")
+    // console.log(layout.state)
+    // console.log("----")
     layout.state = newState
+    layout.oldState = oldState
   });
 
   window.api.send('showWindow')

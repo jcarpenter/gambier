@@ -14,6 +14,8 @@ import { getCharAt } from '../editor/editor-utils'
 
 // -------- SHARED VARIABLES -------- //
 
+let state = {}
+
 let editor
 let fileId
 let filePath
@@ -26,15 +28,30 @@ let citationItems
 
 const turndownService = new TurndownService()
 
+
 // -------- SETUP -------- //
 
 /**
  * Load file contents into CodeMirror
+ * If id param is empty, start new doc. This can happen when opening an empty SideBar item (e.g. Favorites, if there are no files with `favorite` tag.)
  */
-function loadFile(file) {
-  editor.setValue(file)
+async function loadFile(fileId) {
+  if (fileId == '') {
+    // This
+    startNewDoc()
+  } else {
+    const file = await window.api.invoke('getFileById', fileId, 'utf8')
+    filePath = state.contents.find((f) => f.id == fileId).path
+    filePath = filePath.substring(0, filePath.lastIndexOf('/'))
+    editor.setValue(file)
+    editor.clearHistory()
+    findAndMark()
+  }
+}
+
+function startNewDoc() {
+  editor.setValue()
   editor.clearHistory()
-  // findAndMark()
 }
 
 /**
@@ -68,9 +85,11 @@ function findAndMark() {
  * Every time cursor updates, check last line it was in for citations. We have to do this, because TODO... (along lines of: citations open/close when they're clicked into and out-of)
  */
 function onCursorActivity() {
-  lastCursorLine = editor.getCursor().line
+  // lastCursorLine = editor.getCursor().line
   // editor.addWidget(editor.getCursor(), el)
-  findAndMark()
+
+  // TODO: June 23: Revisit this. Turned off temporarily.
+  // findAndMark()
 }
 
 function onChange(cm, change) {
@@ -104,7 +123,14 @@ function onChange(cm, change) {
   }
 }
 
+
+/**
+ * Handle paste operations
+ * If URL, generate link.
+ * Else, if HTML, convert to markdown} cm 
+ */
 async function onBeforeChange(cm, change) {
+
   if (change.origin === 'paste') {
     const selection = editor.getSelection()
     const isURL = isUrl(change.text)
@@ -130,25 +156,20 @@ async function onBeforeChange(cm, change) {
   }
 }
 
-// function onInputRead(cm, change) {
-//   console.log(change)
-// }
-
 // -------- SETUP -------- //
 
-function makeEditor() {
+function makeEditor(textarea) {
 
   // Brackets widget
-  bracketsWidget = mountReplace(BracketsWidget, {
-    target: document.querySelector('#bracketsWidget'),
-    // props: {  }
-  })
+  // bracketsWidget = mountReplace(BracketsWidget, {
+  //   target: document.querySelector('#bracketsWidget'),
+  //   // props: {  }
+  // })
 
   // Define "gambier" CodeMirror mode
   defineGambierMode()
 
-  // Create CodeMirror instance from `<textarea>` (which is replaced).
-  const textarea = document.querySelector('#editor textarea')
+  // Create CodeMirror instance from textarea element (which is replaced).
   editor = CodeMirror.fromTextArea(textarea, {
     mode: 'gambier',
     lineWrapping: true,
@@ -165,42 +186,37 @@ function makeEditor() {
 
   // Setup event listeners
   editor.on("cursorActivity", onCursorActivity)
-  editor.on("change", onChange)
+  // editor.on("change", onChange)
+
+  /**
+   * "This event is fired before a change is applied, and its handler may choose to modify or cancel the change"
+   * See: https://codemirror.net/doc/manual.html#event_beforeChange
+   */
   editor.on('beforeChange', onBeforeChange)
-  // editor.on("inputRead", onInputRead)
 }
 
-async function setup(initialState) {
+async function setup(textarea, initialState) {
+
+  state = initialState
 
   // Make editor
-  makeEditor()
+  makeEditor(textarea)
 
   // Setup change listeners
-  window.api.receive('stateChanged', async (state, oldState) => {
-
-    if (state.changed.includes('selectedFileId')) {
-      console.log(state.selectedFileId)
-      fileId = state.selectedFileId
-      const file = await window.api.invoke('getFileById', fileId, 'utf8')
-      loadFile(file)
+  window.api.receive('stateChanged', async (newState, oldState) => {
+    if (newState.changed.includes('selectedFileId')) {
+      state = newState
+      loadFile(state.selectedFileId)
     }
   })
 
-  // Check if projectPath defined. If no, exit.
-  if (
-    initialState.projectPath == '' ||
-    initialState.selectedFileId == 0
-  ) {
-    console.log("No project path defined")
-    return
-  }
+  window.api.receive('keyboardShortcut', (shortcut) => {
+    const filePath = state.contents.find((c) => c.id == state.selectedFileId).path
+    window.api.send('saveFile', filePath, editor.getValue())
+  })
 
-  // Get file to load, and load
-  fileId = initialState.selectedFileId
-  filePath = initialState.contents.find((f) => f.id == fileId).path
-  filePath = filePath.substring(0, filePath.lastIndexOf('/'))
-  const file = await window.api.invoke('getFileById', fileId, 'utf8')
-  loadFile(file)
+  // Load file
+  loadFile(initialState.selectedFileId)
 }
 
 export { setup }

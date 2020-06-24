@@ -1,7 +1,8 @@
 // External dependencies
 import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import path from 'path'
-import { readdir, readFile, pathExists, stat } from 'fs-extra'
+import electronLocalshortcut from 'electron-localshortcut'
+import { readdir, readFile, pathExists, stat, writeFile } from 'fs-extra'
 
 // Bundled dependencies
 import { GambierStore } from './js/GambierStore'
@@ -94,8 +95,13 @@ function createWindow() {
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'))
 
-  // Populate OS menus
+  // OS menus
   mainMenu.create()
+
+  // Keyboard shortcuts
+  electronLocalshortcut.register(win, 'Cmd+S', () => {
+    win.webContents.send('keyboardShortcut', 'Cmd+S')
+  });
 
   // Send state to render process once dom is ready
   win.once('ready-to-show', () => {
@@ -109,19 +115,19 @@ function createWindow() {
   // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
   // }, 1000)
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
   // }, 1000)
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/arasd'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/arasd'})
   // }, 4000)
 
   // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_DIRECTORY', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Notes'})
+  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Notes'})
   // }, 6000)
 }
 
@@ -145,6 +151,12 @@ store.onDidAnyChange((newState, oldState) => {
 
 // -------- IPC: Send/Receive -------- //
 
+ipcMain.on('saveFile', async (event, filePath, fileContents) => {
+  console.log(filePath)
+  console.log(fileContents)
+  await writeFile(filePath, fileContents, 'utf8')
+})
+
 ipcMain.on('showWindow', (event) => {
   win.show()
 })
@@ -159,7 +171,7 @@ ipcMain.on('selectProjectPath', async (event) => {
     properties: ['openDirectory', 'createDirectory']
   })
   if (!selection.canceled) {
-    store.dispatch({ type: 'SET_PROJECT_DIRECTORY', path: selection.filePaths[0] })
+    store.dispatch({ type: 'SET_PROJECT_PATH', path: selection.filePaths[0] })
   }
 })
 

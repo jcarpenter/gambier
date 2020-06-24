@@ -4,9 +4,9 @@ var electron = require('electron');
 
 // Whitelist channels
 
-let validSendChannels = ['hideWindow', 'showWindow', 'selectProjectPath', 'dispatch'];
+let validSendChannels = ['saveFile', 'hideWindow', 'showWindow', 'selectProjectPath', 'dispatch'];
 
-let validReceiveChannels = ['stateChanged', 'setInitialState'];
+let validReceiveChannels = ['keyboardShortcut', 'stateChanged', 'setInitialState'];
 
 let validInvokeChannels = ['ifPathExists', 'getState', 'getCitations', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard'];
 

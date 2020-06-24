@@ -1,6 +1,6 @@
 <script>
   /**
-   * Render project directory contents as tree of folders.
+   * Render project folder contents as tree of folders.
    * Folder component does most of the work here.
    */
   import { onMount } from "svelte";
@@ -26,7 +26,7 @@
 
   // Filter to only directories
     const flatArrayOfFolders = state.contents.filter(
-      c => c.type == "directory"
+      c => c.type == "folder"
     );
 
     // Add `filesSearchCriteria` for each

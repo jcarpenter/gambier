@@ -3,38 +3,88 @@
    * Render files in a folder as a vertical list
    */
   import { onMount, tick } from "svelte";
+  import FileListItem from "./FileListItem.svelte";
 
   export let state = {};
+  export let oldState = {};
   export let focused;
 
+  // Files
   let files = [];
+  let fileEl
+  let selectedFileIndex = 0;
+  
+  // Sorting
   let sortKey = "title";
   let sortOrder = "ascending";
 
-  let selectedFileIndex = 0;
-  let selectedEl = undefined;
 
+  $: sideBarItem = state.sideBar.items.find((i) => i.id == state.sideBar.selectedItemId)
+  $: focused = state.focusedLayoutSection == 'navigation'
   $: {
+    if (state.changed.includes("sideBar.selectedItemId")) {
+      saveOutgoingSideBarItemScrollPosition()
+    }
+
     if (
-      state.changed.includes("contents") ||
-      state.changed.includes("filesSearchCriteria") ||
-      state.changed.includes("selectedFileId")
+      state.changed.includes("sideBar.selectedItemId") ||
+      state.changed.includes("contents")
     ) {
-      files = getFiles();
+      getFiles();
       sortFiles();
+      restoreSideBarItemScrollPosition()
+      restoreFileSelection()
     }
   }
 
   onMount(async () => {
-    files = getFiles();
+    getFiles();
     sortFiles();
+    restoreSideBarItemScrollPosition()
+    restoreFileSelection()
   });
+
+  /** 
+   * Restore the previous SideBar file selection.
+   * Unless it's empty (never set). In which case, select the first of `files`
+   * Unless it's -also- empty, in which case, do not select anything
+  */
+  function restoreFileSelection() {
+    if (files.length > 0) {
+      selectFile(sideBarItem.selectedFileId !== '' ? sideBarItem.selectedFileId : files[0].id)
+    }
+  }
+  
+  function saveOutgoingSideBarItemScrollPosition() {
+    if (!fileEl || oldState.sideBar.selectedItemId == '') return 
+    
+    window.api.send("dispatch", {
+      type: "SAVE_SIDEBAR_SCROLL_POSITION",
+      sideBarItemId: oldState.sideBar.selectedItemId,
+      scrollposition: fileEl.scrollTop
+    });
+  }
+
+  async function restoreSideBarItemScrollPosition() {
+    await tick();
+    fileEl.scrollTop = sideBarItem.scrollPosition
+  }
+
+  async function scrollElementIntoView(element, animate = true) {
+    if (element) {
+      element.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+        behavior: animate ? "smooth" : "auto"
+      });
+    }
+  }
 
   function getChildFolderIds(parentFolder) {
     let ids = [];
 
     const children = state.contents.map(c => {
-      if (c.type == "directory" && c.parentId == parentFolder.id) {
+      if (c.type == "folder" && c.parentId == parentFolder.id) {
         // Push id of child folder
         ids.push(c.id);
 
@@ -49,24 +99,25 @@
   }
 
   function getFiles() {
+
     if (
       state.projectPath == "" ||
-      !state.contents.length > 0 ||
-      !state.filesSearchCriteria
-    )
+      !state.contents.length > 0
+    ) {
       return [];
+    }
 
-    let files = [];
+    const searchParams = sideBarItem.filesSearchParams
 
-    const folderId = state.filesSearchCriteria.lookInFolderId;
-    const includeChildren = state.filesSearchCriteria.includeChildren;
-    const tags = state.filesSearchCriteria.tags;
-    const filterDateModified = state.filesSearchCriteria.filterDateModified;
-    const filterDateCreated = state.filesSearchCriteria.filterDateCreated;
+    const folderId = searchParams.lookInFolderId;
+    const includeChildren = searchParams.includeChildren;
+    const tags = searchParams.tags;
+    const filterDateModified = searchParams.filterDateModified;
+    const filterDateCreated = searchParams.filterDateCreated;
 
     // Get selected folder
     const folder = state.contents.find(
-      c => c.type == "directory" && c.id == folderId
+      c => c.type == "folder" && c.id == folderId
     );
 
     // Get all files for selected folder
@@ -102,8 +153,8 @@
 
     // Filter by date modified
     if (filterDateModified) {
-      const from = new Date(state.filesSearchCriteria.fromDateModified);
-      const to = new Date(state.filesSearchCriteria.toDateModified);
+      const from = new Date(searchParams.fromDateModified);
+      const to = new Date(searchParams.toDateModified);
       files = files.filter(f => {
         const modified = new Date(f.modified);
         if (modified < from && modified > to) {
@@ -114,8 +165,8 @@
 
     // Filter by date modified
     if (filterDateCreated) {
-      const from = new Date(state.filesSearchCriteria.fromDateCreated);
-      const to = new Date(state.filesSearchCriteria.toDateCreated);
+      const from = new Date(searchParams.fromDateCreated);
+      const to = new Date(searchParams.toDateCreated);
       files = files.filter(f => {
         const created = new Date(f.created);
         if (created < from && created > to) {
@@ -123,13 +174,9 @@
         }
       });
     }
-
-    return files;
   }
 
   function sortFiles() {
-    if (!files) return;
-
     if (sortKey == "title") {
       if (sortOrder == "ascending") {
         files.sort((a, b) => a.title.localeCompare(b.title));
@@ -137,40 +184,6 @@
         files.sort((a, b) => b.title.localeCompare(a.title));
       }
     }
-  }
-
-  /**
-   * Set `selected` property of each entry in files array.
-   * Set all to false, except the one whose id == state.lastOpenedFileId.
-   * Then make sure the selected file is scrolled into view.
-   */
-  async function setSelectedFile(state) {
-    if (files.length == 0) return;
-
-    // Get selectedFileId for selectedFolder
-    let selectedFileId = state.contents.find(
-      d => d.type == "directory" && d.id == state.selectedFolderId
-    ).selectedFileId;
-
-    // If it's 0 (the default, meaning "nothing"), set selectFileId to first of files
-    if (selectedFileId == "") {
-      selectedFileId = files[0].id;
-    }
-
-    // Find the file whose id == selectedFileId,
-    // and set selected true, and `selectedFileIndex = index`
-    // Set all other files unselected
-    files.forEach((f, index) => {
-      f.selected = f.id == selectedFileId;
-      if (f.selected) selectedFileIndex = index;
-    });
-
-    // Tell Svelte that variable has changed. Makes view update.
-    files = files;
-
-    // Await tick, then scroll file into view
-    await tick();
-    scrollFileIntoView(selectedEl, true);
   }
 
   /**
@@ -184,38 +197,34 @@
       case "Tab":
         event.preventDefault();
         break;
-      case "ArrowUp":
+      case "ArrowUp": {
         event.preventDefault();
-        if (selectedFileIndex > 0) {
-          const prevFileId = files[selectedFileIndex - 1].id;
-          window.api.send("dispatch", { type: "OPEN_FILE", id: prevFileId });
+        const currentIndex = files.findIndex((f) => f.id == sideBarItem.selectedFileId)
+        if (currentIndex > 0) {
+          const prevFileId = files[currentIndex - 1].id;
+          const prevFileEl = fileEl.querySelector('.selected').previousSibling
+          selectFile(prevFileId)
+          scrollElementIntoView(prevFileEl, true)
         }
         break;
-      case "ArrowDown":
+      }
+      case "ArrowDown": {
         event.preventDefault();
-        if (selectedFileIndex < files.length - 1) {
-          const nextFileId = files[selectedFileIndex + 1].id;
-          window.api.send("dispatch", { type: "OPEN_FILE", id: nextFileId });
+        const currentIndex = files.findIndex((f) => f.id == sideBarItem.selectedFileId)
+        if (currentIndex < files.length - 1) {
+          const nextFileId = files[currentIndex + 1].id;
+          const nextFileEl = fileEl.querySelector('.selected').nextSibling
+          selectFile(nextFileId)
+          scrollElementIntoView(nextFileEl, true)
         }
         break;
+      }
     }
   }
 
-  function scrollFileIntoView(element, animate = true) {
-    const behavior = animate ? "smooth" : "auto";
-    if (element) {
-      element.scrollIntoView({
-        block: "nearest",
-        inline: "nearest",
-        behavior: behavior
-      });
-    }
-  }
-
-  function openFile(id) {
+  function selectFile(id) {
     window.api.send("dispatch", {
-      type: "OPEN_FILE",
-      // parentId: selectedFolderId,
+      type: "SELECT_FILE",
       fileId: id
     });
   }
@@ -233,78 +242,17 @@
     padding: 0;
     user-select: none;
   }
-
-  .file {
-    padding: 0.5em 1em 0;
-
-    &:focus {
-      outline: none;
-    }
-  }
-
-  h2,
-  p {
-    margin: 0;
-    padding: 0;
-    pointer-events: none;
-    word-break: break-word;
-  }
-
-  h2 {
-    @include column;
-  }
-
-  p {
-    @include column;
-
-    color: gray;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  hr {
-    margin: 0.5em 0 0;
-    height: 1px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border: 0;
-  }
-
-  .selected {
-    background: var(--clr-gray-lightest);
-  }
-
-  .focused .selected {
-    background: rgb(45, 103, 250);
-    h2 {
-      color: white;
-    }
-    p {
-      color: rgba(255, 255, 255, 0.8);
-    }
-  }
 </style>
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div id="files" class:focused>
+<div id="files" class:focused bind:this={fileEl}>
   {#each files as file}
-    {#if file.selected}
-      <div bind:this={selectedEl} class="file selected" tabindex="0">
-        <h2>{file.title}</h2>
-        <p>{file.excerpt}</p>
-        <hr />
-      </div>
-    {:else}
-      <div
-        class="file"
-        on:click|preventDefault={() => openFile(file.id)}
-        tabindex="0">
-        <h2>{file.title}</h2>
-        <p>{file.excerpt}</p>
-        <hr />
-      </div>
-    {/if}
+    <FileListItem
+      state={state}
+      title={file.title}
+      excerpt={file.excerpt}
+      selected={file.id == sideBarItem.selectedFileId}
+      on:click={() => {if (file.id !== sideBarItem.selectedFileId) selectFile(file.id)}} />
   {/each}
 </div>

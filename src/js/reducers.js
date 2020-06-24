@@ -1,22 +1,100 @@
-function getRootFolder(contents) {
-  return contents.find((d) => d.type == 'directory' && d.isRoot)
-}
-
-function getDirectoryById(contents, id) {
-  return contents.find((d) => d.type == 'directory' && d.id == id)
-}
-
-function getFirstFileInDirectory(contents, directoryId) {
-  const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId)
-  return files[0]
-}
-
 /**
  * Check if contents contains item by type and id
  */
-function contentContainsItemById(contents, type, id) {
-  return contents.some((d) => d.type == type && d.id == id)
+// function contentContainsItemById(contents, type, id) {
+//   return contents.some((d) => d.type == type && d.id == id)
+// }
+
+// function getDirectoryById(contents, id) {
+//   return contents.find((d) => d.type == 'directory' && d.id == id)
+// }
+
+// function getFirstFileInDirectory(contents, directoryId) {
+//   const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId)
+//   return files[0]
+// }
+
+function getRootFolder(contents) {
+  return contents.find((d) => d.type == 'folder' && d.isRoot)
 }
+
+function getSideBarItem(sideBarItems, id) {
+  return sideBarItems.find((i) => i.id == id)
+}
+
+
+
+
+
+
+
+
+function updateSideBarItems(newState) {
+
+  const rootFolder = getRootFolder(newState.contents)
+
+  // Update `filesFilter` type items. 
+  // Specifically, their lookInFolder values, to point to correct `contents` id.
+  newState.sideBar.items.forEach((i) => {
+    if (i.type == 'filesFilter') {
+      i.filesSearchParams.lookInFolderId = rootFolder.id
+    }
+  })
+
+  // Update root folder item values. This item holds the project file hierarchy, in the UI.
+  const rootFolderItem = newState.sideBar.items.find((i) => i.type == 'filesFolder' && i.isRoot)
+  rootFolderItem.label = rootFolder.name
+  rootFolderItem.id = rootFolder.id
+  rootFolderItem.filesSearchParams.lookInFolderId = rootFolder.id
+
+  // Remove existing child folder items.
+  newState.sideBar.items = newState.sideBar.items.filter((i) => i.isRoot || i.type !== 'filesFolder')
+
+  // Add child folder items.
+  // For each, set parent item as root folder item, and push into items array.
+  if (rootFolder.childFolderCount > 0) {
+    createAndInsertChildFolderItems(rootFolder)
+  }
+
+  function createAndInsertChildFolderItems(folder) {
+
+    // For the given folder in contents, find it's children,
+    // create a new sideBar item for each, and recursively do 
+    // the same for their children, in turn
+
+    newState.contents.map((c) => {
+      if (c.type == 'folder' && c.parentId == folder.id) {
+
+        const childFolderItem = {
+          label: c.name,
+          id: c.id,
+          parentId: folder.id,
+          type: 'filesFolder',
+          isRoot: false,
+          icon: 'images/folder.svg',
+          showFilesList: true,
+          filesSearchParams: {
+            lookInFolderId: c.id,
+            includeChildren: false
+          },
+          selectedFileId: ''
+        }
+
+        newState.sideBar.items.push(childFolderItem)
+
+        // Recursive loop
+        if (c.childFolderCount > 0) {
+          createAndInsertChildFolderItems(c)
+        }
+      }
+    })
+  }
+}
+
+
+
+
+
 
 /**
  * `state = {}` gives us a default, for possible first run empty '' value.
@@ -30,20 +108,21 @@ function reducers(state = {}, action) {
 
   switch (action.type) {
 
-    case 'SET_PROJECT_DIRECTORY': {
+    case 'SET_LAYOUT_FOCUS': {
+      newState.focusedLayoutSection = action.section
+      newState.changed.push('focusedLayoutSection')
+      break
+    }
+
+    case 'TOGGLE_SIDEBAR_ITEM_EXPANDED': {
+      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id)
+      sideBarItem.expanded = !sideBarItem.expanded
+      newState.changed.push('sideBar item expanded')
+      break
+    }
+
+    case 'SET_PROJECT_PATH': {
       newState.projectPath = action.path
-
-      // Handle first run and error conditions:
-      // If SideBar item has not been selected yet, select All 
-      // if (state.sideBar.selectedItemId == '') {
-      //   console.log("SET IT UPPPPP")
-      //   state.sideBar.selectedItemId = 'all'
-      //   newState.showFilesList = true
-      //   newState.filesSearchCriteria.lookInFolderId = newState.rootFolderId
-      //   newState.filesSearchCriteria.includeChildren = true
-      //   newState.changed.push('sideBar')
-      // }
-
       newState.changed.push('projectPath')
       break
     }
@@ -55,86 +134,53 @@ function reducers(state = {}, action) {
       const rootFolder = getRootFolder(newState.contents)
       newState.rootFolderId = rootFolder.id
 
-      // Handle case of previously-selected folder no longer existing, since remap.
-      // Check if selected item is folder, and if it no longer exists in content.
-      // If conditions met, 
-      // if (
-      //   state.sideBar.selectedItemId.includes('folder') &&
-      //   !contentContainsItemById(newState.contents, 'directory', state.sideBar.selectedItemId)
-      // ) {
-      //   state.sideBar.selectedItemId = 'all'
-      //   newState.showFilesList = true
-      //   newState.filesSearchCriteria = {
-      //     lookInFolderId: newState.rootFolderId,
-      //     includeChildren: true,
-      //   }
-      //   // newState.selectedFileId = newState.contents.find((c) => c.type == 'file')
-      //   newState.changed.push('sideBar', 'selectedFileId')
-      // }
+      updateSideBarItems(newState)
 
-
-
-      // Handle first run and error conditions:
-      // If a folder has not been selected yet, or if the previously-selected 
-      // folder does not exist in updated contents, select root directory.
-      // if (
-      //   state.sideBar.selectedItemId == '' ||
-      //   !hasContentById(newState.contents, 'directory', state.sideBar.selectedItemId)
-      // ) {
-
-      //   // Set sideBar selected item
-      //   state.sideBar.selectedItemId = newState.rootFolderId
-
-      //   // If `rootDir` has child files, set `selectedFileId` to first one. Else, set `selectedFileId` to '' (empty)
-      //   if (rootFolder.childFileCount > 0) {
-      //     const firstFile = getFirstFileInDirectory(newState.contents, newState.selectedFolderId)
-      //     newState.selectedFileId = firstFile.id
-      //   } else {
-      //     newState.selectedFileId = ''
-      //   }
-
-      //   newState.changed.push('selectedFolderId', 'selectedFileId', 'rootFolderId')
-      // }
-
-      newState.changed.push('contents')
+      newState.changed.push('sideBar', 'contents')
       break
     }
 
     case 'SELECT_SIDEBAR_ITEM': {
-      // if (action.filesSearchCriteria) {
-      //   newState.filesSearchCriteria = action.filesSearchCriteria
-      //   newState.changed.push('filesSearchCriteria')
-      // }
-      // newState.showFilesList = action.showFilesList
-      state.sideBar.selectedItemId = action.id
-      newState.changed.push('sideBar')
+      
+      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id)
+      
+      // Update FileList visibility
+      newState.showFilesList = sideBarItem.showFilesList
+      newState.changed.push('showFilesList')
+      
+      // Update selected SideBar item
+      newState.sideBar.selectedItemId = action.id
+      newState.changed.push('sideBar.selectedItemId')
+
+      // Update selected file
+      newState.selectedFileId = sideBarItem.selectedFileId
+      newState.changed.push('selectedFileId')
+      
       break
     }
 
-    // case 'OPEN_FOLDER': {
+    // This is set on the _outgoing_ item, when the user is switching SideBar items.
+    // 
+    case 'SAVE_SIDEBAR_SCROLL_POSITION': {
+      const sideBarItem = getSideBarItem(newState.sideBar.items, action.sideBarItemId)
+      sideBarItem.scrollPosition = action.scrollposition
+      newState.changed.push('sideBar scrollposition')
+      break
+    }
 
-    //   // Set `state.selectedFolderId`
-    //   newState.selectedFolderId = action.id
+    case 'SELECT_FILE': {
 
-    //   const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.id)
+      // Update the `selectedItemId` value of the active sideBar item
+      const sideBarItem = getSideBarItem(newState.sideBar.items, newState.sideBar.selectedItemId)
 
-    //   // Set `state.selectedFileId` to folder's selected file
-    //   newState.selectedFileId = selectedFolder.selectedFileId
+      if (sideBarItem.type == 'filesFolder' || sideBarItem.type == 'filesFilter') {
+        sideBarItem.selectedFileId = action.fileId
+      }
 
-    //   newState.changed.push('selectedFolderId', 'selectedFileId')
-
-    //   break
-    // }
-
-    case 'OPEN_FILE': {
+      // Update the `selectedFileId`
       newState.selectedFileId = action.fileId
 
-      // Find directory that contains selected file, 
-      // and set its `selectedFileId` property.
-      const selectedFolder = newState.contents.find((d) => d.type == 'directory' && d.id == action.parentId)
-      selectedFolder.selectedFileId = action.fileId
-
-      newState.changed.push('selectedFileId', 'selectedFolder.selectedFileId')
+      newState.changed.push('selectedFileId')
 
       break
     }

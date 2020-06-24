@@ -23,11 +23,13 @@ class GambierStore extends Store {
 
   dispatch(action) {
 
+    // Optional: Log the changes (useful for debug)
+    this.logTheAction(action)
+    
     // Get next state
     const nextState = reducers(this.getCurrentState(), action)
 
-    // Optional: Log the changes (useful for debug)
-    this.logTheAction(action)
+    // Optional: Log the diff (useful for debug)
     this.logTheDiff(this.getCurrentState(), nextState)
 
     // Set the next state
@@ -49,7 +51,7 @@ class GambierStore extends Store {
       // console.log(diff)
       console.log(`Changed: ${nextState.changed}`.yellow)
     } else {
-      console.log('No changes')
+      console.log('No changes'.yellow)
     }
   }
 }

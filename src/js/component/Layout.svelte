@@ -7,8 +7,17 @@
   import Editor from "./Editor.svelte";
 
   export let state = {};
+  export let oldState = {};
 
   let focusedSection;
+
+  function setLayoutFocus(section) {
+    if (state.focusedLayoutSection == section) return
+    window.api.send("dispatch", {
+      type: "SET_LAYOUT_FOCUS",
+      section: section
+    });
+  }
 
 </script>
 
@@ -34,19 +43,20 @@
       min={160}
       max={220}
       start={180}
-      on:click={() => (focusedSection = 'Navigation')}>
-      <SideBar state={state} focused={focusedSection == 'Navigation'} />
+      on:click={() => setLayoutFocus('navigation')}>
+      <SideBar state={state} />
     </FlexPanel>
-    <FlexPanel
-      visible={state.showFilesList}
-      min={260}
-      max={320}
-      start={280}
-      on:click={() => (focusedSection = 'Navigation')}>
-      <FileList state={state} focused={focusedSection == 'Navigation'} />
-    </FlexPanel>
+    {#if state.showFilesList}
+      <FlexPanel
+        min={260}
+        max={320}
+        start={280}
+        on:click={() => setLayoutFocus('navigation')}>
+        <FileList state={state} oldState={oldState} />
+      </FlexPanel>
+    {/if}
     <Editor
-      on:click={() => (focusedSection = 'Editor')}
-      focused={focusedSection == 'Editor'} />
+      state={state}
+      on:click={() => setLayoutFocus('editor')} />
   </div>
 {/if}

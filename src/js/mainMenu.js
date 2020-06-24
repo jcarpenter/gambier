@@ -3,10 +3,6 @@ import electron from 'electron'
 
 const app = electron.app
 
-// const { Menu } = require('electron')
-// const electron = require('electron')
-// const app = electron.app
-
 const template = [
   {
     label: 'Edit',
@@ -29,9 +25,9 @@ const template = [
       {
         role: 'paste'
       },
-      {
-        role: 'pasteandmatchstyle'
-      },
+      // {
+      //   role: 'pasteandmatchstyle'
+      // },
       {
         role: 'delete'
       },
