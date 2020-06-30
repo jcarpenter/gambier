@@ -21,7 +21,7 @@
   onMount(() => {
     buildTree()
 
-    if (state.sideBar.selectedItemId == '') {
+    if (state.selectedSideBarItemId == '') {
       window.api.send("dispatch", {
         type: "SELECT_SIDEBAR_ITEM",
         id: "all"
@@ -37,7 +37,7 @@
 </script>
 
 <style type="text/scss">
-  @import "../../styles/_variables.scss";
+  @import "../../../styles/_variables.scss";
 
   #sidebar {
     width: 100%;

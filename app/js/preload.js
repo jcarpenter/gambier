@@ -3,12 +3,14 @@
 var electron = require('electron');
 
 // Whitelist channels
+// Main <-- Renderer
+let validSendChannels = ['hideWindow', 'showWindow', 'selectProjectPath', 'dispatch'];
 
-let validSendChannels = ['saveFile', 'hideWindow', 'showWindow', 'selectProjectPath', 'dispatch'];
+// Main --> Renderer
+let validReceiveChannels = ['mainRequestsDeleteFile', 'mainRequestsSaveFile', 'keyboardShortcut', 'stateChanged', 'setInitialState'];
 
-let validReceiveChannels = ['keyboardShortcut', 'stateChanged', 'setInitialState'];
-
-let validInvokeChannels = ['ifPathExists', 'getState', 'getCitations', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard'];
+// Main <--> Renderer
+let validInvokeChannels = ['ifPathExists', 'getState', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard'];
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 electron.contextBridge.exposeInMainWorld(

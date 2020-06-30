@@ -56,7 +56,7 @@
   id={rootFolder.id}
   children={rootFolder.children ? rootFolder.children : []}
   filesSearchCriteria={rootFolder.filesSearchCriteria}
-  selected={state.sideBar.selectedItemId == rootFolder.id}
+  selected={state.selectedSideBarItemId == rootFolder.id}
   icon={'images/folder.svg'}
   showFilesList={true}
   expanded />

@@ -24,7 +24,7 @@
 </script>
 
 <style type="text/scss">
-  @import "../../styles/_variables.scss";
+  @import "../../../styles/_variables.scss";
   .link {
     position: absolute;
     box-sizing: border-box;

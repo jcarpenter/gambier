@@ -3,7 +3,7 @@ import chokidar from 'chokidar'
 import path from 'path'
 import matter from 'gray-matter'
 import removeMd from 'remove-markdown'
-import { applyDiffs, isWorkingPath } from './utils-mainProcess'
+import { applyDiffs, isWorkingPath } from './utils-main'
 import diff from 'deep-diff'
 
 /**
@@ -51,11 +51,26 @@ class GambierContents {
       }
     })
 
-    this.watcher.on('all', (event, path) => {
-      console.log(event)
-      console.log(path)
-      this.mapProjectPath()
-    })
+    const log = console.log.bind(console);
+
+    this.watcher
+      // .on('add', (path) => this.store.dispatch({ type: 'HANDLE_ADD_FILE', path: path }))
+      .on('add', (path) => this.store.dispatch({ type: 'HANDLE_ADD_FILE', path: path }))
+      .on('change', (path) => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
+      .on('unlink', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_FILE', path: path }))
+      .on('addDir', (path) => this.store.dispatch({ type: 'HANDLE_ADD_DIR', path: path }))
+      .on('unlinkDir', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_DIR', path: path }))
+      // .on('ready', () => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
+      // .on('error', error => log(`error: Watcher error: ${error}`))
+
+
+    // this.watcher.on('all', (event, path) => {
+    //   console.log(event)
+    //   console.log(path)
+    //   this.mapProjectPath()
+    // })
+
+
   }
 
   /**
@@ -70,7 +85,7 @@ class GambierContents {
       let contents = await this.mapFolderRecursively(this.projectPath)
       contents = await this.getFilesDetails(contents)
       contents = this.applyDiffs(this.store.store.contents, contents)
-      this.store.dispatch({ type: 'MAP_HIERARCHY', contents: contents })
+      this.store.dispatch({ type: 'MAP_CONTENTS', contents: contents })
     } else {
       this.store.dispatch({ type: 'RESET_HIERARCHY' })
     }

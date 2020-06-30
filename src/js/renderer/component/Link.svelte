@@ -15,7 +15,7 @@
 </script>
 
 <style type="text/scss">
-  @import "../../styles/_variables.scss";
+  @import "../../../styles/_variables.scss";
   .link {
     box-sizing: border-box;
     color: var(--clr-blue);

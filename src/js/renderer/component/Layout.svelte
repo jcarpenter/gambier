@@ -11,6 +11,8 @@
 
   let focusedSection;
 
+  $: isEditorVisible = state.openFile.id
+
   function setLayoutFocus(section) {
     if (state.focusedLayoutSection == section) return
     window.api.send("dispatch", {
@@ -22,10 +24,15 @@
 </script>
 
 <style type="text/scss">
-  @import "../../styles/_variables.scss";
+  @import "../../../styles/_variables.scss";
 
   .flexLayout {
     display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  #mainSection {
     width: 100%;
     height: 100%;
   }
@@ -55,8 +62,11 @@
         <FileList state={state} oldState={oldState} />
       </FlexPanel>
     {/if}
-    <Editor
-      state={state}
-      on:click={() => setLayoutFocus('editor')} />
+    <div id="mainSection">
+        <Editor
+          state={state}
+          visible={isEditorVisible}
+          on:click={() => setLayoutFocus('editor')} />
+    </div>
   </div>
 {/if}

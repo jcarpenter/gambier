@@ -1,7 +1,5 @@
-import { mountReplace } from './utils'
-// import * as Editor from './editor/editor'
-// import * as FirstRun from './firstRun'
 import Layout from './component/Layout.svelte'
+// import { mountReplace } from './utils'
 // import Fuse from './third-party/fuse/fuse.esm.js'
 
 async function setup() {
@@ -17,9 +15,6 @@ async function setup() {
   });
 
   window.api.receive("stateChanged", (newState, oldState) => {
-    // console.log("State changed")
-    // console.log(layout.state)
-    // console.log("----")
     layout.state = newState
     layout.oldState = oldState
   });

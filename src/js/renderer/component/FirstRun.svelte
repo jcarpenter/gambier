@@ -3,7 +3,7 @@
 </script>
 
 <style type='text/scss'>
-  @import '../../styles/_variables.scss';
+  @import '../../../styles/_variables.scss';
 
   #firstrun {
     padding: var(--grid-2);
@@ -34,7 +34,7 @@
   <h2>Get started:</h2>
   <button
     on:click={() => {
-      window.api.send('selectProjectPath');
+      window.api.send('dispatch', { type: 'SET_PROJECT_PATH' });
     }}>
     Choose Project Folder...
   </button>

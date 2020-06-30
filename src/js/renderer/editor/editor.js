@@ -17,8 +17,7 @@ import { getCharAt } from '../editor/editor-utils'
 let state = {}
 
 let editor
-let fileId
-let filePath
+let mediaBasePath
 let bracketsWidget
 
 let lastCursorLine = 0
@@ -35,22 +34,24 @@ const turndownService = new TurndownService()
  * Load file contents into CodeMirror
  * If id param is empty, start new doc. This can happen when opening an empty SideBar item (e.g. Favorites, if there are no files with `favorite` tag.)
  */
-async function loadFile(fileId) {
-  if (fileId == '') {
-    // This
+async function loadFileByPath(filePath) {
+  if (filePath == '') {
     startNewDoc()
   } else {
-    const file = await window.api.invoke('getFileById', fileId, 'utf8')
-    filePath = state.contents.find((f) => f.id == fileId).path
-    filePath = filePath.substring(0, filePath.lastIndexOf('/'))
+
+    // Load file into editor
+    const file = await window.api.invoke('getFileByPath', filePath, 'utf8')
     editor.setValue(file)
     editor.clearHistory()
     findAndMark()
+
+    // Update media path
+    mediaBasePath = filePath.substring(0, filePath.lastIndexOf('/'))
   }
 }
 
 function startNewDoc() {
-  editor.setValue()
+  editor.setValue("Empty doc")
   editor.clearHistory()
 }
 
@@ -66,7 +67,7 @@ function findAndMark() {
       const isList = tokens[0] !== undefined && tokens[0].type !== null && tokens[0].type.includes('list')
 
       if (isFigure) {
-        markFigures(editor, lineHandle, tokens, filePath)
+        markFigures(editor, lineHandle, tokens, mediaBasePath)
       } else {
         if (isList) {
           markList(editor, lineHandle, tokens)
@@ -170,7 +171,7 @@ function makeEditor(textarea) {
   defineGambierMode()
 
   // Create CodeMirror instance from textarea element (which is replaced).
-  editor = CodeMirror.fromTextArea(textarea, {
+  const editor = CodeMirror.fromTextArea(textarea, {
     mode: 'gambier',
     lineWrapping: true,
     lineNumbers: false,
@@ -193,6 +194,8 @@ function makeEditor(textarea) {
    * See: https://codemirror.net/doc/manual.html#event_beforeChange
    */
   editor.on('beforeChange', onBeforeChange)
+
+  return editor
 }
 
 async function setup(textarea, initialState) {
@@ -200,23 +203,30 @@ async function setup(textarea, initialState) {
   state = initialState
 
   // Make editor
-  makeEditor(textarea)
+  editor = makeEditor(textarea)
 
   // Setup change listeners
   window.api.receive('stateChanged', async (newState, oldState) => {
-    if (newState.changed.includes('selectedFileId')) {
-      state = newState
-      loadFile(state.selectedFileId)
+    state = newState
+    if (state.changed.includes('openFile')) {
+      if (state.openFile.path) {
+        loadFileByPath(state.openFile.path) 
+      }
     }
   })
 
-  window.api.receive('keyboardShortcut', (shortcut) => {
-    const filePath = state.contents.find((c) => c.id == state.selectedFileId).path
-    window.api.send('saveFile', filePath, editor.getValue())
+  window.api.receive('mainRequestsSaveFile', () => {
+    // const sideBarItem = state.sideBar.items.find((i) => i.id == state.selectedSideBarItemId)
+    // const selectedFile = state.contents.find((c) => c.id == sideBarItem.lastSelection[0].id)
+
+    // TODO: Update this. Need to get id from `selectedSideBarItemId`.
+    // const filePath = state.contents.find((c) => c.id == state.selectedFileId).path
+    // window.api.send('dispatch', {type: 'SAVE_FILE', path: filePath, data: editor.getValue()})
   })
 
-  // Load file
-  loadFile(initialState.selectedFileId)
+  if (state.openFile.path) {
+    loadFileByPath(state.openFile.path) 
+  }
 }
 
 export { setup }

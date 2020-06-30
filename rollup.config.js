@@ -7,7 +7,7 @@ export default [
   
   // Electron | Main
   {
-    input: 'src/main.js',
+    input: 'src/js/main/main.js',
     output: {
       sourcemap: true,
       format: 'cjs',
@@ -18,7 +18,7 @@ export default [
 
   // Electron | Preload
   {
-    input: 'src/js/preload.js',
+    input: 'src/js/main/preload.js',
     output: {
       sourcemap: false,
       format: 'cjs',
@@ -29,7 +29,7 @@ export default [
 
   // Electron | Renderer
   {
-    input: 'src/js/renderer.js',
+    input: 'src/js/renderer/renderer.js',
     output: {
       sourcemap: true,
       format: 'es',

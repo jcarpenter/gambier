@@ -3,6 +3,7 @@
   import {onMount} from 'svelte'
 
   export let focused;
+  export let visible;
   export let state = {}
 
   let textarea
@@ -14,17 +15,21 @@
 </script>
 
 <style type="text/scss">
-  @import "../../styles/_variables.scss";
+  @import "../../../styles/_variables.scss";
 
   #editor {
     width: 100%;
     height: 100%;
     background-color: white;
-    display: flex;
+    display: none;
     justify-content: center;
 
     &.focused {
       // background-color: red;
+    }
+
+    &.visible {
+      display: flex
     }
   }
 
@@ -36,6 +41,6 @@
   }
 </style>
 
-<div id="editor" class:focused on:click>
-  <textarea bind:this={textarea} style="display: none;">Editor initial text</textarea>
+<div id="editor" class:focused class:visible on:click>
+  <textarea bind:this={textarea} style="display: none;">Gambier</textarea>
 </div>

@@ -13,7 +13,7 @@
   $: sideBarItem = state.sideBar.items.find((i) => i.id == id)
   $: expandable = children.length > 0
   $: expanded = sideBarItem.expanded
-  $: selected = state.sideBar.selectedItemId == sideBarItem.id
+  $: selected = state.selectedSideBarItemId == sideBarItem.id
 
   function clicked() {
     if (selected) return;
@@ -33,7 +33,7 @@
 </script>
 
 <style type="text/scss">
-  @import "../../styles/_variables.scss";
+  @import "../../../styles/_variables.scss";
 
   #container {
     overflow: hidden;

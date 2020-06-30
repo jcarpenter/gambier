@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { fade, fly } from 'svelte/transition';
 
   export let state = {}
   export let selected = false
@@ -11,7 +12,7 @@
 </script>
 
 <style type="text/scss">
-  @import "../../styles/_variables.scss";
+  @import "../../../styles/_variables.scss";
 
   .file {
     padding: 0.5em 1em 0.5em;
@@ -62,7 +63,8 @@
 
 </style>
 
-<div class="file"
+<div
+    class="file"
     class:focused
     class:selected
     on:click|preventDefault

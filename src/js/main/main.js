@@ -5,10 +5,11 @@ import electronLocalshortcut from 'electron-localshortcut'
 import { readdir, readFile, pathExists, stat, writeFile } from 'fs-extra'
 
 // Bundled dependencies
-import { GambierStore } from './js/GambierStore'
-import { GambierContents } from './js/GambierContents'
-// import { projectCitations } from './js/projectCitations'
-import * as mainMenu from './js/mainMenu'
+import { GambierStore } from './GambierStore'
+import { GambierContents } from './GambierContents'
+import * as menuBar from './menuBar'
+// import { projectCitations } from './projectCitations'
+import { saveFile, deleteFile, deleteFiles, setProjectPath } from './actions/index.js'
 
 // Dev only
 import colors from 'colors'
@@ -56,7 +57,6 @@ console.log(`Setup`.bgYellow.black, `(Main.js)`.yellow)
 
 store = new GambierStore()
 contents = new GambierContents(store)
-// projectPath.setup(store)
 // projectCitations.setup(store)
 
 // -------- Create window -------- //
@@ -96,12 +96,12 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'index.html'))
 
   // OS menus
-  mainMenu.create()
+  menuBar.setup(store)
 
   // Keyboard shortcuts
-  electronLocalshortcut.register(win, 'Cmd+S', () => {
-    win.webContents.send('keyboardShortcut', 'Cmd+S')
-  });
+  // electronLocalshortcut.register(win, 'Cmd+S', () => {
+  //   win.webContents.send('keyboardShortcut', 'Cmd+S')
+  // });
 
   // Send state to render process once dom is ready
   win.once('ready-to-show', () => {
@@ -151,32 +151,42 @@ store.onDidAnyChange((newState, oldState) => {
 
 // -------- IPC: Send/Receive -------- //
 
-ipcMain.on('saveFile', async (event, filePath, fileContents) => {
-  console.log(filePath)
-  console.log(fileContents)
-  await writeFile(filePath, fileContents, 'utf8')
-})
-
 ipcMain.on('showWindow', (event) => {
   win.show()
 })
 
-ipcMain.on('hideWindow', (event) => {
-  win.hide()
-})
-
-ipcMain.on('selectProjectPath', async (event) => {
-  const selection = await dialog.showOpenDialog(win, {
-    title: 'Select Project Folder',
-    properties: ['openDirectory', 'createDirectory']
-  })
-  if (!selection.canceled) {
-    store.dispatch({ type: 'SET_PROJECT_PATH', path: selection.filePaths[0] })
+ipcMain.on('dispatch', async (event, action) => {
+  switch (action.type) {
+    case ('LOAD_PATH_IN_EDITOR'):
+      store.dispatch(action)
+    case ('SET_PROJECT_PATH'):
+      store.dispatch(await setProjectPath())
+      break
+    case ('SAVE_FILE'):
+      store.dispatch(await saveFile(action.path, action.data))
+      break
+    case ('DELETE_FILE'):
+      store.dispatch(await deleteFile(action.path))
+      break
+    case ('DELETE_FILES'):
+      store.dispatch(await deleteFiles(action.paths))
+      break
+    case ('SELECT_SIDEBAR_ITEM'):
+      store.dispatch(action)
+      break
+    case ('TOGGLE_SIDEBAR_ITEM_EXPANDED'):
+      store.dispatch(action)
+      break
+    case ('SET_LAYOUT_FOCUS'):
+      store.dispatch(action)
+      break
+    case ('SAVE_SIDEBAR_FILE_SELECTION'):
+      store.dispatch(action)
+      break
+    case ('SAVE_SIDEBAR_SCROLL_POSITION'):
+      store.dispatch(action)
+      break
   }
-})
-
-ipcMain.on('dispatch', (event, action) => {
-  store.dispatch(action)
 })
 
 
@@ -193,6 +203,13 @@ ipcMain.handle('getState', async (event) => {
 
 ipcMain.handle('getCitations', (event) => {
   return projectCitations.getCitations()
+})
+
+ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
+
+  // Load file and return
+  let file = await readFile(filePath, encoding)
+  return file
 })
 
 ipcMain.handle('getFileById', async (event, id, encoding) => {
