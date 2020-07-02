@@ -12,7 +12,7 @@
   $: {
     if (
       state.changed.includes("sideBar") ||
-      state.changed.includes("contents")
+      state.changed.includes("folders")
     ) {
       buildTree()
     }

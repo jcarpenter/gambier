@@ -1,5 +1,3 @@
-import { time_ranges_to_array } from 'svelte/internal';
-
 export const StoreSchema = {
 
   changed: { type: 'array', default: [] },
@@ -9,7 +7,7 @@ export const StoreSchema = {
     default: 'navigation',
   },
 
-  openFile: {
+  openDoc: {
     type: 'object',
     default: {}
   },
@@ -22,11 +20,6 @@ export const StoreSchema = {
   showFilesList: {
     type: 'boolean',
     default: true
-  },
-
-  rootFolderId: {
-    type: 'string',
-    default: ''
   },
 
   projectPath: {
@@ -46,17 +39,45 @@ export const StoreSchema = {
     properties: {
       show: { type: 'boolean', default: true },
       items: {
-        type: 'array', default: [
+        type: 'array', 
+        default: [
+          
+          // -------- Folders -------- //
           {
-            label: 'Files',
-            id: 'files-group',
+            label: 'Folders',
+            id: 'folders-group',
+            type: 'group'
+          },
+          {
+            label: '',
+            id: '',
+            isRoot: true,
+            parentId: 'folders-group',
+            type: 'folder',
+            icon: 'images/folder.svg',
+            showFilesList: true,
+            searchParams: {
+              lookInFolderId: 'root',
+              includeChildren: false,
+              filterDateModified: false,
+            },
+            selectedFileId: '',
+            lastScrollPosition: 0,
+            lastSelection: [],
+            expanded: true
+          },
+
+          // -------- Documents -------- //
+          {
+            label: 'Documents',
+            id: 'docs-group',
             type: 'group'
           },
           {
             label: 'All',
             id: 'all',
-            parentId: 'files-group',
-            type: 'filesFilter',
+            parentId: 'docs-group',
+            type: 'filter',
             icon: 'images/sidebar-default-icon.svg',
             showFilesList: true,
             searchParams: {
@@ -70,8 +91,8 @@ export const StoreSchema = {
           {
             label: 'Favorites',
             id: 'favorites',
-            parentId: 'files-group',
-            type: 'filesFilter',
+            parentId: 'docs-group',
+            type: 'filter',
             icon: 'images/sidebar-default-icon.svg',
             showFilesList: true,
             searchParams: {
@@ -86,8 +107,8 @@ export const StoreSchema = {
           {
             label: 'Most Recent',
             id: 'most-recent',
-            parentId: 'files-group',
-            type: 'filesFilter',
+            parentId: 'docs-group',
+            type: 'filter',
             icon: 'images/sidebar-default-icon.svg',
             showFilesList: true,
             searchParams: {
@@ -101,24 +122,25 @@ export const StoreSchema = {
             lastScrollPosition: 0,
             lastSelection: [],
           },
+
+          // -------- Media -------- //
           {
-            label: '',
-            id: '',
-            isRoot: true,
-            parentId: 'files-group',
-            type: 'filesFolder',
-            icon: 'images/folder.svg',
-            showFilesList: true,
-            searchParams: {
-              lookInFolderId: 'root',
-              includeChildren: false,
-              filterDateModified: false,
-            },
-            selectedFileId: '',
+            label: 'Media',
+            id: 'media-group',
+            type: 'group'
+          },
+          {
+            label: 'Media',
+            id: 'media-all',
+            parentId: 'media-group',
+            type: 'other',
+            icon: 'images/sidebar-default-icon.svg',
+            showFilesList: false,
             lastScrollPosition: 0,
             lastSelection: [],
-            expanded: true
           },
+
+          // -------- Citations -------- //
           {
             label: 'Citations',
             id: 'citations-group',
@@ -140,18 +162,25 @@ export const StoreSchema = {
     default: {}
   },
 
-  // fileList: {
-  //   type: 'object',
-  //   properties: {
-  //     items: { type: 'array', default: [] }
-  //   },
-  //   default: {}
-  // },
-
-  contents: { 
+  folders: { 
     type: 'array', 
     default: [] 
   },
+
+  documents: { 
+    type: 'array', 
+    default: [] 
+  },
+
+  media: { 
+    type: 'array', 
+    default: [] 
+  },
+
+  // contents: { 
+  //   type: 'array', 
+  //   default: [] 
+  // },
 
   // TODO: For `searchInElement`, add enum of possible elements, matching CodeMirror mode assignments.
   // filesSearchCriteria: {

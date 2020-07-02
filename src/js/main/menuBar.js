@@ -1,6 +1,4 @@
-import { Menu, MenuItem, app, webContents } from 'electron'
-import { deleteFile } from './actions/index.js'
-
+import { Menu, MenuItem, app } from 'electron'
 
 let store = {}
 let state = {}
@@ -54,8 +52,6 @@ function setup(gambierStore) {
       accelerator: 'CmdOrCtrl+Backspace',
       async click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsDeleteFile')
-        // const path = state.contents.find((c) => c.id == state.selectedFileId).path
-        // store.dispatch(await deleteFile(path))
       }
     })
 

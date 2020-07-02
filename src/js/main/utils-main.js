@@ -1,12 +1,12 @@
 import { pathExists } from 'fs-extra'
 import diff from 'deep-diff'
 
-async function isWorkingPath(pth) {
+async function isWorkingPath(path) {
 
-  if (pth == '') {
+  if (path == '') {
     return false
   } else {
-    if (await pathExists(pth)) {
+    if (await pathExists(path)) {
       return true
     } else {
       return false

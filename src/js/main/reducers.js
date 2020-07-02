@@ -1,6 +1,10 @@
-import diff from 'deep-diff'
-import colors from 'colors'
-import { xlink_attr } from 'svelte/internal'
+// import diff from 'deep-diff'
+// import colors from 'colors'
+// import { getFileMetadata, Folder } from './contents/index.js'
+// import { readFile, stat } from 'fs-extra'
+
+import { mapSideBarItems } from './sideBar/mapSideBarItems'
+
 
 /**
  * Check if contents contains item by type and id
@@ -18,100 +22,34 @@ import { xlink_attr } from 'svelte/internal'
 //   return files[0]
 // }
 
-function getFile(contents, id) {
-  return contents.find((c) => c.type == 'file' && c.id == id)
-}
+// function getFile(contents, id) {
+//   return contents.find((c) => c.type == 'file' && c.id == id)
+// }
 
-function getRootFolder(contents) {
-  return contents.find((c) => c.type == 'folder' && c.isRoot)
-}
+// function getRootFolder(newState) {
+//   return newState.folders.find((f) => f.parentId == '')
+// }
+
+
 
 function getSideBarItem(sideBarItems, id) {
   return sideBarItems.find((i) => i.id == id)
 }
 
-function updateSideBarItems(newState) {
-
-  const rootFolder = getRootFolder(newState.contents)
-
-  // Update `filesFilter` type items: 
-  // Specifically, their lookInFolder values, to point to correct `contents` id.
-  // They always operate on the rootFolder
-  newState.sideBar.items.forEach((i) => {
-    if (i.type == 'filesFilter') {
-      i.searchParams.lookInFolderId = rootFolder.id
-    }
-  })
-
-  // Update `filesFolder` type items:
-  // Update root folder item. This item holds the project file hierarchy, in the UI.
-  const rootFolderItem = newState.sideBar.items.find((i) => i.type == 'filesFolder' && i.isRoot)
-  rootFolderItem.label = rootFolder.name
-  rootFolderItem.id = rootFolder.id
-  rootFolderItem.searchParams.lookInFolderId = rootFolder.id
-
-  // Remove existing child folder items.
-  newState.sideBar.items = newState.sideBar.items.filter((i) => i.isRoot || i.type !== 'filesFolder')
-
-  // Add child folder items.
-  // For each, set parent item as root folder item, and push into items array.
-  if (rootFolder.childFolderCount > 0) {
-    createAndInsertChildFolderItems(rootFolder)
-  }
-
-  function createAndInsertChildFolderItems(folder) {
-
-    // For the given folder in contents, find it's children,
-    // create a new sideBar item for each, and recursively do 
-    // the same for their children, in turn
-
-    newState.contents.map((c) => {
-      if (c.type == 'folder' && c.parentId == folder.id) {
-
-        const childFolderItem = {
-          label: c.name,
-          id: c.id,
-          parentId: folder.id,
-          type: 'filesFolder',
-          isRoot: false,
-          icon: 'images/folder.svg',
-          showFilesList: true,
-          searchParams: {
-            lookInFolderId: c.id,
-            includeChildren: false
-          },
-          selectedFileId: '',
-          lastScrollPosition: 0,
-          lastSelection: [],
-
-        }
-
-        newState.sideBar.items.push(childFolderItem)
-
-        // Recursive loop
-        if (c.childFolderCount > 0) {
-          createAndInsertChildFolderItems(c)
-        }
-      }
-    })
-  }
-}
-
 /**
- * Copy object of the selected file from `state.contents` into top-level `state.openFile`
+ * Copy object of the selected file from `state.contents` into top-level `state.openDoc`
  * @param {*} newState 
  * @param {*} id - Selected file `id`
  */
 function updateOpenFile(newState, selectedSideBarItem) {
-  
+
   const lastSelection = selectedSideBarItem.lastSelection
   if (lastSelection.length == 1) {
-    newState.openFile = newState.contents.find((c) => c.type == 'file' && c.id == lastSelection[0].id)
+    console.log(lastSelection[0])
+    newState.openDoc = newState.contents.find((c) => c.type == 'file' && c.id == lastSelection[0].id)
   } else {
-    newState.openFile = {}
+    newState.openDoc = {}
   }
-
-  console.log(newState.openFile)
 }
 
 
@@ -120,7 +58,7 @@ function updateOpenFile(newState, selectedSideBarItem) {
 /**
  * `state = {}` gives us a default, for possible first run empty '' value.
  */
-function reducers(state = {}, action) {
+async function reducers(state = {}, action) {
 
   const newState = Object.assign({}, state)
 
@@ -128,20 +66,6 @@ function reducers(state = {}, action) {
   newState.changed = [] // Reset on every action 
 
   switch (action.type) {
-
-
-    // -------- EDITOR -------- //
-
-    case 'LOAD_PATH_IN_EDITOR': {
-      newState.editingFileId = action.id
-      newState.changed.push('editingFileId')
-      break
-    }
-
-    case 'SET_PROJECTPATH_FAIL': {
-      // DO NOTHING
-      break
-    }
 
 
     // -------- PROJECT PATH -------- //
@@ -158,136 +82,95 @@ function reducers(state = {}, action) {
     }
 
 
-    // -------- FILES -------- //
+    // -------- UI -------- //
 
-    case 'SAVE_FILE_SUCCESS': {
-      // Apply changes to record in `contents`
-      const lhs = newState.contents.find((c) => c.id == action.metadata.id)
-      const rhs = action.metadata
-      diff.observableDiff(lhs, rhs, (d) => {
-        diff.applyChange(lhs, rhs, d)
-      })
+    case 'SET_LAYOUT_FOCUS': {
+      newState.focusedLayoutSection = action.section
+      newState.changed.push('focusedLayoutSection')
       break
     }
 
-    case 'SAVE_FILE_FAIL': {
-      console.log(`Reducers: SAVE_FILE_FAIL: ${action.path}`.red)
-      break
-    }
 
-    // Delete _file_ (singular)
+    // -------- EDITOR -------- //
 
-    case 'DELETE_FILE_SUCCESS': {
-
-      console.log(`Reducers: DELETE_FILE_SUCCESS: ${action.path}`.green)
-
-      // let contentIndex
-
-      // const contentObj = newState.contents.find((c, index) => {
-      //   if (c.type == 'file' && c.path == action.path) {
-      //     contentIndex = index
-      //     return true
-      //   }
-      // })
-
-      // // Delete from `contents` array
-      // if (contentIndex !== -1) {
-      //   newState.contents.splice(contentIndex, 1)
-      // }
-
-      // newState.changed.push('contents')
-
-      // TODO: Update newState.sideBar.items 
-      // if ()
-      // sideBar.items.map((i) => {
-      //   if (i.selectedFileId == contentObj.id) {
-
-      //   }
-      // })
-
-      break
-    }
-
-    case 'DELETE_FILE_FAIL': {
-      console.log(`Reducers: DELETE_FILE_FAIL: ${action.err}`.red)
-      break
-    }
-
-    // Delete _files_ (plural)
-
-    case 'DELETE_FILES_SUCCESS': {
-      console.log(`Reducers: DELETE_FILES_SUCCESS: ${action.paths}`.green)
-      break
-    }
-
-    case 'DELETE_FILES_FAIL': {
-      console.log(`Reducers: DELETE_FILES_FAIL: ${action.err}`.red)
+    case 'LOAD_PATH_IN_EDITOR': {
+      newState.editingFileId = action.id
+      newState.changed.push('editingFileId')
       break
     }
 
 
     // -------- CONTENTS -------- //
 
-    case 'HANDLE_ADD_FILE': {
-      console.log('HANDLE_ADD_FILE')
-      break
-    }
-
-    case 'HANDLE_CHANGE_FILE': {
-      console.log('HANDLE_CHANGE_FILE')
-      break
-    }
-
-    case 'HANDLE_UNLINK_FILE': {
-
-      const index = newState.contents.findIndex((c) => c.type == 'file' && c.path == action.path)
-
-      // If the file existed in `contents`, remove it.
-      // Note: -1 from `findIndex` means it did NOT exist.
-      if (index !== -1) {
-        newState.contents.splice(index, 1)
-      }
-
-      newState.changed.push('contents')
-
-      break
-    }
-
-    case 'HANDLE_ADD_DIR': {
-      console.log('HANDLE_ADD_DIR')
-      break
-    }
-
-    case 'HANDLE_UNLINK_DIR': {
-      console.log('HANDLE_UNLINK_DIR')
-      break
-    }
-
-    case 'MAP_CONTENTS': {
-
-      // Set new contents
-      newState.contents = action.contents
-      newState.changed.push('contents')
-
-      // Set `rootDirId`
-      const rootFolder = getRootFolder(newState.contents)
-      newState.rootFolderId = rootFolder.id
-
-      updateSideBarItems(newState)
+    case 'MAP_PROJECT_CONTENTS': {
+      newState.folders = action.folders
+      newState.documents = action.documents
+      newState.media = action.media
+      newState.changed.push('folders', 'documents', 'media')
+      newState.sideBar.items = mapSideBarItems(newState)
       newState.changed.push('sideBar')
       break
     }
 
-    case 'RESET_HIERARCHY': {
-      newState.contents = []
-      newState.changed.push('contents')
+    case 'ADD_DOCUMENTS': {
+      newState.documents = newState.documents.concat(action.documents)
+      newState.changed.push('documents')
       break
     }
 
-    // Layout focus
-    case 'SET_LAYOUT_FOCUS': {
-      newState.focusedLayoutSection = action.section
-      newState.changed.push('focusedLayoutSection')
+    case 'ADD_MEDIA': {
+      newState.media = newState.media.concat(action.media)
+      newState.changed.push('media')
+      break
+    }
+
+    case 'UPDATE_DOCUMENTS': {
+      for (let updatedVersion of action.documents) {
+        // Get index of old version in `documents`
+        const index = newState.documents.findIndex((oldVersion) => oldVersion.id == updatedVersion.id)
+        // Confirm old version exists (index is not -1)
+        // And replace it with new version
+        if (index !== -1) {
+          newState.documents[index] = updatedVersion
+        }
+      }
+      newState.changed.push('documents')
+      break
+    }
+
+    case 'UPDATE_MEDIA': {
+      for (let updatedVersion of action.media) {
+        // Get index of old version in `media`
+        const index = newState.media.findIndex((oldVersion) => oldVersion.id == updatedVersion.id)
+        // Confirm old version exists (index is not -1)
+        // And replace it with new version
+        if (index !== -1) {
+          newState.media[index] = updatedVersion
+        }
+      }
+      newState.changed.push('media')
+      break
+    }
+
+    case 'REMOVE_DOCUMENTS': {
+      for (let p of action.documentPaths) {
+        const index = newState.documents.findIndex((d) => d.path == p)
+        if (index !== -1) {
+          newState.documents.splice(index, 1)
+        }
+      }
+      newState.changed.push('documents')
+      break
+    }
+
+    case 'REMOVE_MEDIA': {
+      for (let p of action.mediaPaths) {
+        const index = newState.media.findIndex((d) => d.path == p)
+        if (index !== -1) {
+          newState.media.splice(index, 1)
+        }
+      }
+      newState.changed.push('media')
       break
     }
 
@@ -310,12 +193,10 @@ function reducers(state = {}, action) {
       newState.selectedSideBarItemId = action.id
       newState.changed.push('selectedSideBarItemId')
 
-      // Update `openFile`
-      console.log(sideBarItem)
-
+      // Update `openDoc`
       if (sideBarItem.lastSelection.length > 0) {
         updateOpenFile(newState, sideBarItem)
-        newState.changed.push('openFile')
+        newState.changed.push('openDoc')
       }
 
       break
@@ -335,7 +216,7 @@ function reducers(state = {}, action) {
       newState.changed.push('lastSelection')
       if (sideBarItem.lastSelection.length > 0) {
         updateOpenFile(newState, sideBarItem)
-        newState.changed.push('openFile')
+        newState.changed.push('openDoc')
       }
       break
     }
@@ -349,12 +230,142 @@ function reducers(state = {}, action) {
     }
 
 
+    // -------- FILE ACTIONS -------- //
 
-    // case 'SET_STARTUP_TIME': {
-    //   newState.appStartupTime = action.time
-    //   newState.changed.push('appStartupTime')
+    // case 'SAVE_FILE_SUCCESS': {
+    //   console.log(`Reducers: SAVE_FILE_SUCCESS: ${action.path}`.green)
     //   break
     // }
+
+    // case 'SAVE_FILE_FAIL': {
+    //   console.log(`Reducers: SAVE_FILE_FAIL: ${action.path}`.red)
+    //   break
+    // }
+
+    // // Delete
+
+    // case 'DELETE_FILE_SUCCESS': {
+    //   console.log(`Reducers: DELETE_FILE_SUCCESS: ${action.path}`.green)
+    //   break
+    // }
+
+    // case 'DELETE_FILE_FAIL': {
+    //   console.log(`Reducers: DELETE_FILE_FAIL: ${action.err}`.red)
+    //   break
+    // }
+
+    // case 'DELETE_FILES_SUCCESS': {
+    //   console.log(`Reducers: DELETE_FILES_SUCCESS: ${action.paths}`.green)
+    //   break
+    // }
+
+    // case 'DELETE_FILES_FAIL': {
+    //   console.log(`Reducers: DELETE_FILES_FAIL: ${action.err}`.red)
+    //   break
+    // }
+
+
+
+
+
+
+
+
+
+
+
+
+    // ================ PRE-REFACTOR ================ //
+
+    // -------- CONTENTS -------- //
+
+    // case 'CONTENTS_CHANGED': {
+    //   newState.contents = action.contents
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_CHANGE_FILE': {
+
+    //   // Load file and get metadata
+    //   const data = await readFile(action.path, 'utf8')
+    //   const metadata = await getFileMetadata(action.path, data)
+
+    //   // Apply changes to record in `contents`
+    //   const lhs = newState.contents.find((c) => c.id == metadata.id)
+    //   const rhs = metadata
+    //   diff.observableDiff(lhs, rhs, (d) => {
+    //     if (d.kind !== 'D') {
+    //       diff.applyChange(lhs, rhs, d)
+    //     }
+    //   })
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_UNLINK_FILE': {
+
+    //   const index = newState.contents.findIndex((c) => c.type == 'file' && c.path == action.path)
+
+    //   // If the file existed in `contents`, remove it.
+    //   // Note: -1 from `findIndex` means it did NOT exist.
+    //   if (index !== -1) {
+    //     newState.contents.splice(index, 1)
+    //   }
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_ADD_FILE': {
+
+    //   const data = await readFile(action.path, 'utf8')
+    //   const metadata = await getFileMetadata(action.path, data)
+
+
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_ADD_DIR': {
+
+    //   const stats = await stat(action.path)
+
+    //   // Create new Folder and add to `contents`
+    //   const folder = new Folder()
+    //   folder.id = `folder-${stats.ino}`
+    //   folder.path = action.path
+    //   folder.name = action.path.substring(action.path.lastIndexOf('/') + 1)
+    //   folder.modified = stats.mtime.toISOString()
+    //   newState.contents.push(folder)
+    //   console.log(folder)
+
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_UNLINK_DIR': {
+    //   console.log('HANDLE_UNLINK_DIR')
+    //   break
+    // }
+
+
+    // case 'MAP_CONTENTS': {
+
+    //   // Set new contents
+    //   newState.contents = action.contents
+    //   newState.changed.push('contents')
+
+    //   updateSideBarItems(newState)
+    //   newState.changed.push('sideBar')
+    //   break
+    // }
+
+    // case 'RESET_HIERARCHY': {
+    //   newState.contents = []
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
 
   }
 

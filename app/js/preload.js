@@ -3,13 +3,14 @@
 var electron = require('electron');
 
 // Whitelist channels
-// Main <-- Renderer
-let validSendChannels = ['hideWindow', 'showWindow', 'selectProjectPath', 'dispatch'];
+
+// Renderer --> Main
+let validSendChannels = ['saveFile', 'hideWindow', 'showWindow', 'selectProjectPath', 'dispatch'];
 
 // Main --> Renderer
-let validReceiveChannels = ['mainRequestsDeleteFile', 'mainRequestsSaveFile', 'keyboardShortcut', 'stateChanged', 'setInitialState'];
+let validReceiveChannels = ['mainRequestsSaveFile', 'mainRequestsDeleteFile', 'keyboardShortcut', 'stateChanged', 'setInitialState'];
 
-// Main <--> Renderer
+// Renderer --> Main --> Renderer
 let validInvokeChannels = ['ifPathExists', 'getState', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard'];
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.

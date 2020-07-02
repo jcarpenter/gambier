@@ -1,25 +1,23 @@
 // External dependencies
 import { app, BrowserWindow, clipboard, dialog, ipcMain } from 'electron'
 import path from 'path'
-import electronLocalshortcut from 'electron-localshortcut'
-import { readdir, readFile, pathExists, stat, writeFile } from 'fs-extra'
+// import electronLocalshortcut from 'electron-localshortcut'
+import { readFile, pathExists } from 'fs-extra'
 
 // Bundled dependencies
 import { GambierStore } from './GambierStore'
-import { GambierContents } from './GambierContents'
 import * as menuBar from './menuBar'
-// import { projectCitations } from './projectCitations'
 import { saveFile, deleteFile, deleteFiles, setProjectPath } from './actions/index.js'
+import { watcher, mapProject } from './contents/index.js'
 
 // Dev only
-import colors from 'colors'
+// import colors from 'colors'
 
 // -------- Variables -------- //
 
 // Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
 let win = undefined
 let store = undefined
-let contents = undefined
 
 // -------- Process variables -------- //
 
@@ -51,19 +49,38 @@ require('electron-reload')(watchAndReload, {
   // argv: ['--inspect=5858'],
 })
 
+console.log('- - - - - - - - - - - - - - -')
+console.log(`Setup`, `(Main.js)`)
+
+
+
 // -------- Setup -------- //
 
-console.log(`Setup`.bgYellow.black, `(Main.js)`.yellow)
-
+// Create store
 store = new GambierStore()
-contents = new GambierContents(store)
-// projectCitations.setup(store)
+
+// Setup store change listeners
+store.onDidAnyChange((newState, oldState) => {
+  if (win !== undefined) {
+    win.webContents.send('stateChanged', newState, oldState)
+  }
+})
+
+// TEMP
+store.set('projectPath', '/Users/josh/Documents/Climate research/GitHub/climate-research/src/Notes/Abicus/Arsenal/Whisper')
+
+// Do initial project map, if projectPath has been set)
+if (store.store.projectPath !== '') {
+  mapProject(store.store.projectPath, store)
+}
+
+// Create watcher
+watcher.setup(store)
+
 
 // -------- Create window -------- //
 
 function createWindow() {
-
-  console.log(`Create window`.bgBrightBlue.black, `(Main.js)`.brightBlue)
 
   win = new BrowserWindow({
     show: true,
@@ -95,58 +112,22 @@ function createWindow() {
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'))
 
-  // OS menus
+  // Setup menu bar
   menuBar.setup(store)
 
-  // Keyboard shortcuts
-  // electronLocalshortcut.register(win, 'Cmd+S', () => {
-  //   win.webContents.send('keyboardShortcut', 'Cmd+S')
-  // });
-
   // Send state to render process once dom is ready
-  win.once('ready-to-show', () => {
-    console.log(`ready-to-show`.bgBrightBlue.black, `(Main.js)`.brightBlue)
-  })
-
-  // -------- TEMP DEVELOPMENT STUFF -------- //
-  // store.clear()
-  // store.reset()
-  // This triggers a change event, which subscribers then receive
-  // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
-  // }, 1000)
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
-  // }, 1000)
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/arasd'})
-  // }, 4000)
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Notes'})
-  // }, 6000)
+  // win.once('ready-to-show', () => {
+  // })
 }
 
 
 // -------- Kickoff -------- //
 
-// Set this to shut up console warnings re: deprecated default 
-// If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9.
-// Per: https://github.com/electron/electron/issues/18397
+// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
 app.allowRendererProcessReuse = true
 
 app.whenReady().then(createWindow)
 
-
-// -------- Store -------- //
-
-store.onDidAnyChange((newState, oldState) => {
-  win.webContents.send('stateChanged', newState, oldState)
-})
 
 
 // -------- IPC: Send/Receive -------- //

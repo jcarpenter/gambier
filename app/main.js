@@ -4,15 +4,13 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var electron = require('electron');
 var path = _interopDefault(require('path'));
-require('electron-localshortcut');
 var fsExtra = require('fs-extra');
 var Store = _interopDefault(require('electron-store'));
-require('svelte/internal');
-var diff = _interopDefault(require('deep-diff'));
 require('colors');
 var deepEql = _interopDefault(require('deep-eql'));
-require('deep-object-diff');
 var chokidar = _interopDefault(require('chokidar'));
+require('deep-diff');
+require('util');
 var matter = _interopDefault(require('gray-matter'));
 var removeMd = _interopDefault(require('remove-markdown'));
 
@@ -25,7 +23,7 @@ const StoreSchema = {
     default: 'navigation',
   },
 
-  openFile: {
+  openDoc: {
     type: 'object',
     default: {}
   },
@@ -38,11 +36,6 @@ const StoreSchema = {
   showFilesList: {
     type: 'boolean',
     default: true
-  },
-
-  rootFolderId: {
-    type: 'string',
-    default: ''
   },
 
   projectPath: {
@@ -62,17 +55,45 @@ const StoreSchema = {
     properties: {
       show: { type: 'boolean', default: true },
       items: {
-        type: 'array', default: [
+        type: 'array', 
+        default: [
+          
+          // -------- Folders -------- //
           {
-            label: 'Files',
-            id: 'files-group',
+            label: 'Folders',
+            id: 'folders-group',
+            type: 'group'
+          },
+          {
+            label: '',
+            id: '',
+            isRoot: true,
+            parentId: 'folders-group',
+            type: 'folder',
+            icon: 'images/folder.svg',
+            showFilesList: true,
+            searchParams: {
+              lookInFolderId: 'root',
+              includeChildren: false,
+              filterDateModified: false,
+            },
+            selectedFileId: '',
+            lastScrollPosition: 0,
+            lastSelection: [],
+            expanded: true
+          },
+
+          // -------- Documents -------- //
+          {
+            label: 'Documents',
+            id: 'docs-group',
             type: 'group'
           },
           {
             label: 'All',
             id: 'all',
-            parentId: 'files-group',
-            type: 'filesFilter',
+            parentId: 'docs-group',
+            type: 'filter',
             icon: 'images/sidebar-default-icon.svg',
             showFilesList: true,
             searchParams: {
@@ -86,8 +107,8 @@ const StoreSchema = {
           {
             label: 'Favorites',
             id: 'favorites',
-            parentId: 'files-group',
-            type: 'filesFilter',
+            parentId: 'docs-group',
+            type: 'filter',
             icon: 'images/sidebar-default-icon.svg',
             showFilesList: true,
             searchParams: {
@@ -102,8 +123,8 @@ const StoreSchema = {
           {
             label: 'Most Recent',
             id: 'most-recent',
-            parentId: 'files-group',
-            type: 'filesFilter',
+            parentId: 'docs-group',
+            type: 'filter',
             icon: 'images/sidebar-default-icon.svg',
             showFilesList: true,
             searchParams: {
@@ -117,24 +138,25 @@ const StoreSchema = {
             lastScrollPosition: 0,
             lastSelection: [],
           },
+
+          // -------- Media -------- //
           {
-            label: '',
-            id: '',
-            isRoot: true,
-            parentId: 'files-group',
-            type: 'filesFolder',
-            icon: 'images/folder.svg',
-            showFilesList: true,
-            searchParams: {
-              lookInFolderId: 'root',
-              includeChildren: false,
-              filterDateModified: false,
-            },
-            selectedFileId: '',
+            label: 'Media',
+            id: 'media-group',
+            type: 'group'
+          },
+          {
+            label: 'Media',
+            id: 'media-all',
+            parentId: 'media-group',
+            type: 'other',
+            icon: 'images/sidebar-default-icon.svg',
+            showFilesList: false,
             lastScrollPosition: 0,
             lastSelection: [],
-            expanded: true
           },
+
+          // -------- Citations -------- //
           {
             label: 'Citations',
             id: 'citations-group',
@@ -156,18 +178,25 @@ const StoreSchema = {
     default: {}
   },
 
-  // fileList: {
-  //   type: 'object',
-  //   properties: {
-  //     items: { type: 'array', default: [] }
-  //   },
-  //   default: {}
-  // },
-
-  contents: { 
+  folders: { 
     type: 'array', 
     default: [] 
   },
+
+  documents: { 
+    type: 'array', 
+    default: [] 
+  },
+
+  media: { 
+    type: 'array', 
+    default: [] 
+  },
+
+  // contents: { 
+  //   type: 'array', 
+  //   default: [] 
+  // },
 
   // TODO: For `searchInElement`, add enum of possible elements, matching CodeMirror mode assignments.
   // filesSearchCriteria: {
@@ -232,96 +261,85 @@ const StoreSchema = {
   // }
 };
 
-function getRootFolder(contents) {
-  return contents.find((c) => c.type == 'folder' && c.isRoot)
+let newItems = {};
+
+/**
+ * Filter items always operate on the top-level (root) folder.
+ * Update their `lookInFolder` properties to point to root folder id.
+ * @param {*} newItems 
+ */
+function updateFilters(newItems, rootFolderId) {
+  
+  return newItems.map((i) => {
+    if (i.type == 'filter') {
+      i.searchParams.lookInFolderId = rootFolderId;
+    }
+    return i
+  })
 }
+
+function mapSideBarItems(newState) {
+
+  // Copy existing items
+  newItems = newState.sideBar.items;
+
+  // Get root folder from `folders`. It's the one without a parentId
+  const rootFolder = newState.folders.find((f) => f.parentId == '');
+
+  // Update `filter` and `folder` items
+  newItems = updateFilters(newItems, rootFolder.id);
+  // updateFolders(newItems)
+
+  return newItems
+}
+
+// import diff from 'deep-diff'
+
+
+/**
+ * Check if contents contains item by type and id
+ */
+// function contentContainsItemById(contents, type, id) {
+//   return contents.some((d) => d.type == type && d.id == id)
+// }
+
+// function getDirectoryById(contents, id) {
+//   return contents.find((d) => d.type == 'directory' && d.id == id)
+// }
+
+// function getFirstFileInDirectory(contents, directoryId) {
+//   const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId)
+//   return files[0]
+// }
+
+// function getFile(contents, id) {
+//   return contents.find((c) => c.type == 'file' && c.id == id)
+// }
+
+// function getRootFolder(newState) {
+//   return newState.folders.find((f) => f.parentId == '')
+// }
+
+
 
 function getSideBarItem(sideBarItems, id) {
   return sideBarItems.find((i) => i.id == id)
 }
 
-function updateSideBarItems(newState) {
-
-  const rootFolder = getRootFolder(newState.contents);
-
-  // Update `filesFilter` type items: 
-  // Specifically, their lookInFolder values, to point to correct `contents` id.
-  // They always operate on the rootFolder
-  newState.sideBar.items.forEach((i) => {
-    if (i.type == 'filesFilter') {
-      i.searchParams.lookInFolderId = rootFolder.id;
-    }
-  });
-
-  // Update `filesFolder` type items:
-  // Update root folder item. This item holds the project file hierarchy, in the UI.
-  const rootFolderItem = newState.sideBar.items.find((i) => i.type == 'filesFolder' && i.isRoot);
-  rootFolderItem.label = rootFolder.name;
-  rootFolderItem.id = rootFolder.id;
-  rootFolderItem.searchParams.lookInFolderId = rootFolder.id;
-
-  // Remove existing child folder items.
-  newState.sideBar.items = newState.sideBar.items.filter((i) => i.isRoot || i.type !== 'filesFolder');
-
-  // Add child folder items.
-  // For each, set parent item as root folder item, and push into items array.
-  if (rootFolder.childFolderCount > 0) {
-    createAndInsertChildFolderItems(rootFolder);
-  }
-
-  function createAndInsertChildFolderItems(folder) {
-
-    // For the given folder in contents, find it's children,
-    // create a new sideBar item for each, and recursively do 
-    // the same for their children, in turn
-
-    newState.contents.map((c) => {
-      if (c.type == 'folder' && c.parentId == folder.id) {
-
-        const childFolderItem = {
-          label: c.name,
-          id: c.id,
-          parentId: folder.id,
-          type: 'filesFolder',
-          isRoot: false,
-          icon: 'images/folder.svg',
-          showFilesList: true,
-          searchParams: {
-            lookInFolderId: c.id,
-            includeChildren: false
-          },
-          selectedFileId: '',
-          lastScrollPosition: 0,
-          lastSelection: [],
-
-        };
-
-        newState.sideBar.items.push(childFolderItem);
-
-        // Recursive loop
-        if (c.childFolderCount > 0) {
-          createAndInsertChildFolderItems(c);
-        }
-      }
-    });
-  }
-}
-
 /**
- * Copy object of the selected file from `state.contents` into top-level `state.openFile`
+ * Copy object of the selected file from `state.contents` into top-level `state.openDoc`
  * @param {*} newState 
  * @param {*} id - Selected file `id`
  */
 function updateOpenFile(newState, selectedSideBarItem) {
-  
+
   const lastSelection = selectedSideBarItem.lastSelection;
   if (lastSelection.length == 1) {
-    newState.openFile = newState.contents.find((c) => c.type == 'file' && c.id == lastSelection[0].id);
+    console.log(lastSelection[0]);
+    newState.openDoc = newState.contents.find((c) => c.type == 'file' && c.id == lastSelection[0].id);
   } else {
-    newState.openFile = {};
+    newState.openDoc = {};
   }
-
-  console.log(newState.openFile);
 }
 
 
@@ -330,7 +348,7 @@ function updateOpenFile(newState, selectedSideBarItem) {
 /**
  * `state = {}` gives us a default, for possible first run empty '' value.
  */
-function reducers(state = {}, action) {
+async function reducers(state = {}, action) {
 
   const newState = Object.assign({}, state);
 
@@ -338,20 +356,6 @@ function reducers(state = {}, action) {
   newState.changed = []; // Reset on every action 
 
   switch (action.type) {
-
-
-    // -------- EDITOR -------- //
-
-    case 'LOAD_PATH_IN_EDITOR': {
-      newState.editingFileId = action.id;
-      newState.changed.push('editingFileId');
-      break
-    }
-
-    case 'SET_PROJECTPATH_FAIL': {
-      // DO NOTHING
-      break
-    }
 
 
     // -------- PROJECT PATH -------- //
@@ -368,136 +372,95 @@ function reducers(state = {}, action) {
     }
 
 
-    // -------- FILES -------- //
+    // -------- UI -------- //
 
-    case 'SAVE_FILE_SUCCESS': {
-      // Apply changes to record in `contents`
-      const lhs = newState.contents.find((c) => c.id == action.metadata.id);
-      const rhs = action.metadata;
-      diff.observableDiff(lhs, rhs, (d) => {
-        diff.applyChange(lhs, rhs, d);
-      });
+    case 'SET_LAYOUT_FOCUS': {
+      newState.focusedLayoutSection = action.section;
+      newState.changed.push('focusedLayoutSection');
       break
     }
 
-    case 'SAVE_FILE_FAIL': {
-      console.log(`Reducers: SAVE_FILE_FAIL: ${action.path}`.red);
-      break
-    }
 
-    // Delete _file_ (singular)
+    // -------- EDITOR -------- //
 
-    case 'DELETE_FILE_SUCCESS': {
-
-      console.log(`Reducers: DELETE_FILE_SUCCESS: ${action.path}`.green);
-
-      // let contentIndex
-
-      // const contentObj = newState.contents.find((c, index) => {
-      //   if (c.type == 'file' && c.path == action.path) {
-      //     contentIndex = index
-      //     return true
-      //   }
-      // })
-
-      // // Delete from `contents` array
-      // if (contentIndex !== -1) {
-      //   newState.contents.splice(contentIndex, 1)
-      // }
-
-      // newState.changed.push('contents')
-
-      // TODO: Update newState.sideBar.items 
-      // if ()
-      // sideBar.items.map((i) => {
-      //   if (i.selectedFileId == contentObj.id) {
-
-      //   }
-      // })
-
-      break
-    }
-
-    case 'DELETE_FILE_FAIL': {
-      console.log(`Reducers: DELETE_FILE_FAIL: ${action.err}`.red);
-      break
-    }
-
-    // Delete _files_ (plural)
-
-    case 'DELETE_FILES_SUCCESS': {
-      console.log(`Reducers: DELETE_FILES_SUCCESS: ${action.paths}`.green);
-      break
-    }
-
-    case 'DELETE_FILES_FAIL': {
-      console.log(`Reducers: DELETE_FILES_FAIL: ${action.err}`.red);
+    case 'LOAD_PATH_IN_EDITOR': {
+      newState.editingFileId = action.id;
+      newState.changed.push('editingFileId');
       break
     }
 
 
     // -------- CONTENTS -------- //
 
-    case 'HANDLE_ADD_FILE': {
-      console.log('HANDLE_ADD_FILE');
-      break
-    }
-
-    case 'HANDLE_CHANGE_FILE': {
-      console.log('HANDLE_CHANGE_FILE');
-      break
-    }
-
-    case 'HANDLE_UNLINK_FILE': {
-
-      const index = newState.contents.findIndex((c) => c.type == 'file' && c.path == action.path);
-
-      // If the file existed in `contents`, remove it.
-      // Note: -1 from `findIndex` means it did NOT exist.
-      if (index !== -1) {
-        newState.contents.splice(index, 1);
-      }
-
-      newState.changed.push('contents');
-
-      break
-    }
-
-    case 'HANDLE_ADD_DIR': {
-      console.log('HANDLE_ADD_DIR');
-      break
-    }
-
-    case 'HANDLE_UNLINK_DIR': {
-      console.log('HANDLE_UNLINK_DIR');
-      break
-    }
-
-    case 'MAP_CONTENTS': {
-
-      // Set new contents
-      newState.contents = action.contents;
-      newState.changed.push('contents');
-
-      // Set `rootDirId`
-      const rootFolder = getRootFolder(newState.contents);
-      newState.rootFolderId = rootFolder.id;
-
-      updateSideBarItems(newState);
+    case 'MAP_PROJECT_CONTENTS': {
+      newState.folders = action.folders;
+      newState.documents = action.documents;
+      newState.media = action.media;
+      newState.changed.push('folders', 'documents', 'media');
+      newState.sideBar.items = mapSideBarItems(newState);
       newState.changed.push('sideBar');
       break
     }
 
-    case 'RESET_HIERARCHY': {
-      newState.contents = [];
-      newState.changed.push('contents');
+    case 'ADD_DOCUMENTS': {
+      newState.documents = newState.documents.concat(action.documents);
+      newState.changed.push('documents');
       break
     }
 
-    // Layout focus
-    case 'SET_LAYOUT_FOCUS': {
-      newState.focusedLayoutSection = action.section;
-      newState.changed.push('focusedLayoutSection');
+    case 'ADD_MEDIA': {
+      newState.media = newState.media.concat(action.media);
+      newState.changed.push('media');
+      break
+    }
+
+    case 'UPDATE_DOCUMENTS': {
+      for (let updatedVersion of action.documents) {
+        // Get index of old version in `documents`
+        const index = newState.documents.findIndex((oldVersion) => oldVersion.id == updatedVersion.id);
+        // Confirm old version exists (index is not -1)
+        // And replace it with new version
+        if (index !== -1) {
+          newState.documents[index] = updatedVersion;
+        }
+      }
+      newState.changed.push('documents');
+      break
+    }
+
+    case 'UPDATE_MEDIA': {
+      for (let updatedVersion of action.media) {
+        // Get index of old version in `media`
+        const index = newState.media.findIndex((oldVersion) => oldVersion.id == updatedVersion.id);
+        // Confirm old version exists (index is not -1)
+        // And replace it with new version
+        if (index !== -1) {
+          newState.media[index] = updatedVersion;
+        }
+      }
+      newState.changed.push('media');
+      break
+    }
+
+    case 'REMOVE_DOCUMENTS': {
+      for (let p of action.documentPaths) {
+        const index = newState.documents.findIndex((d) => d.path == p);
+        if (index !== -1) {
+          newState.documents.splice(index, 1);
+        }
+      }
+      newState.changed.push('documents');
+      break
+    }
+
+    case 'REMOVE_MEDIA': {
+      for (let p of action.mediaPaths) {
+        const index = newState.media.findIndex((d) => d.path == p);
+        if (index !== -1) {
+          newState.media.splice(index, 1);
+        }
+      }
+      newState.changed.push('media');
       break
     }
 
@@ -520,12 +483,10 @@ function reducers(state = {}, action) {
       newState.selectedSideBarItemId = action.id;
       newState.changed.push('selectedSideBarItemId');
 
-      // Update `openFile`
-      console.log(sideBarItem);
-
+      // Update `openDoc`
       if (sideBarItem.lastSelection.length > 0) {
         updateOpenFile(newState, sideBarItem);
-        newState.changed.push('openFile');
+        newState.changed.push('openDoc');
       }
 
       break
@@ -545,7 +506,7 @@ function reducers(state = {}, action) {
       newState.changed.push('lastSelection');
       if (sideBarItem.lastSelection.length > 0) {
         updateOpenFile(newState, sideBarItem);
-        newState.changed.push('openFile');
+        newState.changed.push('openDoc');
       }
       break
     }
@@ -559,17 +520,149 @@ function reducers(state = {}, action) {
     }
 
 
+    // -------- FILE ACTIONS -------- //
 
-    // case 'SET_STARTUP_TIME': {
-    //   newState.appStartupTime = action.time
-    //   newState.changed.push('appStartupTime')
+    // case 'SAVE_FILE_SUCCESS': {
+    //   console.log(`Reducers: SAVE_FILE_SUCCESS: ${action.path}`.green)
     //   break
     // }
+
+    // case 'SAVE_FILE_FAIL': {
+    //   console.log(`Reducers: SAVE_FILE_FAIL: ${action.path}`.red)
+    //   break
+    // }
+
+    // // Delete
+
+    // case 'DELETE_FILE_SUCCESS': {
+    //   console.log(`Reducers: DELETE_FILE_SUCCESS: ${action.path}`.green)
+    //   break
+    // }
+
+    // case 'DELETE_FILE_FAIL': {
+    //   console.log(`Reducers: DELETE_FILE_FAIL: ${action.err}`.red)
+    //   break
+    // }
+
+    // case 'DELETE_FILES_SUCCESS': {
+    //   console.log(`Reducers: DELETE_FILES_SUCCESS: ${action.paths}`.green)
+    //   break
+    // }
+
+    // case 'DELETE_FILES_FAIL': {
+    //   console.log(`Reducers: DELETE_FILES_FAIL: ${action.err}`.red)
+    //   break
+    // }
+
+
+
+
+
+
+
+
+
+
+
+
+    // ================ PRE-REFACTOR ================ //
+
+    // -------- CONTENTS -------- //
+
+    // case 'CONTENTS_CHANGED': {
+    //   newState.contents = action.contents
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_CHANGE_FILE': {
+
+    //   // Load file and get metadata
+    //   const data = await readFile(action.path, 'utf8')
+    //   const metadata = await getFileMetadata(action.path, data)
+
+    //   // Apply changes to record in `contents`
+    //   const lhs = newState.contents.find((c) => c.id == metadata.id)
+    //   const rhs = metadata
+    //   diff.observableDiff(lhs, rhs, (d) => {
+    //     if (d.kind !== 'D') {
+    //       diff.applyChange(lhs, rhs, d)
+    //     }
+    //   })
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_UNLINK_FILE': {
+
+    //   const index = newState.contents.findIndex((c) => c.type == 'file' && c.path == action.path)
+
+    //   // If the file existed in `contents`, remove it.
+    //   // Note: -1 from `findIndex` means it did NOT exist.
+    //   if (index !== -1) {
+    //     newState.contents.splice(index, 1)
+    //   }
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_ADD_FILE': {
+
+    //   const data = await readFile(action.path, 'utf8')
+    //   const metadata = await getFileMetadata(action.path, data)
+
+
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_ADD_DIR': {
+
+    //   const stats = await stat(action.path)
+
+    //   // Create new Folder and add to `contents`
+    //   const folder = new Folder()
+    //   folder.id = `folder-${stats.ino}`
+    //   folder.path = action.path
+    //   folder.name = action.path.substring(action.path.lastIndexOf('/') + 1)
+    //   folder.modified = stats.mtime.toISOString()
+    //   newState.contents.push(folder)
+    //   console.log(folder)
+
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
+    // case 'HANDLE_UNLINK_DIR': {
+    //   console.log('HANDLE_UNLINK_DIR')
+    //   break
+    // }
+
+
+    // case 'MAP_CONTENTS': {
+
+    //   // Set new contents
+    //   newState.contents = action.contents
+    //   newState.changed.push('contents')
+
+    //   updateSideBarItems(newState)
+    //   newState.changed.push('sideBar')
+    //   break
+    // }
+
+    // case 'RESET_HIERARCHY': {
+    //   newState.contents = []
+    //   newState.changed.push('contents')
+    //   break
+    // }
+
 
   }
 
   return newState
 }
+
+// import { updatedDiff, detailedDiff } from 'deep-object-diff'
 
 class GambierStore extends Store {
   constructor() {
@@ -586,13 +679,13 @@ class GambierStore extends Store {
     return this.store
   }
 
-  dispatch(action) {
+  async dispatch(action) {
 
     // Optional: Log the changes (useful for debug)
     this.logTheAction(action);
     
     // Get next state
-    const nextState = reducers(this.getCurrentState(), action);
+    const nextState = await reducers(this.getCurrentState(), action);
 
     // Optional: Log the diff (useful for debug)
     this.logTheDiff(this.getCurrentState(), nextState);
@@ -618,416 +711,6 @@ class GambierStore extends Store {
     } else {
       console.log('No changes'.yellow);
     }
-  }
-}
-
-async function isWorkingPath(pth) {
-
-  if (pth == '') {
-    return false
-  } else {
-    if (await fsExtra.pathExists(pth)) {
-      return true
-    } else {
-      return false
-    }
-  }
-}
-
-/**
- * Map projectPath and save as a flattened hierarchy `contents` property of store (array).
- */
-class GambierContents {
-
-  constructor(store) {
-    this.store = store;
-    this.projectPath = store.store.projectPath;
-    this.watcher = undefined;
-
-    // Setup change listener for store
-    this.store.onDidAnyChange((newState, oldState) => {
-      // console.log(newState)
-      if (newState.changed.includes('projectPath')) {
-        this.projectPath = newState.projectPath;
-        this.mapProjectPath();
-        this.startWatching();
-      }
-    });
-
-    // Map project path and start watching
-    this.mapProjectPath();
-    this.startWatching();
-  }
-
-
-  async startWatching() {
-    if (this.projectPath == '') return
-
-    // Close existing watcher.
-    // This will only be called if projectPath has changed.
-    if (this.watcher !== undefined) {
-      await this.watcher.close();
-    }
-
-    this.watcher = chokidar.watch(this.projectPath, {
-      ignored: /(^|[\/\\])\../, // Ignore dotfiles
-      ignoreInitial: true,
-      persistent: true,
-      awaitWriteFinish: {
-        stabilityThreshold: 400,
-        pollInterval: 200
-      }
-    });
-
-    const log = console.log.bind(console);
-
-    this.watcher
-      // .on('add', (path) => this.store.dispatch({ type: 'HANDLE_ADD_FILE', path: path }))
-      .on('add', (path) => this.store.dispatch({ type: 'HANDLE_ADD_FILE', path: path }))
-      .on('change', (path) => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
-      .on('unlink', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_FILE', path: path }))
-      .on('addDir', (path) => this.store.dispatch({ type: 'HANDLE_ADD_DIR', path: path }))
-      .on('unlinkDir', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_DIR', path: path }));
-      // .on('ready', () => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
-      // .on('error', error => log(`error: Watcher error: ${error}`))
-
-
-    // this.watcher.on('all', (event, path) => {
-    //   console.log(event)
-    //   console.log(path)
-    //   this.mapProjectPath()
-    // })
-
-
-  }
-
-  /**
-   * Check if path is valid. 
-   * If true, map folder, update store, and add watcher.
-   * Else, tell store to `RESET_HIERARCHY` (clears to `[]`)
-   */
-  async mapProjectPath() {
-    if (this.projectPath == '') return
-
-    if (await isWorkingPath(this.projectPath)) {
-      let contents = await this.mapFolderRecursively(this.projectPath);
-      contents = await this.getFilesDetails(contents);
-      contents = this.applyDiffs(this.store.store.contents, contents);
-      this.store.dispatch({ type: 'MAP_CONTENTS', contents: contents });
-    } else {
-      this.store.dispatch({ type: 'RESET_HIERARCHY' });
-    }
-  }
-
-  applyDiffs(oldContents, newContents) {
-
-    diff.observableDiff(oldContents, newContents, (d) => {
-      // Apply all changes except to the name property...
-      if (d.path !== undefined) {
-        if (d.path[d.path.length - 1] !== 'selectedFileId') {
-          diff.applyChange(oldContents, newContents, d);
-        }
-      } else {
-        diff.applyChange(oldContents, newContents, d);
-      }
-    });
-
-    return oldContents
-  }
-
-  /**
-   * Populate this.contents with flat array of folder contents. One object for each folder and file found. Works recursively.
-   * @param {*} folderPath - folder to look inside.
-   * @param {*} parentObj - If passed in, we 1) get parent id, and 2) increment its folder counter. Is left undefined (default) for the top-level folder.
-   */
-  async mapFolderRecursively(folderPath, parentId = undefined) {
-
-    let arrayOfContents = [];
-
-    let contents = await fsExtra.readdir(folderPath, { withFileTypes: true });
-
-    // Filter contents to (not-empty) directories, and markdown files.
-    contents = contents.filter((c) => c.isDirectory() || c.name.includes('.md'));
-
-    // If the folder has no children we care about (.md files or directories), 
-    // we return an empty array.
-    if (contents.length == 0) {
-      return arrayOfContents
-    }
-
-    // Get stats for folder
-    const stats = await fsExtra.stat(folderPath);
-
-    // Create object for folder
-    const thisDir = {
-      type: 'folder',
-      id: `folder-${stats.ino}`,
-      name: folderPath.substring(folderPath.lastIndexOf('/') + 1),
-      path: folderPath,
-      modified: stats.mtime.toISOString(),
-      childFileCount: 0,
-      childFolderCount: 0,
-      selectedFileId: 0,
-      isRoot: false,
-    };
-
-    // If parentId was passed, set `thisDir.parentId` to it
-    // Else this folder is the root, so set `isRoot: true`
-    if (parentId !== undefined) {
-      thisDir.parentId = parentId;
-    } else {
-      thisDir.isRoot = true;
-    }
-
-    for (let c of contents) {
-
-      // Get path
-      const cPath = path.join(folderPath, c.name);
-
-      if (c.isFile()) {
-        // Increment file counter
-        thisDir.childFileCount++;
-
-        // Push new file object
-        arrayOfContents.push({
-          type: 'file',
-          name: c.name,
-          path: cPath,
-          parentId: thisDir.id
-        });
-      } else if (c.isDirectory()) {
-
-        // Get child folder contents
-        // If not empty, increment counter and push to arrayOfContents
-        const childFolderContents = await this.mapFolderRecursively(cPath, thisDir.id);
-        if (childFolderContents.length !== 0) {
-          thisDir.childFolderCount++;
-          arrayOfContents = arrayOfContents.concat(childFolderContents);
-        }
-      }
-    }
-
-    // Finally, if it is not empty, push thisDir to `arrayOfContents`
-    if (arrayOfContents.length !== 0) {
-      arrayOfContents.push(thisDir);
-    }
-
-    return arrayOfContents
-  }
-
-  /**
-   * Go through each file in `this.contents` and add details loaded from stats (e.g. created) and gray-matter (e.g. excerpt, tags, title). We use Promise.all() to run this in parallel, so we're processing files in a batch, instead of sequentially one-by-one.
-   */
-  async getFilesDetails(contents) {
-
-    await Promise.all(
-      contents.map(async (f) => {
-
-        // Ignore directories
-        if (f.type == 'file') {
-
-          // Return a promise ()
-          return fsExtra.readFile(f.path, 'utf8').then(async str => {
-
-            // Get stats
-            const stats = await fsExtra.stat(f.path);
-
-            // Get front matter
-            const md = matter(str, { excerpt: extractExcerpt });
-
-            // Set fields from stats
-            f.id = `file-${stats.ino}`,
-              f.modified = stats.mtime.toISOString();
-            f.created = stats.birthtime.toISOString();
-            f.excerpt = md.excerpt;
-
-            // Set fields from front matter (if it exists)
-            // gray-matter `isEmpty` property returns "true if front-matter is empty".
-            if (!f.isEmpty) {
-
-              // If `tags` exists in front matter, use it. Else, set as empty `[]`.
-              f.tags = md.data.hasOwnProperty('tags') ? md.data.tags : [];
-
-              // If title exists in front matter, use it. Else, use name, minus extension.
-              if (md.data.hasOwnProperty('title')) {
-                f.title = md.data.title;
-              } else {
-                f.title = f.name.slice(0, f.name.lastIndexOf('.'));
-              }
-            }
-          })
-        }
-      })
-    );
-    // console.log(contents)
-    return contents
-  }
-}
-
-function extractExcerpt(file) {
-
-  // gray-matter passes extract function the file.
-  // file.contents give us the input string, with front matter stripped.
-
-  // Remove h1, if it exists. Then trim to 200 characters.
-  let excerpt = file.content
-    .replace(/^# (.*)\n/gm, '')
-    .substring(0, 400);
-
-  // Remove markdown formatting. Start with remove-markdown rules.
-  // Per: https://github.com/stiang/remove-markdown/blob/master/index.js
-  // Then add whatever additional changes I want (e.g. new lines).
-  excerpt = removeMd(excerpt)
-    .replace(/^> /gm, '')         // Block quotes
-    .replace(/^\n/gm, '')         // New lines at start of line (usually doc)
-    .replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
-    .replace(/\t/gm, ' ')         // Artifact left from list replacement
-    .replace(/\[@.*?\]/gm, '')    // Citations
-    .replace(/:::.*?:::/gm, ' ')  // Bracketed spans
-    .replace(/\s{2,}/gm, ' ')     // Extra spaces
-    .substring(0, 200);            // Trim to 200 characters
-
-  file.excerpt = excerpt;
-}
-
-async function deleteFile(path) {
-  try {
-		await fsExtra.remove(path);
-		return { type: 'DELETE_FILE_SUCCESS', path: path }
-	} catch(err) {
-		return { type: 'DELETE_FILE_FAIL', err: err }
-	}
-}
-
-async function deleteFiles(paths) {
-  try {
-    let deletedPaths = await Promise.all(
-      paths.map(async (path) => {
-        await fsExtra.remove(path);
-      })
-    );
-		return { type: 'DELETE_FILES_SUCCESS', paths: deletedPaths }
-	} catch(err) {
-		return { type: 'DELETE_FILES_FAIL', err: err }
-	}
-}
-
-async function getFileMetadata (path, data) {
-
-  const file = {};
-  
-  // Set path
-  file.path = path;
-
-	// Get stats
-	const stats = await fsExtra.stat(path);
-
-	// Set fields from stats
-	file.id = `file-${stats.ino}`;
-	file.modified = stats.mtime.toISOString();
-	file.created = stats.birthtime.toISOString();
-
-	// Get front matter
-	const gm = matter(data);
-
-	// Set excerpt
-	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
-	file.excerpt = getExcerpt(gm.content);
-
-	// Set fields from front matter (if it exists)
-	// gray-matter `isEmpty` property returns "true if front-matter is empty".
-	if (!gm.isEmpty) {
-		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
-		file.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
-	}
-
-	// Set name (includes extension). E.g. "sealevel.md"
-	file.name = path.substring(path.lastIndexOf('/') + 1);
-
-	// Set title. E.g. "Sea Level Rise"
-	file.title = getTitle(gm, file.name);
-
-	return file
-}
-
-/**
- * Set title, in following order of preference:
- * 1. From first h1 in content
- * 2. From `title` field of front matter
- * 3. From filename, minus extension
- */
-function getTitle(graymatter, filename) {
-
-	let titleFromH1 = graymatter.content.match(/^# (.*)$/m);
-	if (titleFromH1) {
-		return titleFromH1[1]
-	} else if (graymatter.data.hasOwnProperty('title')) {
-		return graymatter.data.title
-	} else {
-		return filename.slice(0, filename.lastIndexOf('.'))
-	}
-}
-
-/**
- * Return excerpt from content, stripped of markdown characters.
- * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
- * @param {*} file 
- */
-function getExcerpt(content) {
-
-	// Remove h1, if it exists. Then trim to 200 characters.
-	let excerpt = content
-		.replace(/^# (.*)\n/gm, '')
-		.substring(0, 400);
-
-	// Remove markdown formatting. Start with remove-markdown rules.
-	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
-	// Then add whatever additional changes I want (e.g. new lines).
-	excerpt = removeMd(excerpt)
-		.replace(/^> /gm, '')         // Block quotes
-		.replace(/^\n/gm, '')         // New lines at start of line (usually doc)
-		.replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
-		.replace(/\t/gm, ' ')         // Artifact left from list replacement
-		.replace(/\[@.*?\]/gm, '')    // Citations
-		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
-		.replace(/\s{2,}/gm, ' ')     // Extra spaces
-		.substring(0, 200);            // Trim to 200 characters
-
-	return excerpt
-}
-
-async function saveFile(path, data) {
-  try {
-		await fsExtra.writeFile(path, data, 'utf8');
-		const metadata = await getFileMetadata(path, data);
-		return { 
-			type: 'SAVE_FILE_SUCCESS', 
-			path: path, 
-			metadata: metadata 
-		}
-	} catch(err) {
-		return { 
-			type: 'SAVE_FILE_FAIL', 
-			err: err 
-		}
-	}
-}
-
-async function setProjectPath () {
-
-  // console.log(BrowserWindow.getFocusedWindow())
-
-  const win = electron.BrowserWindow.getFocusedWindow();
-
-  const selection = await electron.dialog.showOpenDialog(win, {
-    title: 'Select Project Folder',
-    properties: ['openDirectory', 'createDirectory']
-  });
-
-  if (!selection.canceled) {
-    return { type: 'SET_PROJECTPATH_SUCCESS', path: selection.filePaths[0] }
-  } else {
-    return { type: 'SET_PROJECTPATH_FAIL' }
   }
 }
 
@@ -1083,8 +766,6 @@ function setup(gambierStore) {
       accelerator: 'CmdOrCtrl+Backspace',
       async click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsDeleteFile');
-        // const path = state.contents.find((c) => c.id == state.selectedFileId).path
-        // store.dispatch(await deleteFile(path))
       }
     });
 
@@ -1241,14 +922,663 @@ function setup(gambierStore) {
   electron.Menu.setApplicationMenu(menu);
 }
 
+async function deleteFile(path) {
+  try {
+		await fsExtra.remove(path);
+		return { type: 'DELETE_FILE_SUCCESS', path: path }
+	} catch(err) {
+		return { type: 'DELETE_FILE_FAIL', err: err }
+	}
+}
+
+async function deleteFiles(paths) {
+  try {
+    let deletedPaths = await Promise.all(
+      paths.map(async (path) => {
+        await fsExtra.remove(path);
+      })
+    );
+		return { type: 'DELETE_FILES_SUCCESS', paths: deletedPaths }
+	} catch(err) {
+		return { type: 'DELETE_FILES_FAIL', err: err }
+	}
+}
+
+/**
+ * For specified folder path, map the folder and it's child  
+ * documents, media, and citations, and return `contents` object
+ * with four arrays (one for each type).
+ * @param {*} folderPath - Path to map
+ * @param {*} stats - Optional. Can pass in stats, or if undefined, will get them in function.
+ * @param {*} parentId - Optional. If undefined, we regard the folder as `root`
+ * @param {*} recursive - Optional. If true, map descendant directories also.
+ */
+async function mapFolder (folderPath, stats = undefined, parentId = '', recursive = false) {
+
+  // Stub out return object
+  let contents = {
+    folders: [],
+    documents: [],
+    media: [],
+  };
+
+  // -------- Folder -------- //
+
+  const folder = Object.assign({}, Folder);
+
+  if (stats == undefined) {
+    stats = await fsExtra.stat(folderPath);
+  }
+
+  folder.name = folderPath.substring(folderPath.lastIndexOf('/') + 1);
+  folder.path = folderPath;
+  folder.id = `folder-${stats.ino}`;
+  folder.parentId = parentId;
+  folder.modified = stats.mtime.toISOString();
+
+  contents.folders.push(folder);
+
+
+  // -------- Contents -------- //
+
+  // Get everything in directory with `readdir`.
+  // Returns array of file name and file type pairs. If empty, return.
+  const everything = await fsExtra.readdir(folderPath, { withFileTypes: true });
+  // if (!everything.length > 0) return contents
+
+  await Promise.all(
+   everything.map(async (e) => {
+
+      // Get path by combining folderPath with file name.
+      const ePath = path.join(folderPath, e.name);
+      const ext = path.extname(e.name);
+      const stats = await fsExtra.stat(ePath);
+    
+      if (e.isDirectory() && recursive) {
+        const { folders, documents, media } = await mapFolder(ePath, stats, folder.id, true);
+        // Concat findings into respective `contents` arrays
+        contents.folders = contents.folders.concat(folders);
+        contents.documents = contents.documents.concat(documents);
+        contents.media = contents.media.concat(media);
+      } else if (ext == '.md') {
+        contents.documents.push(await mapDocument(ePath, stats, folder.id));
+      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
+        contents.media.push(await mapMedia(ePath, stats, folder.id, ext));
+      }
+    })
+  );
+
+  return contents
+}
+
+async function isWorkingPath(path) {
+
+  if (path == '') {
+    return false
+  } else {
+    if (await fsExtra.pathExists(path)) {
+      return true
+    } else {
+      return false
+    }
+  }
+}
+
+// import diff from 'deep-diff'
+
+
+let store$1 = undefined;
+let state$1 = {};
+let watcher = undefined;
+let changeTimer = undefined;
+let changes = [];
+
+/**
+ * Chokidar config
+ * Docs: https://www.npmjs.com/package/chokidar
+ */
+const config = {
+  ignored: /(^|[\/\\])\../, // Ignore dotfiles
+  ignoreInitial: true,
+  persistent: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 400,
+    pollInterval: 200
+  }
+};
+
+
+/**
+ * Setup watcher module
+ * @param {*} projectPath - Path to watch
+ */
+async function setup$1(storeRef) {
+
+  // Check if undefined
+  if (storeRef == undefined) console.error("Store not defined");
+
+  // Set `store` and `state`
+  store$1 = storeRef;
+  state$1 = store$1.store;
+
+  // Listen for state changes. When `projectPath` changes, watch it.
+  store$1.onDidAnyChange(async (newState, oldState) => {
+
+    state$1 = newState;
+
+    if (newState.changed.includes('projectPath')) {
+
+      // If watcher was already active on another directory, close it.
+      if (watcher !== undefined) {
+        await watcher.close();
+      }
+
+      // Watch new path
+      startWatcher(newState.projectPath);
+    }
+  });
+
+  // Start initial watcher
+  startWatcher(state$1.projectPath);
+}
+
+
+/**
+ * Start watcher
+ */
+async function startWatcher(projectPath) {
+
+  // If new projectPath is not valid, return
+  if (!await fsExtra.pathExists(projectPath)) return
+
+  // Start watcher
+  watcher = chokidar.watch(projectPath, config);
+
+  // On any event, track changes. Some events include `stats`.
+  watcher
+    .on('change', (filePath) => trackChanges('change', filePath))
+    .on('add', (filePath) => trackChanges('add', filePath))
+    .on('unlink', (filePath) => trackChanges('unlink', filePath))
+    .on('addDir', (filePath) => trackChanges('addDir', filePath))
+    .on('unlinkDir', (filePath) => trackChanges('unlinkDir', filePath));
+}
+
+
+/**
+ * Create a tally of changes as they occur, and once things settle down, evaluate them.We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
+ */
+function trackChanges(event, filePath, stats) {
+  const change = { event: event, path: filePath };
+
+  if (stats) change.stats = stats;
+  // console.log(event)
+
+  // Make the timer longer if `addDir` event comes through. 
+  // If it's too quick, subsequent `add` events are not caught by the timer.
+  const timerDuration = event == 'addDir' ? 500 : 100;
+
+  // Either start a new timer, or if one is already active, refresh it.
+  if (
+    changeTimer == undefined ||
+    !changeTimer.hasRef()
+  ) {
+    changes = [change];
+    changeTimer = setTimeout(onChangesFinished, timerDuration, changes);
+  } else {
+    changes.push(change);
+    changeTimer.refresh();
+  }
+}
+
+/**
+ * When changes are finished, discern what happened, and dispatch the appropriate actions.
+ * @param {*} changes - Array of objects: `{ event: 'add', path: './Notes/mynote.md' }`
+ */
+async function onChangesFinished(changes) {
+
+  // If change events include directories added or removed, remap everything.
+  // Else, sort changes by event (changed, added, removed), and call appro
+  if (
+    changes.some((c) => c.event == 'addDir') ||
+    changes.some((c) => c.event == 'unlinkDir')
+  ) {
+    // A directory was added or removed
+    mapProject(state$1.projectPath, store$1);
+  } else {
+    // Files were changed (saved or over-written, added, or removed)
+    // Most commonly, this will be a single file saved.
+    // But in other cases, it may be a mix of events.
+    // Sort the events into arrays then pass them to right handlers.
+    let filesChanged = [];
+    let filesAdded = [];
+    let filesUnlinked = [];
+    for (var c of changes) {
+      switch (c.event) {
+        case 'change':
+          filesChanged.push(c);
+          break
+        case 'add':
+          filesAdded.push(c);
+          break
+        case 'unlink':
+          filesUnlinked.push(c);
+          break
+      }
+    }
+    if (filesChanged.length > 0) onFilesChanged(filesChanged);
+    if (filesAdded.length > 0) onFilesAdded(filesAdded);
+    if (filesUnlinked.length > 0) onFilesUnlinked(filesUnlinked);
+  }
+}
+
+async function onFilesChanged(filesChanged) {
+
+  let documents = [];
+  let media = [];
+
+  await Promise.all(
+    filesChanged.map(async (f) => {
+
+      const ext = path.extname(f.path);
+      const parentPath = path.dirname(f.path);
+      const parentId = state$1.folders.find((folder) => folder.path == parentPath).id;
+
+      if (ext == '.md') {
+        documents.push(await mapDocument(f.path, f.stats, parentId));
+      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
+        media.push(await mapMedia(f.path, f.stats, parentId, ext));
+      }
+
+    })
+  );
+
+  // Dispatch results to store
+  if (documents.length > 0) {
+    store$1.dispatch({ type: 'UPDATE_DOCUMENTS', documents: documents });
+  }
+
+  if (media.length > 0) {
+    store$1.dispatch({ type: 'UPDATE_MEDIA', media: media });
+  }
+}
+
+async function onFilesAdded(filesAdded) {
+
+  let documents = [];
+  let media = [];
+
+  await Promise.all(
+    filesAdded.map(async (f) => {
+
+      const ext = path.extname(f.path);
+      const parentPath = path.dirname(f.path);
+      const parentId = state$1.folders.find((folder) => folder.path == parentPath).id;
+
+      if (ext == '.md') {
+        documents.push(await mapDocument(f.path, f.stats, parentId));
+      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
+        media.push(await mapMedia(f.path, f.stats, parentId, ext));
+      }
+
+    })
+  );
+
+  // Dispatch results to store
+  if (documents.length > 0) {
+    store$1.dispatch({ type: 'ADD_DOCUMENTS', documents: documents });
+  }
+
+  if (media.length > 0) {
+    store$1.dispatch({ type: 'ADD_MEDIA', media: media });
+  }
+}
+
+async function onFilesUnlinked(filesUnlinked) {
+  let documentPaths = [];
+  let mediaPaths = [];
+
+  await Promise.all(
+    filesUnlinked.map(async (f) => {
+
+      const ext = path.extname(f.path);
+
+      if (ext == '.md') {
+        documentPaths.push(f.path);
+      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
+        mediaPaths.push(f.path);
+      }
+    })
+  );
+
+  // Dispatch results to store
+  if (documentPaths.length > 0) {
+    store$1.dispatch({ type: 'REMOVE_DOCUMENTS', documentPaths: documentPaths });
+  }
+
+  if (mediaPaths.length > 0) {
+    store$1.dispatch({ type: 'REMOVE_MEDIA', mediaPaths: mediaPaths });
+  }
+}
+
+const Document = {
+  title: '',
+  path: '',
+  id: '',
+  parentId: '',
+  modified: '',
+  created: '',
+  excerpt: '',
+  tags: [],
+};
+
+const Folder = {
+  name: '',
+  path: '',
+  id: '',
+  parentId: '',
+  modified: '',
+  childFileCount: 0,
+  childFolderCount: 0,
+};
+
+const Media = {
+  filetype: '',
+  path: '',
+  id: '',
+  parentId: '',
+  modified: '',
+  created: '',
+};
+
+/**
+ * For specified path, return document details
+ */
+async function mapDocument (filePath, stats = undefined, parentId = '') {
+
+	const doc = Object.assign({}, Document);
+
+	if (stats == undefined) {
+		stats = await fsExtra.stat(filePath);
+	}
+
+	doc.path = filePath;
+	doc.id = `doc-${stats.ino}`;
+	doc.parentId = parentId;
+	doc.modified = stats.mtime.toISOString();
+	doc.created = stats.birthtime.toISOString();
+
+	// Get front matter
+	const gm = matter.read(filePath);
+
+	// Set excerpt
+	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
+	doc.excerpt = getExcerpt(gm.content);
+
+	// Set fields from front matter (if it exists)
+	// gray-matter `isEmpty` property returns "true if front-matter is empty".
+	const hasFrontMatter = !gm.isEmpty;
+	if (hasFrontMatter) {
+		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
+		doc.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
+	}
+
+	// Set title. E.g. "Sea Level Rise"
+	doc.title = getTitle(gm, path.basename(filePath));
+
+	return doc
+
+	// if (oldVersion !== undefined) {
+	//   const lhs = Object.assign({}, oldVersion)
+	//   const rhs = file
+	//   diff.observableDiff(lhs, rhs, (d) => {
+	//     if (d.kind !== 'D') {
+	//       diff.applyChange(lhs, rhs, d)
+	//     }
+	//   })
+	//   return lhs
+	// } else {
+	// }
+}
+
+/**
+ * Set title, in following order of preference:
+ * 1. From first h1 in content
+ * 2. From `title` field of front matter
+ * 3. From filename, minus extension
+ */
+function getTitle(graymatter, filename) {
+
+	let titleFromH1 = graymatter.content.match(/^# (.*)$/m);
+	if (titleFromH1) {
+		return titleFromH1[1]
+	} else if (graymatter.data.hasOwnProperty('title')) {
+		return graymatter.data.title
+	} else {
+		return filename.slice(0, filename.lastIndexOf('.'))
+	}
+}
+
+/**
+ * Return excerpt from content, stripped of markdown characters.
+ * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
+ * @param {*} file 
+ */
+function getExcerpt(content) {
+
+	// Remove h1, if it exists. Then trim to 200 characters.
+	let excerpt = content
+		.replace(/^# (.*)\n/gm, '')
+		.substring(0, 400);
+
+	// Remove markdown formatting. Start with remove-markdown rules.
+	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
+	// Then add whatever additional changes I want (e.g. new lines).
+	excerpt = removeMd(excerpt)
+		.replace(/^> /gm, '')         // Block quotes
+		.replace(/^\n/gm, '')         // New lines at start of line (usually doc)
+		.replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
+		.replace(/\t/gm, ' ')         // Artifact left from list replacement
+		.replace(/\[@.*?\]/gm, '')    // Citations
+		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
+		.replace(/\s{2,}/gm, ' ')     // Extra spaces
+		.substring(0, 200);            // Trim to 200 characters
+
+	return excerpt
+}
+
+/**
+ * For specified path, return document details
+ */
+async function mapMedia (filePath, stats = undefined, parentId = '', extension = undefined) {
+
+	const media = Object.assign({}, Media);
+
+	if (stats == undefined) {
+		stats = await fsExtra.stat(filePath);
+	}
+
+  media.filetype = extension == undefined ? path.extname(filePath) : extension;
+	media.path = filePath;
+	media.id = `media-${stats.ino}`;
+	media.parentId = parentId;
+	media.modified = stats.mtime.toISOString();
+	media.created = stats.birthtime.toISOString();
+
+	return media
+}
+
+/**
+ * Map project path recursively and dispatch results to store
+ * @param {*} projectPath 
+ */
+async function mapProject(projectPath, store) {
+
+  if (projectPath == undefined || store == undefined) {
+    console.error('projectPath or store is undefined');
+  }
+
+  await isWorkingPath(projectPath);
+  if (!isWorkingPath) {
+    console.error('projectPath is not valid');
+  }
+  
+  try {
+
+    // Map project path, recursively
+    const { folders, documents, media } = await mapFolder(projectPath, undefined, '', true);
+    
+    // Dispatch results to store
+    store.dispatch({
+      type: 'MAP_PROJECT_CONTENTS',
+      folders: folders,
+      documents: documents,
+      media: media,
+    });
+
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+const imageFormats = [
+  '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
+];
+
+const avFormats = [
+  '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
+];
+
+async function getFileMetadata (path, data, stats) {
+
+  const file = {};
+  
+  // Set path
+  file.path = path;
+
+	// Get stats
+	if (stats == undefined) {
+    stats = await fsExtra.stat(path);
+  }
+  
+	// Set fields from stats
+	file.id = `file-${stats.ino}`;
+	file.modified = stats.mtime.toISOString();
+	file.created = stats.birthtime.toISOString();
+
+	// Get front matter
+	const gm = matter(data);
+
+	// Set excerpt
+	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
+	file.excerpt = getExcerpt$1(gm.content);
+
+	// Set fields from front matter (if it exists)
+	// gray-matter `isEmpty` property returns "true if front-matter is empty".
+	if (!gm.isEmpty) {
+		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
+		file.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
+	}
+
+	// Set name (includes extension). E.g. "sealevel.md"
+	file.name = path.substring(path.lastIndexOf('/') + 1);
+
+	// Set title. E.g. "Sea Level Rise"
+	file.title = getTitle$1(gm, file.name);
+
+	return file
+}
+
+/**
+ * Set title, in following order of preference:
+ * 1. From first h1 in content
+ * 2. From `title` field of front matter
+ * 3. From filename, minus extension
+ */
+function getTitle$1(graymatter, filename) {
+
+	let titleFromH1 = graymatter.content.match(/^# (.*)$/m);
+	if (titleFromH1) {
+		return titleFromH1[1]
+	} else if (graymatter.data.hasOwnProperty('title')) {
+		return graymatter.data.title
+	} else {
+		return filename.slice(0, filename.lastIndexOf('.'))
+	}
+}
+
+/**
+ * Return excerpt from content, stripped of markdown characters.
+ * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
+ * @param {*} file 
+ */
+function getExcerpt$1(content) {
+
+	// Remove h1, if it exists. Then trim to 200 characters.
+	let excerpt = content
+		.replace(/^# (.*)\n/gm, '')
+		.substring(0, 400);
+
+	// Remove markdown formatting. Start with remove-markdown rules.
+	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
+	// Then add whatever additional changes I want (e.g. new lines).
+	excerpt = removeMd(excerpt)
+		.replace(/^> /gm, '')         // Block quotes
+		.replace(/^\n/gm, '')         // New lines at start of line (usually doc)
+		.replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
+		.replace(/\t/gm, ' ')         // Artifact left from list replacement
+		.replace(/\[@.*?\]/gm, '')    // Citations
+		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
+		.replace(/\s{2,}/gm, ' ')     // Extra spaces
+		.substring(0, 200);            // Trim to 200 characters
+
+	return excerpt
+}
+
+async function saveFile (path, data) {
+	try {
+		await fsExtra.writeFile(path, data, 'utf8');
+		const metadata = await getFileMetadata(path, data);
+		return {
+			type: 'SAVE_FILE_SUCCESS',
+			path: path,
+			metadata: metadata
+		}
+	} catch (err) {
+		return {
+			type: 'SAVE_FILE_FAIL',
+			err: err
+		}
+	}
+}
+
+async function setProjectPath () {
+
+  // console.log(BrowserWindow.getFocusedWindow())
+
+  const win = electron.BrowserWindow.getFocusedWindow();
+
+  const selection = await electron.dialog.showOpenDialog(win, {
+    title: 'Select Project Folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
+
+  if (!selection.canceled) {
+    return { type: 'SET_PROJECTPATH_SUCCESS', path: selection.filePaths[0] }
+  } else {
+    return { type: 'SET_PROJECTPATH_FAIL' }
+  }
+}
+
 // External dependencies
+
+// Dev only
+// import colors from 'colors'
 
 // -------- Variables -------- //
 
 // Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
 let win = undefined;
-let store$1 = undefined;
-let contents = undefined;
+let store$2 = undefined;
 
 // -------- Process variables -------- //
 
@@ -1280,19 +1610,38 @@ require('electron-reload')(watchAndReload, {
   // argv: ['--inspect=5858'],
 });
 
+console.log('- - - - - - - - - - - - - - -');
+console.log(`Setup`, `(Main.js)`);
+
+
+
 // -------- Setup -------- //
 
-console.log(`Setup`.bgYellow.black, `(Main.js)`.yellow);
+// Create store
+store$2 = new GambierStore();
 
-store$1 = new GambierStore();
-contents = new GambierContents(store$1);
-// projectCitations.setup(store)
+// Setup store change listeners
+store$2.onDidAnyChange((newState, oldState) => {
+  if (win !== undefined) {
+    win.webContents.send('stateChanged', newState, oldState);
+  }
+});
+
+// TEMP
+store$2.set('projectPath', '/Users/josh/Documents/Climate research/GitHub/climate-research/src/Notes/Abicus/Arsenal/Whisper');
+
+// Do initial project map, if projectPath has been set)
+if (store$2.store.projectPath !== '') {
+  mapProject(store$2.store.projectPath, store$2);
+}
+
+// Create watcher
+setup$1(store$2);
+
 
 // -------- Create window -------- //
 
 function createWindow() {
-
-  console.log(`Create window`.bgBrightBlue.black, `(Main.js)`.brightBlue);
 
   win = new electron.BrowserWindow({
     show: true,
@@ -1324,58 +1673,22 @@ function createWindow() {
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'));
 
-  // OS menus
-  setup(store$1);
-
-  // Keyboard shortcuts
-  // electronLocalshortcut.register(win, 'Cmd+S', () => {
-  //   win.webContents.send('keyboardShortcut', 'Cmd+S')
-  // });
+  // Setup menu bar
+  setup(store$2);
 
   // Send state to render process once dom is ready
-  win.once('ready-to-show', () => {
-    console.log(`ready-to-show`.bgBrightBlue.black, `(Main.js)`.brightBlue);
-  });
-
-  // -------- TEMP DEVELOPMENT STUFF -------- //
-  // store.clear()
-  // store.reset()
-  // This triggers a change event, which subscribers then receive
-  // store.dispatch({ type: 'SET_STARTUP_TIME', time: new Date().toISOString() })
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Empty'})
-  // }, 1000)
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src'})
-  // }, 1000)
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/arasd'})
-  // }, 4000)
-
-  // setTimeout(() => {
-  //   store.dispatch({type: 'SET_PROJECT_PATH', path: '/Users/josh/Documents/Climate\ research/GitHub/climate-research/src/Notes'})
-  // }, 6000)
+  // win.once('ready-to-show', () => {
+  // })
 }
 
 
 // -------- Kickoff -------- //
 
-// Set this to shut up console warnings re: deprecated default 
-// If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9.
-// Per: https://github.com/electron/electron/issues/18397
+// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
 electron.app.allowRendererProcessReuse = true;
 
 electron.app.whenReady().then(createWindow);
 
-
-// -------- Store -------- //
-
-store$1.onDidAnyChange((newState, oldState) => {
-  win.webContents.send('stateChanged', newState, oldState);
-});
 
 
 // -------- IPC: Send/Receive -------- //
@@ -1387,33 +1700,33 @@ electron.ipcMain.on('showWindow', (event) => {
 electron.ipcMain.on('dispatch', async (event, action) => {
   switch (action.type) {
     case ('LOAD_PATH_IN_EDITOR'):
-      store$1.dispatch(action);
+      store$2.dispatch(action);
     case ('SET_PROJECT_PATH'):
-      store$1.dispatch(await setProjectPath());
+      store$2.dispatch(await setProjectPath());
       break
     case ('SAVE_FILE'):
-      store$1.dispatch(await saveFile(action.path, action.data));
+      store$2.dispatch(await saveFile(action.path, action.data));
       break
     case ('DELETE_FILE'):
-      store$1.dispatch(await deleteFile(action.path));
+      store$2.dispatch(await deleteFile(action.path));
       break
     case ('DELETE_FILES'):
-      store$1.dispatch(await deleteFiles(action.paths));
+      store$2.dispatch(await deleteFiles(action.paths));
       break
     case ('SELECT_SIDEBAR_ITEM'):
-      store$1.dispatch(action);
+      store$2.dispatch(action);
       break
     case ('TOGGLE_SIDEBAR_ITEM_EXPANDED'):
-      store$1.dispatch(action);
+      store$2.dispatch(action);
       break
     case ('SET_LAYOUT_FOCUS'):
-      store$1.dispatch(action);
+      store$2.dispatch(action);
       break
     case ('SAVE_SIDEBAR_FILE_SELECTION'):
-      store$1.dispatch(action);
+      store$2.dispatch(action);
       break
     case ('SAVE_SIDEBAR_SCROLL_POSITION'):
-      store$1.dispatch(action);
+      store$2.dispatch(action);
       break
   }
 });
@@ -1427,7 +1740,7 @@ electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
 });
 
 electron.ipcMain.handle('getState', async (event) => {
-  return store$1.store
+  return store$2.store
 });
 
 electron.ipcMain.handle('getCitations', (event) => {
@@ -1444,7 +1757,7 @@ electron.ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
 electron.ipcMain.handle('getFileById', async (event, id, encoding) => {
 
   // Get path of file with matching id
-  const filePath = store$1.store.contents.find((f) => f.id == id).path;
+  const filePath = store$2.store.contents.find((f) => f.id == id).path;
 
   // Load file and return
   let file = await fsExtra.readFile(filePath, encoding);

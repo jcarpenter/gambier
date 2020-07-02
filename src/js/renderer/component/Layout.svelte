@@ -11,7 +11,7 @@
 
   let focusedSection;
 
-  $: isEditorVisible = state.openFile.id
+  $: isEditorVisible = state.openDoc.id
 
   function setLayoutFocus(section) {
     if (state.focusedLayoutSection == section) return
@@ -53,7 +53,8 @@
       on:click={() => setLayoutFocus('navigation')}>
       <SideBar state={state} />
     </FlexPanel>
-    {#if state.showFilesList}
+    <div id="mainSection"></div>
+    <!-- {#if state.showFilesList}
       <FlexPanel
         min={260}
         max={320}
@@ -67,6 +68,6 @@
           state={state}
           visible={isEditorVisible}
           on:click={() => setLayoutFocus('editor')} />
-    </div>
+    </div> -->
   </div>
 {/if}

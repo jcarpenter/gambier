@@ -1,45 +1,57 @@
 import { stat } from 'fs-extra'
 import matter from 'gray-matter'
 import removeMd from 'remove-markdown'
+import { Document } from './index.js'
+import path from 'path'
 
-export default async function (path, data, stats) {
+/**
+ * For specified path, return document details
+ */
+export default async function (filePath, stats = undefined, parentId = '') {
 
-  const file = {}
-  
-  // Set path
-  file.path = path
+	const doc = Object.assign({}, Document)
 
-	// Get stats
 	if (stats == undefined) {
-    stats = await stat(path)
-  }
-  
-	// Set fields from stats
-	file.id = `file-${stats.ino}`
-	file.modified = stats.mtime.toISOString()
-	file.created = stats.birthtime.toISOString()
+		stats = await stat(filePath)
+	}
+
+	doc.path = filePath
+	doc.id = `doc-${stats.ino}`
+	doc.parentId = parentId
+	doc.modified = stats.mtime.toISOString()
+	doc.created = stats.birthtime.toISOString()
 
 	// Get front matter
-	const gm = matter(data)
+	const gm = matter.read(filePath)
 
 	// Set excerpt
 	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
-	file.excerpt = getExcerpt(gm.content)
+	doc.excerpt = getExcerpt(gm.content)
 
 	// Set fields from front matter (if it exists)
 	// gray-matter `isEmpty` property returns "true if front-matter is empty".
-	if (!gm.isEmpty) {
+	const hasFrontMatter = !gm.isEmpty
+	if (hasFrontMatter) {
 		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
-		file.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : []
+		doc.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : []
 	}
 
-	// Set name (includes extension). E.g. "sealevel.md"
-	file.name = path.substring(path.lastIndexOf('/') + 1)
-
 	// Set title. E.g. "Sea Level Rise"
-	file.title = getTitle(gm, file.name)
+	doc.title = getTitle(gm, path.basename(filePath))
 
-	return file
+	return doc
+
+	// if (oldVersion !== undefined) {
+	//   const lhs = Object.assign({}, oldVersion)
+	//   const rhs = file
+	//   diff.observableDiff(lhs, rhs, (d) => {
+	//     if (d.kind !== 'D') {
+	//       diff.applyChange(lhs, rhs, d)
+	//     }
+	//   })
+	//   return lhs
+	// } else {
+	// }
 }
 
 /**

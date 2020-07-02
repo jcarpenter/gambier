@@ -38,7 +38,6 @@ async function loadFileByPath(filePath) {
   if (filePath == '') {
     startNewDoc()
   } else {
-
     // Load file into editor
     const file = await window.api.invoke('getFileByPath', filePath, 'utf8')
     editor.setValue(file)
@@ -67,7 +66,7 @@ function findAndMark() {
       const isList = tokens[0] !== undefined && tokens[0].type !== null && tokens[0].type.includes('list')
 
       if (isFigure) {
-        markFigures(editor, lineHandle, tokens, mediaBasePath)
+        // markFigures(editor, lineHandle, tokens, mediaBasePath)
       } else {
         if (isList) {
           markList(editor, lineHandle, tokens)
@@ -208,24 +207,24 @@ async function setup(textarea, initialState) {
   // Setup change listeners
   window.api.receive('stateChanged', async (newState, oldState) => {
     state = newState
-    if (state.changed.includes('openFile')) {
-      if (state.openFile.path) {
-        loadFileByPath(state.openFile.path) 
+    if (state.changed.includes('openDoc')) {
+      if (state.openDoc.path) {
+        loadFileByPath(state.openDoc.path)
       }
     }
   })
 
   window.api.receive('mainRequestsSaveFile', () => {
-    // const sideBarItem = state.sideBar.items.find((i) => i.id == state.selectedSideBarItemId)
-    // const selectedFile = state.contents.find((c) => c.id == sideBarItem.lastSelection[0].id)
-
-    // TODO: Update this. Need to get id from `selectedSideBarItemId`.
-    // const filePath = state.contents.find((c) => c.id == state.selectedFileId).path
-    // window.api.send('dispatch', {type: 'SAVE_FILE', path: filePath, data: editor.getValue()})
+    window.api.send('dispatch',
+      {
+        type: 'SAVE_FILE',
+        path: state.openDoc.path,
+        data: editor.getValue()
+      })
   })
 
-  if (state.openFile.path) {
-    loadFileByPath(state.openFile.path) 
+  if (state.openDoc.path) {
+    loadFileByPath(state.openDoc.path)
   }
 }
 

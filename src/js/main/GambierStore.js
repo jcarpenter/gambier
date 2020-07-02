@@ -4,7 +4,7 @@ import reducers from './reducers'
 
 import colors from 'colors'
 import deepEql from 'deep-eql'
-import { updatedDiff, detailedDiff } from 'deep-object-diff'
+// import { updatedDiff, detailedDiff } from 'deep-object-diff'
 
 class GambierStore extends Store {
   constructor() {
@@ -21,13 +21,13 @@ class GambierStore extends Store {
     return this.store
   }
 
-  dispatch(action) {
+  async dispatch(action) {
 
     // Optional: Log the changes (useful for debug)
     this.logTheAction(action)
     
     // Get next state
-    const nextState = reducers(this.getCurrentState(), action)
+    const nextState = await reducers(this.getCurrentState(), action)
 
     // Optional: Log the diff (useful for debug)
     this.logTheDiff(this.getCurrentState(), nextState)

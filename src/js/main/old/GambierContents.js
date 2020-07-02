@@ -53,24 +53,24 @@ class GambierContents {
 
     const log = console.log.bind(console);
 
-    this.watcher
-      // .on('add', (path) => this.store.dispatch({ type: 'HANDLE_ADD_FILE', path: path }))
-      .on('add', (path) => this.store.dispatch({ type: 'HANDLE_ADD_FILE', path: path }))
-      .on('change', (path) => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
-      .on('unlink', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_FILE', path: path }))
-      .on('addDir', (path) => this.store.dispatch({ type: 'HANDLE_ADD_DIR', path: path }))
-      .on('unlinkDir', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_DIR', path: path }))
-      // .on('ready', () => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
-      // .on('error', error => log(`error: Watcher error: ${error}`))
+    // this.watcher
+    //   .on('add', (path) => this.store.dispatch({ type: 'HANDLE_ADD_FILE', path: path }))
+    //   .on('change', (path) => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
+    //   .on('unlink', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_FILE', path: path }))
+    //   .on('addDir', (path) => this.store.dispatch({ type: 'HANDLE_ADD_DIR', path: path }))
+    //   .on('unlinkDir', (path) => this.store.dispatch({ type: 'HANDLE_UNLINK_DIR', path: path }))
+    //   // .on('ready', () => this.store.dispatch({ type: 'HANDLE_CHANGE_FILE', path: path }))
+    //   // .on('error', error => log(`error: Watcher error: ${error}`))
 
 
-    // this.watcher.on('all', (event, path) => {
-    //   console.log(event)
-    //   console.log(path)
-    //   this.mapProjectPath()
-    // })
+    this.watcher.on('all', (event, path) => {
+      this.figureOutWhatChanged(event, path)
+    })
+  }
 
-
+  figureOutWhatChanged(event, path) {
+    console.log(event)
+    console.log(path)
   }
 
   /**
