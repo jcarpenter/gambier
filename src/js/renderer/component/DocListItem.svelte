@@ -14,7 +14,11 @@
 <style type="text/scss">
   @import "../../../styles/_variables.scss";
 
-  .file {
+  // .doc:first-child {
+  //   margin-top: 2rem;
+  // }
+
+  .doc {
     padding: 0.5em 1em 0.5em;
     overflow-y: hidden;
     border-bottom: 1px solid gray;
@@ -64,7 +68,7 @@
 </style>
 
 <div
-    class="file"
+    class="doc"
     class:focused
     class:selected
     on:click|preventDefault

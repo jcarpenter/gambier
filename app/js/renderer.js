@@ -86,6 +86,13 @@ function listen(node, event, handler, options) {
     node.addEventListener(event, handler, options);
     return () => node.removeEventListener(event, handler, options);
 }
+function prevent_default(fn) {
+    return function (event) {
+        event.preventDefault();
+        // @ts-ignore
+        return fn.call(this, event);
+    };
+}
 function stop_propagation(fn) {
     return function (event) {
         event.stopPropagation();
@@ -147,6 +154,10 @@ function schedule_update() {
         update_scheduled = true;
         resolved_promise.then(flush);
     }
+}
+function tick() {
+    schedule_update();
+    return resolved_promise;
 }
 function add_render_callback(fn) {
     render_callbacks.push(fn);
@@ -234,6 +245,92 @@ function transition_out(block, local, detach, callback) {
         });
         block.o(local);
     }
+}
+
+const globals = (typeof window !== 'undefined'
+    ? window
+    : typeof globalThis !== 'undefined'
+        ? globalThis
+        : global);
+function outro_and_destroy_block(block, lookup) {
+    transition_out(block, 1, 1, () => {
+        lookup.delete(block.key);
+    });
+}
+function update_keyed_each(old_blocks, dirty, get_key, dynamic, ctx, list, lookup, node, destroy, create_each_block, next, get_context) {
+    let o = old_blocks.length;
+    let n = list.length;
+    let i = o;
+    const old_indexes = {};
+    while (i--)
+        old_indexes[old_blocks[i].key] = i;
+    const new_blocks = [];
+    const new_lookup = new Map();
+    const deltas = new Map();
+    i = n;
+    while (i--) {
+        const child_ctx = get_context(ctx, list, i);
+        const key = get_key(child_ctx);
+        let block = lookup.get(key);
+        if (!block) {
+            block = create_each_block(key, child_ctx);
+            block.c();
+        }
+        else if (dynamic) {
+            block.p(child_ctx, dirty);
+        }
+        new_lookup.set(key, new_blocks[i] = block);
+        if (key in old_indexes)
+            deltas.set(key, Math.abs(i - old_indexes[key]));
+    }
+    const will_move = new Set();
+    const did_move = new Set();
+    function insert(block) {
+        transition_in(block, 1);
+        block.m(node, next, lookup.has(block.key));
+        lookup.set(block.key, block);
+        next = block.first;
+        n--;
+    }
+    while (o && n) {
+        const new_block = new_blocks[n - 1];
+        const old_block = old_blocks[o - 1];
+        const new_key = new_block.key;
+        const old_key = old_block.key;
+        if (new_block === old_block) {
+            // do nothing
+            next = new_block.first;
+            o--;
+            n--;
+        }
+        else if (!new_lookup.has(old_key)) {
+            // remove old block
+            destroy(old_block, lookup);
+            o--;
+        }
+        else if (!lookup.has(new_key) || will_move.has(new_key)) {
+            insert(new_block);
+        }
+        else if (did_move.has(old_key)) {
+            o--;
+        }
+        else if (deltas.get(new_key) > deltas.get(old_key)) {
+            did_move.add(new_key);
+            insert(new_block);
+        }
+        else {
+            will_move.add(old_key);
+            o--;
+        }
+    }
+    while (o--) {
+        const old_block = old_blocks[o];
+        if (!new_lookup.has(old_block.key))
+            destroy(old_block, lookup);
+    }
+    while (n)
+        insert(new_blocks[n - 1]);
+    return new_blocks;
 }
 function create_component(block) {
     block && block.c();
@@ -421,6 +518,18 @@ class FirstRun extends SvelteComponent {
 		if (!document.getElementById("svelte-ko94oe-style")) add_css();
 		init(this, options, instance, create_fragment, safe_not_equal, {});
 	}
+}
+
+/**
+ * Check if object is empty" {}
+ */
+// Taken from https://coderwall.com/p/_g3x9q/how-to-check-if-javascript-object-is-empty
+function isEmpty(obj) {
+  for(var key in obj) {
+      if(obj.hasOwnProperty(key))
+          return false
+  }
+  return true
 }
 
 // Copied from:
@@ -779,15 +888,15 @@ function add_css$2() {
 
 function get_each_context(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[10] = list[i];
+	child_ctx[6] = list[i];
 	return child_ctx;
 }
 
-// (188:2) {#if children.length > 0}
+// (181:2) {#if item.children.length > 0}
 function create_if_block(ctx) {
 	let div;
 	let current;
-	let each_value = /*children*/ ctx[1];
+	let each_value = /*item*/ ctx[1].children;
 	let each_blocks = [];
 
 	for (let i = 0; i < each_value.length; i += 1) {
@@ -808,7 +917,7 @@ function create_if_block(ctx) {
 
 			attr(div, "id", "children");
 			attr(div, "class", "svelte-15dk33n");
-			toggle_class(div, "expanded", /*expanded*/ ctx[6]);
+			toggle_class(div, "expanded", /*item*/ ctx[1].expanded);
 		},
 		m(target, anchor) {
 			insert(target, div, anchor);
@@ -820,8 +929,8 @@ function create_if_block(ctx) {
 			current = true;
 		},
 		p(ctx, dirty) {
-			if (dirty & /*state, children, nestDepth*/ 7) {
-				each_value = /*children*/ ctx[1];
+			if (dirty & /*state, item, nestDepth*/ 7) {
+				each_value = /*item*/ ctx[1].children;
 				let i;
 
 				for (i = 0; i < each_value.length; i += 1) {
@@ -847,8 +956,8 @@ function create_if_block(ctx) {
 				check_outros();
 			}
 
-			if (dirty & /*expanded*/ 64) {
-				toggle_class(div, "expanded", /*expanded*/ ctx[6]);
+			if (dirty & /*item*/ 2) {
+				toggle_class(div, "expanded", /*item*/ ctx[1].expanded);
 			}
 		},
 		i(local) {
@@ -876,17 +985,14 @@ function create_if_block(ctx) {
 	};
 }
 
-// (190:6) {#each children as item}
+// (183:6) {#each item.children as childItem}
 function create_each_block(ctx) {
 	let current;
 
 	const sidebaritem = new SideBarItem({
 			props: {
 				state: /*state*/ ctx[0],
-				id: /*item*/ ctx[10].id,
-				children: /*item*/ ctx[10].children
-				? /*item*/ ctx[10].children
-				: [],
+				item: /*childItem*/ ctx[6],
 				nestDepth: /*nestDepth*/ ctx[2] + 1
 			}
 		});
@@ -902,12 +1008,7 @@ function create_each_block(ctx) {
 		p(ctx, dirty) {
 			const sidebaritem_changes = {};
 			if (dirty & /*state*/ 1) sidebaritem_changes.state = /*state*/ ctx[0];
-			if (dirty & /*children*/ 2) sidebaritem_changes.id = /*item*/ ctx[10].id;
-
-			if (dirty & /*children*/ 2) sidebaritem_changes.children = /*item*/ ctx[10].children
-			? /*item*/ ctx[10].children
-			: [];
-
+			if (dirty & /*item*/ 2) sidebaritem_changes.item = /*childItem*/ ctx[6];
 			if (dirty & /*nestDepth*/ 4) sidebaritem_changes.nestDepth = /*nestDepth*/ ctx[2] + 1;
 			sidebaritem.$set(sidebaritem_changes);
 		},
@@ -935,12 +1036,12 @@ function create_fragment$2(ctx) {
 	let img1_src_value;
 	let t1;
 	let span;
-	let t2_value = /*sideBarItem*/ ctx[4].label + "";
+	let t2_value = /*item*/ ctx[1].label + "";
 	let t2;
 	let t3;
 	let current;
 	let dispose;
-	let if_block = /*children*/ ctx[1].length > 0 && create_if_block(ctx);
+	let if_block = /*item*/ ctx[1].children.length > 0 && create_if_block(ctx);
 
 	return {
 		c() {
@@ -958,9 +1059,9 @@ function create_fragment$2(ctx) {
 			attr(button, "id", "disclosure-triangle");
 			attr(button, "alt", "Expand");
 			attr(button, "class", "svelte-15dk33n");
-			toggle_class(button, "expandable", /*expandable*/ ctx[5]);
-			toggle_class(button, "expanded", /*expanded*/ ctx[6]);
-			if (img1.src !== (img1_src_value = /*sideBarItem*/ ctx[4].icon)) attr(img1, "src", img1_src_value);
+			toggle_class(button, "expandable", /*item*/ ctx[1].children.length > 0);
+			toggle_class(button, "expanded", /*item*/ ctx[1].expanded);
+			if (img1.src !== (img1_src_value = /*item*/ ctx[1].icon)) attr(img1, "src", img1_src_value);
 			attr(img1, "id", "icon");
 			attr(img1, "alt", "Icon");
 			attr(img1, "class", "svelte-15dk33n");
@@ -988,30 +1089,30 @@ function create_fragment$2(ctx) {
 			if (remount) run_all(dispose);
 
 			dispose = [
-				listen(button, "click", stop_propagation(/*toggleExpanded*/ ctx[8])),
-				listen(div0, "click", /*clicked*/ ctx[7])
+				listen(button, "click", stop_propagation(/*toggleExpanded*/ ctx[5])),
+				listen(div0, "click", /*clicked*/ ctx[4])
 			];
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*expandable*/ 32) {
-				toggle_class(button, "expandable", /*expandable*/ ctx[5]);
+			if (dirty & /*item*/ 2) {
+				toggle_class(button, "expandable", /*item*/ ctx[1].children.length > 0);
 			}
 
-			if (dirty & /*expanded*/ 64) {
-				toggle_class(button, "expanded", /*expanded*/ ctx[6]);
+			if (dirty & /*item*/ 2) {
+				toggle_class(button, "expanded", /*item*/ ctx[1].expanded);
 			}
 
-			if (!current || dirty & /*sideBarItem*/ 16 && img1.src !== (img1_src_value = /*sideBarItem*/ ctx[4].icon)) {
+			if (!current || dirty & /*item*/ 2 && img1.src !== (img1_src_value = /*item*/ ctx[1].icon)) {
 				attr(img1, "src", img1_src_value);
 			}
 
-			if ((!current || dirty & /*sideBarItem*/ 16) && t2_value !== (t2_value = /*sideBarItem*/ ctx[4].label + "")) set_data(t2, t2_value);
+			if ((!current || dirty & /*item*/ 2) && t2_value !== (t2_value = /*item*/ ctx[1].label + "")) set_data(t2, t2_value);
 
-			if (/*children*/ ctx[1].length > 0) {
+			if (/*item*/ ctx[1].children.length > 0) {
 				if (if_block) {
 					if_block.p(ctx, dirty);
 
-					if (dirty & /*children*/ 2) {
+					if (dirty & /*item*/ 2) {
 						transition_in(if_block, 1);
 					}
 				} else {
@@ -1057,77 +1158,42 @@ function create_fragment$2(ctx) {
 
 function instance$2($$self, $$props, $$invalidate) {
 	let { state = {} } = $$props;
-	let { id } = $$props;
-	let { children = [] } = $$props;
+	let { item = {} } = $$props;
 	let { nestDepth = 0 } = $$props;
 	let selected = false;
-	let sideBarItem;
 
 	function clicked() {
 		if (selected) return;
-		window.api.send("dispatch", { type: "SELECT_SIDEBAR_ITEM", id });
+		window.api.send("dispatch", { type: "SELECT_SIDEBAR_ITEM", item });
 	}
 
 	function toggleExpanded() {
 		window.api.send("dispatch", {
 			type: "TOGGLE_SIDEBAR_ITEM_EXPANDED",
-			id: sideBarItem.id
+			item
 		});
 	}
 
 	$$self.$set = $$props => {
 		if ("state" in $$props) $$invalidate(0, state = $$props.state);
-		if ("id" in $$props) $$invalidate(9, id = $$props.id);
-		if ("children" in $$props) $$invalidate(1, children = $$props.children);
+		if ("item" in $$props) $$invalidate(1, item = $$props.item);
 		if ("nestDepth" in $$props) $$invalidate(2, nestDepth = $$props.nestDepth);
 	};
 
-	let expandable;
-	let expanded;
-
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*state, id*/ 513) {
-			 $$invalidate(4, sideBarItem = state.sideBar.items.find(i => i.id == id));
-		}
-
-		if ($$self.$$.dirty & /*children*/ 2) {
-			 $$invalidate(5, expandable = children.length > 0);
-		}
-
-		if ($$self.$$.dirty & /*sideBarItem*/ 16) {
-			 $$invalidate(6, expanded = sideBarItem.expanded);
-		}
-
-		if ($$self.$$.dirty & /*state, sideBarItem*/ 17) {
-			 $$invalidate(3, selected = state.selectedSideBarItemId == sideBarItem.id);
+		if ($$self.$$.dirty & /*state, item*/ 3) {
+			 $$invalidate(3, selected = state.selectedSideBarItem.id == item.id);
 		}
 	};
 
-	return [
-		state,
-		children,
-		nestDepth,
-		selected,
-		sideBarItem,
-		expandable,
-		expanded,
-		clicked,
-		toggleExpanded,
-		id
-	];
+	return [state, item, nestDepth, selected, clicked, toggleExpanded];
 }
 
 class SideBarItem extends SvelteComponent {
 	constructor(options) {
 		super();
 		if (!document.getElementById("svelte-15dk33n-style")) add_css$2();
-
-		init(this, options, instance$2, create_fragment$2, safe_not_equal, {
-			state: 0,
-			id: 9,
-			children: 1,
-			nestDepth: 2
-		});
+		init(this, options, instance$2, create_fragment$2, safe_not_equal, { state: 0, item: 1, nestDepth: 2 });
 	}
 }
 
@@ -1140,128 +1206,32 @@ function add_css$3() {
 	append(document.head, style);
 }
 
-function get_each_context_1(ctx, list, i) {
-	const child_ctx = ctx.slice();
-	child_ctx[7] = list[i];
-	return child_ctx;
-}
-
 function get_each_context$1(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[4] = list[i];
+	child_ctx[5] = list[i];
 	return child_ctx;
 }
 
-// (141:4) {#if topLevelItem.type == 'group'}
-function create_if_block$1(ctx) {
-	let h1;
-	let t0_value = /*topLevelItem*/ ctx[4].label + "";
-	let t0;
-	let t1;
-	let each_1_anchor;
-	let current;
-	let each_value_1 = /*topLevelItem*/ ctx[4].children;
-	let each_blocks = [];
-
-	for (let i = 0; i < each_value_1.length; i += 1) {
-		each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
-	}
-
-	const out = i => transition_out(each_blocks[i], 1, 1, () => {
-		each_blocks[i] = null;
-	});
-
-	return {
-		c() {
-			h1 = element("h1");
-			t0 = text(t0_value);
-			t1 = space();
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				each_blocks[i].c();
-			}
-
-			each_1_anchor = empty();
-			attr(h1, "class", "title svelte-1gmu8r1");
-		},
-		m(target, anchor) {
-			insert(target, h1, anchor);
-			append(h1, t0);
-			insert(target, t1, anchor);
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				each_blocks[i].m(target, anchor);
-			}
-
-			insert(target, each_1_anchor, anchor);
-			current = true;
-		},
-		p(ctx, dirty) {
-			if ((!current || dirty & /*tree*/ 4) && t0_value !== (t0_value = /*topLevelItem*/ ctx[4].label + "")) set_data(t0, t0_value);
-
-			if (dirty & /*state, tree*/ 5) {
-				each_value_1 = /*topLevelItem*/ ctx[4].children;
-				let i;
-
-				for (i = 0; i < each_value_1.length; i += 1) {
-					const child_ctx = get_each_context_1(ctx, each_value_1, i);
-
-					if (each_blocks[i]) {
-						each_blocks[i].p(child_ctx, dirty);
-						transition_in(each_blocks[i], 1);
-					} else {
-						each_blocks[i] = create_each_block_1(child_ctx);
-						each_blocks[i].c();
-						transition_in(each_blocks[i], 1);
-						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
-					}
-				}
-
-				group_outros();
-
-				for (i = each_value_1.length; i < each_blocks.length; i += 1) {
-					out(i);
-				}
-
-				check_outros();
-			}
-		},
-		i(local) {
-			if (current) return;
-
-			for (let i = 0; i < each_value_1.length; i += 1) {
-				transition_in(each_blocks[i]);
-			}
-
-			current = true;
-		},
-		o(local) {
-			each_blocks = each_blocks.filter(Boolean);
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				transition_out(each_blocks[i]);
-			}
-
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(h1);
-			if (detaching) detach(t1);
-			destroy_each(each_blocks, detaching);
-			if (detaching) detach(each_1_anchor);
-		}
-	};
+function get_each_context_1(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[5] = list[i];
+	return child_ctx;
 }
 
-// (143:6) {#each topLevelItem.children as item}
-function create_each_block_1(ctx) {
+function get_each_context_2(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[5] = list[i];
+	return child_ctx;
+}
+
+// (146:2) {#each folders as item}
+function create_each_block_2(ctx) {
 	let current;
 
 	const sidebaritem = new SideBarItem({
 			props: {
 				state: /*state*/ ctx[0],
-				id: /*item*/ ctx[7].id,
-				children: /*item*/ ctx[7].children ? /*item*/ ctx[7].children : []
+				item: /*item*/ ctx[5]
 			}
 		});
 
@@ -1276,8 +1246,7 @@ function create_each_block_1(ctx) {
 		p(ctx, dirty) {
 			const sidebaritem_changes = {};
 			if (dirty & /*state*/ 1) sidebaritem_changes.state = /*state*/ ctx[0];
-			if (dirty & /*tree*/ 4) sidebaritem_changes.id = /*item*/ ctx[7].id;
-			if (dirty & /*tree*/ 4) sidebaritem_changes.children = /*item*/ ctx[7].children ? /*item*/ ctx[7].children : [];
+			if (dirty & /*folders*/ 4) sidebaritem_changes.item = /*item*/ ctx[5];
 			sidebaritem.$set(sidebaritem_changes);
 		},
 		i(local) {
@@ -1295,90 +1264,186 @@ function create_each_block_1(ctx) {
 	};
 }
 
-// (140:2) {#each tree as topLevelItem}
-function create_each_block$1(ctx) {
-	let if_block_anchor;
+// (151:2) {#each documents as item}
+function create_each_block_1(ctx) {
 	let current;
-	let if_block = /*topLevelItem*/ ctx[4].type == "group" && create_if_block$1(ctx);
+
+	const sidebaritem = new SideBarItem({
+			props: {
+				state: /*state*/ ctx[0],
+				item: /*item*/ ctx[5]
+			}
+		});
 
 	return {
 		c() {
-			if (if_block) if_block.c();
-			if_block_anchor = empty();
+			create_component(sidebaritem.$$.fragment);
 		},
 		m(target, anchor) {
-			if (if_block) if_block.m(target, anchor);
-			insert(target, if_block_anchor, anchor);
+			mount_component(sidebaritem, target, anchor);
 			current = true;
 		},
 		p(ctx, dirty) {
-			if (/*topLevelItem*/ ctx[4].type == "group") {
-				if (if_block) {
-					if_block.p(ctx, dirty);
-
-					if (dirty & /*tree*/ 4) {
-						transition_in(if_block, 1);
-					}
-				} else {
-					if_block = create_if_block$1(ctx);
-					if_block.c();
-					transition_in(if_block, 1);
-					if_block.m(if_block_anchor.parentNode, if_block_anchor);
-				}
-			} else if (if_block) {
-				group_outros();
-
-				transition_out(if_block, 1, 1, () => {
-					if_block = null;
-				});
-
-				check_outros();
-			}
+			const sidebaritem_changes = {};
+			if (dirty & /*state*/ 1) sidebaritem_changes.state = /*state*/ ctx[0];
+			if (dirty & /*documents*/ 8) sidebaritem_changes.item = /*item*/ ctx[5];
+			sidebaritem.$set(sidebaritem_changes);
 		},
 		i(local) {
 			if (current) return;
-			transition_in(if_block);
+			transition_in(sidebaritem.$$.fragment, local);
 			current = true;
 		},
 		o(local) {
-			transition_out(if_block);
+			transition_out(sidebaritem.$$.fragment, local);
 			current = false;
 		},
 		d(detaching) {
-			if (if_block) if_block.d(detaching);
-			if (detaching) detach(if_block_anchor);
+			destroy_component(sidebaritem, detaching);
+		}
+	};
+}
+
+// (156:2) {#each media as item}
+function create_each_block$1(ctx) {
+	let current;
+
+	const sidebaritem = new SideBarItem({
+			props: {
+				state: /*state*/ ctx[0],
+				item: /*item*/ ctx[5]
+			}
+		});
+
+	return {
+		c() {
+			create_component(sidebaritem.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(sidebaritem, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const sidebaritem_changes = {};
+			if (dirty & /*state*/ 1) sidebaritem_changes.state = /*state*/ ctx[0];
+			if (dirty & /*media*/ 16) sidebaritem_changes.item = /*item*/ ctx[5];
+			sidebaritem.$set(sidebaritem_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(sidebaritem.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(sidebaritem.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(sidebaritem, detaching);
 		}
 	};
 }
 
 function create_fragment$3(ctx) {
 	let div;
+	let h10;
+	let t1;
+	let t2;
+	let h11;
+	let t4;
+	let t5;
+	let h12;
+	let t7;
 	let current;
-	let each_value = /*tree*/ ctx[2];
+	let each_value_2 = /*folders*/ ctx[2];
+	let each_blocks_2 = [];
+
+	for (let i = 0; i < each_value_2.length; i += 1) {
+		each_blocks_2[i] = create_each_block_2(get_each_context_2(ctx, each_value_2, i));
+	}
+
+	const out = i => transition_out(each_blocks_2[i], 1, 1, () => {
+		each_blocks_2[i] = null;
+	});
+
+	let each_value_1 = /*documents*/ ctx[3];
+	let each_blocks_1 = [];
+
+	for (let i = 0; i < each_value_1.length; i += 1) {
+		each_blocks_1[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+	}
+
+	const out_1 = i => transition_out(each_blocks_1[i], 1, 1, () => {
+		each_blocks_1[i] = null;
+	});
+
+	let each_value = /*media*/ ctx[4];
 	let each_blocks = [];
 
 	for (let i = 0; i < each_value.length; i += 1) {
 		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
 	}
 
-	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+	const out_2 = i => transition_out(each_blocks[i], 1, 1, () => {
 		each_blocks[i] = null;
 	});
 
 	return {
 		c() {
 			div = element("div");
+			h10 = element("h1");
+			h10.textContent = "Folders";
+			t1 = space();
+
+			for (let i = 0; i < each_blocks_2.length; i += 1) {
+				each_blocks_2[i].c();
+			}
+
+			t2 = space();
+			h11 = element("h1");
+			h11.textContent = "Documents";
+			t4 = space();
+
+			for (let i = 0; i < each_blocks_1.length; i += 1) {
+				each_blocks_1[i].c();
+			}
+
+			t5 = space();
+			h12 = element("h1");
+			h12.textContent = "Media";
+			t7 = space();
 
 			for (let i = 0; i < each_blocks.length; i += 1) {
 				each_blocks[i].c();
 			}
 
+			attr(h10, "class", "title svelte-1gmu8r1");
+			attr(h11, "class", "title svelte-1gmu8r1");
+			attr(h12, "class", "title svelte-1gmu8r1");
 			attr(div, "id", "sidebar");
 			attr(div, "class", "svelte-1gmu8r1");
 			toggle_class(div, "focused", /*focused*/ ctx[1]);
 		},
 		m(target, anchor) {
 			insert(target, div, anchor);
+			append(div, h10);
+			append(div, t1);
+
+			for (let i = 0; i < each_blocks_2.length; i += 1) {
+				each_blocks_2[i].m(div, null);
+			}
+
+			append(div, t2);
+			append(div, h11);
+			append(div, t4);
+
+			for (let i = 0; i < each_blocks_1.length; i += 1) {
+				each_blocks_1[i].m(div, null);
+			}
+
+			append(div, t5);
+			append(div, h12);
+			append(div, t7);
 
 			for (let i = 0; i < each_blocks.length; i += 1) {
 				each_blocks[i].m(div, null);
@@ -1387,8 +1452,62 @@ function create_fragment$3(ctx) {
 			current = true;
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*tree, state*/ 5) {
-				each_value = /*tree*/ ctx[2];
+			if (dirty & /*state, folders*/ 5) {
+				each_value_2 = /*folders*/ ctx[2];
+				let i;
+
+				for (i = 0; i < each_value_2.length; i += 1) {
+					const child_ctx = get_each_context_2(ctx, each_value_2, i);
+
+					if (each_blocks_2[i]) {
+						each_blocks_2[i].p(child_ctx, dirty);
+						transition_in(each_blocks_2[i], 1);
+					} else {
+						each_blocks_2[i] = create_each_block_2(child_ctx);
+						each_blocks_2[i].c();
+						transition_in(each_blocks_2[i], 1);
+						each_blocks_2[i].m(div, t2);
+					}
+				}
+
+				group_outros();
+
+				for (i = each_value_2.length; i < each_blocks_2.length; i += 1) {
+					out(i);
+				}
+
+				check_outros();
+			}
+
+			if (dirty & /*state, documents*/ 9) {
+				each_value_1 = /*documents*/ ctx[3];
+				let i;
+
+				for (i = 0; i < each_value_1.length; i += 1) {
+					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+
+					if (each_blocks_1[i]) {
+						each_blocks_1[i].p(child_ctx, dirty);
+						transition_in(each_blocks_1[i], 1);
+					} else {
+						each_blocks_1[i] = create_each_block_1(child_ctx);
+						each_blocks_1[i].c();
+						transition_in(each_blocks_1[i], 1);
+						each_blocks_1[i].m(div, t5);
+					}
+				}
+
+				group_outros();
+
+				for (i = each_value_1.length; i < each_blocks_1.length; i += 1) {
+					out_1(i);
+				}
+
+				check_outros();
+			}
+
+			if (dirty & /*state, media*/ 17) {
+				each_value = /*media*/ ctx[4];
 				let i;
 
 				for (i = 0; i < each_value.length; i += 1) {
@@ -1408,7 +1527,7 @@ function create_fragment$3(ctx) {
 				group_outros();
 
 				for (i = each_value.length; i < each_blocks.length; i += 1) {
-					out(i);
+					out_2(i);
 				}
 
 				check_outros();
@@ -1421,6 +1540,14 @@ function create_fragment$3(ctx) {
 		i(local) {
 			if (current) return;
 
+			for (let i = 0; i < each_value_2.length; i += 1) {
+				transition_in(each_blocks_2[i]);
+			}
+
+			for (let i = 0; i < each_value_1.length; i += 1) {
+				transition_in(each_blocks_1[i]);
+			}
+
 			for (let i = 0; i < each_value.length; i += 1) {
 				transition_in(each_blocks[i]);
 			}
@@ -1428,6 +1555,18 @@ function create_fragment$3(ctx) {
 			current = true;
 		},
 		o(local) {
+			each_blocks_2 = each_blocks_2.filter(Boolean);
+
+			for (let i = 0; i < each_blocks_2.length; i += 1) {
+				transition_out(each_blocks_2[i]);
+			}
+
+			each_blocks_1 = each_blocks_1.filter(Boolean);
+
+			for (let i = 0; i < each_blocks_1.length; i += 1) {
+				transition_out(each_blocks_1[i]);
+			}
+
 			each_blocks = each_blocks.filter(Boolean);
 
 			for (let i = 0; i < each_blocks.length; i += 1) {
@@ -1438,6 +1577,8 @@ function create_fragment$3(ctx) {
 		},
 		d(detaching) {
 			if (detaching) detach(div);
+			destroy_each(each_blocks_2, detaching);
+			destroy_each(each_blocks_1, detaching);
 			destroy_each(each_blocks, detaching);
 		}
 	};
@@ -1446,36 +1587,49 @@ function create_fragment$3(ctx) {
 function instance$3($$self, $$props, $$invalidate) {
 	let { state = {} } = $$props;
 	let { focused } = $$props;
-	let tree = {};
 
+	// $: {
+	//   if (
+	//     state.changed.includes("sideBar")
+	//   ) {
+	//     buildTree()
+	//   }
+	// }
 	onMount(() => {
-		buildTree();
-
-		if (state.selectedSideBarItemId == "") {
-			window.api.send("dispatch", { type: "SELECT_SIDEBAR_ITEM", id: "all" });
+		// buildTree()
+		// If no sideBar item is selected yet (ala on first run), select first folder
+		if (isEmpty(state.selectedSideBarItem)) {
+			window.api.send("dispatch", {
+				type: "SELECT_SIDEBAR_ITEM",
+				item: folders[0]
+			});
 		}
 	});
-
-	function buildTree() {
-		$$invalidate(2, tree = lib_1(state.sideBar.items));
-	}
 
 	$$self.$set = $$props => {
 		if ("state" in $$props) $$invalidate(0, state = $$props.state);
 		if ("focused" in $$props) $$invalidate(1, focused = $$props.focused);
 	};
 
+	let folders;
+	let documents;
+	let media;
+
 	$$self.$$.update = () => {
 		if ($$self.$$.dirty & /*state*/ 1) {
-			 {
-				if (state.changed.includes("sideBar") || state.changed.includes("folders")) {
-					buildTree();
-				}
-			}
+			 $$invalidate(2, folders = lib_1(state.sideBar.folders));
+		}
+
+		if ($$self.$$.dirty & /*state*/ 1) {
+			 $$invalidate(3, documents = lib_1(state.sideBar.documents));
+		}
+
+		if ($$self.$$.dirty & /*state*/ 1) {
+			 $$invalidate(4, media = lib_1(state.sideBar.media));
 		}
 	};
 
-	return [state, focused, tree];
+	return [state, focused, folders, documents, media];
 }
 
 class SideBar extends SvelteComponent {
@@ -1486,11 +1640,721 @@ class SideBar extends SvelteComponent {
 	}
 }
 
+/* src/js/renderer/component/DocListItem.svelte generated by Svelte v3.22.3 */
+
+function add_css$4() {
+	var style = element("style");
+	style.id = "svelte-cke80v-style";
+	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.doc.svelte-cke80v.svelte-cke80v{padding:0.5em 1em 0.5em;overflow-y:hidden;border-bottom:1px solid gray;contain:content}.doc.svelte-cke80v.svelte-cke80v:focus{outline:none}h2.svelte-cke80v.svelte-cke80v,p.svelte-cke80v.svelte-cke80v{margin:0;padding:0;pointer-events:none;word-break:break-word}h2.svelte-cke80v.svelte-cke80v{font:caption;font-weight:500;font-size:12px;line-height:16px;letter-spacing:-0.07px}p.svelte-cke80v.svelte-cke80v{font:caption;font-weight:500;font-size:12px;line-height:16px;letter-spacing:-0.07px;color:gray;height:4em;overflow:hidden}.selected.svelte-cke80v.svelte-cke80v{background-color:var(--clr-gray-lightest)}.focused.selected.svelte-cke80v.svelte-cke80v{background-color:#2d67fa}.focused.selected.svelte-cke80v h2.svelte-cke80v{color:white}.focused.selected.svelte-cke80v p.svelte-cke80v{color:rgba(255, 255, 255, 0.8)}";
+	append(document.head, style);
+}
+
+function create_fragment$4(ctx) {
+	let div;
+	let h2;
+	let t0;
+	let t1;
+	let p;
+	let t2;
+	let dispose;
+
+	return {
+		c() {
+			div = element("div");
+			h2 = element("h2");
+			t0 = text(/*title*/ ctx[1]);
+			t1 = space();
+			p = element("p");
+			t2 = text(/*excerpt*/ ctx[2]);
+			attr(h2, "class", "svelte-cke80v");
+			attr(p, "class", "svelte-cke80v");
+			attr(div, "class", "doc svelte-cke80v");
+			attr(div, "tabindex", "0");
+			toggle_class(div, "focused", /*focused*/ ctx[3]);
+			toggle_class(div, "selected", /*selected*/ ctx[0]);
+		},
+		m(target, anchor, remount) {
+			insert(target, div, anchor);
+			append(div, h2);
+			append(h2, t0);
+			append(div, t1);
+			append(div, p);
+			append(p, t2);
+			if (remount) dispose();
+			dispose = listen(div, "click", prevent_default(/*click_handler*/ ctx[5]));
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*title*/ 2) set_data(t0, /*title*/ ctx[1]);
+			if (dirty & /*excerpt*/ 4) set_data(t2, /*excerpt*/ ctx[2]);
+
+			if (dirty & /*focused*/ 8) {
+				toggle_class(div, "focused", /*focused*/ ctx[3]);
+			}
+
+			if (dirty & /*selected*/ 1) {
+				toggle_class(div, "selected", /*selected*/ ctx[0]);
+			}
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(div);
+			dispose();
+		}
+	};
+}
+
+function instance$4($$self, $$props, $$invalidate) {
+	let { state = {} } = $$props;
+	let { selected = false } = $$props;
+	let { title = "" } = $$props;
+	let { excerpt = "" } = $$props;
+
+	function click_handler(event) {
+		bubble($$self, event);
+	}
+
+	$$self.$set = $$props => {
+		if ("state" in $$props) $$invalidate(4, state = $$props.state);
+		if ("selected" in $$props) $$invalidate(0, selected = $$props.selected);
+		if ("title" in $$props) $$invalidate(1, title = $$props.title);
+		if ("excerpt" in $$props) $$invalidate(2, excerpt = $$props.excerpt);
+	};
+
+	let focused;
+
+	$$self.$$.update = () => {
+		if ($$self.$$.dirty & /*state*/ 16) {
+			 $$invalidate(3, focused = state.focusedLayoutSection == "navigation");
+		}
+	};
+
+	return [selected, title, excerpt, focused, state, click_handler];
+}
+
+class DocListItem extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-cke80v-style")) add_css$4();
+
+		init(this, options, instance$4, create_fragment$4, safe_not_equal, {
+			state: 4,
+			selected: 0,
+			title: 1,
+			excerpt: 2
+		});
+	}
+}
+
+function updateDocList(state, searchParams) {
+
+  // Get search paramaters
+  const filterDateModified = searchParams.filterDateModified;
+  const filterDateCreated = searchParams.filterDateCreated;
+
+  // Get folder. If `lookInFolderId` is '*', that means "search all folders", so we get the root folder (the one without a parentId). Else, we get the folder specified by `lookInFolderId`.
+  const folder = searchParams.lookInFolderId == '*' ? 
+    state.folders.find((f) => f.parentId == '') : 
+    state.folders.find((f) => f.id == searchParams.lookInFolderId);
+
+  // Get docs for selected folder
+  let docs = state.documents.filter((d) => d.parentId == folder.id);
+
+  console.log(searchParams);
+
+  // If `includeChildren`, get docs for all descendant folders
+  if (searchParams.includeChildren) {
+    // Get ids of child folders
+    let childFolderIds = getChildFolderIds(folder);
+
+    // Add docs in child folders
+    state.documents.forEach((c) => {
+      if (childFolderIds.includes(c.parentId)) {
+        docs.push(c);
+      }
+    });
+  }
+
+  /**
+   * Get all the child folder ids of specified folder, recursively.
+   * @param {*} parentFolder 
+   */
+  function getChildFolderIds(parentFolder) {
+    
+    let ids = [];
+
+    state.folders.forEach((f) => {
+      if (f.parentId == parentFolder.id) {
+        // Push id of child folder
+        ids.push(f.id);
+
+        // Find and add ids of the child's children (recursive)
+        ids.concat(getChildFolderIds(f));
+      }
+    });
+    return ids;
+  }
+
+  // Set `selected` property to false, by default
+  docs.forEach((f) => f.selected = false);
+
+  // Filter by tags
+  if (searchParams.tags.length > 0) {
+    docs = docs.filter((f) => {
+      return searchParams.tags.some((t) => {
+        if (f.tags.includes(t)) {
+          return true;
+        }
+      });
+    });
+  }
+
+  // Filter by date modified
+  // if (filterDateModified) {
+  //   const from = new Date(searchParams.fromDateModified);
+  //   const to = new Date(searchParams.toDateModified);
+  //   docs = docs.filter(f => {
+  //     const modified = new Date(f.modified);
+  //     if (modified < from && modified > to) {
+  //       return f;
+  //     }
+  //   });
+  // }
+
+  // // Filter by date modified
+  // if (filterDateCreated) {
+  //   const from = new Date(searchParams.fromDateCreated);
+  //   const to = new Date(searchParams.toDateCreated);
+  //   docs = docs.filter(f => {
+  //     const created = new Date(f.created);
+  //     if (created < from && created > to) {
+  //       return f;
+  //     }
+  //   });
+  // }
+
+  return docs
+}
+
+function sortDocList(docsBefore, searchParams) {
+
+  let docs = docsBefore;
+
+  {
+    {
+      docs.sort((a, b) => b.title.localeCompare(a.title));
+    }
+  }
+
+  return docs  
+}
+
+/* src/js/renderer/component/DocList.svelte generated by Svelte v3.22.3 */
+
+const { window: window_1 } = globals;
+
+function add_css$5() {
+	var style = element("style");
+	style.id = "svelte-17myrd3-style";
+	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}#list.svelte-17myrd3{width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column;background-color:white}h1.svelte-17myrd3{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;margin:0;padding:0;padding:0.5rem;border-right:1px solid black;border-bottom:1px solid black;width:100%;z-index:1}#docs.svelte-17myrd3{width:100%;flex-grow:1;overflow-y:scroll;border-right:1px solid black;padding:0;user-select:none}";
+	append(document.head, style);
+}
+
+function get_each_context$2(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[20] = list[i];
+	child_ctx[22] = i;
+	return child_ctx;
+}
+
+// (408:4) {#each docs as doc, index (doc.id)}
+function create_each_block$2(key_1, ctx) {
+	let first;
+	let current;
+
+	const doclistitem = new DocListItem({
+			props: {
+				state: /*state*/ ctx[1],
+				title: /*doc*/ ctx[20].title,
+				excerpt: /*doc*/ ctx[20].excerpt,
+				selected: /*doc*/ ctx[20].selected
+			}
+		});
+
+	doclistitem.$on("click", function () {
+		if (is_function(/*handleClick*/ ctx[6](event, /*index*/ ctx[22]))) /*handleClick*/ ctx[6](event, /*index*/ ctx[22]).apply(this, arguments);
+	});
+
+	return {
+		key: key_1,
+		first: null,
+		c() {
+			first = empty();
+			create_component(doclistitem.$$.fragment);
+			this.first = first;
+		},
+		m(target, anchor) {
+			insert(target, first, anchor);
+			mount_component(doclistitem, target, anchor);
+			current = true;
+		},
+		p(new_ctx, dirty) {
+			ctx = new_ctx;
+			const doclistitem_changes = {};
+			if (dirty & /*state*/ 2) doclistitem_changes.state = /*state*/ ctx[1];
+			if (dirty & /*docs*/ 4) doclistitem_changes.title = /*doc*/ ctx[20].title;
+			if (dirty & /*docs*/ 4) doclistitem_changes.excerpt = /*doc*/ ctx[20].excerpt;
+			if (dirty & /*docs*/ 4) doclistitem_changes.selected = /*doc*/ ctx[20].selected;
+			doclistitem.$set(doclistitem_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(doclistitem.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(doclistitem.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) detach(first);
+			destroy_component(doclistitem, detaching);
+		}
+	};
+}
+
+function create_fragment$5(ctx) {
+	let div1;
+	let h1;
+	let t0_value = /*sideBarItem*/ ctx[4].label + "";
+	let t0;
+	let t1;
+	let div0;
+	let each_blocks = [];
+	let each_1_lookup = new Map();
+	let current;
+	let dispose;
+	let each_value = /*docs*/ ctx[2];
+	const get_key = ctx => /*doc*/ ctx[20].id;
+
+	for (let i = 0; i < each_value.length; i += 1) {
+		let child_ctx = get_each_context$2(ctx, each_value, i);
+		let key = get_key(child_ctx);
+		each_1_lookup.set(key, each_blocks[i] = create_each_block$2(key, child_ctx));
+	}
+
+	return {
+		c() {
+			div1 = element("div");
+			h1 = element("h1");
+			t0 = text(t0_value);
+			t1 = space();
+			div0 = element("div");
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				each_blocks[i].c();
+			}
+
+			attr(h1, "class", "svelte-17myrd3");
+			attr(div0, "id", "docs");
+			attr(div0, "class", "svelte-17myrd3");
+			toggle_class(div0, "focused", /*focused*/ ctx[0]);
+			attr(div1, "id", "list");
+			attr(div1, "class", "svelte-17myrd3");
+		},
+		m(target, anchor, remount) {
+			insert(target, div1, anchor);
+			append(div1, h1);
+			append(h1, t0);
+			append(div1, t1);
+			append(div1, div0);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				each_blocks[i].m(div0, null);
+			}
+
+			/*div0_binding*/ ctx[19](div0);
+			current = true;
+			if (remount) dispose();
+			dispose = listen(window_1, "keydown", /*handleKeydown*/ ctx[5]);
+		},
+		p(ctx, [dirty]) {
+			if ((!current || dirty & /*sideBarItem*/ 16) && t0_value !== (t0_value = /*sideBarItem*/ ctx[4].label + "")) set_data(t0, t0_value);
+
+			if (dirty & /*state, docs, handleClick, event*/ 70) {
+				const each_value = /*docs*/ ctx[2];
+				group_outros();
+				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, div0, outro_and_destroy_block, create_each_block$2, null, get_each_context$2);
+				check_outros();
+			}
+
+			if (dirty & /*focused*/ 1) {
+				toggle_class(div0, "focused", /*focused*/ ctx[0]);
+			}
+		},
+		i(local) {
+			if (current) return;
+
+			for (let i = 0; i < each_value.length; i += 1) {
+				transition_in(each_blocks[i]);
+			}
+
+			current = true;
+		},
+		o(local) {
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				transition_out(each_blocks[i]);
+			}
+
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) detach(div1);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				each_blocks[i].d();
+			}
+
+			/*div0_binding*/ ctx[19](null);
+			dispose();
+		}
+	};
+}
+
+function getFirstSelectedFileIndex(docs) {
+	return docs.findIndex(f => f.selected);
+}
+
+function getLastSelectedFileIndex(docs) {
+	let l = docs.length;
+
+	while (l--) {
+		if (docs[l].selected) {
+			break;
+		}
+	}
+
+	return l;
+}
+
+async function scrollElementIntoView(element, animate = true) {
+	if (element) {
+		element.scrollIntoView({
+			block: "nearest",
+			inline: "start",
+			behavior: animate ? "smooth" : "auto"
+		});
+	}
+}
+
+function instance$5($$self, $$props, $$invalidate) {
+	let { state = {} } = $$props;
+	let { oldState = {} } = $$props;
+	let { focused } = $$props;
+
+	// Files
+	let docs = [];
+
+	let fileEl;
+	let mounted = false;
+
+	function onStateChange(state) {
+		if (!mounted) return;
+
+		if (state.changed.includes("selectedSideBarItem")) {
+			saveOutgoingSideBarItemScrollPosition();
+			$$invalidate(2, docs = updateDocList(state, searchParams));
+			$$invalidate(2, docs = sortDocList(docs));
+			$$invalidate(2, docs = restoreLastSelection(docs, sideBarItem.lastSelection));
+			setScrollPosition();
+		} else if (state.changed.includes("sideBar") || state.changed.includes("folders") || state.changed.includes("documents")) {
+			$$invalidate(2, docs = updateDocList(state, searchParams));
+			$$invalidate(2, docs = sortDocList(docs));
+			$$invalidate(2, docs = restoreLastSelection(docs, sideBarItem.lastSelection));
+		}
+	}
+
+	onMount(async () => {
+		$$invalidate(2, docs = updateDocList(state, searchParams));
+		$$invalidate(2, docs = sortDocList(docs));
+		$$invalidate(2, docs = restoreLastSelection(docs, sideBarItem.lastSelection));
+		setScrollPosition();
+		mounted = true;
+	});
+
+	function saveOutgoingSideBarItemScrollPosition() {
+		if (!fileEl || isEmpty(oldState.selectedSideBarItem)) return;
+
+		window.api.send("dispatch", {
+			type: "SAVE_SIDEBAR_SCROLL_POSITION",
+			item: oldState.selectedSideBarItem,
+			lastScrollPosition: fileEl.scrollTop
+		});
+	}
+
+	async function setScrollPosition() {
+		await tick();
+		$$invalidate(3, fileEl.scrollTop = sideBarItem.lastScrollPosition, fileEl);
+	}
+
+	// -------- INTERACTIONS -------- //
+	/**
+ * Handle key presses
+ * User can press arrow keys to navigate up/down the list
+ * TODO: SideBar + DocList should be one unified focus area. Pressing arrows while clicking inside SideBar should translate into up/down inside DocList.
+ */
+	function handleKeydown(event) {
+		if (!focused) return;
+		const key = event.key;
+
+		switch (key) {
+			case "Tab":
+				event.preventDefault();
+				break;
+			case "ArrowUp":
+				{
+					event.preventDefault();
+					const firstSelected = getFirstSelectedFileIndex(docs);
+
+					if (firstSelected > 0) {
+						select(firstSelected - 1, event.shiftKey);
+					}
+
+					break;
+				}
+			case "ArrowDown":
+				{
+					event.preventDefault();
+					const lastSelected = getLastSelectedFileIndex(docs);
+
+					if (lastSelected < docs.length - 1) {
+						select(lastSelected + 1, event.shiftKey);
+					}
+
+					break;
+				}
+		}
+	}
+
+	/** 
+ * Handle click, shift-click, and command-click events
+ * - Click: select file
+ * - Meta-click: toggle selected
+ * - Shift-click, select range
+*/
+	function handleClick(event, index) {
+		if (!event.metaKey && !event.shiftKey) {
+			select(index, false);
+		} else if (event.metaKey) {
+			toggleSelected(index);
+		} else if (event.shiftKey) {
+			// Is anything selected?
+			const isAnythingSelected = docs.some(f => f.selected);
+
+			// If no, simply mark from start of list to clicked file (index)
+			// If yes, logic is more complicated
+			if (!isAnythingSelected) {
+				selectRange(0, index);
+			} else {
+				// Find first and last currently-selected docs
+				const firstSelected = getFirstSelectedFileIndex(docs);
+
+				const lastSelected = getLastSelectedFileIndex(docs);
+
+				// Set start and end depending on where user is clicking, relative to 
+				// currently-selected docs.
+				if (index < firstSelected) {
+					selectRange(index, firstSelected);
+				} else if (index > lastSelected) {
+					selectRange(lastSelected, index);
+				} else if (index > firstSelected && index < lastSelected) {
+					selectRange(firstSelected, index);
+				}
+			}
+		}
+	}
+
+	// -------- SELECT -------- //
+	function select(index, addToExistingSelection) {
+		if (addToExistingSelection) {
+			$$invalidate(2, docs[index].selected = true, docs);
+		} else {
+			docs.forEach((f, i) => {
+				f.selected = i == index;
+			});
+		}
+
+		scrollElementIntoView(fileEl.children[index], true);
+		$$invalidate(2, docs);
+		dispatchSelectionChangesToStore(docs);
+	}
+
+	function toggleSelected(index) {
+		$$invalidate(2, docs[index].selected = !docs[index].selected, docs);
+		$$invalidate(2, docs);
+		dispatchSelectionChangesToStore(docs);
+	}
+
+	function selectRange(start, end) {
+		for (let i = start; i <= end; i++) {
+			$$invalidate(2, docs[i].selected = true, docs);
+		}
+
+		$$invalidate(2, docs);
+		dispatchSelectionChangesToStore(docs);
+	}
+
+	/**
+ * Set document `selected` property. First try to restore the `lastSelected` docs for the selected sideBar item. If there were none selected, select the first doc. Or if the selected docs no longer exist (e.g. after a deletion), select the next adjacent doc.
+ * @param {} docs - Array of docs, as originally created by `updateDocList`.
+ * @param {*} previousSelections - Each is object: `{ index: 0, id: 'file-3234376' }`
+ */
+	function restoreLastSelection(docsBefore, lastSelection = []) {
+		if (docsBefore.length == 0) return [];
+		let docs = docsBefore;
+
+		// Else, try to restore the selections.
+		// If none of the previously-selected items exist in the updated `docs`, (e.g. in the case of a selected file being deleted), try to pick the next file. If already at the end of the list, 
+		// If there was a previous selections, try to restore it
+		if (lastSelection.length > 0) {
+			let isAtLeastOneFileSelected = false;
+
+			// If current docs match lastSelection docs, select them
+			docs.forEach(f => {
+				if (lastSelection.some(s => s.id == f.id)) {
+					f.selected = true;
+					isAtLeastOneFileSelected = true;
+				}
+			});
+
+			// If none of the previously selected docs still exist (most commonly, after a selected doc was deleted), then try to select the "next" doc (the new doc at the same index number as the previously selected doc). Or if the previously-selected doc was last in the list, select the new last doc.
+			if (!isAtLeastOneFileSelected) {
+				if (lastSelection[0].index <= docs.length - 1) {
+					docs[lastSelection[0].index].selected = true;
+				} else {
+					docs[docs.length - 1].selected = true;
+				}
+			}
+		} else {
+			// Else, just select the first file
+			docs[0].selected = true;
+		}
+
+		dispatchSelectionChangesToStore(docs);
+		return docs;
+	}
+
+	function dispatchSelectionChangesToStore(docs) {
+		let selectedDocs = [];
+
+		docs.forEach((f, i) => {
+			if (f.selected) {
+				selectedDocs.push({ index: i, id: f.id });
+			}
+		});
+
+		window.api.send("dispatch", {
+			type: "SAVE_SIDEBAR_LAST_SELECTION",
+			item: sideBarItem,
+			lastSelection: selectedDocs
+		});
+	}
+
+	// -------- DELETE -------- //
+	window.api.receive("mainRequestsDeleteFile", deleteFile);
+
+	function deleteFile() {
+		let selectedPaths = [];
+
+		docs.forEach((f, index) => {
+			if (f.selected) {
+				selectedPaths.push(f.path);
+			}
+		});
+
+		if (selectedPaths.length == 1) {
+			window.api.send("dispatch", {
+				type: "DELETE_FILE",
+				path: selectedPaths[0]
+			});
+		} else if (selectedPaths.length > 1) {
+			window.api.send("dispatch", {
+				type: "DELETE_FILES",
+				paths: selectedPaths
+			});
+		}
+	}
+
+	function div0_binding($$value) {
+		binding_callbacks[$$value ? "unshift" : "push"](() => {
+			$$invalidate(3, fileEl = $$value);
+		});
+	}
+
+	$$self.$set = $$props => {
+		if ("state" in $$props) $$invalidate(1, state = $$props.state);
+		if ("oldState" in $$props) $$invalidate(7, oldState = $$props.oldState);
+		if ("focused" in $$props) $$invalidate(0, focused = $$props.focused);
+	};
+
+	let sideBarItem;
+	let searchParams;
+
+	$$self.$$.update = () => {
+		if ($$self.$$.dirty & /*state*/ 2) {
+			 $$invalidate(4, sideBarItem = state.selectedSideBarItem);
+		}
+
+		if ($$self.$$.dirty & /*sideBarItem*/ 16) {
+			 searchParams = sideBarItem.searchParams;
+		}
+
+		if ($$self.$$.dirty & /*state*/ 2) {
+			 $$invalidate(0, focused = state.focusedLayoutSection == "navigation");
+		}
+
+		if ($$self.$$.dirty & /*state*/ 2) {
+			 onStateChange(state);
+		}
+	};
+
+	return [
+		focused,
+		state,
+		docs,
+		fileEl,
+		sideBarItem,
+		handleKeydown,
+		handleClick,
+		oldState,
+		mounted,
+		searchParams,
+		onStateChange,
+		saveOutgoingSideBarItemScrollPosition,
+		setScrollPosition,
+		select,
+		toggleSelected,
+		selectRange,
+		restoreLastSelection,
+		dispatchSelectionChangesToStore,
+		deleteFile,
+		div0_binding
+	];
+}
+
+class DocList extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-17myrd3-style")) add_css$5();
+		init(this, options, instance$5, create_fragment$5, safe_not_equal, { state: 1, oldState: 7, focused: 0 });
+	}
+}
+
 const turndownService = new TurndownService();
 
 /* src/js/renderer/component/Layout.svelte generated by Svelte v3.22.3 */
 
-function add_css$4() {
+function add_css$6() {
 	var style = element("style");
 	style.id = "svelte-1d8kdq7-style";
 	style.textContent = ":root{--layout:[nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]\n        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];--clr-editorText:#24292e;--side-bar-bg-color:#fafafa;--control-text-color:#777;--body-color:rgb(51, 51, 51);--body-color-light:rgb(96, 96, 96);--clr-warning:rgba(255, 50, 50, 0.4);--clr-warning-dark:rgba(255, 50, 50, 0.75);--clr-gray-darkest:hsl(0, 0%, 7.5%);--clr-gray-darker:hsl(0, 0%, 15%);--clr-gray-dark:hsl(0, 0%, 30%);--clr-gray:hsl(0, 0%, 50%);--clr-gray-light:hsl(0, 0%, 70%);--clr-gray-lighter:hsl(0, 0%, 85%);--clr-gray-lightest:hsl(0, 0%, 92.5%);--clr-blue:rgb(13, 103, 220);--clr-blue-light:#b9d0ee;--clr-blue-lighter:rgb(232, 242, 255);--baseFontSize:16px;--baseLineHeight:1.625rem;--baseFontScale:1.125;--font-base-size:1rem;--font-sml-3:calc(var(--font-sml-2) / var(--baseFontScale));--font-sml-2:calc(var(--font-sml-1) / var(--baseFontScale));--font-sml-1:calc(var(--font-base-size) / var(--baseFontScale));--font-lg-1:calc(var(--font-base-size) * var(--baseFontScale));--font-lg-2:calc(var(--font-lg-1) * var(--baseFontScale));--font-lg-3:calc(var(--font-lg-2) * var(--baseFontScale));--font-lg-4:calc(var(--font-lg-3) * var(--baseFontScale));--font-lg-5:calc(var(--font-lg-4) * var(--baseFontScale));--font-lg-6:calc(var(--font-lg-5) * var(--baseFontScale));--font-lg-7:calc(var(--font-lg-6) * var(--baseFontScale));--font-lg-8:calc(var(--font-lg-7) * var(--baseFontScale));--grid:var(--baseLineHeight);--grid-eighth:calc(var(--grid) * 0.125);--grid-sixth:calc(var(--grid) * 0.166);--grid-quarter:calc(var(--grid) * 0.25);--grid-half:calc(var(--grid) * 0.5);--grid-three-quarters:calc(var(--grid) * 0.75);--grid-1-and-quarter:calc(var(--grid) * 1.25);--grid-1-and-half:calc(var(--grid) * 1.5);--grid-1-and-three-quarters:calc(var(--grid) * 1.75);--grid-2:calc(var(--grid) * 2);--grid-3:calc(var(--grid) * 3);--grid-4:calc(var(--grid) * 4);--grid-5:calc(var(--grid) * 5);--grid-6:calc(var(--grid) * 6);--grid-7:calc(var(--grid) * 7);--grid-8:calc(var(--grid) * 8);--grid-9:calc(var(--grid) * 9);--grid-10:calc(var(--grid) * 10);--grid-12:calc(var(--grid) * 12);--grid-14:calc(var(--grid) * 14);--grid-16:calc(var(--grid) * 16);--grid-24:calc(var(--grid) * 24);--grid-32:calc(var(--grid) * 32)}.flexLayout.svelte-1d8kdq7{display:flex;width:100%;height:100%}#mainSection.svelte-1d8kdq7{width:100%;height:100%}";
@@ -1500,7 +2364,8 @@ function add_css$4() {
 // (118:0) {:else}
 function create_else_block(ctx) {
 	let div1;
-	let t;
+	let t0;
+	let t1;
 	let div0;
 	let current;
 
@@ -1510,18 +2375,21 @@ function create_else_block(ctx) {
 				min: 160,
 				max: 220,
 				start: 180,
-				$$slots: { default: [create_default_slot] },
+				$$slots: { default: [create_default_slot_1] },
 				$$scope: { ctx }
 			}
 		});
 
 	flexpanel.$on("click", /*click_handler*/ ctx[5]);
+	let if_block = /*state*/ ctx[0].showFilesList && create_if_block_1(ctx);
 
 	return {
 		c() {
 			div1 = element("div");
 			create_component(flexpanel.$$.fragment);
-			t = space();
+			t0 = space();
+			if (if_block) if_block.c();
+			t1 = space();
 			div0 = element("div");
 			attr(div0, "id", "mainSection");
 			attr(div0, "class", "svelte-1d8kdq7");
@@ -1530,7 +2398,9 @@ function create_else_block(ctx) {
 		m(target, anchor) {
 			insert(target, div1, anchor);
 			mount_component(flexpanel, div1, null);
-			append(div1, t);
+			append(div1, t0);
+			if (if_block) if_block.m(div1, null);
+			append(div1, t1);
 			append(div1, div0);
 			current = true;
 		},
@@ -1538,30 +2408,56 @@ function create_else_block(ctx) {
 			const flexpanel_changes = {};
 			if (dirty & /*state*/ 1) flexpanel_changes.visible = /*state*/ ctx[0].sideBar.show;
 
-			if (dirty & /*$$scope, state*/ 65) {
+			if (dirty & /*$$scope, state*/ 129) {
 				flexpanel_changes.$$scope = { dirty, ctx };
 			}
 
 			flexpanel.$set(flexpanel_changes);
+
+			if (/*state*/ ctx[0].showFilesList) {
+				if (if_block) {
+					if_block.p(ctx, dirty);
+
+					if (dirty & /*state*/ 1) {
+						transition_in(if_block, 1);
+					}
+				} else {
+					if_block = create_if_block_1(ctx);
+					if_block.c();
+					transition_in(if_block, 1);
+					if_block.m(div1, t1);
+				}
+			} else if (if_block) {
+				group_outros();
+
+				transition_out(if_block, 1, 1, () => {
+					if_block = null;
+				});
+
+				check_outros();
+			}
 		},
 		i(local) {
 			if (current) return;
 			transition_in(flexpanel.$$.fragment, local);
+			transition_in(if_block);
 			current = true;
 		},
 		o(local) {
 			transition_out(flexpanel.$$.fragment, local);
+			transition_out(if_block);
 			current = false;
 		},
 		d(detaching) {
 			if (detaching) detach(div1);
 			destroy_component(flexpanel);
+			if (if_block) if_block.d();
 		}
 	};
 }
 
 // (116:0) {#if state.projectPath == ''}
-function create_if_block$2(ctx) {
+function create_if_block$1(ctx) {
 	let current;
 	const firstrun = new FirstRun({});
 
@@ -1590,7 +2486,7 @@ function create_if_block$2(ctx) {
 }
 
 // (120:4) <FlexPanel       visible={state.sideBar.show}       min={160}       max={220}       start={180}       on:click={() => setLayoutFocus('navigation')}>
-function create_default_slot(ctx) {
+function create_default_slot_1(ctx) {
 	let current;
 	const sidebar = new SideBar({ props: { state: /*state*/ ctx[0] } });
 
@@ -1622,12 +2518,100 @@ function create_default_slot(ctx) {
 	};
 }
 
-function create_fragment$4(ctx) {
+// (128:4) {#if state.showFilesList}
+function create_if_block_1(ctx) {
+	let current;
+
+	const flexpanel = new FlexPanel({
+			props: {
+				min: 260,
+				max: 320,
+				start: 280,
+				$$slots: { default: [create_default_slot] },
+				$$scope: { ctx }
+			}
+		});
+
+	flexpanel.$on("click", /*click_handler_1*/ ctx[6]);
+
+	return {
+		c() {
+			create_component(flexpanel.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(flexpanel, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const flexpanel_changes = {};
+
+			if (dirty & /*$$scope, state, oldState*/ 131) {
+				flexpanel_changes.$$scope = { dirty, ctx };
+			}
+
+			flexpanel.$set(flexpanel_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(flexpanel.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(flexpanel.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(flexpanel, detaching);
+		}
+	};
+}
+
+// (129:6) <FlexPanel         min={260}         max={320}         start={280}         on:click={() => setLayoutFocus('navigation')}>
+function create_default_slot(ctx) {
+	let current;
+
+	const doclist = new DocList({
+			props: {
+				state: /*state*/ ctx[0],
+				oldState: /*oldState*/ ctx[1]
+			}
+		});
+
+	return {
+		c() {
+			create_component(doclist.$$.fragment);
+		},
+		m(target, anchor) {
+			mount_component(doclist, target, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const doclist_changes = {};
+			if (dirty & /*state*/ 1) doclist_changes.state = /*state*/ ctx[0];
+			if (dirty & /*oldState*/ 2) doclist_changes.oldState = /*oldState*/ ctx[1];
+			doclist.$set(doclist_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(doclist.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(doclist.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(doclist, detaching);
+		}
+	};
+}
+
+function create_fragment$6(ctx) {
 	let current_block_type_index;
 	let if_block;
 	let if_block_anchor;
 	let current;
-	const if_block_creators = [create_if_block$2, create_else_block];
+	const if_block_creators = [create_if_block$1, create_else_block];
 	const if_blocks = [];
 
 	function select_block_type(ctx, dirty) {
@@ -1689,7 +2673,7 @@ function create_fragment$4(ctx) {
 	};
 }
 
-function instance$4($$self, $$props, $$invalidate) {
+function instance$6($$self, $$props, $$invalidate) {
 	let { state = {} } = $$props;
 	let { oldState = {} } = $$props;
 	let focusedSection;
@@ -1700,10 +2684,11 @@ function instance$4($$self, $$props, $$invalidate) {
 	}
 
 	const click_handler = () => setLayoutFocus("navigation");
+	const click_handler_1 = () => setLayoutFocus("navigation");
 
 	$$self.$set = $$props => {
 		if ("state" in $$props) $$invalidate(0, state = $$props.state);
-		if ("oldState" in $$props) $$invalidate(2, oldState = $$props.oldState);
+		if ("oldState" in $$props) $$invalidate(1, oldState = $$props.oldState);
 	};
 
 	let isEditorVisible;
@@ -1716,19 +2701,20 @@ function instance$4($$self, $$props, $$invalidate) {
 
 	return [
 		state,
-		setLayoutFocus,
 		oldState,
+		setLayoutFocus,
 		isEditorVisible,
 		focusedSection,
-		click_handler
+		click_handler,
+		click_handler_1
 	];
 }
 
 class Layout extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1d8kdq7-style")) add_css$4();
-		init(this, options, instance$4, create_fragment$4, safe_not_equal, { state: 0, oldState: 2 });
+		if (!document.getElementById("svelte-1d8kdq7-style")) add_css$6();
+		init(this, options, instance$6, create_fragment$6, safe_not_equal, { state: 0, oldState: 1 });
 	}
 
 	get state() {
@@ -1741,7 +2727,7 @@ class Layout extends SvelteComponent {
 	}
 
 	get oldState() {
-		return this.$$.ctx[2];
+		return this.$$.ctx[1];
 	}
 
 	set oldState(oldState) {

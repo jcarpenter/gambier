@@ -1,19 +1,21 @@
-import Store from 'electron-store'
-import { StoreSchema } from './store-schema'
+import ElectronStore from 'electron-store'
+// import { StoreSchema } from './store-schema'
+import { storeDefault } from './store-default'
 import reducers from './reducers'
 
 import colors from 'colors'
 import deepEql from 'deep-eql'
 // import { updatedDiff, detailedDiff } from 'deep-object-diff'
 
-class GambierStore extends Store {
+class Store extends ElectronStore {
   constructor() {
     // Note: `super` lets us access and call functions on object's parent (MDN)
     // We pass in our config options for electron-store
     // Per: https://github.com/sindresorhus/electron-store#options
     super({
       name: "store",
-      schema: StoreSchema
+      defaults: storeDefault
+      // schema: StoreSchema
     })
   }
 
@@ -25,7 +27,7 @@ class GambierStore extends Store {
 
     // Optional: Log the changes (useful for debug)
     this.logTheAction(action)
-    
+
     // Get next state
     const nextState = await reducers(this.getCurrentState(), action)
 
@@ -40,7 +42,7 @@ class GambierStore extends Store {
     console.log(
       `Action:`.bgBrightGreen.black,
       `${action.type}`.bgBrightGreen.black.bold,
-      `(GambierStore.js)`.green
+      `(Store.js)`.green
     )
   }
 
@@ -56,4 +58,4 @@ class GambierStore extends Store {
   }
 }
 
-export { GambierStore }
+export { Store }

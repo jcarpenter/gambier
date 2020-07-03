@@ -1,95 +1,77 @@
-import { Folder } from './Folder'
-
-let newItems = {}
+import { makeItem } from './makeItem'
 
 /**
- * Filter items always operate on the top-level (root) folder.
- * Update their `lookInFolder` properties to point to root folder id.
- * @param {*} newItems 
+ * Update `folder` items
  */
-function updateFilters(newItems, rootFolderId) {
+function mapFolders(sideBar, newState) {
+
+  // Save existing folders, then clear
+  const oldFolders = sideBar.folders
+  sideBar.folders = []
   
-  return newItems.map((i) => {
-    if (i.type == 'filter') {
-      i.searchParams.lookInFolderId = rootFolderId
+  // Make new array of existing folders.
+  newState.folders.forEach((f) => {
+    
+    // Get old version
+    const oldFolder = oldFolders.find((oldF) => oldF.id == f.id)
+
+    // Determine icon
+    const icon = f.childFileCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg'
+
+    // Make new version
+    const newFolder = makeItem(
+      'folder', 
+      f.name, 
+      f.id, 
+      f.parentId, 
+      icon, 
+      true, 
+      {
+        lookInFolderId: f.id,
+        includeChildren: false,
+        tags: [],
+        filterDateModified: false,
+        fromDateModified: '',
+        toDateModified: '',
+      }
+    )
+    
+    // Copy over old values
+    if (oldFolder) {
+      newFolder.selectedFileId = oldFolder.selectedFileId,
+      newFolder.lastScrollPosition = oldFolder.lastScrollPosition,
+      newFolder.expanded = oldFolder.expanded,
+      newFolder.lastSelection = oldFolder.lastSelection,
+      newFolder.children = []
     }
-    return i
+
+    // Sort alphabetically by label
+    sideBar.folders.sort((a, b) => a.label.localeCompare(b.label))
+
+    sideBar.folders.push(newFolder)
   })
+
+  return sideBar
 }
 
-function updateFolders(newItems) {
 
-  // Update `folder` type items:
-  // Update root folder item. This item holds the project file hierarchy, in the UI.
-  const rootFolderItem = newItems.find((i) => i.type == 'folder' && i.isRoot)
-  rootFolderItem.label = rootFolder.name
-  rootFolderItem.id = rootFolder.id
-  rootFolderItem.searchParams.lookInFolderId = rootFolder.id
-
-  // Remove existing child folder items.
-  // TODO: Diff (don't remove). We don't want to blow away user-settings:
-  // - selectedFileId
-  // - lastScrollPosition
-  // - lastSelection
-  // - expanded
-  newState.sideBar.items = newState.sideBar.items.filter((i) => i.isRoot || i.type !== 'folder')
-
-  // Add child folder items.
-  // For each, set parent item as root folder item, and push into items array.
-  if (rootFolder.childFolderCount > 0) {
-    createAndInsertChildFolderItems(rootFolder)
-  }
-
-}
 
 /**
- * For the specified folder in `folders`, find its children,
- * create a new sideBar item for each, and recursively do 
- * the same for their children, in turn
- * @param {*} folder 
+ * Return `sideBar` with updated `folders`, `documents`, `media`, and `citations`.
+ * @param {*} newState - Reference to the newState
  */
-function createAndInsertChildFolderItems(folder) {
-  newState.folders.map((c) => {
-    if (c.parentId == folder.id) {
-
-      const childFolder = Object.assign({}, Folder)
-
-      childFolder.type = 'folder'
-      childFolder.label = c.name
-      childFolder.id = c.id
-      childFolder.parentId = folder.id
-      childFolder.isRoot = false
-      childFolder.icon = 'images/folder.svg'
-      childFolder.showFilesList = true
-      childFolder.searchParams.lookInFolderId = c.id
-      childFolder.searchParams.includeChildren = false
-      childFolder.selectedFileId = ''
-      childFolder.lastScrollPosition = 0
-      childFolder.lastSelection = []
-
-      newState.sideBar.items.push(childFolder)
-
-      // Recursive loop
-      if (c.childFolderCount > 0) {
-        createAndInsertChildFolderItems(c)
-      }
-    }
-  })
-}
-
 export function mapSideBarItems(newState) {
 
-  // Copy existing items
-  newItems = newState.sideBar.items
+  // Copy the sideBar object (so we don't effect the original)
+  let sideBar = Object.assign({}, newState.sideBar)
 
   // Get root folder from `folders`. It's the one without a parentId
   const rootFolder = newState.folders.find((f) => f.parentId == '')
 
-  // Update `filter` and `folder` items
-  newItems = updateFilters(newItems, rootFolder.id)
-  // updateFolders(newItems)
+  // Update `sideBar.folders`
+  sideBar = mapFolders(sideBar, newState)
 
-  return newItems
+  return sideBar
 }
 
 

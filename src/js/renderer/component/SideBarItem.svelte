@@ -2,32 +2,26 @@
   import { onMount } from "svelte";
 
   export let state = {};
-  export let id;
-  export let children = []
+  export let item = {}
   export let nestDepth = 0;
-  
+
   let selected = false;
 
-  let sideBarItem
-
-  $: sideBarItem = state.sideBar.items.find((i) => i.id == id)
-  $: expandable = children.length > 0
-  $: expanded = sideBarItem.expanded
-  $: selected = state.selectedSideBarItemId == sideBarItem.id
+  $: selected = state.selectedSideBarItem.id == item.id
 
   function clicked() {
     if (selected) return;
 
     window.api.send("dispatch", {
       type: "SELECT_SIDEBAR_ITEM",
-      id: id,
+      item: item,
     });
   }
 
   function toggleExpanded() {
     window.api.send("dispatch", {
       type: "TOGGLE_SIDEBAR_ITEM_EXPANDED",
-      id: sideBarItem.id,
+      item: item,
     });
   }
 </script>
@@ -110,25 +104,23 @@
 <div id="container" class:selected data-nestDepth={nestDepth}>
   <div id="flex-row" on:click={clicked}>
     <button
-      class:expandable
-      class:expanded
+      class:expandable={item.children.length > 0}
+      class:expanded={item.expanded}
       id="disclosure-triangle"
       alt="Expand"
       on:click|stopPropagation={toggleExpanded}>
       <img src="images/mac/disclosure-triangle.svg" alt="Collapse/Expand" />
     </button>
-    <img src={sideBarItem.icon} id="icon" alt="Icon" />
-    <span id="label">{sideBarItem.label}</span>
+    <img src={item.icon} id="icon" alt="Icon" />
+    <span id="label">{item.label}</span>
   </div>
 
-  <!-- Recursive children nesting -->
-  {#if children.length > 0}
-    <div id="children" class:expanded>
-      {#each children as item}
+  {#if item.children.length > 0}
+    <div id="children" class:expanded={item.expanded}>
+      {#each item.children as childItem}
         <svelte:self
           state={state}
-          id={item.id}
-          children={item.children ? item.children : []}
+          item={childItem}
           nestDepth={nestDepth + 1} />
       {/each}
     </div>

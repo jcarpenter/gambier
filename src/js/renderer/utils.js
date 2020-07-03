@@ -1,3 +1,15 @@
+/**
+ * Check if object is empty" {}
+ */
+// Taken from https://coderwall.com/p/_g3x9q/how-to-check-if-javascript-object-is-empty
+function isEmpty(obj) {
+  for(var key in obj) {
+      if(obj.hasOwnProperty(key))
+          return false
+  }
+  return true
+}
+
 // Copied from:
 // https://github.com/Rich-Harris/yootils/blob/master/src/number/clamp.ts
 function clamp(num, min, max) {
@@ -46,4 +58,4 @@ function mountReplace(Component, options) {
   return component;
 }
 
-export { mountReplace, hasChanged, isUrl, containsHTML, clamp }
+export { mountReplace, hasChanged, isUrl, containsHTML, clamp, isEmpty }

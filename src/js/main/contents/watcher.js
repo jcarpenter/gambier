@@ -164,7 +164,7 @@ async function onFilesChanged(filesChanged) {
       const parentPath = path.dirname(f.path)
       const parentId = state.folders.find((folder) => folder.path == parentPath).id
 
-      if (ext == '.md') {
+      if (ext == '.md' || ext == '.markdown') {
         documents.push(await mapDocument(f.path, f.stats, parentId))
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         media.push(await mapMedia(f.path, f.stats, parentId, ext))
@@ -195,7 +195,7 @@ async function onFilesAdded(filesAdded) {
       const parentPath = path.dirname(f.path)
       const parentId = state.folders.find((folder) => folder.path == parentPath).id
 
-      if (ext == '.md') {
+      if (ext == '.md' || ext == '.markdown') {
         documents.push(await mapDocument(f.path, f.stats, parentId))
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         media.push(await mapMedia(f.path, f.stats, parentId, ext))
@@ -223,7 +223,7 @@ async function onFilesUnlinked(filesUnlinked) {
 
       const ext = path.extname(f.path)
 
-      if (ext == '.md') {
+      if (ext == '.md' || ext == '.markdown') {
         documentPaths.push(f.path)
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         mediaPaths.push(f.path)

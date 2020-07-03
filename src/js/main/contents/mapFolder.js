@@ -59,10 +59,12 @@ export default async function (folderPath, stats = undefined, parentId = '', rec
         contents.folders = contents.folders.concat(folders)
         contents.documents = contents.documents.concat(documents)
         contents.media = contents.media.concat(media)
-      } else if (ext == '.md') {
+      } else if (ext == '.md' || ext == '.markdown') {
         contents.documents.push(await mapDocument(ePath, stats, folder.id))
+        folder.childFileCount++
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         contents.media.push(await mapMedia(ePath, stats, folder.id, ext))
+        folder.childFileCount++
       }
     })
   )

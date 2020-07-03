@@ -1,4 +1,4 @@
-function updateFileList(state, searchParams) {
+function updateDocList(state, searchParams) {
 
   // Get search paramaters
   const folderId = searchParams.lookInFolderId;
@@ -88,7 +88,7 @@ function updateFileList(state, searchParams) {
   return files
 }
 
-function sortFileList(files, searchParams) {
+function sortDocList(files, searchParams) {
 
   let sortedFiles = files
 
@@ -107,4 +107,4 @@ function sortFileList(files, searchParams) {
   return sortedFiles  
 }
 
-export { updateFileList, sortFileList }
+export { updateDocList, sortDocList }

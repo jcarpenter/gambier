@@ -5,7 +5,7 @@ import path from 'path'
 import { readFile, pathExists } from 'fs-extra'
 
 // Bundled dependencies
-import { GambierStore } from './GambierStore'
+import { Store } from './Store'
 import * as menuBar from './menuBar'
 import { saveFile, deleteFile, deleteFiles, setProjectPath } from './actions/index.js'
 import { watcher, mapProject } from './contents/index.js'
@@ -57,7 +57,7 @@ console.log(`Setup`, `(Main.js)`)
 // -------- Setup -------- //
 
 // Create store
-store = new GambierStore()
+store = new Store()
 
 // Setup store change listeners
 store.onDidAnyChange((newState, oldState) => {
@@ -67,7 +67,7 @@ store.onDidAnyChange((newState, oldState) => {
 })
 
 // TEMP
-store.set('projectPath', '/Users/josh/Documents/Climate research/GitHub/climate-research/src/Notes/Abicus/Arsenal/Whisper')
+store.set('projectPath', '/Users/josh/Documents/Climate research/GitHub/climate-research/src/Notes/Abicus')
 
 // Do initial project map, if projectPath has been set)
 if (store.store.projectPath !== '') {
@@ -161,7 +161,7 @@ ipcMain.on('dispatch', async (event, action) => {
     case ('SET_LAYOUT_FOCUS'):
       store.dispatch(action)
       break
-    case ('SAVE_SIDEBAR_FILE_SELECTION'):
+    case ('SAVE_SIDEBAR_LAST_SELECTION'):
       store.dispatch(action)
       break
     case ('SAVE_SIDEBAR_SCROLL_POSITION'):

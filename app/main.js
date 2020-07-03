@@ -5,7 +5,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var electron = require('electron');
 var path = _interopDefault(require('path'));
 var fsExtra = require('fs-extra');
-var Store = _interopDefault(require('electron-store'));
+var ElectronStore = _interopDefault(require('electron-store'));
 require('colors');
 var deepEql = _interopDefault(require('deep-eql'));
 var chokidar = _interopDefault(require('chokidar'));
@@ -14,287 +14,172 @@ require('util');
 var matter = _interopDefault(require('gray-matter'));
 var removeMd = _interopDefault(require('remove-markdown'));
 
-const StoreSchema = {
-
-  changed: { type: 'array', default: [] },
-
-  focusedLayoutSection: {
-    type: 'string',
-    default: 'navigation',
-  },
-
-  openDoc: {
-    type: 'object',
-    default: {}
-  },
-
-  selectedSideBarItemId: {
-    type: 'string',
-    default: '',
-  },
-
-  showFilesList: {
-    type: 'boolean',
-    default: true
-  },
-
-  projectPath: {
-    descrition: 'User specified path to folder containing their project files',
-    type: 'string',
-    default: ''
-  },
-
-  projectCitations: {
-    descrition: 'User specified path to CSL-JSON file containing their citatons',
-    type: 'string',
-    default: ''
-  },
-
-  sideBar: {
-    type: 'object',
-    properties: {
-      show: { type: 'boolean', default: true },
-      items: {
-        type: 'array', 
-        default: [
-          
-          // -------- Folders -------- //
-          {
-            label: 'Folders',
-            id: 'folders-group',
-            type: 'group'
-          },
-          {
-            label: '',
-            id: '',
-            isRoot: true,
-            parentId: 'folders-group',
-            type: 'folder',
-            icon: 'images/folder.svg',
-            showFilesList: true,
-            searchParams: {
-              lookInFolderId: 'root',
-              includeChildren: false,
-              filterDateModified: false,
-            },
-            selectedFileId: '',
-            lastScrollPosition: 0,
-            lastSelection: [],
-            expanded: true
-          },
-
-          // -------- Documents -------- //
-          {
-            label: 'Documents',
-            id: 'docs-group',
-            type: 'group'
-          },
-          {
-            label: 'All',
-            id: 'all',
-            parentId: 'docs-group',
-            type: 'filter',
-            icon: 'images/sidebar-default-icon.svg',
-            showFilesList: true,
-            searchParams: {
-              lookInFolderId: 'root',
-              includeChildren: true,
-            },
-            selectedFileId: '',
-            lastScrollPosition: 0,
-            lastSelection: [],
-          },
-          {
-            label: 'Favorites',
-            id: 'favorites',
-            parentId: 'docs-group',
-            type: 'filter',
-            icon: 'images/sidebar-default-icon.svg',
-            showFilesList: true,
-            searchParams: {
-              lookInFolderId: 'root',
-              includeChildren: true,
-              tags: ['favorite']
-            },
-            selectedFileId: '',
-            lastScrollPosition: 0,
-            lastSelection: [],
-          },
-          {
-            label: 'Most Recent',
-            id: 'most-recent',
-            parentId: 'docs-group',
-            type: 'filter',
-            icon: 'images/sidebar-default-icon.svg',
-            showFilesList: true,
-            searchParams: {
-              lookInFolderId: 'root',
-              includeChildren: true,
-              filterDateModified: true,
-              fromDateModified: 'today',
-              toDateModified: '7-days-ago'
-            },
-            selectedFileId: '',
-            lastScrollPosition: 0,
-            lastSelection: [],
-          },
-
-          // -------- Media -------- //
-          {
-            label: 'Media',
-            id: 'media-group',
-            type: 'group'
-          },
-          {
-            label: 'Media',
-            id: 'media-all',
-            parentId: 'media-group',
-            type: 'other',
-            icon: 'images/sidebar-default-icon.svg',
-            showFilesList: false,
-            lastScrollPosition: 0,
-            lastSelection: [],
-          },
-
-          // -------- Citations -------- //
-          {
-            label: 'Citations',
-            id: 'citations-group',
-            type: 'group'
-          },
-          {
-            label: 'Citations',
-            id: 'citations',
-            parentId: 'citations-group',
-            type: 'other',
-            icon: 'images/sidebar-default-icon.svg',
-            showFilesList: false,
-            lastScrollPosition: 0,
-            lastSelection: [],
-          }
-        ]
-      },
-    },
-    default: {}
-  },
-
-  folders: { 
-    type: 'array', 
-    default: [] 
-  },
-
-  documents: { 
-    type: 'array', 
-    default: [] 
-  },
-
-  media: { 
-    type: 'array', 
-    default: [] 
-  },
-
-  // contents: { 
-  //   type: 'array', 
-  //   default: [] 
-  // },
-
-  // TODO: For `searchInElement`, add enum of possible elements, matching CodeMirror mode assignments.
-  // filesSearchCriteria: {
-  //   type: 'object',
-  //   properties: {
-  //     lookInFolderId: { type: 'string', default: '' },
-  //     includeChildren: { type: 'boolean', default: false },
-  //     searchFor: { type: 'string', default: '*' },
-  //     searchInElement: { type: 'string', default: '*' },
-  //     matchWholeWord: { type: 'boolean', default: false },
-  //     matchCase: { type: 'boolean', default: false },
-  //     filterDateModified: { type: 'boolean', default: false },
-  //     fromDateModified: { type: 'string', format: 'date-time' },
-  //     toDateModified: { type: 'string', format: 'date-time' },
-  //     filterDateCreated: { type: 'boolean', default: false },
-  //     fromDateCreated: { type: 'string', format: 'date-time' },
-  //     toDateCreated: { type: 'string', format: 'date-time' },
-  //     tags: { type: 'array', default: [] }
-  //   },
-  //   default: {
-  //     lookInFolderId: '',
-  //     includeChildren: false,
-  //     searchFor: '',
-  //     searchInElement: '*',
-  //     matchWholeWord: false,
-  //     matchCase: false,
-  //     filterDateModified: false,
-  //     filterDateCreated: false,
-  //     tags: []
-  //   }
-  // },
-
-  // appStartupTime: {
-  //   type: 'string',
-  //   default: 'undefined'
-  // },
-
-  // hierarchy: {
-  //   description: 'Snapshot of hierarchy of project directory: files and directories. This is a recursive setup: directories can contain directories. Per: https://json-schema.org/understanding-json-schema/structuring.html#id1. Note: `id` can be anything, but it must be present, or our $refs will not work.',
-  //   $schema: 'http://json-schema.org/draft-07/schema#',
-  //   $id: 'anything-could-go-here',
-  //   definitions: {
-  //     'fileOrDirectory': {
-  //       type: 'object',
-  //       required: ['typeOf', 'name', 'path'],
-  //       properties: {
-  //         typeOf: { type: 'string', enum: ['File', 'Directory'] },
-  //         name: { type: 'string' },
-  //         path: { type: 'string' },
-  //         created: { type: 'string', format: 'date-time' },
-  //         modified: { type: 'string', format: 'date-time' },
-  //         children: {
-  //           type: 'array',
-  //           items: { $ref: '#/definitions/fileOrDirectory' }
-  //         }
-  //       }
-  //     }
-  //   },
-  //   type: 'array',
-  //   items: { $ref: '#/definitions/fileOrDirectory' },
-  //   default: []
-  // }
-};
-
-let newItems = {};
-
-/**
- * Filter items always operate on the top-level (root) folder.
- * Update their `lookInFolder` properties to point to root folder id.
- * @param {*} newItems 
- */
-function updateFilters(newItems, rootFolderId) {
+function makeItem(type, label, id, parentId, icon, showFilesList, searchParams) {
   
-  return newItems.map((i) => {
-    if (i.type == 'filter') {
-      i.searchParams.lookInFolderId = rootFolderId;
-    }
-    return i
-  })
+  const item = {
+    type: type ? type : '',
+    label: label ? label : '',
+    id: id ? id : '',
+    parentId: parentId ? parentId : '',
+    icon: icon ? icon : 'images/sidebar-default-icon.svg',
+    showFilesList: showFilesList ? showFilesList : false,
+    searchParams: searchParams ? searchParams : {
+      lookInFolderId: '*',
+      includeChildren: true,
+      filetypes: ['*'],
+      tags: [],
+      filterDateModified: false,
+      fromDateModified: '',
+      toDateModified: '',
+    },
+    selectedFileId: '',
+    lastScrollPosition: 0,
+    lastSelection: [],
+    expanded: true,
+    children: [],
+  };
+
+  return item
 }
 
+const storeDefault = {
+
+  focusedLayoutSection: 'navigation',
+
+  openDoc: {},
+
+  selectedSideBarItem: {},
+
+  showFilesList: true,
+
+  // User specified path to folder containing their project files
+  projectPath: '',
+
+  // User specified path to CSL-JSON file containing their citatons
+  projectCitations: '',
+
+  // Contents
+  folders: [],
+  documents: [],
+  media: [],
+  contents: [],
+
+  // SideBar
+  sideBar: {
+    show: true,
+    folders: [],
+    documents: [
+      makeItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true, {
+        lookInFolderId: '*',
+        includeChildren: true,
+        filetypes: ['.md', '.markdown'],
+        tags: [],
+        filterDateModified: false,
+        fromDateModified: '',
+        toDateModified: '',
+      }),
+      makeItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true, {
+        lookInFolderId: '*',
+        includeChildren: true,
+        filetypes: ['.md', '.markdown'],
+        tags: ['favorite'],
+        filterDateModified: false,
+        fromDateModified: '',
+        toDateModified: '',
+      }),
+      makeItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true, {
+        lookInFolderId: '*',
+        includeChildren: true,
+        filetypes: ['.md', '.markdown'],
+        tags: [],
+        filterDateModified: true,
+        fromDateModified: 'today',
+        toDateModified: '7-days-ago',
+      })
+    ],
+    media: [
+      makeItem('filter', 'All', 'media-all', '', 'images/sidebar-default-icon.svg', true,)
+    ],
+    citations: [],
+  }
+
+};
+
+/**
+ * Update `folder` items
+ */
+function mapFolders(sideBar, newState) {
+
+  // Save existing folders, then clear
+  const oldFolders = sideBar.folders;
+  sideBar.folders = [];
+  
+  // Make new array of existing folders.
+  newState.folders.forEach((f) => {
+    
+    // Get old version
+    const oldFolder = oldFolders.find((oldF) => oldF.id == f.id);
+
+    // Determine icon
+    const icon = f.childFileCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg';
+
+    // Make new version
+    const newFolder = makeItem(
+      'folder', 
+      f.name, 
+      f.id, 
+      f.parentId, 
+      icon, 
+      true, 
+      {
+        lookInFolderId: f.id,
+        includeChildren: false,
+        tags: [],
+        filterDateModified: false,
+        fromDateModified: '',
+        toDateModified: '',
+      }
+    );
+    
+    // Copy over old values
+    if (oldFolder) {
+      newFolder.selectedFileId = oldFolder.selectedFileId,
+      newFolder.lastScrollPosition = oldFolder.lastScrollPosition,
+      newFolder.expanded = oldFolder.expanded,
+      newFolder.lastSelection = oldFolder.lastSelection,
+      newFolder.children = [];
+    }
+
+    // Sort alphabetically by label
+    sideBar.folders.sort((a, b) => a.label.localeCompare(b.label));
+
+    sideBar.folders.push(newFolder);
+  });
+
+  return sideBar
+}
+
+
+
+/**
+ * Return `sideBar` with updated `folders`, `documents`, `media`, and `citations`.
+ * @param {*} newState - Reference to the newState
+ */
 function mapSideBarItems(newState) {
 
-  // Copy existing items
-  newItems = newState.sideBar.items;
+  // Copy the sideBar object (so we don't effect the original)
+  let sideBar = Object.assign({}, newState.sideBar);
 
   // Get root folder from `folders`. It's the one without a parentId
   const rootFolder = newState.folders.find((f) => f.parentId == '');
 
-  // Update `filter` and `folder` items
-  newItems = updateFilters(newItems, rootFolder.id);
-  // updateFolders(newItems)
+  // Update `sideBar.folders`
+  sideBar = mapFolders(sideBar, newState);
 
-  return newItems
+  return sideBar
 }
 
 // import diff from 'deep-diff'
-
 
 /**
  * Check if contents contains item by type and id
@@ -322,21 +207,30 @@ function mapSideBarItems(newState) {
 
 
 
-function getSideBarItem(sideBarItems, id) {
-  return sideBarItems.find((i) => i.id == id)
+function getSideBarItem(newState, id) {
+  if (id.includes('folder')) {
+    return newState.sideBar.folders.find((i) => i.id == id)
+  } else if (id.includes('docs')) {
+    return newState.sideBar.documents.find((i) => i.id == id)
+  } else if (id.includes('media')) {
+    return newState.sideBar.media.find((i) => i.id == id)
+  }  
 }
 
 /**
- * Copy object of the selected file from `state.contents` into top-level `state.openDoc`
+ * Update top-level `state.openDoc`. It is a copy of the selected doc's object from `state.documents`. We only "open" a doc if _one_ doc is selected in docList. If multiple are selected, we display nothing in the editor. 
  * @param {*} newState 
  * @param {*} id - Selected file `id`
  */
-function updateOpenFile(newState, selectedSideBarItem) {
+function updateOpenDoc(newState, selectedSideBarItem) {
 
-  const lastSelection = selectedSideBarItem.lastSelection;
-  if (lastSelection.length == 1) {
-    console.log(lastSelection[0]);
-    newState.openDoc = newState.contents.find((c) => c.type == 'file' && c.id == lastSelection[0].id);
+  if (selectedSideBarItem.lastSelection.length == 1) {
+    const docToOpen = newState.documents.find((c) => c.id == selectedSideBarItem.lastSelection[0].id);
+    if (docToOpen !== undefined) {
+      newState.openDoc = Object.assign({}, docToOpen);
+    } else {
+      newState.openDoc = {};  
+    }
   } else {
     newState.openDoc = {};
   }
@@ -393,24 +287,58 @@ async function reducers(state = {}, action) {
     // -------- CONTENTS -------- //
 
     case 'MAP_PROJECT_CONTENTS': {
+      
+      // Update `folders`, `documents`, `media`
       newState.folders = action.folders;
       newState.documents = action.documents;
       newState.media = action.media;
       newState.changed.push('folders', 'documents', 'media');
-      newState.sideBar.items = mapSideBarItems(newState);
+      
+      // Update sideBar
+      newState.sideBar = mapSideBarItems(newState);
       newState.changed.push('sideBar');
+      
+      // Check if selectedSideBarItem still exists. If no, select first sideBar item. Covers scenario where a folder sideBar item was selected, then deleted from the disk.
+
+      const allSideBarItems = newState.sideBar.folders.concat(newState.sideBar.documents, newState.sideBar.media);
+      
+      console.log(allSideBarItems);
+
+      const selectedStillExists = allSideBarItems.some((sbi) => sbi.id == newState.selectedSideBarItem.id);
+
+      if (!selectedStillExists) {
+        newState.selectedSideBarItem = Object.assign({}, newState.sideBar.folders[0]);
+        newState.changed.push('selectedSideBarItem');
+      }
+
       break
     }
 
     case 'ADD_DOCUMENTS': {
       newState.documents = newState.documents.concat(action.documents);
       newState.changed.push('documents');
+      
+      // Increment parent folder `childFileCount`
+      action.documents.forEach((d) => {
+        newState.folders.find((f) => f.path == path.dirname(d.path)).childFileCount++;
+      });
+      newState.sideBar = mapSideBarItems(newState);
+      newState.changed.push('sideBar');
+
       break
     }
 
     case 'ADD_MEDIA': {
       newState.media = newState.media.concat(action.media);
       newState.changed.push('media');
+      
+      // Increment parent folder `childFileCount`
+      action.media.forEach((m) => {
+        newState.folders.find((f) => f.path == path.dirname(m.path)).childFileCount++;
+      });
+      newState.sideBar = mapSideBarItems(newState);
+      newState.changed.push('sideBar');
+
       break
     }
 
@@ -448,8 +376,12 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.documents.splice(index, 1);
         }
+        // Decrement parent folder `childFileCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--;
       }
-      newState.changed.push('documents');
+      newState.changed.push('documents', 'folders');
+      newState.sideBar = mapSideBarItems(newState);
+      newState.changed.push('sideBar');
       break
     }
 
@@ -459,8 +391,12 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.media.splice(index, 1);
         }
+        // Decrement parent folder `childFileCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--;
       }
-      newState.changed.push('media');
+      newState.changed.push('media', 'folders');
+      newState.sideBar = mapSideBarItems(newState);
+      newState.changed.push('sideBar');
       break
     }
 
@@ -469,53 +405,58 @@ async function reducers(state = {}, action) {
 
     case 'SELECT_SIDEBAR_ITEM': {
 
-      if (newState.selectedSideBarItemId == action.id) break
+      if (newState.selectedSideBarItem.id == action.item.id) break
 
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id);
+      // Get reference to item inside newState.sideBar.
+      // This is the object we need to update (and then copy)
+      const item = getSideBarItem(newState, action.item.id);
 
-      // Update FileList visibility
-      if (newState.showFilesList !== sideBarItem.showFilesList) {
-        newState.showFilesList !== sideBarItem.showFilesList;
+      // Update DocList visibility
+      if (newState.showFilesList !== item.showFilesList) {
+        newState.showFilesList = item.showFilesList;
         newState.changed.push('showFilesList');
       }
 
-      // Update selected SideBar item
-      newState.selectedSideBarItemId = action.id;
-      newState.changed.push('selectedSideBarItemId');
+      // Copy selected item object to `selectedSideBarItem`
+      newState.selectedSideBarItem = Object.assign({}, item);
+      newState.changed.push('selectedSideBarItem');
 
       // Update `openDoc`
-      if (sideBarItem.lastSelection.length > 0) {
-        updateOpenFile(newState, sideBarItem);
-        newState.changed.push('openDoc');
-      }
+      updateOpenDoc(newState, item);
+      newState.changed.push('openDoc');
 
-      break
-    }
-
-    case 'TOGGLE_SIDEBAR_ITEM_EXPANDED': {
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id);
-      sideBarItem.expanded = !sideBarItem.expanded;
-      newState.changed.push('sideBar item expanded');
-      break
+      break 
     }
 
     // This is set on the _outgoing_ item, when the user is switching SideBar items.
-    case 'SAVE_SIDEBAR_FILE_SELECTION': {
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.sideBarItemId);
-      sideBarItem.lastSelection = action.lastSelection;
+    case 'SAVE_SIDEBAR_LAST_SELECTION': {
+      const item = getSideBarItem(newState, action.item.id);
+      if (!item) break 
+
+      item.lastSelection = action.lastSelection;
+      newState.selectedSideBarItem.lastSelection = item.lastSelection;
       newState.changed.push('lastSelection');
-      if (sideBarItem.lastSelection.length > 0) {
-        updateOpenFile(newState, sideBarItem);
-        newState.changed.push('openDoc');
-      }
+
+      // Update `openDoc`
+      updateOpenDoc(newState, item);
+      newState.changed.push('openDoc');
       break
     }
 
     // This is set on the _outgoing_ item, when the user is switching SideBar items.
     case 'SAVE_SIDEBAR_SCROLL_POSITION': {
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.sideBarItemId);
-      sideBarItem.lastScrollPosition = action.lastScrollPosition;
-      newState.changed.push('sideBar lastScrollPosition');
+      const item = getSideBarItem(newState, action.item.id);
+      if (!item) break 
+      item.lastScrollPosition = action.lastScrollPosition;
+      newState.changed.push('lastScrollPosition');
+      break
+    }
+
+    case 'TOGGLE_SIDEBAR_ITEM_EXPANDED': {
+      const item = getSideBarItem(newState, action.item.id);
+      if (!item) break 
+      item.expanded = !item.expanded;
+      newState.changed.push('item expanded');
       break
     }
 
@@ -664,14 +605,15 @@ async function reducers(state = {}, action) {
 
 // import { updatedDiff, detailedDiff } from 'deep-object-diff'
 
-class GambierStore extends Store {
+class Store extends ElectronStore {
   constructor() {
     // Note: `super` lets us access and call functions on object's parent (MDN)
     // We pass in our config options for electron-store
     // Per: https://github.com/sindresorhus/electron-store#options
     super({
       name: "store",
-      schema: StoreSchema
+      defaults: storeDefault
+      // schema: StoreSchema
     });
   }
 
@@ -683,7 +625,7 @@ class GambierStore extends Store {
 
     // Optional: Log the changes (useful for debug)
     this.logTheAction(action);
-    
+
     // Get next state
     const nextState = await reducers(this.getCurrentState(), action);
 
@@ -698,7 +640,7 @@ class GambierStore extends Store {
     console.log(
       `Action:`.bgBrightGreen.black,
       `${action.type}`.bgBrightGreen.black.bold,
-      `(GambierStore.js)`.green
+      `(Store.js)`.green
     );
   }
 
@@ -1000,10 +942,12 @@ async function mapFolder (folderPath, stats = undefined, parentId = '', recursiv
         contents.folders = contents.folders.concat(folders);
         contents.documents = contents.documents.concat(documents);
         contents.media = contents.media.concat(media);
-      } else if (ext == '.md') {
+      } else if (ext == '.md' || ext == '.markdown') {
         contents.documents.push(await mapDocument(ePath, stats, folder.id));
+        folder.childFileCount++;
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         contents.media.push(await mapMedia(ePath, stats, folder.id, ext));
+        folder.childFileCount++;
       }
     })
   );
@@ -1183,7 +1127,7 @@ async function onFilesChanged(filesChanged) {
       const parentPath = path.dirname(f.path);
       const parentId = state$1.folders.find((folder) => folder.path == parentPath).id;
 
-      if (ext == '.md') {
+      if (ext == '.md' || ext == '.markdown') {
         documents.push(await mapDocument(f.path, f.stats, parentId));
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         media.push(await mapMedia(f.path, f.stats, parentId, ext));
@@ -1214,7 +1158,7 @@ async function onFilesAdded(filesAdded) {
       const parentPath = path.dirname(f.path);
       const parentId = state$1.folders.find((folder) => folder.path == parentPath).id;
 
-      if (ext == '.md') {
+      if (ext == '.md' || ext == '.markdown') {
         documents.push(await mapDocument(f.path, f.stats, parentId));
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         media.push(await mapMedia(f.path, f.stats, parentId, ext));
@@ -1242,7 +1186,7 @@ async function onFilesUnlinked(filesUnlinked) {
 
       const ext = path.extname(f.path);
 
-      if (ext == '.md') {
+      if (ext == '.md' || ext == '.markdown') {
         documentPaths.push(f.path);
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         mediaPaths.push(f.path);
@@ -1618,7 +1562,7 @@ console.log(`Setup`, `(Main.js)`);
 // -------- Setup -------- //
 
 // Create store
-store$2 = new GambierStore();
+store$2 = new Store();
 
 // Setup store change listeners
 store$2.onDidAnyChange((newState, oldState) => {
@@ -1628,7 +1572,7 @@ store$2.onDidAnyChange((newState, oldState) => {
 });
 
 // TEMP
-store$2.set('projectPath', '/Users/josh/Documents/Climate research/GitHub/climate-research/src/Notes/Abicus/Arsenal/Whisper');
+store$2.set('projectPath', '/Users/josh/Documents/Climate research/GitHub/climate-research/src/Notes/Abicus');
 
 // Do initial project map, if projectPath has been set)
 if (store$2.store.projectPath !== '') {
@@ -1722,7 +1666,7 @@ electron.ipcMain.on('dispatch', async (event, action) => {
     case ('SET_LAYOUT_FOCUS'):
       store$2.dispatch(action);
       break
-    case ('SAVE_SIDEBAR_FILE_SELECTION'):
+    case ('SAVE_SIDEBAR_LAST_SELECTION'):
       store$2.dispatch(action);
       break
     case ('SAVE_SIDEBAR_SCROLL_POSITION'):

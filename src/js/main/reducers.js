@@ -4,7 +4,7 @@
 // import { readFile, stat } from 'fs-extra'
 
 import { mapSideBarItems } from './sideBar/mapSideBarItems'
-
+import path from 'path'
 
 /**
  * Check if contents contains item by type and id
@@ -32,21 +32,30 @@ import { mapSideBarItems } from './sideBar/mapSideBarItems'
 
 
 
-function getSideBarItem(sideBarItems, id) {
-  return sideBarItems.find((i) => i.id == id)
+function getSideBarItem(newState, id) {
+  if (id.includes('folder')) {
+    return newState.sideBar.folders.find((i) => i.id == id)
+  } else if (id.includes('docs')) {
+    return newState.sideBar.documents.find((i) => i.id == id)
+  } else if (id.includes('media')) {
+    return newState.sideBar.media.find((i) => i.id == id)
+  }  
 }
 
 /**
- * Copy object of the selected file from `state.contents` into top-level `state.openDoc`
+ * Update top-level `state.openDoc`. It is a copy of the selected doc's object from `state.documents`. We only "open" a doc if _one_ doc is selected in docList. If multiple are selected, we display nothing in the editor. 
  * @param {*} newState 
  * @param {*} id - Selected file `id`
  */
-function updateOpenFile(newState, selectedSideBarItem) {
+function updateOpenDoc(newState, selectedSideBarItem) {
 
-  const lastSelection = selectedSideBarItem.lastSelection
-  if (lastSelection.length == 1) {
-    console.log(lastSelection[0])
-    newState.openDoc = newState.contents.find((c) => c.type == 'file' && c.id == lastSelection[0].id)
+  if (selectedSideBarItem.lastSelection.length == 1) {
+    const docToOpen = newState.documents.find((c) => c.id == selectedSideBarItem.lastSelection[0].id)
+    if (docToOpen !== undefined) {
+      newState.openDoc = Object.assign({}, docToOpen)
+    } else {
+      newState.openDoc = {}  
+    }
   } else {
     newState.openDoc = {}
   }
@@ -103,24 +112,58 @@ async function reducers(state = {}, action) {
     // -------- CONTENTS -------- //
 
     case 'MAP_PROJECT_CONTENTS': {
+      
+      // Update `folders`, `documents`, `media`
       newState.folders = action.folders
       newState.documents = action.documents
       newState.media = action.media
       newState.changed.push('folders', 'documents', 'media')
-      newState.sideBar.items = mapSideBarItems(newState)
+      
+      // Update sideBar
+      newState.sideBar = mapSideBarItems(newState)
       newState.changed.push('sideBar')
+      
+      // Check if selectedSideBarItem still exists. If no, select first sideBar item. Covers scenario where a folder sideBar item was selected, then deleted from the disk.
+
+      const allSideBarItems = newState.sideBar.folders.concat(newState.sideBar.documents, newState.sideBar.media)
+      
+      console.log(allSideBarItems)
+
+      const selectedStillExists = allSideBarItems.some((sbi) => sbi.id == newState.selectedSideBarItem.id)
+
+      if (!selectedStillExists) {
+        newState.selectedSideBarItem = Object.assign({}, newState.sideBar.folders[0])
+        newState.changed.push('selectedSideBarItem')
+      }
+
       break
     }
 
     case 'ADD_DOCUMENTS': {
       newState.documents = newState.documents.concat(action.documents)
       newState.changed.push('documents')
+      
+      // Increment parent folder `childFileCount`
+      action.documents.forEach((d) => {
+        newState.folders.find((f) => f.path == path.dirname(d.path)).childFileCount++
+      })
+      newState.sideBar = mapSideBarItems(newState)
+      newState.changed.push('sideBar')
+
       break
     }
 
     case 'ADD_MEDIA': {
       newState.media = newState.media.concat(action.media)
       newState.changed.push('media')
+      
+      // Increment parent folder `childFileCount`
+      action.media.forEach((m) => {
+        newState.folders.find((f) => f.path == path.dirname(m.path)).childFileCount++
+      })
+      newState.sideBar = mapSideBarItems(newState)
+      newState.changed.push('sideBar')
+
       break
     }
 
@@ -158,8 +201,12 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.documents.splice(index, 1)
         }
+        // Decrement parent folder `childFileCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--
       }
-      newState.changed.push('documents')
+      newState.changed.push('documents', 'folders')
+      newState.sideBar = mapSideBarItems(newState)
+      newState.changed.push('sideBar')
       break
     }
 
@@ -169,8 +216,12 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.media.splice(index, 1)
         }
+        // Decrement parent folder `childFileCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--
       }
-      newState.changed.push('media')
+      newState.changed.push('media', 'folders')
+      newState.sideBar = mapSideBarItems(newState)
+      newState.changed.push('sideBar')
       break
     }
 
@@ -179,53 +230,58 @@ async function reducers(state = {}, action) {
 
     case 'SELECT_SIDEBAR_ITEM': {
 
-      if (newState.selectedSideBarItemId == action.id) break
+      if (newState.selectedSideBarItem.id == action.item.id) break
 
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id)
+      // Get reference to item inside newState.sideBar.
+      // This is the object we need to update (and then copy)
+      const item = getSideBarItem(newState, action.item.id)
 
-      // Update FileList visibility
-      if (newState.showFilesList !== sideBarItem.showFilesList) {
-        newState.showFilesList !== sideBarItem.showFilesList
+      // Update DocList visibility
+      if (newState.showFilesList !== item.showFilesList) {
+        newState.showFilesList = item.showFilesList
         newState.changed.push('showFilesList')
       }
 
-      // Update selected SideBar item
-      newState.selectedSideBarItemId = action.id
-      newState.changed.push('selectedSideBarItemId')
+      // Copy selected item object to `selectedSideBarItem`
+      newState.selectedSideBarItem = Object.assign({}, item)
+      newState.changed.push('selectedSideBarItem')
 
       // Update `openDoc`
-      if (sideBarItem.lastSelection.length > 0) {
-        updateOpenFile(newState, sideBarItem)
-        newState.changed.push('openDoc')
-      }
+      updateOpenDoc(newState, item)
+      newState.changed.push('openDoc')
 
-      break
-    }
-
-    case 'TOGGLE_SIDEBAR_ITEM_EXPANDED': {
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.id)
-      sideBarItem.expanded = !sideBarItem.expanded
-      newState.changed.push('sideBar item expanded')
-      break
+      break 
     }
 
     // This is set on the _outgoing_ item, when the user is switching SideBar items.
-    case 'SAVE_SIDEBAR_FILE_SELECTION': {
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.sideBarItemId)
-      sideBarItem.lastSelection = action.lastSelection
+    case 'SAVE_SIDEBAR_LAST_SELECTION': {
+      const item = getSideBarItem(newState, action.item.id)
+      if (!item) break 
+
+      item.lastSelection = action.lastSelection
+      newState.selectedSideBarItem.lastSelection = item.lastSelection
       newState.changed.push('lastSelection')
-      if (sideBarItem.lastSelection.length > 0) {
-        updateOpenFile(newState, sideBarItem)
-        newState.changed.push('openDoc')
-      }
+
+      // Update `openDoc`
+      updateOpenDoc(newState, item)
+      newState.changed.push('openDoc')
       break
     }
 
     // This is set on the _outgoing_ item, when the user is switching SideBar items.
     case 'SAVE_SIDEBAR_SCROLL_POSITION': {
-      const sideBarItem = getSideBarItem(newState.sideBar.items, action.sideBarItemId)
-      sideBarItem.lastScrollPosition = action.lastScrollPosition
-      newState.changed.push('sideBar lastScrollPosition')
+      const item = getSideBarItem(newState, action.item.id)
+      if (!item) break 
+      item.lastScrollPosition = action.lastScrollPosition
+      newState.changed.push('lastScrollPosition')
+      break
+    }
+
+    case 'TOGGLE_SIDEBAR_ITEM_EXPANDED': {
+      const item = getSideBarItem(newState, action.item.id)
+      if (!item) break 
+      item.expanded = !item.expanded
+      newState.changed.push('item expanded')
       break
     }
 

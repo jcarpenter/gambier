@@ -3,7 +3,7 @@
   import FirstRun from "./FirstRun.svelte";
   import FlexPanel from "./FlexPanel.svelte";
   import SideBar from "./SideBar.svelte";
-  import FileList from "./FileList.svelte";
+  import DocList from "./DocList.svelte";
   import Editor from "./Editor.svelte";
 
   export let state = {};
@@ -53,17 +53,19 @@
       on:click={() => setLayoutFocus('navigation')}>
       <SideBar state={state} />
     </FlexPanel>
-    <div id="mainSection"></div>
-    <!-- {#if state.showFilesList}
+    {#if state.showFilesList}
       <FlexPanel
         min={260}
         max={320}
         start={280}
         on:click={() => setLayoutFocus('navigation')}>
-        <FileList state={state} oldState={oldState} />
+        <DocList state={state} oldState={oldState} />
       </FlexPanel>
     {/if}
     <div id="mainSection">
+
+    </div>
+    <!-- <div id="mainSection">
         <Editor
           state={state}
           visible={isEditorVisible}
