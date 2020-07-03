@@ -87,6 +87,11 @@
 
   #label {
     @include label-normal;
+    white-space: nowrap;
+
+
+    overflow: hidden;
+
     margin-left: 6px;
     flex: 1;
   }

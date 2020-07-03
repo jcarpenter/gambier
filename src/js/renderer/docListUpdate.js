@@ -1,21 +1,21 @@
-function updateDocList(state, searchParams) {
+import moment from 'moment'
+
+function updateDocList(state, filter) {
 
   // Get search paramaters
-  const filterDateModified = searchParams.filterDateModified;
-  const filterDateCreated = searchParams.filterDateCreated;
+  const filterDateModified = filter.filterDateModified;
+  const filterDateCreated = filter.filterDateCreated;
 
   // Get folder. If `lookInFolderId` is '*', that means "search all folders", so we get the root folder (the one without a parentId). Else, we get the folder specified by `lookInFolderId`.
-  const folder = searchParams.lookInFolderId == '*' ? 
-    state.folders.find((f) => f.parentId == '') : 
-    state.folders.find((f) => f.id == searchParams.lookInFolderId)
+  const folder = filter.lookInFolderId == '*' ?
+    state.folders.find((f) => f.parentId == '') :
+    state.folders.find((f) => f.id == filter.lookInFolderId)
 
   // Get docs for selected folder
   let docs = state.documents.filter((d) => d.parentId == folder.id);
 
-  console.log(searchParams)
-
   // If `includeChildren`, get docs for all descendant folders
-  if (searchParams.includeChildren) {
+  if (filter.includeChildren) {
     // Get ids of child folders
     let childFolderIds = getChildFolderIds(folder);
 
@@ -32,7 +32,7 @@ function updateDocList(state, searchParams) {
    * @param {*} parentFolder 
    */
   function getChildFolderIds(parentFolder) {
-    
+
     let ids = [];
 
     state.folders.forEach((f) => {
@@ -51,9 +51,9 @@ function updateDocList(state, searchParams) {
   docs.forEach((f) => f.selected = false);
 
   // Filter by tags
-  if (searchParams.tags.length > 0) {
+  if (filter.tags.length > 0) {
     docs = docs.filter((f) => {
-      return searchParams.tags.some((t) => {
+      return filter.tags.some((t) => {
         if (f.tags.includes(t)) {
           return true;
         }
@@ -61,10 +61,50 @@ function updateDocList(state, searchParams) {
     });
   }
 
+  // If we should use dateModified, we need to validate the dates.
+  // E.g. `from` must be before `to`. 
+  // If the dates are not valid, we do not apply the filter.
+  if (filter.dateModified.use) {
+
+    // Start by copying the input from and to values
+    let from = filter.dateModified.from
+    let to = filter.dateModified.to
+
+    // Convert `from` value to date
+    if (from == 'NOW' || from == '') {
+      from = moment().format()
+    } else if (filter.dateModified.from.includes('DAYS-AGO')) {
+      let numberOf = from.substring(0, from.indexOf('-'))
+      from = moment().subtract(numberOf, 'days')
+    } else {
+      from = moment(from).format()
+    }
+
+    // Convert `to` value to date
+    if (filter.dateModified.to.includes('DAYS-AGO')) {
+      let numberOf = to.substring(0, to.indexOf('-'))
+      to = moment().subtract(numberOf, 'days').format()
+    } else {
+      to = moment(to).format()
+    }
+
+    console.log(from)
+    console.log(to)
+
+    if (from > to) {
+      docs = docs.filter((f) => {
+        const modified = moment(f.modified).format()
+        if (modified < from && modified > to) {
+          return f
+        }
+      })
+    }
+  }
+
   // Filter by date modified
   // if (filterDateModified) {
-  //   const from = new Date(searchParams.fromDateModified);
-  //   const to = new Date(searchParams.toDateModified);
+  //   const from = new Date(filter.fromDateModified);
+  //   const to = new Date(filter.toDateModified);
   //   docs = docs.filter(f => {
   //     const modified = new Date(f.modified);
   //     if (modified < from && modified > to) {
@@ -75,8 +115,8 @@ function updateDocList(state, searchParams) {
 
   // // Filter by date modified
   // if (filterDateCreated) {
-  //   const from = new Date(searchParams.fromDateCreated);
-  //   const to = new Date(searchParams.toDateCreated);
+  //   const from = new Date(filter.fromDateCreated);
+  //   const to = new Date(filter.toDateCreated);
   //   docs = docs.filter(f => {
   //     const created = new Date(f.created);
   //     if (created < from && created > to) {
@@ -88,23 +128,25 @@ function updateDocList(state, searchParams) {
   return docs
 }
 
-function sortDocList(docsBefore, searchParams) {
+function sortDocList(docsBefore, sort) {
 
   let docs = docsBefore
 
-  // Sorting
-  let sortKey = "title";
-  let sortOrder = "descending";
-
-  if (sortKey == "title") {
-    if (sortOrder == "ascending") {
-      docs.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sortOrder == "descending") {
-      docs.sort((a, b) => b.title.localeCompare(a.title));
-    }
+  switch (sort.by) {
+    case 'title':
+      docs.sort((a, b) => a.title.localeCompare(b.title))
+      break
+    case 'date-modified':
+      docs.sort((a, b) => new Date(b.modified) - new Date(a.modified))
+      break
+    case 'date-created':
+      docs.sort((a, b) => new Date(b.created) - new Date(a.created))
+      break
   }
 
-  return docs  
+  if (sort.order == 'descending') docs.reverse()
+
+  return docs
 }
 
 export { updateDocList, sortDocList }

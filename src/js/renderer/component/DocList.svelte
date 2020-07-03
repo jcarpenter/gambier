@@ -17,7 +17,8 @@
   let mounted = false
 
   $: sideBarItem = state.selectedSideBarItem
-  $: searchParams = sideBarItem.searchParams
+  $: filter = sideBarItem.filter
+    $: sort = sideBarItem.sort
   $: focused = state.focusedLayoutSection == 'navigation'
 
   $: onStateChange(state)
@@ -28,8 +29,8 @@
 
     if (state.changed.includes("selectedSideBarItem")) {
       saveOutgoingSideBarItemScrollPosition()
-      docs = updateDocList(state, searchParams)
-      docs = sortDocList(docs, searchParams)
+      docs = updateDocList(state, filter)
+      docs = sortDocList(docs, sort)
       docs = restoreLastSelection(docs, sideBarItem.lastSelection)
       setScrollPosition()
     } else if (
@@ -37,15 +38,18 @@
         state.changed.includes("folders") ||
         state.changed.includes("documents")
     ) {
-      docs = updateDocList(state, searchParams)
-      docs = sortDocList(docs, searchParams)
+      docs = updateDocList(state, filter)
+      docs = sortDocList(docs, sort)
       docs = restoreLastSelection(docs, sideBarItem.lastSelection)
+    }
+    else if (state.changed.includes("sort")) {
+      docs = sortDocList(docs, sort)
     }
   }
 
   onMount(async () => {
-    docs = updateDocList(state, searchParams)
-    docs = sortDocList(docs, searchParams)
+    docs = updateDocList(state, filter)
+    docs = sortDocList(docs, sort)
     docs = restoreLastSelection(docs, sideBarItem.lastSelection)
     setScrollPosition()
     mounted = true
@@ -288,6 +292,20 @@
     }
   }
 
+  // -------- SORT -------- //
+    // Bind displayed value to state
+    // When user makes selection, dispatch that selection to store. Store will update, and state will update. But there will be a delay, waiting for IPC...
+    // So need to basically hold the user's selection in the interim. And when the new value from state comes down, apply it.
+    // Have internal state. Sync to state when state changes.
+
+    function selectionMade() {
+        window.api.send("dispatch", {
+            type: "SET_SORT",
+            item: sideBarItem,
+            sort: sort
+        });
+    }
+
 
 </script>
 
@@ -303,16 +321,52 @@
     background-color: white;
   }
 
-  h1 {
-    @include label-normal;
+  #header {
     margin: 0;
-    padding: 0;
     padding: 0.5rem;
     border-right: 1px solid black;
     border-bottom: 1px solid black;
     width: 100%;
     z-index: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    height: 2rem;
+
+    h1 {
+        @include label-normal;
+        font-weight: bold;
+        margin: 0;
+        padding: 0;
+        white-space: nowrap;
+    }
+
+    &:hover #sorting-options {
+        display: block;
+    }
   }
+
+    #sorting-options {
+        @include label-normal-small;
+
+        display: none;
+        position: absolute;
+        right: 0.5em;
+        top: 50%;
+        transform: translate(0%, -50%);
+        background: white;
+        // padding-left: 0.5rem;
+        box-shadow: 0px 0px 15px 20px white;
+
+        select {
+            @include label-normal-small;
+            font-weight: bold;
+        }
+    }
+
 
   #docs {
     width: 100%;
@@ -328,7 +382,17 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div id="list">
-    <h1>{sideBarItem.label}</h1>
+    <div id="header">
+        <h1>{sideBarItem.label}</h1>
+        <div id="sorting-options">
+            <label for="sort-select">Sort By:</label>
+            <select name="Sort By" id="sort-select" bind:value={sort.by} on:change={selectionMade}>
+                <option value="title">Title</option>
+                <option value="date-modified">Date modified</option>
+                <option value="date-created">Date created</option>
+            </select>
+        </div>
+    </div>
     <div id="docs" class:focused bind:this={fileEl}>
     {#each docs as doc, index (doc.id)}
         <DocListItem

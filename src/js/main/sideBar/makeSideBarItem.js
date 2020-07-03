@@ -1,4 +1,4 @@
-function makeItem(type, label, id, parentId, icon, showFilesList, searchParams) {
+function makeSideBarItem(type, label, id, parentId, icon, showFilesList, filter, sort) {
   
   const item = {
     type: type ? type : '',
@@ -7,15 +7,15 @@ function makeItem(type, label, id, parentId, icon, showFilesList, searchParams) 
     parentId: parentId ? parentId : '',
     icon: icon ? icon : 'images/sidebar-default-icon.svg',
     showFilesList: showFilesList ? showFilesList : false,
-    searchParams: searchParams ? searchParams : {
+    filter: filter ? filter : {
       lookInFolderId: '*',
       includeChildren: true,
       filetypes: ['*'],
       tags: [],
-      filterDateModified: false,
-      fromDateModified: '',
-      toDateModified: '',
+      dateModified: { use: false, from: '', to: '' },
+      dateCreated: { use: false, from: '', to: '' },
     },
+    sort: sort ? sort : { by: 'title', order: 'ascending' },
     selectedFileId: '',
     lastScrollPosition: 0,
     lastSelection: [],
@@ -26,6 +26,6 @@ function makeItem(type, label, id, parentId, icon, showFilesList, searchParams) 
   return item
 }
 
-export { makeItem }
+export { makeSideBarItem }
 
 

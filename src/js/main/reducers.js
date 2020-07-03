@@ -1,35 +1,5 @@
-// import diff from 'deep-diff'
-// import colors from 'colors'
-// import { getFileMetadata, Folder } from './contents/index.js'
-// import { readFile, stat } from 'fs-extra'
-
 import { mapSideBarItems } from './sideBar/mapSideBarItems'
 import path from 'path'
-
-/**
- * Check if contents contains item by type and id
- */
-// function contentContainsItemById(contents, type, id) {
-//   return contents.some((d) => d.type == type && d.id == id)
-// }
-
-// function getDirectoryById(contents, id) {
-//   return contents.find((d) => d.type == 'directory' && d.id == id)
-// }
-
-// function getFirstFileInDirectory(contents, directoryId) {
-//   const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId)
-//   return files[0]
-// }
-
-// function getFile(contents, id) {
-//   return contents.find((c) => c.type == 'file' && c.id == id)
-// }
-
-// function getRootFolder(newState) {
-//   return newState.folders.find((f) => f.parentId == '')
-// }
-
 
 
 function getSideBarItem(newState, id) {
@@ -71,12 +41,11 @@ async function reducers(state = {}, action) {
 
   const newState = Object.assign({}, state)
 
-  // newState.lastAction = action.type
   newState.changed = [] // Reset on every action 
 
   switch (action.type) {
 
-
+    
     // -------- PROJECT PATH -------- //
 
     case 'SET_PROJECTPATH_SUCCESS': {
@@ -285,6 +254,17 @@ async function reducers(state = {}, action) {
       break
     }
 
+    case 'SET_SORT': {
+      console.log("SET_SORT")
+
+      const item = getSideBarItem(newState, action.item.id)
+      item.sort = action.sort
+      newState.selectedSideBarItem.sort = action.sort
+      newState.changed.push('sort')
+      console.log(action.sort)
+
+      break
+    }
 
     // -------- FILE ACTIONS -------- //
 
@@ -319,109 +299,6 @@ async function reducers(state = {}, action) {
     //   console.log(`Reducers: DELETE_FILES_FAIL: ${action.err}`.red)
     //   break
     // }
-
-
-
-
-
-
-
-
-
-
-
-
-    // ================ PRE-REFACTOR ================ //
-
-    // -------- CONTENTS -------- //
-
-    // case 'CONTENTS_CHANGED': {
-    //   newState.contents = action.contents
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_CHANGE_FILE': {
-
-    //   // Load file and get metadata
-    //   const data = await readFile(action.path, 'utf8')
-    //   const metadata = await getFileMetadata(action.path, data)
-
-    //   // Apply changes to record in `contents`
-    //   const lhs = newState.contents.find((c) => c.id == metadata.id)
-    //   const rhs = metadata
-    //   diff.observableDiff(lhs, rhs, (d) => {
-    //     if (d.kind !== 'D') {
-    //       diff.applyChange(lhs, rhs, d)
-    //     }
-    //   })
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_UNLINK_FILE': {
-
-    //   const index = newState.contents.findIndex((c) => c.type == 'file' && c.path == action.path)
-
-    //   // If the file existed in `contents`, remove it.
-    //   // Note: -1 from `findIndex` means it did NOT exist.
-    //   if (index !== -1) {
-    //     newState.contents.splice(index, 1)
-    //   }
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_ADD_FILE': {
-
-    //   const data = await readFile(action.path, 'utf8')
-    //   const metadata = await getFileMetadata(action.path, data)
-
-
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_ADD_DIR': {
-
-    //   const stats = await stat(action.path)
-
-    //   // Create new Folder and add to `contents`
-    //   const folder = new Folder()
-    //   folder.id = `folder-${stats.ino}`
-    //   folder.path = action.path
-    //   folder.name = action.path.substring(action.path.lastIndexOf('/') + 1)
-    //   folder.modified = stats.mtime.toISOString()
-    //   newState.contents.push(folder)
-    //   console.log(folder)
-
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_UNLINK_DIR': {
-    //   console.log('HANDLE_UNLINK_DIR')
-    //   break
-    // }
-
-
-    // case 'MAP_CONTENTS': {
-
-    //   // Set new contents
-    //   newState.contents = action.contents
-    //   newState.changed.push('contents')
-
-    //   updateSideBarItems(newState)
-    //   newState.changed.push('sideBar')
-    //   break
-    // }
-
-    // case 'RESET_HIERARCHY': {
-    //   newState.contents = []
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
 
   }
 

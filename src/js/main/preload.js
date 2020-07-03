@@ -6,7 +6,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 let validSendChannels = ['saveFile', 'hideWindow', 'showWindow', 'selectProjectPath', 'dispatch']
 
 // Main --> Renderer
-let validReceiveChannels = ['mainRequestsSaveFile', 'mainRequestsDeleteFile', 'keyboardShortcut', 'stateChanged', 'setInitialState']
+let validReceiveChannels = ['mainRequestsToggleSource', 'mainRequestsSaveFile', 'mainRequestsDeleteFile', 'keyboardShortcut', 'stateChanged', 'setInitialState']
 
 // Renderer --> Main --> Renderer
 let validInvokeChannels = ['ifPathExists', 'getState', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard']

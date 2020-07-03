@@ -138,8 +138,12 @@ ipcMain.on('showWindow', (event) => {
 
 ipcMain.on('dispatch', async (event, action) => {
   switch (action.type) {
+    case ('SET_SORT'):
+      store.dispatch(action)
+      break
     case ('LOAD_PATH_IN_EDITOR'):
       store.dispatch(action)
+      break
     case ('SET_PROJECT_PATH'):
       store.dispatch(await setProjectPath())
       break

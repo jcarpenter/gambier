@@ -14,7 +14,7 @@ require('util');
 var matter = _interopDefault(require('gray-matter'));
 var removeMd = _interopDefault(require('remove-markdown'));
 
-function makeItem(type, label, id, parentId, icon, showFilesList, searchParams) {
+function makeSideBarItem(type, label, id, parentId, icon, showFilesList, filter, sort) {
   
   const item = {
     type: type ? type : '',
@@ -23,15 +23,15 @@ function makeItem(type, label, id, parentId, icon, showFilesList, searchParams) 
     parentId: parentId ? parentId : '',
     icon: icon ? icon : 'images/sidebar-default-icon.svg',
     showFilesList: showFilesList ? showFilesList : false,
-    searchParams: searchParams ? searchParams : {
+    filter: filter ? filter : {
       lookInFolderId: '*',
       includeChildren: true,
       filetypes: ['*'],
       tags: [],
-      filterDateModified: false,
-      fromDateModified: '',
-      toDateModified: '',
+      dateModified: { use: false, from: '', to: '' },
+      dateCreated: { use: false, from: '', to: '' },
     },
+    sort: sort ? sort : { by: 'title', order: 'ascending' },
     selectedFileId: '',
     lastScrollPosition: 0,
     lastSelection: [],
@@ -69,36 +69,39 @@ const storeDefault = {
     show: true,
     folders: [],
     documents: [
-      makeItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true, {
+      makeSideBarItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true, 
+      {
         lookInFolderId: '*',
         includeChildren: true,
         filetypes: ['.md', '.markdown'],
         tags: [],
-        filterDateModified: false,
-        fromDateModified: '',
-        toDateModified: '',
-      }),
-      makeItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true, {
+        dateModified: { use: false, from: '',to: '' },
+        dateCreated: { use: false, from: '', to: '' },
+      },
+      { by: 'title', order: 'ascending' }),
+      makeSideBarItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true, 
+      {
         lookInFolderId: '*',
         includeChildren: true,
         filetypes: ['.md', '.markdown'],
         tags: ['favorite'],
-        filterDateModified: false,
-        fromDateModified: '',
-        toDateModified: '',
-      }),
-      makeItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true, {
+        dateModified: { use: false, from: '',to: '' },
+        dateCreated: { use: false, from: '', to: '' },
+      },
+      { by: 'title', order: 'ascending' }),
+      makeSideBarItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true, 
+      {
         lookInFolderId: '*',
         includeChildren: true,
         filetypes: ['.md', '.markdown'],
         tags: [],
-        filterDateModified: true,
-        fromDateModified: 'today',
-        toDateModified: '7-days-ago',
-      })
+        dateModified: { use: true, from: 'NOW', to: '7-DAYS-AGO' },
+        dateCreated: { use: false, from: '', to: '' },
+      },
+      { by: 'date-modified', order: 'ascending' })
     ],
     media: [
-      makeItem('filter', 'All', 'media-all', '', 'images/sidebar-default-icon.svg', true,)
+      makeSideBarItem('filter', 'All', 'media-all', '', 'images/sidebar-default-icon.svg', true)
     ],
     citations: [],
   }
@@ -124,7 +127,7 @@ function mapFolders(sideBar, newState) {
     const icon = f.childFileCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg';
 
     // Make new version
-    const newFolder = makeItem(
+    const newFolder = makeSideBarItem(
       'folder', 
       f.name, 
       f.id, 
@@ -134,15 +137,16 @@ function mapFolders(sideBar, newState) {
       {
         lookInFolderId: f.id,
         includeChildren: false,
+        filetypes: ['*'],
         tags: [],
-        filterDateModified: false,
-        fromDateModified: '',
-        toDateModified: '',
+        dateModified: { use: false, from: '', to: '' },
+        dateCreated: { use: false, from: '', to: '' },
       }
     );
     
     // Copy over old values
     if (oldFolder) {
+      newFolder.sort = oldFolder.sort,
       newFolder.selectedFileId = oldFolder.selectedFileId,
       newFolder.lastScrollPosition = oldFolder.lastScrollPosition,
       newFolder.expanded = oldFolder.expanded,
@@ -178,34 +182,6 @@ function mapSideBarItems(newState) {
 
   return sideBar
 }
-
-// import diff from 'deep-diff'
-
-/**
- * Check if contents contains item by type and id
- */
-// function contentContainsItemById(contents, type, id) {
-//   return contents.some((d) => d.type == type && d.id == id)
-// }
-
-// function getDirectoryById(contents, id) {
-//   return contents.find((d) => d.type == 'directory' && d.id == id)
-// }
-
-// function getFirstFileInDirectory(contents, directoryId) {
-//   const files = contents.filter((f) => f.type == 'file' && f.parentId == directoryId)
-//   return files[0]
-// }
-
-// function getFile(contents, id) {
-//   return contents.find((c) => c.type == 'file' && c.id == id)
-// }
-
-// function getRootFolder(newState) {
-//   return newState.folders.find((f) => f.parentId == '')
-// }
-
-
 
 function getSideBarItem(newState, id) {
   if (id.includes('folder')) {
@@ -246,12 +222,11 @@ async function reducers(state = {}, action) {
 
   const newState = Object.assign({}, state);
 
-  // newState.lastAction = action.type
   newState.changed = []; // Reset on every action 
 
   switch (action.type) {
 
-
+    
     // -------- PROJECT PATH -------- //
 
     case 'SET_PROJECTPATH_SUCCESS': {
@@ -460,6 +435,17 @@ async function reducers(state = {}, action) {
       break
     }
 
+    case 'SET_SORT': {
+      console.log("SET_SORT");
+
+      const item = getSideBarItem(newState, action.item.id);
+      item.sort = action.sort;
+      newState.selectedSideBarItem.sort = action.sort;
+      newState.changed.push('sort');
+      console.log(action.sort);
+
+      break
+    }
 
     // -------- FILE ACTIONS -------- //
 
@@ -494,109 +480,6 @@ async function reducers(state = {}, action) {
     //   console.log(`Reducers: DELETE_FILES_FAIL: ${action.err}`.red)
     //   break
     // }
-
-
-
-
-
-
-
-
-
-
-
-
-    // ================ PRE-REFACTOR ================ //
-
-    // -------- CONTENTS -------- //
-
-    // case 'CONTENTS_CHANGED': {
-    //   newState.contents = action.contents
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_CHANGE_FILE': {
-
-    //   // Load file and get metadata
-    //   const data = await readFile(action.path, 'utf8')
-    //   const metadata = await getFileMetadata(action.path, data)
-
-    //   // Apply changes to record in `contents`
-    //   const lhs = newState.contents.find((c) => c.id == metadata.id)
-    //   const rhs = metadata
-    //   diff.observableDiff(lhs, rhs, (d) => {
-    //     if (d.kind !== 'D') {
-    //       diff.applyChange(lhs, rhs, d)
-    //     }
-    //   })
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_UNLINK_FILE': {
-
-    //   const index = newState.contents.findIndex((c) => c.type == 'file' && c.path == action.path)
-
-    //   // If the file existed in `contents`, remove it.
-    //   // Note: -1 from `findIndex` means it did NOT exist.
-    //   if (index !== -1) {
-    //     newState.contents.splice(index, 1)
-    //   }
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_ADD_FILE': {
-
-    //   const data = await readFile(action.path, 'utf8')
-    //   const metadata = await getFileMetadata(action.path, data)
-
-
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_ADD_DIR': {
-
-    //   const stats = await stat(action.path)
-
-    //   // Create new Folder and add to `contents`
-    //   const folder = new Folder()
-    //   folder.id = `folder-${stats.ino}`
-    //   folder.path = action.path
-    //   folder.name = action.path.substring(action.path.lastIndexOf('/') + 1)
-    //   folder.modified = stats.mtime.toISOString()
-    //   newState.contents.push(folder)
-    //   console.log(folder)
-
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
-    // case 'HANDLE_UNLINK_DIR': {
-    //   console.log('HANDLE_UNLINK_DIR')
-    //   break
-    // }
-
-
-    // case 'MAP_CONTENTS': {
-
-    //   // Set new contents
-    //   newState.contents = action.contents
-    //   newState.changed.push('contents')
-
-    //   updateSideBarItems(newState)
-    //   newState.changed.push('sideBar')
-    //   break
-    // }
-
-    // case 'RESET_HIERARCHY': {
-    //   newState.contents = []
-    //   newState.changed.push('contents')
-    //   break
-    // }
-
 
   }
 
@@ -663,7 +546,7 @@ let state = {};
  * Note: App and File menus are macOS only. 
  */
 function setup(gambierStore) {
-  
+
   store = gambierStore;
   state = gambierStore.store;
 
@@ -698,7 +581,7 @@ function setup(gambierStore) {
     var save = new electron.MenuItem({
       label: 'Save',
       accelerator: 'CmdOrCtrl+S',
-      async click(item, focusedWindow) {
+      click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsSaveFile');
       }
     });
@@ -706,7 +589,7 @@ function setup(gambierStore) {
     var moveToTrash = new electron.MenuItem({
       label: 'Move to Trash',
       accelerator: 'CmdOrCtrl+Backspace',
-      async click(item, focusedWindow) {
+      click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsDeleteFile');
       }
     });
@@ -769,6 +652,18 @@ function setup(gambierStore) {
       label: 'View',
       submenu: [
         {
+          label: 'Source mode',
+          type: 'checkbox',
+          checked: false,
+          accelerator: 'CmdOrCtrl+/',
+          click(item, focusedWindow) {
+            if (focusedWindow) {
+              focusedWindow.webContents.send('mainRequestsToggleSource', item.checked );
+            }
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Reload',
           accelerator: 'CmdOrCtrl+R',
           click(item, focusedWindow) {
@@ -791,6 +686,14 @@ function setup(gambierStore) {
       ]
     }
   );
+
+  var save = new electron.MenuItem({
+    label: 'Save',
+    accelerator: 'CmdOrCtrl+S',
+    click(item, focusedWindow) {
+      focusedWindow.webContents.send('mainRequestsSaveFile');
+    }
+  });
 
   menu.append(view);
 
@@ -884,6 +787,39 @@ async function deleteFiles(paths) {
 	} catch(err) {
 		return { type: 'DELETE_FILES_FAIL', err: err }
 	}
+}
+
+async function saveFile (path, data) {
+	try {
+		await fsExtra.writeFile(path, data, 'utf8');
+		return {
+			type: 'SAVE_FILE_SUCCESS',
+			path: path,
+		}
+	} catch (err) {
+		return {
+			type: 'SAVE_FILE_FAIL',
+			err: err
+		}
+	}
+}
+
+async function setProjectPath () {
+
+  // console.log(BrowserWindow.getFocusedWindow())
+
+  const win = electron.BrowserWindow.getFocusedWindow();
+
+  const selection = await electron.dialog.showOpenDialog(win, {
+    title: 'Select Project Folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
+
+  if (!selection.canceled) {
+    return { type: 'SET_PROJECTPATH_SUCCESS', path: selection.filePaths[0] }
+  } else {
+    return { type: 'SET_PROJECTPATH_FAIL' }
+  }
 }
 
 /**
@@ -1222,7 +1158,6 @@ const Folder = {
   parentId: '',
   modified: '',
   childFileCount: 0,
-  childFolderCount: 0,
 };
 
 const Media = {
@@ -1392,127 +1327,6 @@ const avFormats = [
   '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
 ];
 
-async function getFileMetadata (path, data, stats) {
-
-  const file = {};
-  
-  // Set path
-  file.path = path;
-
-	// Get stats
-	if (stats == undefined) {
-    stats = await fsExtra.stat(path);
-  }
-  
-	// Set fields from stats
-	file.id = `file-${stats.ino}`;
-	file.modified = stats.mtime.toISOString();
-	file.created = stats.birthtime.toISOString();
-
-	// Get front matter
-	const gm = matter(data);
-
-	// Set excerpt
-	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
-	file.excerpt = getExcerpt$1(gm.content);
-
-	// Set fields from front matter (if it exists)
-	// gray-matter `isEmpty` property returns "true if front-matter is empty".
-	if (!gm.isEmpty) {
-		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
-		file.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
-	}
-
-	// Set name (includes extension). E.g. "sealevel.md"
-	file.name = path.substring(path.lastIndexOf('/') + 1);
-
-	// Set title. E.g. "Sea Level Rise"
-	file.title = getTitle$1(gm, file.name);
-
-	return file
-}
-
-/**
- * Set title, in following order of preference:
- * 1. From first h1 in content
- * 2. From `title` field of front matter
- * 3. From filename, minus extension
- */
-function getTitle$1(graymatter, filename) {
-
-	let titleFromH1 = graymatter.content.match(/^# (.*)$/m);
-	if (titleFromH1) {
-		return titleFromH1[1]
-	} else if (graymatter.data.hasOwnProperty('title')) {
-		return graymatter.data.title
-	} else {
-		return filename.slice(0, filename.lastIndexOf('.'))
-	}
-}
-
-/**
- * Return excerpt from content, stripped of markdown characters.
- * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
- * @param {*} file 
- */
-function getExcerpt$1(content) {
-
-	// Remove h1, if it exists. Then trim to 200 characters.
-	let excerpt = content
-		.replace(/^# (.*)\n/gm, '')
-		.substring(0, 400);
-
-	// Remove markdown formatting. Start with remove-markdown rules.
-	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
-	// Then add whatever additional changes I want (e.g. new lines).
-	excerpt = removeMd(excerpt)
-		.replace(/^> /gm, '')         // Block quotes
-		.replace(/^\n/gm, '')         // New lines at start of line (usually doc)
-		.replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
-		.replace(/\t/gm, ' ')         // Artifact left from list replacement
-		.replace(/\[@.*?\]/gm, '')    // Citations
-		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
-		.replace(/\s{2,}/gm, ' ')     // Extra spaces
-		.substring(0, 200);            // Trim to 200 characters
-
-	return excerpt
-}
-
-async function saveFile (path, data) {
-	try {
-		await fsExtra.writeFile(path, data, 'utf8');
-		const metadata = await getFileMetadata(path, data);
-		return {
-			type: 'SAVE_FILE_SUCCESS',
-			path: path,
-			metadata: metadata
-		}
-	} catch (err) {
-		return {
-			type: 'SAVE_FILE_FAIL',
-			err: err
-		}
-	}
-}
-
-async function setProjectPath () {
-
-  // console.log(BrowserWindow.getFocusedWindow())
-
-  const win = electron.BrowserWindow.getFocusedWindow();
-
-  const selection = await electron.dialog.showOpenDialog(win, {
-    title: 'Select Project Folder',
-    properties: ['openDirectory', 'createDirectory']
-  });
-
-  if (!selection.canceled) {
-    return { type: 'SET_PROJECTPATH_SUCCESS', path: selection.filePaths[0] }
-  } else {
-    return { type: 'SET_PROJECTPATH_FAIL' }
-  }
-}
-
 // External dependencies
 
 // Dev only
@@ -1643,8 +1457,12 @@ electron.ipcMain.on('showWindow', (event) => {
 
 electron.ipcMain.on('dispatch', async (event, action) => {
   switch (action.type) {
+    case ('SET_SORT'):
+      store$2.dispatch(action);
+      break
     case ('LOAD_PATH_IN_EDITOR'):
       store$2.dispatch(action);
+      break
     case ('SET_PROJECT_PATH'):
       store$2.dispatch(await setProjectPath());
       break

@@ -1,4 +1,4 @@
-import { makeItem } from './sideBar/makeItem'
+import { makeSideBarItem } from './sideBar/makeSideBarItem'
 
 const storeDefault = {
 
@@ -27,36 +27,39 @@ const storeDefault = {
     show: true,
     folders: [],
     documents: [
-      makeItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true, {
+      makeSideBarItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true, 
+      {
         lookInFolderId: '*',
         includeChildren: true,
         filetypes: ['.md', '.markdown'],
         tags: [],
-        filterDateModified: false,
-        fromDateModified: '',
-        toDateModified: '',
-      }),
-      makeItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true, {
+        dateModified: { use: false, from: '',to: '' },
+        dateCreated: { use: false, from: '', to: '' },
+      },
+      { by: 'title', order: 'ascending' }),
+      makeSideBarItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true, 
+      {
         lookInFolderId: '*',
         includeChildren: true,
         filetypes: ['.md', '.markdown'],
         tags: ['favorite'],
-        filterDateModified: false,
-        fromDateModified: '',
-        toDateModified: '',
-      }),
-      makeItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true, {
+        dateModified: { use: false, from: '',to: '' },
+        dateCreated: { use: false, from: '', to: '' },
+      },
+      { by: 'title', order: 'ascending' }),
+      makeSideBarItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true, 
+      {
         lookInFolderId: '*',
         includeChildren: true,
         filetypes: ['.md', '.markdown'],
         tags: [],
-        filterDateModified: true,
-        fromDateModified: 'today',
-        toDateModified: '7-days-ago',
-      })
+        dateModified: { use: true, from: 'NOW', to: '7-DAYS-AGO' },
+        dateCreated: { use: false, from: '', to: '' },
+      },
+      { by: 'date-modified', order: 'ascending' })
     ],
     media: [
-      makeItem('filter', 'All', 'media-all', '', 'images/sidebar-default-icon.svg', true,)
+      makeSideBarItem('filter', 'All', 'media-all', '', 'images/sidebar-default-icon.svg', true)
     ],
     citations: [],
   }

@@ -11,16 +11,15 @@
 
   let focusedSection;
 
-  $: isEditorVisible = state.openDoc.id
+  $: isEditorVisible = state.openDoc.id;
 
   function setLayoutFocus(section) {
-    if (state.focusedLayoutSection == section) return
+    if (state.focusedLayoutSection == section) return;
     window.api.send("dispatch", {
       type: "SET_LAYOUT_FOCUS",
       section: section
     });
   }
-
 </script>
 
 <style type="text/scss">
@@ -36,7 +35,6 @@
     width: 100%;
     height: 100%;
   }
-
 </style>
 
 <svelte:options accessors />
@@ -51,25 +49,22 @@
       max={220}
       start={180}
       on:click={() => setLayoutFocus('navigation')}>
-      <SideBar state={state} />
+      <SideBar {state} />
     </FlexPanel>
     {#if state.showFilesList}
       <FlexPanel
         min={260}
-        max={320}
+        max={360}
         start={280}
         on:click={() => setLayoutFocus('navigation')}>
-        <DocList state={state} oldState={oldState} />
+        <DocList {state} {oldState} />
       </FlexPanel>
     {/if}
     <div id="mainSection">
-
-    </div>
-    <!-- <div id="mainSection">
         <Editor
           state={state}
           visible={isEditorVisible}
           on:click={() => setLayoutFocus('editor')} />
-    </div> -->
+    </div>
   </div>
 {/if}

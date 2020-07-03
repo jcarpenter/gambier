@@ -7,7 +7,7 @@ let state = {}
  * Note: App and File menus are macOS only. 
  */
 function setup(gambierStore) {
-  
+
   store = gambierStore
   state = gambierStore.store
 
@@ -42,7 +42,7 @@ function setup(gambierStore) {
     var save = new MenuItem({
       label: 'Save',
       accelerator: 'CmdOrCtrl+S',
-      async click(item, focusedWindow) {
+      click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsSaveFile')
       }
     })
@@ -50,7 +50,7 @@ function setup(gambierStore) {
     var moveToTrash = new MenuItem({
       label: 'Move to Trash',
       accelerator: 'CmdOrCtrl+Backspace',
-      async click(item, focusedWindow) {
+      click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsDeleteFile')
       }
     })
@@ -113,6 +113,18 @@ function setup(gambierStore) {
       label: 'View',
       submenu: [
         {
+          label: 'Source mode',
+          type: 'checkbox',
+          checked: false,
+          accelerator: 'CmdOrCtrl+/',
+          click(item, focusedWindow) {
+            if (focusedWindow) {
+              focusedWindow.webContents.send('mainRequestsToggleSource', item.checked )
+            }
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Reload',
           accelerator: 'CmdOrCtrl+R',
           click(item, focusedWindow) {
@@ -135,6 +147,14 @@ function setup(gambierStore) {
       ]
     }
   )
+
+  var save = new MenuItem({
+    label: 'Save',
+    accelerator: 'CmdOrCtrl+S',
+    click(item, focusedWindow) {
+      focusedWindow.webContents.send('mainRequestsSaveFile')
+    }
+  })
 
   menu.append(view)
 

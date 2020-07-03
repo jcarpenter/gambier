@@ -46,6 +46,7 @@ async function loadFileByPath(filePath) {
 
     // Update media path
     mediaBasePath = filePath.substring(0, filePath.lastIndexOf('/'))
+    console.log(`mediaBasePath is ${mediaBasePath}`)
   }
 }
 
@@ -85,11 +86,11 @@ function findAndMark() {
  * Every time cursor updates, check last line it was in for citations. We have to do this, because TODO... (along lines of: citations open/close when they're clicked into and out-of)
  */
 function onCursorActivity() {
-  // lastCursorLine = editor.getCursor().line
+  lastCursorLine = editor.getCursor().line
   // editor.addWidget(editor.getCursor(), el)
 
   // TODO: June 23: Revisit this. Turned off temporarily.
-  // findAndMark()
+  findAndMark()
 }
 
 function onChange(cm, change) {
@@ -215,12 +216,18 @@ async function setup(textarea, initialState) {
   })
 
   window.api.receive('mainRequestsSaveFile', () => {
-    window.api.send('dispatch',
-      {
-        type: 'SAVE_FILE',
-        path: state.openDoc.path,
-        data: editor.getValue()
-      })
+    window.api.send('dispatch', {
+      type: 'SAVE_FILE',
+      path: state.openDoc.path,
+      data: editor.getValue()
+    })
+  })
+
+  window.api.receive('mainRequestsToggleSource', (showSource) => {
+    const mode = showSource ? 'markdown' : 'gambier'
+    const theme = showSource ? '' : 'gambier'
+    editor.setOption('mode', mode)
+    editor.setOption('theme', theme)
   })
 
   if (state.openDoc.path) {

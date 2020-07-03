@@ -3,7 +3,6 @@
   import { onMount } from "svelte";
   import { isEmpty } from "../utils";
   import SideBarItem from "./SideBarItem.svelte";
-  import SideBarFolders from "./SideBarFolders.svelte";
 
   export let state = {};
   export let focused;

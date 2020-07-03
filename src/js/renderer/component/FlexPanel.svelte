@@ -50,7 +50,7 @@
   @import "../../../styles/_variables.scss";
   #container {
     height: 100%;
-    overflow-x: visible;
+    overflow-x: hidden;
     position: relative;
     display: none;
 

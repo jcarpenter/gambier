@@ -1,4 +1,4 @@
-import { makeItem } from './makeItem'
+import { makeSideBarItem } from './makeSideBarItem'
 
 /**
  * Update `folder` items
@@ -19,7 +19,7 @@ function mapFolders(sideBar, newState) {
     const icon = f.childFileCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg'
 
     // Make new version
-    const newFolder = makeItem(
+    const newFolder = makeSideBarItem(
       'folder', 
       f.name, 
       f.id, 
@@ -29,15 +29,16 @@ function mapFolders(sideBar, newState) {
       {
         lookInFolderId: f.id,
         includeChildren: false,
+        filetypes: ['*'],
         tags: [],
-        filterDateModified: false,
-        fromDateModified: '',
-        toDateModified: '',
+        dateModified: { use: false, from: '', to: '' },
+        dateCreated: { use: false, from: '', to: '' },
       }
     )
     
     // Copy over old values
     if (oldFolder) {
+      newFolder.sort = oldFolder.sort,
       newFolder.selectedFileId = oldFolder.selectedFileId,
       newFolder.lastScrollPosition = oldFolder.lastScrollPosition,
       newFolder.expanded = oldFolder.expanded,
