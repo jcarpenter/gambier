@@ -6,6 +6,7 @@ import markInlineLinks from './markInlineLinks'
 import markCitations from './markCitations'
 import markFigures from './markFigures'
 import markList from './markList'
+import keyboardCommands from './keyboardCommands'
 
 import BracketsWidget from '../component/BracketsWidget.svelte'
 import { mountReplace } from '../utils'
@@ -157,6 +158,7 @@ async function onBeforeChange(cm, change) {
   }
 }
 
+
 // -------- SETUP -------- //
 
 function makeEditor(textarea) {
@@ -178,7 +180,16 @@ function makeEditor(textarea) {
     theme: 'gambier',
     indentWithTabs: false,
     autoCloseBrackets: true,
+    // keyMap: 'sublime',
     extraKeys: {
+      'Shift-Cmd-K': 'deleteLine',
+      'Cmd-L': 'selectLine',
+      'Shift-Alt-Down': 'duplicateLine',
+      'Cmd-D': 'selectNextOccurrence',
+      'Alt-Up': 'swapLineUp',
+      'Alt-Down': 'swapLineDown',
+      'Shift-Ctrl-Up': 'addCursorToPrevLine',
+      'Shift-Ctrl-Down': 'addCursorToNextLine',
       'Enter': 'newlineAndIndentContinueMarkdownList',
       'Tab': 'autoIndentMarkdownList',
       'Shift-Tab': 'autoUnindentMarkdownList'
@@ -225,9 +236,14 @@ async function setup(textarea, initialState) {
 
   window.api.receive('mainRequestsToggleSource', (showSource) => {
     const mode = showSource ? 'markdown' : 'gambier'
-    const theme = showSource ? '' : 'gambier'
+    const theme = showSource ? 'markdown' : 'gambier'
     editor.setOption('mode', mode)
     editor.setOption('theme', theme)
+    if (showSource) {
+      editor.getAllMarks().forEach((m) => m.clear())
+    } else {
+      findAndMark()
+    }
   })
 
   if (state.openDoc.path) {

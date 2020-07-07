@@ -148,7 +148,7 @@ function defineGambierMode() {
     const START = 0, FRONTMATTER = 1, BODY = 2
 
     const yamlMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "yaml" }), yamlOverlay)
-    const innerMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "markdown", highlightFormatting: false, tokenTypeOverrides: { code: 'code', list1: 'list', list2: 'list', list3: 'list' } }), markdownOverlay)
+    const innerMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "gfm", highlightFormatting: false, tokenTypeOverrides: { code: 'code', list1: 'list', list2: 'list', list3: 'list' } }), markdownOverlay)
 
     function curMode(state) {
       return state.state == BODY ? innerMode : yamlMode
