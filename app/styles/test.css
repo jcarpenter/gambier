@@ -1,0 +1,111 @@
+.cm-s-test {
+    /* background-color: aliceblue; */
+}
+
+/* BLOCK */
+.cm-s-test .quote {
+    background-color: rgba(182, 251, 251, 0.2) !important;
+    font-style: italic;
+}
+
+
+.cm-s-test .quote * {
+    opacity: 0.8;
+}
+
+.cm-s-test .figure {
+    background-color: rgba(158, 222, 196, 0.2) !important;
+}
+
+/* .cm-s-test .figure .cm-img {
+    background-color: rgb(158, 222, 196);
+} */
+
+.cm-s-test .header {
+    font-weight: 700;
+}
+
+.cm-s-test .header.h3 {
+    color: rgb(156, 156, 156);
+}
+
+
+.cm-s-test .cm-citation {
+    background-color: lightgoldenrodyellow;
+}
+
+.cm-s-test .footnote-reference {
+    background-color: rgba(241, 186, 231, 0.2) !important;
+    font-style: italic !important;
+}
+
+
+/* INLINE */
+
+.cm-s-test .cm-tag {
+    color: rgb(80, 169, 110);
+}
+
+.cm-s-test .cm-attribute {
+    color: rgb(44, 116, 224);
+}
+
+.cm-s-test .cm-string {
+    color: rgb(183, 89, 77);
+}
+
+
+.cm-s-test .cm-code {
+    background-color: rgba(140, 219, 166, 0.6) !important;
+}
+
+.cm-s-test .cm-em {
+    color: rgb(8, 132, 203);
+    font-style: italic;
+}
+
+.cm-s-test .cm-img {
+    background-color: rgb(177, 227, 209);
+}
+
+.cm-s-test .cm-link {
+    background-color: rgba(173, 216, 230, 0.6);
+    text-decoration: none;
+}
+
+.cm-s-test .cm-link.cm-reference {
+}
+
+.cm-s-test .cm-link.cm-label {
+    font-weight: bold;
+}
+
+
+.cm-s-test .cm-link.cm-url {
+    opacity: 0.8;
+    color: rgb(4, 120, 159);
+    text-decoration: underline;
+}
+
+.cm-s-test .cm-link.cm-title {
+    opacity: 0.8;
+    font-style: italic;
+}
+
+.cm-s-test .cm-link.cm-url:hover {
+    opacity: 1;
+}
+
+.cm-s-test .cm-autolink-url, .cm-s-test .cm-autolink-email {
+    background-color: rgb(236, 221, 212);
+}
+
+
+.cm-s-test .cm-footnote-inline {
+    background-color: rgb(243, 222, 239);
+}
+
+.cm-s-test .cm-footnote-reference-id {
+    background-color: rgb(241, 186, 231);
+}
+

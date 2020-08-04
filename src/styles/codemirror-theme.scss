@@ -1,16 +1,5 @@
-#editor .CodeMirror {
-    width: 100%;
-    height: 100%;
-
-}
-
 .cm-s-gambier {
-    background: #fff;
     color: var(--clr-editorText);
-    display: block;
-    font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
-    font-size: var(--font-sml-1);
-    line-height: var(--baseLineHeight);
 
     // -------------- Cursor -------------- //
 
@@ -36,23 +25,6 @@
     .CodeMirror-line > span::-moz-selection,
     .CodeMirror-line > span > span::-moz-selection {
         background: green;
-    }
-
-    // -------------- Line -------------- //
-
-    // Pad sides so there's room for header hashes (which hang left).
-    .CodeMirror-lines {
-        margin: var(--grid) auto;
-        min-width: 30em;
-        max-width: 48em;
-        padding: 0 3em;
-        cursor: default;
-    }
-
-    // Add padding to bottom of doc, so that when we're at bottom of
-    // scroll, there's padding before edge of editor.
-    .CodeMirror-line:last-of-type {
-        margin-bottom: 18em;
     }
 
     // -------------- Lists -------------- //
@@ -204,102 +176,94 @@
     }
 }
 
-
-
-
-
-
-
-
-
-
-
 /* 
 ========================================================
 OLD
 ========================================================
 */
 
-.cm-s-gambier .CodeMirror-gutters {
-    background: #fff;
-    border-right-width: 0;
-}
+// .cm-s-gambier .CodeMirror-gutters {
+//     background: #fff;
+//     border-right-width: 0;
+// }
 
-.cm-s-gambier .CodeMirror-guttermarker {
-    color: white;
-}
+// .cm-s-gambier .CodeMirror-guttermarker {
+//     color: white;
+// }
 
-.cm-s-gambier .CodeMirror-guttermarker-subtle {
-    color: #d0d0d0;
-}
+// .cm-s-gambier .CodeMirror-guttermarker-subtle {
+//     color: #d0d0d0;
+// }
 
-.cm-s-gambier .CodeMirror-linenumber {
-    color: #959da5;
-    padding: 0 16px 0 16px;
-}
+// .cm-s-gambier .CodeMirror-linenumber {
+//     color: #959da5;
+//     padding: 0 16px 0 16px;
+// }
 
-.cm-s-gambier div.CodeMirror-selected,
-.cm-s-gambier .CodeMirror-line::selection,
-.cm-s-gambier .CodeMirror-line > span::selection,
-.cm-s-gambier .CodeMirror-line > span > span::selection,
-.cm-s-gambier .CodeMirror-line::-moz-selection,
-.cm-s-gambier .CodeMirror-line > span::-moz-selection,
-.cm-s-gambier .CodeMirror-line > span > span::-moz-selection {
-    background: #b4d7ff;
-}
+.cm-s-gambier {
+    div.CodeMirror-selected,
+    .CodeMirror-line::selection,
+    .CodeMirror-line > span::selection,
+    .CodeMirror-line > span > span::selection,
+    .CodeMirror-line::-moz-selection,
+    .CodeMirror-line > span::-moz-selection,
+    .CodeMirror-line > span > span::-moz-selection {
+        background: #b4d7ff;
+    }
 
-.cm-s-gambier .CodeMirror-activeline-background {
-    background: #fafbfc;
-}
+    .CodeMirror-activeline-background {
+        background: #fafbfc;
+    }
 
-.cm-s-gambier .CodeMirror-matchingbracket {
-    text-decoration: underline;
-    color: #24292e !important;
-}
+    .CodeMirror-matchingbracket {
+        text-decoration: underline;
+        color: #24292e !important;
+    }
 
-.cm-s-gambier .cm-comment {
-    color: #6a737d;
-}
+    .cm-comment {
+        color: #6a737d;
+    }
 
-.cm-s-gambier .cm-constant {
-    color: #005cc5;
-}
+    .cm-constant {
+        color: #005cc5;
+    }
 
-.cm-s-gambier .cm-entity {
-    font-weight: normal;
-    font-style: normal;
-    text-decoration: none;
-    color: #6f42c1;
-}
+    .cm-entity {
+        font-weight: normal;
+        font-style: normal;
+        text-decoration: none;
+        color: #6f42c1;
+    }
 
-.cm-s-gambier .cm-keyword {
-    font-weight: normal;
-    font-style: normal;
-    text-decoration: none;
-    color: #d73a49;
-}
+    .cm-keyword {
+        font-weight: normal;
+        font-style: normal;
+        text-decoration: none;
+        color: #d73a49;
+    }
 
-.cm-s-gambier .cm-storage {
-    color: #d73a49;
-}
+    .cm-storage {
+        color: #d73a49;
+    }
 
-.cm-s-gambier .cm-string {
-    font-weight: normal;
-    font-style: normal;
-    text-decoration: none;
-    color: #032f62;
-}
+    .cm-string {
+        font-weight: normal;
+        font-style: normal;
+        text-decoration: none;
+        color: #032f62;
+    }
 
-.cm-s-gambier .cm-support {
-    font-weight: normal;
-    font-style: normal;
-    text-decoration: none;
-    color: #005cc5;
-}
+    .cm-support {
+        font-weight: normal;
+        font-style: normal;
+        text-decoration: none;
+        color: #005cc5;
+    }
 
-.cm-s-gambier .cm-variable {
-    font-weight: normal;
-    font-style: normal;
-    text-decoration: none;
-    color: #e36209;
+    .cm-variable {
+        font-weight: normal;
+        font-style: normal;
+        text-decoration: none;
+        color: #e36209;
+    }
 }

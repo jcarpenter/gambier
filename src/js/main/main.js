@@ -67,7 +67,7 @@ store.onDidAnyChange((newState, oldState) => {
 })
 
 // TEMP
-store.set('projectPath', '/Users/josh/Documents/Climate research/GitHub/climate-research/src/Notes/Abicus')
+store.set('projectPath', '/Users/josh/Desktop/Test notes')
 
 // Do initial project map, if projectPath has been set)
 if (store.store.projectPath !== '') {

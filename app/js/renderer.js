@@ -8185,18 +8185,69 @@ class DocList extends SvelteComponent {
 	}
 }
 
+/*
+ * Set up window for Node.js
+ */
+
+var root = (typeof window !== 'undefined' ? window : {});
+
+/*
+ * Parsing HTML strings
+ */
+
+function canParseHTMLNatively () {
+  var Parser = root.DOMParser;
+  var canParse = false;
+
+  // Adapted from https://gist.github.com/1129031
+  // Firefox/Opera/IE throw errors on unsupported types
+  try {
+    // WebKit returns null on unsupported types
+    if (new Parser().parseFromString('', 'text/html')) {
+      canParse = true;
+    }
+  } catch (e) {}
+
+  return canParse
+}
+
+function createHTMLParser () {
+  var Parser = function () {};
+
+  {
+    var JSDOM = require('jsdom').JSDOM;
+    Parser.prototype.parseFromString = function (string) {
+      return new JSDOM(string).window.document
+    };
+  }
+  return Parser
+}
+
+var HTMLParser = canParseHTMLNatively() ? root.DOMParser : createHTMLParser();
+
 const yamlOverlay = {
   startState: function () {
     return {
-      // frontMatter: false,
+      frontMatter: false,
     }
   },
   token: function (stream, state) {
     state.combineTokens = true;
 
+    // Mark lines as `frontmatter`
+
     if (stream.sol()) {
-      stream.next();
-      return "line-frontmatter"
+
+      if (stream.match(/---/, false)) {
+        state.frontMatter = state.frontMatter ? false : true;
+        stream.next();
+        return "line-frontmatter"
+      }
+
+      if (state.frontMatter) {
+        stream.next();
+        return "line-frontmatter"
+      }
     }
 
     while (stream.next() != null) { }
@@ -8207,124 +8258,49 @@ const yamlOverlay = {
 };
 
 const markdownOverlay = {
-  startState: function () {
+
+  // State object: Is always passed when reading a token, and which can be mutated by the tokenizer.
+  // Modes that use a state must define a `startState` method on their mode object.
+
+  startState: () => {
     return {
-      frontMatter: false,
+      codeBlock: false,
     }
   },
-  token: function (stream, state) {
 
-    state.combineTokens = null;
+  // Tokenizer (lexer): All modes must define this method. Takes a character stream as input, reads one token from the stream, advances it past a token, optionally update its state, and return a style string, or null for tokens that do not have to be styled.
 
-    let ch;
+  // Multiple styles can be returned (separated by spaces), for example "string error" for a thing that looks like a string but is invalid somehow (say, missing its closing quote). When a style is prefixed by "line-" or "line-background-", the style will be applied to the whole line
 
-    // Demo: https://regex101.com/r/1MR7Tg/1
+  // The stream object that's passed to token encapsulates a line of code (tokens may never span lines) and our current position in that line. 
+
+  token: (stream, state) => {
+
+    // Mark lines
+
     if (stream.sol()) {
-      if (stream.match(/^(-|\*|\+)\s/)) {
-        // console.log("L1")
-        state.combineTokens = true;
-        return "line-list1"
-      } else if (stream.match(/^\s{2,3}(-|\*|\+)\s/)) {
-        // console.log("L2")
-        state.combineTokens = true;
-        return "line-list2"
-      } else if (stream.match(/^\s{4,5}(-|\*|\+)\s/)) {
-        // console.log("L3")
-        state.combineTokens = true;
-        return "line-list3"
-      } else if (stream.match(/^\s{6,7}(-|\*|\+)\s/)) {
-        state.combineTokens = true;
-        return "line-list4"
+
+      if (stream.match(/^(~~~+|```+)/, false)) {
+        state.codeBlock = state.codeBlock ? false : true;
+        stream.next();
+        return 'line-codeBlock'
+      }
+
+      if (state.codeBlock) {
+        stream.next();
+        return 'line-codeBlock'
       }
     }
 
-    // Blockquote 
-    if (stream.sol() && stream.match(/^>\s/)) {
-      // stream.skipToEnd()
-      stream.next();
-      return "line-blockquote"
-    }
+    // Mark spans
 
-    // Strong - Flanking ** characters
-    if (stream.match('**')) {
-      state.combineTokens = true;
-      return 'flank'
-    }
-
-    // Emphasis - Flanking _ characters
-    if (stream.match(' _') || stream.match('_ ')) {
-      state.combineTokens = true;
-      return 'flank'
-    }
-
-    // Code - Flanking ` characters
-    if (stream.match('`')) {
-      state.combineTokens = true;
-      return 'flank'
-    }
-
-    // Header (hash tags)
-    if (stream.sol() && stream.match(/^#{1,5}/)) {
-      state.combineTokens = true;
-      return "header-hash"
-    }
-
-    // Cite keys
-    if (stream.match("[@")) {
-      // console.log("Citation found")
-      while ((ch = stream.next()) != null)
-        if (ch == "]") {
-          state.combineTokens = false;
-          return "citation"
-        }
-    }
-
-    // Wiki links
-    if (stream.match("[[")) {
-      while ((ch = stream.next()) != null)
-        if (ch == "]" && stream.next() == "]") {
-          stream.eat("]");
-          state.combineTokens = true;
-          return "wikilink"
-        }
-    }
-
-    // Figures
-    if (stream.match("![")) {
-      stream.skipToEnd();
-      return "figure"
-    }
-
-    // Links
-    // if (stream.match("[")) {
-    //   while ((ch = stream.next()) != null)
-    //     console.log(stream.baseToken())
-    //   if (ch == ")") {
-    //     // state.combineTokens = true
-    //     return "linkwrapper "
-    //   }
-    // }
-
-    while (
-      stream.next() != null
-      // Line
-      && !stream.match(">", false)
-      && !stream.match("#", false)
-      // Inline
-      && !stream.match("**", false)
-      && !stream.match(" _", false)
-      && !stream.match("_ ", false)
-      && !stream.match("`", false)
-      && !stream.match("[@", false)
-      && !stream.match("![", false)
-      && !stream.match("[[", false)
-      // && !stream.match("[", false)
-    ) { }
+    if (stream.next() != null) ;
 
     // If we don't do any of the above, return null (token does not need to be styled)
     return null
   }
 };
+
 
 /**
  * Define custom mode to be used with CodeMirror.
@@ -8334,11 +8310,29 @@ function defineGambierMode() {
 
     const START = 0, FRONTMATTER = 1, BODY = 2;
 
-    const yamlMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "yaml" }), yamlOverlay);
-    const innerMode = CodeMirror.overlayMode(CodeMirror.getMode(config, { name: "gfm", highlightFormatting: false, tokenTypeOverrides: { code: 'code', list1: 'list', list2: 'list', list3: 'list' } }), markdownOverlay);
+    const yamlMode = CodeMirror.overlayMode(CodeMirror.getMode(config, {
+      name: "yaml"
+    }), yamlOverlay);
+
+    const markdownMode = CodeMirror.overlayMode(CodeMirror.getMode(config, {
+      name: 'markdown',
+      taskLists: true,
+      strikethrough: true,
+      fencedCodeBlockHighlighting: true,
+      highlightFormatting: false,
+      tokenTypeOverrides: {
+        // code: 'code',
+        // header: 'line-header', // was 'header'
+        // quote: 'line-quote', // was 'quote'
+        // list1: 'line-list-1', // was 'variable-2'
+        // list2: 'line-list-2', // was 'variable-3'
+        // list3: 'line-list-3', // was 'keyword'
+        // hr: 'line-hr', // was 'hr'
+      }
+    }), markdownOverlay);
 
     function curMode(state) {
-      return state.state == BODY ? innerMode : yamlMode
+      return state.state == BODY ? markdownMode : yamlMode
     }
 
     return {
@@ -8361,19 +8355,19 @@ function defineGambierMode() {
             return yamlMode.token(stream, state.inner)
           } else {
             state.state = BODY;
-            state.inner = CodeMirror.startState(innerMode);
-            return innerMode.token(stream, state.inner)
+            state.inner = CodeMirror.startState(markdownMode);
+            return markdownMode.token(stream, state.inner)
           }
         } else if (state.state == FRONTMATTER) {
           var end = stream.sol() && stream.match(/(---|\.\.\.)/, false);
           var style = yamlMode.token(stream, state.inner);
           if (end) {
             state.state = BODY;
-            state.inner = CodeMirror.startState(innerMode);
+            state.inner = CodeMirror.startState(markdownMode);
           }
           return style
         } else {
-          return innerMode.token(stream, state.inner)
+          return markdownMode.token(stream, state.inner)
         }
       },
       innerMode: function (state) {
@@ -8679,6 +8673,8 @@ let state = {};
 let editor;
 let mediaBasePath;
 
+let makeMarks = false;
+
 let lastCursorLine = 0;
 
 const turndownService = new TurndownService();
@@ -8702,7 +8698,7 @@ async function loadFileByPath(filePath) {
 
     // Update media path
     mediaBasePath = filePath.substring(0, filePath.lastIndexOf('/'));
-    console.log(`mediaBasePath is ${mediaBasePath}`);
+    // console.log(`mediaBasePath is ${mediaBasePath}`)
   }
 }
 
@@ -8715,6 +8711,7 @@ function startNewDoc() {
  * Find each citation in the specified line, and collape + replace them.
  */
 function findAndMark() {
+  if (!makeMarks) return
   editor.operation(() => {
     editor.eachLine((lineHandle) => {
       const tokens = editor.getLineTokens(lineHandle.lineNo());
@@ -8797,9 +8794,9 @@ function makeEditor(textarea) {
   // Create CodeMirror instance from textarea element (which is replaced).
   const editor = CodeMirror.fromTextArea(textarea, {
     mode: 'gambier',
+    theme: 'test',
     lineWrapping: true,
     lineNumbers: false,
-    theme: 'gambier',
     indentWithTabs: false,
     autoCloseBrackets: true,
     // keyMap: 'sublime',
@@ -8857,13 +8854,14 @@ async function setup(textarea, initialState) {
   });
 
   window.api.receive('mainRequestsToggleSource', (showSource) => {
-    const mode = showSource ? 'markdown' : 'gambier';
     const theme = showSource ? 'markdown' : 'gambier';
-    editor.setOption('mode', mode);
+    // editor.setOption('mode', mode)
     editor.setOption('theme', theme);
     if (showSource) {
+      makeMarks = false;
       editor.getAllMarks().forEach((m) => m.clear());
     } else {
+      makeMarks = true;
       findAndMark();
     }
   });

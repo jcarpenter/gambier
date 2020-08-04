@@ -1,15 +1,5 @@
-#editor .CodeMirror {
-  width: 100%;
-  height: 100%;
-}
-
 .cm-s-gambier {
-  background: #fff;
   color: var(--clr-editorText);
-  display: block;
-  font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
-  font-size: var(--font-sml-1);
-  line-height: var(--baseLineHeight);
   /* -------------- Blockquote -------------- */
   /* -------------- Citation -------------- */
   /* -------------- Strong -------------- */
@@ -40,18 +30,6 @@
 .cm-s-gambier .CodeMirror-line > span::-moz-selection,
 .cm-s-gambier .CodeMirror-line > span > span::-moz-selection {
   background: green;
-}
-
-.cm-s-gambier .CodeMirror-lines {
-  margin: var(--grid) auto;
-  min-width: 30em;
-  max-width: 48em;
-  padding: 0 3em;
-  cursor: default;
-}
-
-.cm-s-gambier .CodeMirror-line:last-of-type {
-  margin-bottom: 18em;
 }
 
 .cm-s-gambier .CodeMirror-line.list1 .list-marker,
@@ -186,24 +164,6 @@
 OLD
 ========================================================
 */
-.cm-s-gambier .CodeMirror-gutters {
-  background: #fff;
-  border-right-width: 0;
-}
-
-.cm-s-gambier .CodeMirror-guttermarker {
-  color: white;
-}
-
-.cm-s-gambier .CodeMirror-guttermarker-subtle {
-  color: #d0d0d0;
-}
-
-.cm-s-gambier .CodeMirror-linenumber {
-  color: #959da5;
-  padding: 0 16px 0 16px;
-}
-
 .cm-s-gambier div.CodeMirror-selected,
 .cm-s-gambier .CodeMirror-line::selection,
 .cm-s-gambier .CodeMirror-line > span::selection,

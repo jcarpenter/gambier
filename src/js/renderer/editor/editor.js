@@ -21,6 +21,8 @@ let editor
 let mediaBasePath
 let bracketsWidget
 
+let makeMarks = false
+
 let lastCursorLine = 0
 let locators
 let citeproc
@@ -47,7 +49,7 @@ async function loadFileByPath(filePath) {
 
     // Update media path
     mediaBasePath = filePath.substring(0, filePath.lastIndexOf('/'))
-    console.log(`mediaBasePath is ${mediaBasePath}`)
+    // console.log(`mediaBasePath is ${mediaBasePath}`)
   }
 }
 
@@ -60,6 +62,7 @@ function startNewDoc() {
  * Find each citation in the specified line, and collape + replace them.
  */
 function findAndMark() {
+  if (!makeMarks) return
   editor.operation(() => {
     editor.eachLine((lineHandle) => {
       const tokens = editor.getLineTokens(lineHandle.lineNo())
@@ -175,9 +178,9 @@ function makeEditor(textarea) {
   // Create CodeMirror instance from textarea element (which is replaced).
   const editor = CodeMirror.fromTextArea(textarea, {
     mode: 'gambier',
+    theme: 'test',
     lineWrapping: true,
     lineNumbers: false,
-    theme: 'gambier',
     indentWithTabs: false,
     autoCloseBrackets: true,
     // keyMap: 'sublime',
@@ -237,11 +240,13 @@ async function setup(textarea, initialState) {
   window.api.receive('mainRequestsToggleSource', (showSource) => {
     const mode = showSource ? 'markdown' : 'gambier'
     const theme = showSource ? 'markdown' : 'gambier'
-    editor.setOption('mode', mode)
+    // editor.setOption('mode', mode)
     editor.setOption('theme', theme)
     if (showSource) {
+      makeMarks = false
       editor.getAllMarks().forEach((m) => m.clear())
     } else {
+      makeMarks = true
       findAndMark()
     }
   })
