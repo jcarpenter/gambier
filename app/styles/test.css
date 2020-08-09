@@ -2,19 +2,35 @@
     /* background-color: aliceblue; */
 }
 
-/* BLOCK */
+/* ANNOYING: 
+I want to prefix these styles with the theme class, so that it's easier to theme, but the styles only works with `.cm-s-test .CodeMirror-selected`. They do not work `.cm-s-test .CodeMirror-focused .CodeMirror-selected`. So I cannot prefix these styles -AND- have differentiated app-focused / app-not-focused selected styles. I have to remove the theme class prefix for them to work. Not sure what the issue is.
+ */
+.CodeMirror-focused .CodeMirror-selected{
+    background-color: rgb(217, 231, 243) !important;
+}
+
+.CodeMirror-selected {
+    background-color: rgb(224, 224, 224);
+}
+
+
+/* ---------- BLOCK ---------- */
+
+.cm-s-test .fencedcodeblock {
+    background-color: rgba(214, 214, 214, 0.5) !important;
+}
+
 .cm-s-test .quote {
     background-color: rgba(182, 251, 251, 0.2) !important;
     font-style: italic;
 }
-
 
 .cm-s-test .quote * {
     opacity: 0.8;
 }
 
 .cm-s-test .figure {
-    background-color: rgba(158, 222, 196, 0.2) !important;
+    background-color: rgba(209, 177, 227, 0.15) !important;
 }
 
 /* .cm-s-test .figure .cm-img {
@@ -29,31 +45,67 @@
     color: rgb(156, 156, 156);
 }
 
-
 .cm-s-test .cm-citation {
     background-color: lightgoldenrodyellow;
+    color: rgba(0, 0, 0, 0.5);
 }
 
-.cm-s-test .footnote-reference {
+.cm-s-test .cm-citation.cm-key {
+    text-decoration: underline;
+    color: black;
+}
+
+.cm-s-test .footnote-reference-definition {
     background-color: rgba(241, 186, 231, 0.2) !important;
     font-style: italic !important;
 }
 
+.cm-s-test .hr {
+    background-color: rgba(198, 198, 198, 0.2) !important;
+}
 
-/* INLINE */
+.cm-s-test .texmath-equation {
+    background-color: rgba(214, 214, 214, 0.5) !important;
+}
+
+/* ---------- INLINE ----------  */
+
+/* Classic */
 
 .cm-s-test .cm-tag {
     color: rgb(80, 169, 110);
 }
-
 .cm-s-test .cm-attribute {
     color: rgb(44, 116, 224);
 }
-
+.cm-s-test .cm-comment {
+    color: #a50;
+}
 .cm-s-test .cm-string {
-    color: rgb(183, 89, 77);
+    color: #a11;
+}
+.cm-s-test .cm-string-2 {
+    color: rgb(226, 55, 55);
+}
+.cm-s-test .cm-meta {
+    color: #555;
+}
+.cm-s-test .cm-atom {
+    color: #219;
+}
+.cm-s-test .cm-keyword {
+    color: rgb(35, 100, 197);
+}
+.cm-s-test .cm-property {
+    color: rgb(138, 35, 197);
+    font-weight: bold;
+}
+.cm-s-test .cm-operator {
+    color: gray;
 }
 
+
+/* Misc */
 
 .cm-s-test .cm-code {
     background-color: rgba(140, 219, 166, 0.6) !important;
@@ -64,13 +116,32 @@
     font-style: italic;
 }
 
-.cm-s-test .cm-img {
-    background-color: rgb(177, 227, 209);
+/* Footnote */
+
+.cm-s-test .cm-footnote.cm-inline {
+    background-color: rgba(219, 178, 211, 0.5);
 }
 
+.cm-s-test .cm-footnote.cm-reference {
+    background-color: rgba(219, 178, 211, 0.5);
+}
+
+/* Image */
+
+.cm-s-test .cm-img {
+    background-color: rgba(209, 177, 227, 0.5) !important;
+}
+
+/* Link */
+
 .cm-s-test .cm-link {
-    background-color: rgba(173, 216, 230, 0.6);
+    background-color: rgba(173, 216, 230, 0.5);
     text-decoration: none;
+}
+
+.cm-s-test .cm-link.cm-inline {
+    background-color: rgba(173, 216, 230, 0.5);
+    text-decoration: underline;
 }
 
 .cm-s-test .cm-link.cm-reference {
@@ -80,13 +151,14 @@
     font-weight: bold;
 }
 
-
+.cm-s-test .cm-img.cm-url,
 .cm-s-test .cm-link.cm-url {
     opacity: 0.8;
     color: rgb(4, 120, 159);
     text-decoration: underline;
 }
 
+.cm-s-test .cm-img.cm-title,
 .cm-s-test .cm-link.cm-title {
     opacity: 0.8;
     font-style: italic;
@@ -96,16 +168,7 @@
     opacity: 1;
 }
 
-.cm-s-test .cm-autolink-url, .cm-s-test .cm-autolink-email {
-    background-color: rgb(236, 221, 212);
+.cm-s-test .cm-autolink-url,
+.cm-s-test .cm-autolink-email {
+    background-color: rgba(231, 205, 188, 0.5);
 }
-
-
-.cm-s-test .cm-footnote-inline {
-    background-color: rgb(243, 222, 239);
-}
-
-.cm-s-test .cm-footnote-reference-id {
-    background-color: rgb(241, 186, 231);
-}
-

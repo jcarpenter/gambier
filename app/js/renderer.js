@@ -8264,7 +8264,8 @@ const markdownOverlay = {
 
   startState: () => {
     return {
-      codeBlock: false,
+      fencedCodeBlock: false,
+      texMathEquation: false,
     }
   },
 
@@ -8277,23 +8278,40 @@ const markdownOverlay = {
   token: (stream, state) => {
 
     // Mark lines
-
     if (stream.sol()) {
 
-      if (stream.match(/^(~~~+|```+)/, false)) {
-        state.codeBlock = state.codeBlock ? false : true;
-        stream.next();
-        return 'line-codeBlock'
+      state.combineTokens = true;
+
+      // ----- Fenced code block ----- //
+      // Regex taken from underlying markdown mode
+
+      if (!state.fencedCodeBlock && stream.match(/^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/)) {
+        state.fencedCodeBlock = true;
+        stream.skipToEnd();
+        return 'line-fencedcodeblock'
+      } else if (state.fencedCodeBlock) {
+        // If we've reached the end, stop the state
+        if (stream.match(/^(~~~+|```+)/)) state.fencedCodeBlock = false;
+        stream.skipToEnd();
+        return 'line-fencedcodeblock'
       }
 
-      if (state.codeBlock) {
-        stream.next();
-        return 'line-codeBlock'
+      // ----- TeX math equation ----- //
+      // Regex taken from underlying markdown mode
+      
+      if (!state.texMathEquation && stream.match(/^\$\$$/)) {
+        state.texMathEquation = true;
+        stream.skipToEnd();
+        return 'line-texmath-equation'
+      } else if (state.texMathEquation) {
+        // If we've reached the end, stop the state
+        if (stream.match(/^\$\$$/)) state.texMathEquation = false;
+        stream.skipToEnd();
+        return 'line-texmath-equation'
       }
     }
 
-    // Mark spans
-
+    // Advance 
     if (stream.next() != null) ;
 
     // If we don't do any of the above, return null (token does not need to be styled)
@@ -8306,7 +8324,7 @@ const markdownOverlay = {
  * Define custom mode to be used with CodeMirror.
  */
 function defineGambierMode() {
-  CodeMirror.defineMode("gambier", (config, parserConfig) => {
+  CodeMirror.defineMode("gambier", (config, parsegrConfig) => {
 
     const START = 0, FRONTMATTER = 1, BODY = 2;
 
@@ -8319,6 +8337,7 @@ function defineGambierMode() {
       taskLists: true,
       strikethrough: true,
       fencedCodeBlockHighlighting: true,
+      fencedCodeBlockDefaultMode: 'javascript',
       highlightFormatting: false,
       tokenTypeOverrides: {
         // code: 'code',
