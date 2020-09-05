@@ -4,11 +4,16 @@ const storeDefault = {
 
   focusedLayoutSection: 'navigation',
 
+  // A copy of the object of the document currently visible in the editor.
   openDoc: {},
 
+  // A copy of the object of the selected `sideBar` item. We use a copy for the sake of convenience. It saves us having to continually find the original `sideBar` item, which would be tricky, as `sideBar` items don't have unique IDs (we instead use a heuristic based on id names).
   selectedSideBarItem: {},
 
   showFilesList: true,
+
+  // Editor theme
+  editorTheme: 'gambier-light',
 
   // User specified path to folder containing their project files
   projectPath: '',

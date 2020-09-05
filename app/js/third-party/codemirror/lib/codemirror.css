@@ -108,7 +108,7 @@
 
 /* DEFAULT THEME */
 
-.cm-s-default .cm-header {color: blue;}
+/* .cm-s-default .cm-header {color: blue;}
 .cm-s-default .cm-quote {color: #090;}
 .cm-negative {color: #d44;}
 .cm-positive {color: #292;}
@@ -116,7 +116,6 @@
 .cm-em {font-style: italic;}
 .cm-link {text-decoration: underline;}
 .cm-strikethrough {text-decoration: line-through;}
-
 .cm-s-default .cm-keyword {color: #708;}
 .cm-s-default .cm-atom {color: #219;}
 .cm-s-default .cm-number {color: #164;}
@@ -138,10 +137,9 @@
 .cm-s-default .cm-attribute {color: #00c;}
 .cm-s-default .cm-hr {color: #999;}
 .cm-s-default .cm-link {color: #00c;}
+.cm-s-default .cm-error {color: #f00;} */
 
-.cm-s-default .cm-error {color: #f00;}
 .cm-invalidchar {color: #f00;}
-
 .CodeMirror-composing { border-bottom: 2px solid; }
 
 /* Default styles for common addons */

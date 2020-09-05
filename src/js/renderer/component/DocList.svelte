@@ -4,8 +4,8 @@
    */
   import { onMount, tick } from "svelte";
   import DocListItem from "./DocListItem.svelte";
-  import { updateDocList, sortDocList } from "../docListUpdate";
-  import { isEmpty } from "../utils";
+  // import { updateDocList, sortDocList } from "../docListUpdate";
+  import { getSideBarItemById, isEmpty } from "../utils";
 
   export let state = {};
   export let oldState = {};
@@ -13,70 +13,70 @@
 
   // Files
   let docs = [];
-  let fileEl
-  let mounted = false
+  let fileEl;
+  let mounted = false;
 
-  $: sideBarItem = state.selectedSideBarItem
-  $: filter = sideBarItem.filter
-    $: sort = sideBarItem.sort
-  $: focused = state.focusedLayoutSection == 'navigation'
+  $: sideBarItem = getSideBarItemById(state, state.selectedSideBarItem.id);
+  $: filter = sideBarItem.filter;
+  $: sort = sideBarItem.sort;
+  $: focused = state.focusedLayoutSection == "navigation";
 
-  $: onStateChange(state)
+  $: onStateChange(state);
 
   function onStateChange(state) {
-
-    if (!mounted) return
+    if (!mounted) return;
 
     if (state.changed.includes("selectedSideBarItem")) {
-      saveOutgoingSideBarItemScrollPosition()
-      docs = updateDocList(state, filter)
-      docs = sortDocList(docs, sort)
-      docs = restoreLastSelection(docs, sideBarItem.lastSelection)
-      setScrollPosition()
+      saveOutgoingSideBarItemScrollPosition();
+      docs = getDocs();
+      setScrollPosition();
     } else if (
-        state.changed.includes("sideBar") ||
-        state.changed.includes("folders") ||
-        state.changed.includes("documents")
+      state.changed.includes("sort") ||
+      state.changed.includes("sideBar") ||
+      state.changed.includes("folders") ||
+      state.changed.includes("documents")
     ) {
-      docs = updateDocList(state, filter)
-      docs = sortDocList(docs, sort)
-      docs = restoreLastSelection(docs, sideBarItem.lastSelection)
-    }
-    else if (state.changed.includes("sort")) {
-      docs = sortDocList(docs, sort)
+      docs = getDocs();
     }
   }
 
   onMount(async () => {
-    docs = updateDocList(state, filter)
-    docs = sortDocList(docs, sort)
-    docs = restoreLastSelection(docs, sideBarItem.lastSelection)
-    setScrollPosition()
-    mounted = true
+    docs = getDocs();
+    setScrollPosition();
+    mounted = true;
   });
-
-
-
 
   // -------- UTILITY METHODS -------- //
 
+  function getDocs() {
+    let docs = [];
+
+    sideBarItem.files.forEach(file => {
+      let doc = state.documents.find(d => d.id == file.id);
+      doc.selected = file.selected;
+      docs.push(doc);
+    });
+
+    return docs;
+  }
+
   function getFirstSelectedFileIndex(docs) {
-    return docs.findIndex((f) => f.selected)
+    return docs.findIndex(f => f.selected);
   }
 
   function getLastSelectedFileIndex(docs) {
-    let l = docs.length
+    let l = docs.length;
     while (l--) {
       if (docs[l].selected) {
-        break
+        break;
       }
     }
-    return l
+    return l;
   }
 
   function saveOutgoingSideBarItemScrollPosition() {
-    if (!fileEl || isEmpty(oldState.selectedSideBarItem)) return 
-    
+    if (!fileEl || isEmpty(oldState.selectedSideBarItem)) return;
+
     window.api.send("dispatch", {
       type: "SAVE_SIDEBAR_SCROLL_POSITION",
       item: oldState.selectedSideBarItem,
@@ -86,7 +86,7 @@
 
   async function setScrollPosition() {
     await tick();
-    fileEl.scrollTop = sideBarItem.lastScrollPosition
+    fileEl.scrollTop = sideBarItem.lastScrollPosition;
   }
 
   async function scrollElementIntoView(element, animate = true) {
@@ -115,167 +115,157 @@
         break;
       case "ArrowUp": {
         event.preventDefault();
-        const firstSelected = getFirstSelectedFileIndex(docs)
+        const firstSelected = getFirstSelectedFileIndex(docs);
         if (firstSelected > 0) {
-          select(firstSelected - 1, event.shiftKey)
+          select(firstSelected - 1, event.shiftKey);
         }
         break;
       }
       case "ArrowDown": {
         event.preventDefault();
-        const lastSelected = getLastSelectedFileIndex(docs)
+        const lastSelected = getLastSelectedFileIndex(docs);
         if (lastSelected < docs.length - 1) {
-          select(lastSelected + 1, event.shiftKey)
+          select(lastSelected + 1, event.shiftKey);
         }
         break;
       }
     }
   }
 
-  /** 
+  /**
    * Handle click, shift-click, and command-click events
    * - Click: select file
    * - Meta-click: toggle selected
    * - Shift-click, select range
-  */
+   */
   function handleClick(event, index) {
-
     if (!event.metaKey && !event.shiftKey) {
-      select(index, false)
+      select(index, false);
     } else if (event.metaKey) {
-      toggleSelected(index)
-    }
-    else if (event.shiftKey) {
-
+      toggleSelected(index);
+    } else if (event.shiftKey) {
       // Is anything selected?
-      const isAnythingSelected = docs.some((f) => f.selected)
+      const isAnythingSelected = docs.some(f => f.selected);
 
       // If no, simply mark from start of list to clicked file (index)
       // If yes, logic is more complicated
       if (!isAnythingSelected) {
-        selectRange(0, index)
+        selectRange(0, index);
       } else {
-        
         // Find first and last currently-selected docs
-        const firstSelected = getFirstSelectedFileIndex(docs)
-        const lastSelected = getLastSelectedFileIndex(docs)      
+        const firstSelected = getFirstSelectedFileIndex(docs);
+        const lastSelected = getLastSelectedFileIndex(docs);
 
-        // Set start and end depending on where user is clicking, relative to 
+        // Set start and end depending on where user is clicking, relative to
         // currently-selected docs.
         if (index < firstSelected) {
-          selectRange(index, firstSelected)
+          selectRange(index, firstSelected);
         } else if (index > lastSelected) {
-          selectRange(lastSelected, index)
+          selectRange(lastSelected, index);
         } else if (index > firstSelected && index < lastSelected) {
-          selectRange(firstSelected, index)
+          selectRange(firstSelected, index);
         }
       }
-    }    
+    }
   }
-
 
   // -------- SELECT -------- //
 
   function select(index, addToExistingSelection) {
     if (addToExistingSelection) {
-      docs[index].selected = true
+      docs[index].selected = true;
     } else {
       docs.forEach((f, i) => {
-        f.selected = i == index
+        f.selected = i == index;
       });
     }
-    scrollElementIntoView(fileEl.children[index], true)
-    docs = docs
-    dispatchSelectionChangesToStore(docs)
+    scrollElementIntoView(fileEl.children[index], true);
+    docs = docs;
+    dispatchSelectionChangesToStore(docs);
   }
 
   function toggleSelected(index) {
-    docs[index].selected = !docs[index].selected
-    docs = docs
-    dispatchSelectionChangesToStore(docs)
+    docs[index].selected = !docs[index].selected;
+    docs = docs;
+    dispatchSelectionChangesToStore(docs);
   }
 
   function selectRange(start, end) {
     for (let i = start; i <= end; i++) {
-      docs[i].selected = true
+      docs[i].selected = true;
     }
-    docs = docs
-    dispatchSelectionChangesToStore(docs)
+    docs = docs;
+    dispatchSelectionChangesToStore(docs);
   }
 
   /**
    * Set document `selected` property. First try to restore the `lastSelected` docs for the selected sideBar item. If there were none selected, select the first doc. Or if the selected docs no longer exist (e.g. after a deletion), select the next adjacent doc.
    * @param {} docs - Array of docs, as originally created by `updateDocList`.
-   * @param {*} previousSelections - Each is object: `{ index: 0, id: 'file-3234376' }`
+   * @param {*} lastSelection - Array of objects: `{ index: 0, id: 'file-3234376' }`
    */
   function restoreLastSelection(docsBefore, lastSelection = []) {
-    
-    if (docsBefore.length == 0) return []
-    
-    let docs = docsBefore
+    if (docsBefore.length == 0) return [];
+
+    let docs = docsBefore;
 
     // Else, try to restore the selections.
-    // If none of the previously-selected items exist in the updated `docs`, (e.g. in the case of a selected file being deleted), try to pick the next file. If already at the end of the list, 
+    // If none of the previously-selected items exist in the updated `docs`, (e.g. in the case of a selected file being deleted), try to pick the next file. If already at the end of the list,
 
     // If there was a previous selections, try to restore it
     if (lastSelection.length > 0) {
-      
-      let isAtLeastOneFileSelected = false
-      
-      // If current docs match lastSelection docs, select them
-      docs.forEach((f) => {
-        if (lastSelection.some((s) => s.id == f.id)) {
-          f.selected = true
-          isAtLeastOneFileSelected = true
-        }
-      })
+      let isAtLeastOneFileSelected = false;
 
-      // If none of the previously selected docs still exist (most commonly, after a selected doc was deleted), then try to select the "next" doc (the new doc at the same index number as the previously selected doc). Or if the previously-selected doc was last in the list, select the new last doc.
+      // If current docs match lastSelection docs, select them
+      docs.forEach(f => {
+        if (lastSelection.some(s => s.id == f.id)) {
+          f.selected = true;
+          isAtLeastOneFileSelected = true;
+        }
+      });
+
+      // If the previously selected docs do NOT exist any more (most commonly, after a selected doc was deleted), then try to select the "next" doc (the new doc at the same index number as the previously selected doc). Or if the previously-selected doc was last in the list, select the new last doc.
       if (!isAtLeastOneFileSelected) {
         if (lastSelection[0].index <= docs.length - 1) {
-            docs[lastSelection[0].index].selected = true
+          docs[lastSelection[0].index].selected = true;
         } else {
-            docs[docs.length - 1].selected = true
+          docs[docs.length - 1].selected = true;
         }
       }
     } else {
-        // Else, just select the first file
-        docs[0].selected = true
+      // Else, just select the first file
+      docs[0].selected = true;
     }
 
-    dispatchSelectionChangesToStore(docs)
-    return docs
+    dispatchSelectionChangesToStore(docs);
+    return docs;
   }
 
   function dispatchSelectionChangesToStore(docs) {
-    
-    let selectedDocs = []
-    
+    let selectedDocs = [];
+
     docs.forEach((f, i) => {
       if (f.selected) {
-        selectedDocs.push({ index: i, id: f.id })
+        selectedDocs.push({ index: i, id: f.id });
       }
-    })
-      
+    });
+
     window.api.send("dispatch", {
-      type: "SAVE_SIDEBAR_LAST_SELECTION",
-      item: sideBarItem,
-      lastSelection: selectedDocs
+      type: "SELECT_FILES",
+      sideBarItem: sideBarItem,
+      selectedFiles: selectedDocs
     });
   }
 
-
   // -------- DELETE -------- //
 
-  window.api.receive('mainRequestsDeleteFile', deleteFile)
+  window.api.receive("mainRequestsDeleteFile", deleteFile);
 
   function deleteFile() {
+    let selectedPaths = [];
 
-    let selectedPaths = []
-    
     docs.forEach((f, index) => {
-        if (f.selected) {
-        selectedPaths.push(f.path)
+      if (f.selected) {
+        selectedPaths.push(f.path);
       }
     });
 
@@ -293,26 +283,24 @@
   }
 
   // -------- SORT -------- //
-    // Bind displayed value to state
-    // When user makes selection, dispatch that selection to store. Store will update, and state will update. But there will be a delay, waiting for IPC...
-    // So need to basically hold the user's selection in the interim. And when the new value from state comes down, apply it.
-    // Have internal state. Sync to state when state changes.
+  // Bind displayed value to state
+  // When user makes selection, dispatch that selection to store. Store will update, and state will update. But there will be a delay, waiting for IPC...
+  // So need to basically hold the user's selection in the interim. And when the new value from state comes down, apply it.
+  // Have internal state. Sync to state when state changes.
 
-    function selectionMade() {
-        window.api.send("dispatch", {
-            type: "SET_SORT",
-            item: sideBarItem,
-            sort: sort
-        });
-    }
-
-
+  function selectionMade() {
+    window.api.send("dispatch", {
+      type: "SET_SORT",
+      item: sideBarItem,
+      sort: sort
+    });
+  }
 </script>
 
 <style type="text/scss">
   @import "../../../styles/_variables.scss";
 
-  #list { 
+  #list {
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -337,36 +325,35 @@
     height: 2rem;
 
     h1 {
-        @include label-normal;
-        font-weight: bold;
-        margin: 0;
-        padding: 0;
-        white-space: nowrap;
+      @include label-normal;
+      font-weight: bold;
+      margin: 0;
+      padding: 0;
+      white-space: nowrap;
     }
 
     &:hover #sorting-options {
-        display: block;
+      display: block;
     }
   }
 
-    #sorting-options {
-        @include label-normal-small;
+  #sorting-options {
+    @include label-normal-small;
 
-        display: none;
-        position: absolute;
-        right: 0.5em;
-        top: 50%;
-        transform: translate(0%, -50%);
-        background: white;
-        // padding-left: 0.5rem;
-        box-shadow: 0px 0px 15px 20px white;
+    display: none;
+    position: absolute;
+    right: 0.5em;
+    top: 50%;
+    transform: translate(0%, -50%);
+    background: white;
+    // padding-left: 0.5rem;
+    box-shadow: 0px 0px 15px 20px white;
 
-        select {
-            @include label-normal-small;
-            font-weight: bold;
-        }
+    select {
+      @include label-normal-small;
+      font-weight: bold;
     }
-
+  }
 
   #docs {
     width: 100%;
@@ -376,31 +363,34 @@
     padding: 0;
     user-select: none;
   }
-
 </style>
 
 <svelte:window on:keydown={handleKeydown} />
 
 <div id="list">
-    <div id="header">
-        <h1>{sideBarItem.label}</h1>
-        <div id="sorting-options">
-            <label for="sort-select">Sort By:</label>
-            <select name="Sort By" id="sort-select" bind:value={sort.by} on:change={selectionMade}>
-                <option value="title">Title</option>
-                <option value="date-modified">Date modified</option>
-                <option value="date-created">Date created</option>
-            </select>
-        </div>
+  <div id="header">
+    <h1>{sideBarItem.label}</h1>
+    <div id="sorting-options">
+      <label for="sort-select">Sort By:</label>
+      <select
+        name="Sort By"
+        id="sort-select"
+        bind:value={sort.by}
+        on:change={selectionMade}>
+        <option value="title">Title</option>
+        <option value="date-modified">Date modified</option>
+        <option value="date-created">Date created</option>
+      </select>
     </div>
-    <div id="docs" class:focused bind:this={fileEl}>
+  </div>
+  <div id="docs" class:focused bind:this={fileEl}>
     {#each docs as doc, index (doc.id)}
-        <DocListItem
-        state={state}
+      <DocListItem
+        {state}
         title={doc.title}
         excerpt={doc.excerpt}
         selected={doc.selected}
-        on:click={handleClick(event, index)} />
+        on:click={event => handleClick(event, index)} />
     {/each}
-    </div>
+  </div>
 </div>

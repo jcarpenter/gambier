@@ -6,7 +6,7 @@ import markInlineLinks from './markInlineLinks'
 import markCitations from './markCitations'
 import markFigures from './markFigures'
 import markList from './markList'
-import keyboardCommands from './keyboardCommands'
+// import keyboardCommands from './keyboardCommands'
 
 import BracketsWidget from '../component/BracketsWidget.svelte'
 import { mountReplace } from '../utils'
@@ -31,7 +31,7 @@ let citationItems
 const turndownService = new TurndownService()
 
 
-// -------- SETUP -------- //
+// -------- UTILITY -------- //
 
 /**
  * Load file contents into CodeMirror
@@ -161,6 +161,23 @@ async function onBeforeChange(cm, change) {
   }
 }
 
+/**
+ * Wrap text
+ * @param {*} textarea 
+ */
+function wrapText(character) {
+ if (character == '_') {
+   const selection =  editor.getSelection()
+   if (selection) {
+     editor.replaceSelection(`_${selection}_`)
+   } else {
+
+   }
+   console.log('italics')
+   console.log(editor.getSelection())
+ }
+}
+
 
 // -------- SETUP -------- //
 
@@ -178,12 +195,19 @@ function makeEditor(textarea) {
   // Create CodeMirror instance from textarea element (which is replaced).
   const editor = CodeMirror.fromTextArea(textarea, {
     mode: 'gambier',
-    theme: 'test',
     lineWrapping: true,
     lineNumbers: false,
     indentWithTabs: false,
-    autoCloseBrackets: true,
-    // keyMap: 'sublime',
+    // We use closebracket.js for character-closing behaviour. 
+    // https://codemirror.net/doc/manual.html#addon_closebrackets
+    // We add support for `**` and `__` by copying the default config object from closebrackets.js, and adding `**__` to the pairs property.
+    autoCloseBrackets: { 
+      pairs: "**__()[]{}''\"\"",
+      closeBefore: ")]}'\":;>",
+      triples: "",
+      explode: "[]{}"
+    },
+    keyMap: 'sublime',
     extraKeys: {
       'Shift-Cmd-K': 'deleteLine',
       'Cmd-L': 'selectLine',
@@ -195,7 +219,8 @@ function makeEditor(textarea) {
       'Shift-Ctrl-Down': 'addCursorToNextLine',
       'Enter': 'newlineAndIndentContinueMarkdownList',
       'Tab': 'autoIndentMarkdownList',
-      'Shift-Tab': 'autoUnindentMarkdownList'
+      'Shift-Tab': 'autoUnindentMarkdownList',
+      // "'_'": () => wrapText('_')
     }
   })
 
@@ -218,14 +243,34 @@ async function setup(textarea, initialState) {
 
   // Make editor
   editor = makeEditor(textarea)
+  editor.setOption("theme", initialState.editorTheme)
 
   // Setup change listeners
   window.api.receive('stateChanged', async (newState, oldState) => {
     state = newState
+
+    if (state.changed.includes('editorTheme')) {
+      editor.setOption("theme", newState.editorTheme)
+    }
+
     if (state.changed.includes('openDoc')) {
       if (state.openDoc.path) {
         loadFileByPath(state.openDoc.path)
       }
+    }
+
+    if (state.changed.includes('newDoc')) {
+
+      // Place the cursor at the end of the document.
+      // We have to wait a moment before calling.
+      // Per: https://stackoverflow.com/a/61934020
+      setTimeout(() => {
+        editor.focus();
+        editor.setCursor({
+          line: editor.lastLine(),
+          ch: editor.getLine(editor.lastLine()).length,
+        });
+      }, 0)
     }
   })
 
@@ -237,11 +282,16 @@ async function setup(textarea, initialState) {
     })
   })
 
+  // "Source mode" toggle reverts displayed text to plain markdown (without widgets, etc) when activated. 
   window.api.receive('mainRequestsToggleSource', (showSource) => {
     const mode = showSource ? 'markdown' : 'gambier'
-    const theme = showSource ? 'markdown' : 'gambier'
+    const theme = showSource ? 'markdown' : 'test'
     // editor.setOption('mode', mode)
+
+    // Set theme
     editor.setOption('theme', theme)
+
+    // Enable or disable marks
     if (showSource) {
       makeMarks = false
       editor.getAllMarks().forEach((m) => m.clear())
@@ -249,6 +299,7 @@ async function setup(textarea, initialState) {
       makeMarks = true
       findAndMark()
     }
+
   })
 
   if (state.openDoc.path) {

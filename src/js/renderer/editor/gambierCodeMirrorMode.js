@@ -1,5 +1,3 @@
-import TurndownService from "turndown"
-
 const yamlOverlay = {
   startState: function () {
     return {
@@ -45,7 +43,6 @@ const markdownOverlayOLD = {
     // state.combineTokens = null
 
     // if (!state.emphasis) {
-    //   console.log(state.emphasis)
     //   state.emphasis = true
     // } else if (stream.sol() && state.emphasis) {
     //   state.combineTokens = true
@@ -55,7 +52,6 @@ const markdownOverlayOLD = {
     // let ch
 
     // if (stream.sol() && state.emphasis) {
-    //   console.log(stream)
     // }
 
     // Demo: https://regex101.com/r/1MR7Tg/1
@@ -68,11 +64,9 @@ const markdownOverlayOLD = {
     //     // state.list_ul = true
     //     return "line-list1"
     //   } else if (stream.match(/^\s{2,3}(-|\*|\+)\s/)) {
-    //     // console.log("L2")
     //     state.combineTokens = true
     //     return "line-list2"
     //   } else if (stream.match(/^\s{4,5}(-|\*|\+)\s/)) {
-    //     // console.log("L3")
     //     state.combineTokens = true
     //     return "line-list3"
     //   } else if (stream.match(/^\s{6, 7}(-|\*|\+)\s/)) {
@@ -188,14 +182,17 @@ const markdownOverlay = {
 
   token: (stream, state) => {
 
-    // Mark lines
+    state.combineTokens = true
+
+    /*
+    Style lines: We apply line styles in our overlay when we cannot apply them in the underlying markdown.js mode. This happens when we delegate styling to another mode, as in the case of fenced code blocks, TeX math, etc. 
+    */
+
     if (stream.sol()) {
 
-      state.combineTokens = true
+      // ----- Fenced code block: Style line ----- //
 
-      // ----- Fenced code block ----- //
-      // Regex taken from underlying markdown mode
-
+      // NOTE: Regex taken from underlying markdown mode
       if (!state.fencedCodeBlock && stream.match(/^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/)) {
         state.fencedCodeBlock = true
         stream.skipToEnd()
@@ -203,13 +200,14 @@ const markdownOverlay = {
       } else if (state.fencedCodeBlock) {
         // If we've reached the end, stop the state
         if (stream.match(/^(~~~+|```+)/)) state.fencedCodeBlock = false
+        // console.log(stream)
         stream.skipToEnd()
         return 'line-fencedcodeblock'
       }
 
-      // ----- TeX math equation ----- //
-      // Regex taken from underlying markdown mode
+      // ----- TeX math equation: Style line ----- //
       
+      // NOTE: Regex taken from underlying markdown mode
       if (!state.texMathEquation && stream.match(/^\$\$$/)) {
         state.texMathEquation = true
         stream.skipToEnd()
@@ -227,6 +225,18 @@ const markdownOverlay = {
 
     // If we don't do any of the above, return null (token does not need to be styled)
     return null
+  },
+
+  blankLine: function (state) {
+
+    // Style blank lines for multi-line 
+    if (state.fencedCodeBlock) {
+      return 'line-fencedcodeblock'
+    } else if (state.texMathEquation) {
+      return `line-texmath-equation`
+    }
+
+    return
   }
 }
 
@@ -250,15 +260,6 @@ function defineGambierMode() {
       fencedCodeBlockHighlighting: true,
       fencedCodeBlockDefaultMode: 'javascript',
       highlightFormatting: false,
-      tokenTypeOverrides: {
-        // code: 'code',
-        // header: 'line-header', // was 'header'
-        // quote: 'line-quote', // was 'quote'
-        // list1: 'line-list-1', // was 'variable-2'
-        // list2: 'line-list-2', // was 'variable-3'
-        // list3: 'line-list-3', // was 'keyword'
-        // hr: 'line-hr', // was 'hr'
-      }
     }), markdownOverlay)
 
     function curMode(state) {
@@ -305,6 +306,8 @@ function defineGambierMode() {
       },
       blankLine: function (state) {
         var mode = curMode(state)
+
+        // if (state.inner.overlay.fencedCodeBlock) return 'line-fencedcodeblock'
         if (mode.blankLine) return mode.blankLine(state.inner)
       }
     }

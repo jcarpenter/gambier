@@ -1,4 +1,5 @@
 import { Menu, MenuItem, app } from 'electron'
+import { newFile } from './actions/index.js'
 
 let store = {}
 let state = {}
@@ -39,6 +40,16 @@ function setup(gambierStore) {
   // -------- File -------- //
   if (process.platform === 'darwin') {
 
+    var saveNewFile = new MenuItem({
+      label: 'New Document',
+      accelerator: 'CmdOrCtrl+N',
+      async click(item, focusedWindow) {
+
+        store.dispatch(await newFile(state))
+      }
+    })
+
+
     var save = new MenuItem({
       label: 'Save',
       accelerator: 'CmdOrCtrl+S',
@@ -58,6 +69,7 @@ function setup(gambierStore) {
     const file = new MenuItem({
       label: 'File',
       submenu: [
+        saveNewFile,
         save,
         moveToTrash
       ]
@@ -108,6 +120,31 @@ function setup(gambierStore) {
 
   // -------- View -------- //
 
+  var select_editor_theme_dark = new MenuItem({
+    label: 'Dark',
+    type: 'checkbox',
+    checked: state.editorTheme == 'gambier-dark',
+    click(item, focusedWindow) {
+      store.dispatch({
+        type: 'SELECT_EDITOR_THEME',
+        theme: 'gambier-dark',
+      })
+    }
+  })
+
+  var select_editor_theme_light = new MenuItem({
+    label: 'Light',
+    type: 'checkbox',
+    checked: state.editorTheme == 'gambier-light',
+    click() {
+      store.dispatch({
+        type: 'SELECT_EDITOR_THEME',
+        theme: 'gambier-light',
+      })
+    }
+  })
+
+
   const view = new MenuItem(
     {
       label: 'View',
@@ -118,26 +155,34 @@ function setup(gambierStore) {
           checked: false,
           accelerator: 'CmdOrCtrl+/',
           click(item, focusedWindow) {
+            console.log(state.editorTheme)
             if (focusedWindow) {
-              focusedWindow.webContents.send('mainRequestsToggleSource', item.checked )
+              focusedWindow.webContents.send('mainRequestsToggleSource', item.checked)
             }
           }
         },
-        { type: 'separator' },
         {
-          label: 'Reload',
-          accelerator: 'CmdOrCtrl+R',
-          click(item, focusedWindow) {
-            if (focusedWindow) focusedWindow.reload()
-          }
+          label: 'Theme',
+          submenu: [
+            select_editor_theme_dark,
+            select_editor_theme_light
+          ]
         },
-        {
-          label: 'Toggle Developer Tools',
-          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-          click(item, focusedWindow) {
-            if (focusedWindow) focusedWindow.webContents.toggleDevTools()
-          }
-        },
+        // { type: 'separator' },
+        // {
+        //   label: 'Reload',
+        //   accelerator: 'CmdOrCtrl+R',
+        //   click(item, focusedWindow) {
+        //     if (focusedWindow) focusedWindow.reload()
+        //   }
+        // },
+        // {
+        //   label: 'Toggle Developer Tools',
+        //   accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+        //   click(item, focusedWindow) {
+        //     if (focusedWindow) focusedWindow.webContents.toggleDevTools()
+        //   }
+        // },
         { type: 'separator' },
         { role: 'resetzoom' },
         { role: 'zoomin' },
@@ -147,14 +192,6 @@ function setup(gambierStore) {
       ]
     }
   )
-
-  var save = new MenuItem({
-    label: 'Save',
-    accelerator: 'CmdOrCtrl+S',
-    click(item, focusedWindow) {
-      focusedWindow.webContents.send('mainRequestsSaveFile')
-    }
-  })
 
   menu.append(view)
 
@@ -220,6 +257,11 @@ function setup(gambierStore) {
     } else {
       moveToTrash.enabled = false
     }
+  })
+
+  store.onDidChange('editorTheme', () => {
+    select_editor_theme_dark.checked = state.editorTheme == 'gambier-dark'
+    select_editor_theme_light.checked = state.editorTheme == 'gambier-light'
   })
 
 

@@ -2,6 +2,46 @@
 
 An experimental markdown editor.
 
+## Keyboard Shortcuts
+
+* `Shift-Cmd-K`: Delete line
+* `Cmd-L`: Select line
+* `Shift-Alt-Down`: Duplicate line
+* `Cmd-D`: Select next occurrence
+* `Alt-Up`: Swap line up
+* `Alt-Down`: Swap line down
+* `Shift-Ctrl-Up`: Add cursor to previous line
+* `Shift-Ctrl-Down`: Add cursor to next line
+* `Enter`: New line and continue list
+* `Tab`: Indent list
+* `Shift-Tab`: Un-indent list
+
+We use CodeMirror's [Sublime Keymap](https://codemirror.net/demo/sublime.html).
+
+Bracket closing is enabled by the [closebrackets](https://codemirror.net/doc/manual.html#addon_closebrackets) CodeMirror addon. 
+
+## Styling
+
+Style the app UI with:
+
+* App.scss: 
+  * Lives in `src/styles/app.scss`, imports `src/styles/_variables.scss`, and compiles to `app/styles/app.css`.
+  * Linked from `index.html`.
+* Indivual Svelte components
+  * Define their own encapsulated styles. 
+  * Can also import `_variables.scss`, using [this approach](https://medium.com/@sean_27490/svelte-sapper-with-sass-271fff662da9).
+
+Style the editor with:
+
+* Editor themes
+  * Live in `src/styles/editor/`. Compile to `app/styles/themes/.` 
+  * All themes are linked from `index.html`. 
+  * Saved in state in `editorTheme` string.
+
+Regarding themes, per the CodeMirror [docs](https://codemirror.net/doc/manual.html#option_theme)
+
+> The theme to style the editor with. You must make sure the CSS file defining the corresponding `.cm-s-[name]` styles is loaded (see the theme directory in the distribution). The default is "default", for which colors are included in codemirror.css. It is possible to use multiple theming classes at once—for example "foo bar" will assign both the cm-s-foo and the cm-s-bar classes to the editor.
+
 ## Structure
 
 * `src` - Files that require processing (transpile / compile). Are output into `app`.

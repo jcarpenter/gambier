@@ -165,7 +165,7 @@ ipcMain.on('dispatch', async (event, action) => {
     case ('SET_LAYOUT_FOCUS'):
       store.dispatch(action)
       break
-    case ('SAVE_SIDEBAR_LAST_SELECTION'):
+    case ('SELECT_FILES'):
       store.dispatch(action)
       break
     case ('SAVE_SIDEBAR_SCROLL_POSITION'):

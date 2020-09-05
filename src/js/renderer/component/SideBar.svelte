@@ -1,12 +1,13 @@
 <script>
   import { createTreeHierarchy } from "hierarchy-js";
   import { onMount } from "svelte";
-  import { isEmpty } from "../utils";
+  import { getSideBarItemById, isEmpty } from "../utils";
   import SideBarItem from "./SideBarItem.svelte";
 
   export let state = {};
   export let focused;
 
+  $: sideBarItem = getSideBarItemById(state, state.selectedSideBarItem.id);
   $: folders = createTreeHierarchy(state.sideBar.folders)
   $: documents = createTreeHierarchy(state.sideBar.documents)
   $: media = createTreeHierarchy(state.sideBar.media)

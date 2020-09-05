@@ -1,6 +1,21 @@
 import { pathExists } from 'fs-extra'
 import diff from 'deep-diff'
 
+/**
+ * Get a SideBar item object, based on id. 
+ * NOTE: This is a copy of the same function in renderer/utils. If one changes, the other should also.
+ */
+function getSideBarItemById(state, id) {
+  if (id.includes('folder')) {
+    return state.sideBar.folders.find((f) => f.id == id)
+  } else if (id.includes('docs')) {
+    return state.sideBar.documents.find((d) => d.id == id)
+  } else if (id.includes('media')) {
+    return state.sideBar.media.find((m) => m.id == id)
+  }
+}
+
+
 async function isWorkingPath(path) {
 
   if (path == '') {
@@ -27,4 +42,4 @@ function applyDiffs(oldContents, newContents) {
   return oldContents
 }
 
-export { applyDiffs, isWorkingPath }
+export { getSideBarItemById, applyDiffs, isWorkingPath }

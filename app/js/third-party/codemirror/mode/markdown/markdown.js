@@ -111,6 +111,7 @@
       strong: "strong",
       strikethrough: "strikethrough",
       texMathEquation: "line-texmath-equation",
+      texMathInline: "texmath-inline",
       emoji: "emoji"
     };
 
@@ -126,7 +127,6 @@
       , taskListRE = /^\[(x| )\](?=\s)/i // Must follow listRE
       , atxHeaderRE = modeCfg.allowAtxHeaderWithoutSpace ? /^(#+)/ : /^(#+)(?: |$)/
       , setextHeaderRE = /^ {0,3}(?:\={1,}|-{2,})\s*$/
-      , textRE = /^[^#!\[\]*_\\<>^` "'(~:]+/
       , fencedCodeRE = /^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/
       , texMathRE = /^\$\$$/
       , linkRE = /^(?:[^\\\(\)]|\\.|\((?:[^\\\(\)]|\\.)*\))*?(?=\)|])/
@@ -203,6 +203,8 @@
     }
 
     function blockNormal(stream, state) {
+
+      // console.log(stream.string)
 
       var firstTokenOnLine = stream.column() === state.indentation;
       var prevLineLineIsEmpty = lineIsEmpty(state.prevLine.stream);
@@ -481,7 +483,7 @@
       var currListInd = state.listStack[state.listStack.length - 1] || 0;
       var hasExitedList = state.indentation < currListInd;
       var maxFencedEndInd = currListInd + 3;
-      
+
       // Fenced code block: Check if end
       if (state.fencedEndRE && state.indentation <= maxFencedEndInd && (hasExitedList || stream.match(state.fencedEndRE))) {
         if (modeCfg.highlightFormatting) state.formatting = "code-block";
@@ -641,19 +643,33 @@
     }
 
     /**
-     * Advanced stream to next instance of a markdown formatting character 
+     * Advanced stream to next instance of a markdown formatting character.
      * If no markdown characters exist, return `undefined`.
      * @param {*} stream 
      * @param {*} state 
      */
     function handleText(stream, state) {
-      if (stream.match(textRE, true)) {
+
+      // The following if statement finds and moves to the end of 1-to-infinity text characters.
+      // Characters in the [^...] set are markdown formatting characters.
+      // Characters NOT in the [^...] set are processed as text.
+      if (stream.match(/^[^#!\[\]*_\\<>^` "'(~:$]+/, true)) {
         return getType(state);
       }
       return undefined;
     }
 
+    /**
+     * Inline Normal: Parse stream.string. Catches punctuation characters only?
+     * @param {*} stream 
+     * @param {*} state 
+     */
     function inlineNormal(stream, state) {
+
+      // Call the state.text function (handleText)
+      // It advances stream to the next markdown character.
+      // Check if there's a line style(s). E.g. `line-header line-h1`
+      // If true, return that style. Don't proceed to process rest.
       var style = state.text(stream, state);
       if (typeof style !== 'undefined')
         return style;
@@ -676,7 +692,6 @@
 
       state.taskOpen = false;
       state.taskClosed = false;
-
 
       // Header
       if (state.header && stream.match(/^#+$/, true)) {
@@ -795,23 +810,6 @@
         return type;
       }
 
-      // // Image: Alt text
-      // if (ch === '[' && state.imageMarker && stream.match(/[^\]]*\](\(.*?\)| ?\[.*?\])/, false)) {
-      //   state.imageMarker = false;
-      //   state.imageAltText = true
-      //   if (modeCfg.highlightFormatting) state.formatting = "image";
-      //   return getType(state);
-      // }
-
-      // // Image: Closing
-      // if (ch === ']' && state.imageAltText) {
-      //   if (modeCfg.highlightFormatting) state.formatting = "image";
-      //   var type = getType(state);
-      //   state.imageAltText = false;
-      //   state.inline = state.f = linkDestination;
-      //   return type;
-      // }
-
       // Citation
       // Demo: https://regex101.com/r/SFJ4q3/1
       // if (ch === '[' && stream.peek() === '@') {
@@ -929,7 +927,6 @@
         return type;
       }
 
-
       // Autolink URL
       if (ch === '<' && stream.match(/^(https?|ftps?):\/\/(?:[^\\>]|\\.)+>/, false)) {
 
@@ -966,6 +963,17 @@
         //   type = "";
         // }
         // return type + tokenTypes.autolinkEmail;
+      }
+
+      // Inline Tex Math 
+      // See: https://pandoc.org/MANUAL.html#math
+      // Demo: https://regex101.com/r/Plban8/1/
+      if (ch === '$' && stream.match(/[^\s][^$]+[^\s]\$(?!\d)/)) {
+        // if (modeCfg.highlightFormatting) state.formatting = "texMathInline";
+        // var type = getType(state);
+        // state.footnote = false
+        // state.footnoteInline = false;
+        return `${tokenTypes.texMathInline}`;
       }
 
       // Raw HTML (XML?)
@@ -1349,6 +1357,8 @@
           linkUrl: false,
           linkTitle: false,
 
+          texMathInline: false,
+
           citation: false,
           code: 0,
           em: false,
@@ -1404,6 +1414,8 @@
           linkUrl: s.linkUrl,
           linkTitle: s.linkTitle,
 
+          texMathInline: s.texMathInline,
+
           citation: s.citation,
           code: s.code,
           em: s.em,
@@ -1429,13 +1441,14 @@
 
       token: function (stream, state) {
 
-
         // Reset state.formatting
         state.formatting = false;
 
-        // New line. Update state.
-
+        // New line found
+        // This is a good place to perform line checks.
         if (stream != state.thisLine.stream) {
+
+          // Update state.
           state.header = 0;
           state.hr = false;
 
@@ -1444,12 +1457,6 @@
           if (stream.match(/^\s*$/, true) && !state.footnoteReferenceDefinition) {
             blankLine(state);
             return null;
-            // if (state.footnoteReferenceDefinition) {
-            //   return tokenTypes.footnoteReferenceDefinition
-            // } else {
-            //   blankLine(state);
-            //   return null;
-            // }
           }
 
           state.prevLine = state.thisLine
@@ -1468,7 +1475,8 @@
             if (stream.match(texMathRE)) {
               var type = getType(state)
               state.texMathEquation = false
-              state.f = state.block = inlineNormal;
+              state.localMode = null
+              state.f = state.block = blockNormal;
               return type
             } else {
               return getType(state)
@@ -1520,12 +1528,10 @@
       },
 
       blankLine: blankLine,
-
       getType: getType,
-
       blockCommentStart: "<!--",
       blockCommentEnd: "-->",
-      closeBrackets: "()[]{}''\"\"``",
+      // closeBrackets: "**__()[]{}''\"\"``",
       fold: "markdown"
     };
     return mode;

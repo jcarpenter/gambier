@@ -1,4 +1,19 @@
 /**
+ * Get a SideBar item object, based on id. 
+ * NOTE: This is a copy of the same function in main/utils-main. If one changes, the other should also.
+ */
+function getSideBarItemById(state, id) {
+  if (id.includes('folder')) {
+    return state.sideBar.folders.find((f) => f.id == id)
+  } else if (id.includes('docs')) {
+    return state.sideBar.documents.find((d) => d.id == id)
+  } else if (id.includes('media')) {
+    return state.sideBar.media.find((m) => m.id == id)
+  }
+}
+
+
+/**
  * Check if object is empty" {}
  */
 // Taken from https://coderwall.com/p/_g3x9q/how-to-check-if-javascript-object-is-empty
@@ -58,4 +73,4 @@ function mountReplace(Component, options) {
   return component;
 }
 
-export { mountReplace, hasChanged, isUrl, containsHTML, clamp, isEmpty }
+export { getSideBarItemById, mountReplace, hasChanged, isUrl, containsHTML, clamp, isEmpty }

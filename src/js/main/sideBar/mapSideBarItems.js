@@ -1,7 +1,8 @@
 import { makeSideBarItem } from './makeSideBarItem'
 
 /**
- * Update `folder` items
+ * For each folder in the project, create a corresponding SideBar item.
+ * This is run each time 
  */
 function mapFolders(sideBar, newState) {
 
@@ -12,7 +13,7 @@ function mapFolders(sideBar, newState) {
   // Make new array of existing folders.
   newState.folders.forEach((f) => {
     
-    // Get old version
+    // Get old version (if it exists)
     const oldFolder = oldFolders.find((oldF) => oldF.id == f.id)
 
     // Determine icon
@@ -36,13 +37,12 @@ function mapFolders(sideBar, newState) {
       }
     )
     
-    // Copy over old values
+    // Copy values from old version (if one existed)
     if (oldFolder) {
       newFolder.sort = oldFolder.sort,
-      newFolder.selectedFileId = oldFolder.selectedFileId,
+      newFolder.files = oldFolder.files,
       newFolder.lastScrollPosition = oldFolder.lastScrollPosition,
       newFolder.expanded = oldFolder.expanded,
-      newFolder.lastSelection = oldFolder.lastSelection,
       newFolder.children = []
     }
 
@@ -58,8 +58,8 @@ function mapFolders(sideBar, newState) {
 
 
 /**
- * Return `sideBar` with updated `folders`, `documents`, `media`, and `citations`.
- * @param {*} newState - Reference to the newState
+ * Return `sideBar` with updated `folders`
+ * TODO: Also update `documents`, `media`, and `citations` here?
  */
 export function mapSideBarItems(newState) {
 
@@ -67,7 +67,7 @@ export function mapSideBarItems(newState) {
   let sideBar = Object.assign({}, newState.sideBar)
 
   // Get root folder from `folders`. It's the one without a parentId
-  const rootFolder = newState.folders.find((f) => f.parentId == '')
+  // const rootFolder = newState.folders.find((f) => f.parentId == '')
 
   // Update `sideBar.folders`
   sideBar = mapFolders(sideBar, newState)
