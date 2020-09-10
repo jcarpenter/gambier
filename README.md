@@ -42,6 +42,10 @@ Regarding themes, per the CodeMirror [docs](https://codemirror.net/doc/manual.ht
 
 > The theme to style the editor with. You must make sure the CSS file defining the corresponding `.cm-s-[name]` styles is loaded (see the theme directory in the distribution). The default is "default", for which colors are included in codemirror.css. It is possible to use multiple theming classes at once—for example "foo bar" will assign both the cm-s-foo and the cm-s-bar classes to the editor.
 
+## Editor Widgets
+
+* editor.js: `findAndMark`. "Find each citation in the specified line, and collape + replace them." 
+
 ## Structure
 
 * `src` - Files that require processing (transpile / compile). Are output into `app`.

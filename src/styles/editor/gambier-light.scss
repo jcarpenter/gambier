@@ -5,6 +5,11 @@
     --clr-blue-lighter: rgb(232, 242, 255);
     --clr-gray-lighter: hsl(0, 0%, 85%);
 
+    @mixin code {
+        font-size: 0.9em;
+        font-family: "SFMono-Regular";
+    }
+
     // -------------- Cursor -------------- //
 
     .CodeMirror-cursor {
@@ -41,14 +46,12 @@
     // -------------- Code -------------- //
 
     .cm-code {
-        color: #13570b;
+        @include code;
         background-color: #e7f9e8;
+        color: #13570b;
         padding: 0.1em 0 0.2em;
-        font-size: 0.9em;
-        font-family: "SFMono-Regular";
-        // font-family: "SFMono-Regular";
-        &.cm-flank {
-            color: #92e290;
+        &.cm-md {
+            color: #4db14c;
         }
     }
 
@@ -56,6 +59,7 @@
 
     .cm-em {
         color: var(--clr-blue);
+        font-style: italic;
         &.cm-flank {
             color: var(--clr-blue-light);
         }
@@ -64,6 +68,7 @@
     // -------------- Fenced code block -------------- //
 
     .CodeMirror-line.fencedcodeblock {
+        @include code;
         background-color: rgba(214, 214, 214, 0.5) !important;
     }
 
@@ -200,7 +205,7 @@
 
     // -------------- Lists -------------- //
 
-    .CodeMirror-line.list--1,
+    .CodeMirror-line.list-1,
     .CodeMirror-line.list-2,
     .CodeMirror-line.list-3,
     .CodeMirror-line.list-4 {
@@ -230,6 +235,11 @@
         // }
     }
 
+    .taskOpen .cm-md,
+    .taskClosed .cm-md {
+        @include code;
+    }
+
     .CodeMirror-line.list-1 {
         padding-left: 2em;
     }
@@ -246,10 +256,12 @@
     // -------------- Math -------------- //
 
     .cm-texmath-inline {
+        @include code;
         background-color: rgba(214, 214, 214, 0.5) !important;
     }
 
-    .CodeMirror-line.texmath-equation {
+    .CodeMirror-line.texmath-display {
+        @include code;
         background-color: rgba(214, 214, 214, 0.5) !important;
     }
 
@@ -259,10 +271,15 @@
         text-decoration: line-through;
     }
 
+    .cm-md {
+        color: red;
+      }
+
     // -------------- Strong -------------- //
 
     .cm-strong {
         color: var(--clr-blue);
+        font-weight: 700;
         &.cm-flank {
             color: var(--clr-blue-light);
         }

@@ -170,7 +170,7 @@ const markdownOverlay = {
   startState: () => {
     return {
       fencedCodeBlock: false,
-      texMathEquation: false,
+      texMathDisplay: false,
     }
   },
 
@@ -208,15 +208,20 @@ const markdownOverlay = {
       // ----- TeX math equation: Style line ----- //
       
       // NOTE: Regex taken from underlying markdown mode
-      if (!state.texMathEquation && stream.match(/^\$\$$/)) {
-        state.texMathEquation = true
+      if (!state.texMathDisplay && stream.match(/^\$\$$/)) {
+        state.texMathDisplay = true
         stream.skipToEnd()
-        return 'line-texmath-equation'
-      } else if (state.texMathEquation) {
+        return 'line-texmath-display'
+      } else if (state.texMathDisplay) {
         // If we've reached the end, stop the state
-        if (stream.match(/^\$\$$/)) state.texMathEquation = false
-        stream.skipToEnd()
-        return 'line-texmath-equation'
+        if (stream.match(/^\$\$$/)) {
+          state.texMathDisplay = false
+          stream.skipToEnd()
+          return 'line-texmath-display md'
+        } else {
+          stream.skipToEnd()
+          return 'line-texmath-display'
+        }
       }
     }
 
@@ -233,7 +238,7 @@ const markdownOverlay = {
     if (state.fencedCodeBlock) {
       return 'line-fencedcodeblock'
     } else if (state.texMathEquation) {
-      return `line-texmath-equation`
+      return `line-texmath-display`
     }
 
     return
@@ -259,7 +264,7 @@ function defineGambierMode() {
       strikethrough: true,
       fencedCodeBlockHighlighting: true,
       fencedCodeBlockDefaultMode: 'javascript',
-      highlightFormatting: false,
+      // highlightFormatting: true,
     }), markdownOverlay)
 
     function curMode(state) {

@@ -11,6 +11,7 @@ const storeDefault = {
   selectedSideBarItem: {},
 
   showFilesList: true,
+  sourceMode: false,
 
   // Editor theme
   editorTheme: 'gambier-light',

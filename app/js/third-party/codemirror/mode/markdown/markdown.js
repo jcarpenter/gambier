@@ -25,18 +25,14 @@
       return mode.name == "null" ? null : mode;
     }
 
-    // Should characters that affect highlighting be highlighted separate?
-    // Does not include characters that will be output (such as `1.` and `-` for lists)
-    if (modeCfg.highlightFormatting === undefined)
-      modeCfg.highlightFormatting = false;
-
     // Maximum number of nested blockquotes. Set to 0 for infinite nesting.
     // Excess `>` will emit `error` token.
     if (modeCfg.maxBlockquoteDepth === undefined)
       modeCfg.maxBlockquoteDepth = 0;
 
     // Turn on task lists? ("- [ ] " and "- [x] ")
-    if (modeCfg.taskLists === undefined) modeCfg.taskLists = false;
+    if (modeCfg.taskLists === undefined)
+      modeCfg.taskLists = false;
 
     // Turn on strikethrough syntax
     if (modeCfg.strikethrough === undefined)
@@ -54,13 +50,12 @@
     if (modeCfg.xml === undefined)
       modeCfg.xml = true;
 
-    // Allow token types to be overridden by user-provided token types.
-    if (modeCfg.tokenTypeOverrides === undefined)
-      modeCfg.tokenTypeOverrides = {};
-
     var tokenTypes = {
 
-      // Blocks
+      // Blocks:
+
+      figure: "line-figure",
+      footnoteReferenceDefinition: "line-footnote-reference-definition",
       header: "line-header", // was 'header'
       hr: "line-hr", // was 'hr'
       list1: "line-list-1", // was 'variable-2'
@@ -69,78 +64,51 @@
       list4: "line-list-4",
       list5: "line-list-5",
       list6: "line-list-6",
-      listUl: "line-ul",
       listOl: "line-ol",
-      taskOpen: "line-taskOpen",
-      taskClosed: "line-taskClosed",
+      listUl: "line-ul",
       quote: "line-quote", // was 'quote'
-      figure: "line-figure",
-      // codeBlock: 'line-codeBlock',
+      taskClosed: "line-taskClosed",
+      taskOpen: "line-taskOpen",
+      texMathDisplay: "line-texmath-display",
 
-      // Spans
-      formatting: "md", // was 'formatting'
+      // Inline:
 
+      autolinkEmail: "autolink-email",
+      autolinkUrl: "autolink-url",
+      automaticLink: "automatic",
       citation: "citation",
       citationKey: "key",
-
+      code: "code", // was 'comment'
+      em: "em",
+      emoji: "emoji",
       footnote: "footnote",
       footnoteInline: "inline",
       footnoteReference: "reference",
-      footnoteReferenceDefinition: "line-footnote-reference-definition",
-
+      formatting: "md", // was 'formatting'
       image: "img",
-      imageMarker: "marker",
       imageAltText: "alttext",
-      imageUrl: "url",
+      imageMarker: "marker",
       imageTitle: "title",
-
+      imageUrl: "url",
       link: "link",
       linkInline: "inline",
+      linkLabel: "label",
       linkReference: "reference",
       linkReferenceDefinition: "reference-definition",
       linkText: "text",
-      linkLabel: "label",
-      linkUrl: "url",
       linkTitle: "title",
-
-      autolinkUrl: "autolink-url",
-      autolinkEmail: "autolink-email",
-
-      code: "code", // was 'comment'
-      em: "em",
-      strong: "strong",
+      linkUrl: "url",
       strikethrough: "strikethrough",
-      texMathEquation: "line-texmath-equation",
+      strong: "strong",
       texMathInline: "texmath-inline",
-      emoji: "emoji"
     };
 
-    for (var tokenType in tokenTypes) {
-      if (tokenTypes.hasOwnProperty(tokenType) && modeCfg.tokenTypeOverrides[tokenType]) {
-        tokenTypes[tokenType] = modeCfg.tokenTypeOverrides[tokenType];
-      }
-    }
+    // Shared regular expressions and strings
 
-    var hrRE = /^([*\-_])(?:\s*\1){2,}\s*$/
-      , figureRE = /^![^\]]*\](\(.*?\)| ?\[.*?\])/
-      , listRE = /^(?:[*\-+]|^[0-9]+([.)]))\s+/
-      , taskListRE = /^\[(x| )\](?=\s)/i // Must follow listRE
-      , atxHeaderRE = modeCfg.allowAtxHeaderWithoutSpace ? /^(#+)/ : /^(#+)(?: |$)/
-      , setextHeaderRE = /^ {0,3}(?:\={1,}|-{2,})\s*$/
-      , fencedCodeRE = /^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/
-      , texMathRE = /^\$\$$/
-      , linkRE = /^(?:[^\\\(\)]|\\.|\((?:[^\\\(\)]|\\.)*\))*?(?=\)|])/
-      , linkUrlRE = /\s*(?:<[^<>\n]*>|(?!<)[^\s]+)/
-      , linkTitleRE = /\s(".*?")|\s('.*?')|\s(\(.*?\))/
-      // Demo: https://regex101.com/r/anM7bj/1/
-      // TODO: Improve to filter out erroneous titles (e.g. line breaks?)
-      , linkWithTitleRE = /^(?:[^\\\(\)]|\\.|\((?:[^\\\(\)]|\\.))*?(?=\s(".*?")|\s('.*?')|\s(\(.*?\)))/
-      , linkRefFullOrCollapsedRE = /[^\]]+?\]\[.*?\]/
-      // Demo: https://regex101.com/r/6nSTuL/6/
-      , linkRefDefintionRE = /^\[[^\]]+?\]:\s*(?:<[^<>\n]*>|(?!<)[^\s]+)/
-      , linkDefRE = /^\s*\[[^\]]+?\]:.*$/ // naive link-definition. // TODO: Replace with above.
-      , punctuation = /[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~\xA1\xA7\xAB\xB6\xB7\xBB\xBF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2308-\u230B\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E42\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]|\uD800[\uDD00-\uDD02\uDF9F\uDFD0]|\uD801\uDD6F|\uD802[\uDC57\uDD1F\uDD3F\uDE50-\uDE58\uDE7F\uDEF0-\uDEF6\uDF39-\uDF3F\uDF99-\uDF9C]|\uD804[\uDC47-\uDC4D\uDCBB\uDCBC\uDCBE-\uDCC1\uDD40-\uDD43\uDD74\uDD75\uDDC5-\uDDC9\uDDCD\uDDDB\uDDDD-\uDDDF\uDE38-\uDE3D\uDEA9]|\uD805[\uDCC6\uDDC1-\uDDD7\uDE41-\uDE43\uDF3C-\uDF3E]|\uD809[\uDC70-\uDC74]|\uD81A[\uDE6E\uDE6F\uDEF5\uDF37-\uDF3B\uDF44]|\uD82F\uDC9F|\uD836[\uDE87-\uDE8B]/
-      , expandedTab = "    " // CommonMark specifies tab as 4 spaces
+    var atxHeaderRE = modeCfg.allowAtxHeaderWithoutSpace ? /^(#+)/ : /^(#+)(?: |$)/
+    var texMathRE = /^\$\$$/
+    var expandedTab = "    " // CommonMark specifies tab as 4 spaces
+    var punctuation = /[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~\xA1\xA7\xAB\xB6\xB7\xBB\xBF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2308-\u230B\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E42\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]|\uD800[\uDD00-\uDD02\uDF9F\uDFD0]|\uD801\uDD6F|\uD802[\uDC57\uDD1F\uDD3F\uDE50-\uDE58\uDE7F\uDEF0-\uDEF6\uDF39-\uDF3F\uDF99-\uDF9C]|\uD804[\uDC47-\uDC4D\uDCBB\uDCBC\uDCBE-\uDCC1\uDD40-\uDD43\uDD74\uDD75\uDDC5-\uDDC9\uDDCD\uDDDB\uDDDD-\uDDDF\uDE38-\uDE3D\uDEA9]|\uD805[\uDCC6\uDDC1-\uDDD7\uDE41-\uDE43\uDF3C-\uDF3E]|\uD809[\uDC70-\uDC74]|\uD81A[\uDE6E\uDE6F\uDEF5\uDF37-\uDF3B\uDF44]|\uD82F\uDC9F|\uD836[\uDE87-\uDE8B]/
 
     var urlRE = /^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i
 
@@ -204,8 +172,6 @@
 
     function blockNormal(stream, state) {
 
-      // console.log(stream.string)
-
       var firstTokenOnLine = stream.column() === state.indentation;
       var prevLineLineIsEmpty = lineIsEmpty(state.prevLine.stream);
       var prevLineIsIndentedCode = state.indentedCode;
@@ -222,10 +188,9 @@
         }
       }
 
-      // Reset figure
+      // Reset
       state.figure = false
-
-      // Reset indented code
+      state.code = 0
       state.indentedCode = false;
 
       // Determine line indentation
@@ -261,7 +226,7 @@
       );
 
       var isHr = (state.list === false || prevLineIsHr || prevLineLineIsEmpty) &&
-        state.indentation <= maxNonCodeIndentation && stream.match(hrRE);
+        state.indentation <= maxNonCodeIndentation && stream.match(/^([*\-_])(?:\s*\1){2,}\s*$/);
 
       var match = null;
 
@@ -292,7 +257,7 @@
 
         // -----  Block quote ----- //
         state.quote = firstTokenOnLine ? 1 : state.quote + 1;
-        if (modeCfg.highlightFormatting) state.formatting = "quote";
+        state.formatting = true
         stream.eatSpace();
         return getType(state);
 
@@ -300,26 +265,26 @@
 
         // ----- Reference footnote: definition ----- //
         state.footnoteReferenceDefinition = true
-        if (modeCfg.highlightFormatting) state.formatting = "footnote-reference"; // TODO: Use this
+        state.formatting = true
         state.f = state.inline;
         return getType(state);
 
-      } else if (!isHr && !state.setext && stream.column() <= 3 && stream.match(linkRefDefintionRE, false)) {
+      } else if (!isHr && !state.setext && stream.column() <= 3 && stream.match(/^\[[^\]]+?\]:\s*(?:<[^<>\n]*>|(?!<)[^\s]+)/, false)) {
 
         // ----- Reference link: definition ----- //
+        // Regexp demo: https://regex101.com/r/6nSTuL/6/
         return switchInline(stream, state, linkReferenceDefinition);
-        // return tokenTypes.linkReferenceDefinition
 
-      } else if (!isHr && !state.setext && firstTokenOnLine && stream.match(figureRE, false)) {
+      } else if (!isHr && !state.setext && firstTokenOnLine && stream.match(/^![^\]]*\](\(.*?\)| ?\[.*?\])/, false)) {
 
         // ----- Figure ----- //
         state.figure = true
-        if (modeCfg.highlightFormatting) state.formatting = "figure"; // TODO: Use this
+        state.formatting = true
         state.f = state.inline;
         return getType(state);
 
 
-      } else if (!isHr && !state.setext && firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(listRE))) {
+      } else if (!isHr && !state.setext && firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(/^(?:[*\-+]|^[0-9]+([.)]))\s+/))) {
 
         // ----- List ----- //
         var listType = match[1] ? "ol" : "ul";
@@ -331,25 +296,31 @@
 
         // Add this list item's content's indentation to the stack
         state.listStack.push(state.indentation);
+
         // Reset inline styles which shouldn't propagate aross list items
         state.em = false;
         state.strong = false;
         state.code = false;
         state.strikethrough = false;
 
-        if (modeCfg.taskLists && stream.match(taskListRE, false)) state.taskList = true;
-        state.f = state.inline;
-        if (modeCfg.highlightFormatting) state.formatting = ["list", "list-" + listType];
+        // Check if task list. If true, check if item is "open" `- [ ]` or "closed" - [x]
+        const isTaskList = stream.match(/^\[(x| )\](?=\s)/i)
+        if (isTaskList) {
+          state.taskClosed = isTaskList[1] == 'x'
+          state.taskOpen = !state.taskClosed
+        }
+
+        state.formatting = true
         return getType(state);
 
-      } else if (firstTokenOnLine && !state.texMathEquation && (match = stream.match(texMathRE, true))) {
+      } else if (firstTokenOnLine && !state.texMathDisplay && (match = stream.match(texMathRE, true))) {
 
-        // ----- TeX math: Displayed equations ----- //
+        // ----- TeX math: Display ----- //
 
         // console.log(stream.string)
-        // state.texMathEquation = true
-        // if (modeCfg.highlightFormatting) state.formatting = "texMathEquation";
-        // state.f = state.inline = texMathEquation
+        // state.texMathDisplay = true
+        // if (modeCfg.highlightFormatting) state.formatting = "texMathDisplay";
+        // state.f = state.inline = texMathDisplay
         // return getType(state);
 
         // var end = stream.string.indexOf(">", stream.pos);
@@ -363,7 +334,7 @@
 
         // TODO: Add an option here, to enable support only if user has `modeCfg.texMath` true or some such. See `Fenced code block` section below for example of how to format that.
 
-        state.texMathEquation = true
+        state.texMathDisplay = true
 
         state.localMode = getMode('stex');
 
@@ -371,13 +342,13 @@
 
         state.f = state.block = local;
 
-        if (modeCfg.highlightFormatting) state.formatting = "texmath-equation";
+        state.formatting = true
         state.code = -1
 
         return getType(state);
 
 
-      } else if (firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(fencedCodeRE, true))) {
+      } else if (firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(/^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/, true))) {
 
         // ----- Fenced code block ----- //
 
@@ -406,7 +377,7 @@
 
         state.f = state.block = local;
 
-        if (modeCfg.highlightFormatting) state.formatting = "code-block";
+        state.formatting = true
         state.code = -1
 
         return getType(state);
@@ -417,11 +388,12 @@
         //  the others (code, blockquote, list...)
 
         // if setext set, indicates line after ---/===
+        // ORIGINAL COMMENT re: regexp: "naive link-definition"
         state.setext || (
           // line before ---/===
           (!allowsInlineContinuation || !prevLineIsList) && !state.quote && state.list === false &&
-          !state.code && !isHr && !linkDefRE.test(stream.string) &&
-          (match = stream.lookAhead(1)) && (match = match.match(setextHeaderRE))
+          !state.code && !isHr && !/^\s*\[[^\]]+?\]:.*$/.test(stream.string) &&
+          (match = stream.lookAhead(1)) && (match = match.match(/^ {0,3}(?:\={1,}|-{2,})\s*$/))
         )
       ) {
 
@@ -435,7 +407,7 @@
           // has no effect on type so we can reset it now
           state.setext = 0;
           stream.skipToEnd();
-          if (modeCfg.highlightFormatting) state.formatting = "header";
+          state.formatting = true
         }
         state.thisLine.header = true;
         state.f = state.inline;
@@ -486,7 +458,7 @@
 
       // Fenced code block: Check if end
       if (state.fencedEndRE && state.indentation <= maxFencedEndInd && (hasExitedList || stream.match(state.fencedEndRE))) {
-        if (modeCfg.highlightFormatting) state.formatting = "code-block";
+        state.formatting = true
         var returnType;
         if (!hasExitedList) returnType = getType(state)
         state.localMode = state.localState = null;
@@ -509,38 +481,27 @@
       var styles = [];
 
       if (state.formatting) {
-        styles.push(tokenTypes.formatting);
+        styles.push('md');
 
-        if (typeof state.formatting === "string") state.formatting = [state.formatting];
+        // if (typeof state.formatting === "string") state.formatting = [state.formatting];
 
-        for (var i = 0; i < state.formatting.length; i++) {
-          styles.push(tokenTypes.formatting + "-" + state.formatting[i]);
+        // for (var i = 0; i < state.formatting.length; i++) {
+        //   styles.push(tokenTypes.formatting + "-" + state.formatting[i]);
 
-          if (state.formatting[i] === "header") {
-            styles.push(tokenTypes.formatting + "-" + state.formatting[i] + "-" + state.header);
-          }
+        //   if (state.formatting[i] === "header") {
+        //     styles.push(tokenTypes.formatting + "-" + state.formatting[i] + "-" + state.header);
+        //   }
 
-          // Add `formatting-quote` and `formatting-quote-#` for blockquotes
-          // Add `error` instead if the maximum blockquote nesting depth is passed
-          if (state.formatting[i] === "quote") {
-            if (!modeCfg.maxBlockquoteDepth || modeCfg.maxBlockquoteDepth >= state.quote) {
-              styles.push(tokenTypes.formatting + "-" + state.formatting[i] + "-" + state.quote);
-            } else {
-              styles.push("error");
-            }
-          }
-        }
-      }
-
-      // Task list
-      if (state.taskOpen) {
-        styles.push(tokenTypes.taskOpen);
-        return styles.length ? styles.join(' ') : null;
-      }
-
-      if (state.taskClosed) {
-        styles.push(tokenTypes.taskClosed);
-        return styles.length ? styles.join(' ') : null;
+        //   // Add `formatting-quote` and `formatting-quote-#` for blockquotes
+        //   // Add `error` instead if the maximum blockquote nesting depth is passed
+        //   if (state.formatting[i] === "quote") {
+        //     if (!modeCfg.maxBlockquoteDepth || modeCfg.maxBlockquoteDepth >= state.quote) {
+        //       styles.push(tokenTypes.formatting + "-" + state.formatting[i] + "-" + state.quote);
+        //     } else {
+        //       styles.push("error");
+        //     }
+        //   }
+        // }
       }
 
       // Image
@@ -562,27 +523,28 @@
         if (state.linkLabel) { styles.push(tokenTypes.linkLabel); }
         if (state.linkUrl) { styles.push(tokenTypes.linkUrl); }
         if (state.linkTitle) { styles.push(tokenTypes.linkTitle); }
+        if (state.autolinkUrl) { styles.push(tokenTypes.autolinkUrl); }
+        if (state.autolinkEmail) { styles.push(tokenTypes.autolinkEmail); }
+        if (state.automaticLink) { styles.push(tokenTypes.automaticLink); }
       }
 
       // Other states
 
       if (state.citation) styles.push(tokenTypes.citation);
       if (state.citationKey) styles.push(tokenTypes.citationKey);
-
+      if (state.code >= 1) styles.push(tokenTypes.code);
+      if (state.em) styles.push(tokenTypes.em);
+      if (state.emoji) styles.push(tokenTypes.emoji);
+      if (state.figure) styles.push(tokenTypes.figure);
       if (state.footnote) styles.push(tokenTypes.footnote);
       if (state.footnoteInline) styles.push(tokenTypes.footnoteInline);
       if (state.footnoteReference) styles.push(tokenTypes.footnoteReference);
       if (state.footnoteReferenceDefinition) styles.push(tokenTypes.footnoteReferenceDefinition);
-
-      if (state.figure) styles.push(tokenTypes.figure);
-      if (state.strong) styles.push(tokenTypes.strong);
-      if (state.em) styles.push(tokenTypes.em);
-      if (state.strikethrough) styles.push(tokenTypes.strikethrough);
-      if (state.texMathEquation) styles.push(tokenTypes.texMathEquation);
-      if (state.emoji) styles.push(tokenTypes.emoji);
-
-      if (state.code === 1) styles.push(tokenTypes.code);
       if (state.header) styles.push(tokenTypes.header, "line-h" + state.header);
+      if (state.strikethrough) styles.push(tokenTypes.strikethrough);
+      if (state.strong) styles.push(tokenTypes.strong);
+      if (state.texMathInline) styles.push(tokenTypes.texMathInline);
+      if (state.texMathDisplay) styles.push(tokenTypes.texMathDisplay);
 
       // Block quote
       if (state.quote) {
@@ -630,6 +592,13 @@
           case 'ol':
             styles.push(tokenTypes.listOl)
             break
+        }
+
+        // Set task list. Task lists only happen inside lists.
+        if (state.taskOpen) {
+          styles.push(tokenTypes.taskOpen);
+        } else if (state.taskClosed) {
+          styles.push(tokenTypes.taskClosed);
         }
       }
 
@@ -680,22 +649,9 @@
         return getType(state);
       }
 
-      // Task list
-      if (state.taskList) {
-        var taskOpen = stream.match(taskListRE, true)[1] === " ";
-        if (taskOpen) state.taskOpen = true;
-        else state.taskClosed = true;
-        if (modeCfg.highlightFormatting) state.formatting = "task";
-        state.taskList = false;
-        return getType(state);
-      }
-
-      state.taskOpen = false;
-      state.taskClosed = false;
-
       // Header
       if (state.header && stream.match(/^#+$/, true)) {
-        if (modeCfg.highlightFormatting) state.formatting = "header";
+        state.formatting = true
         return getType(state);
       }
 
@@ -704,66 +660,180 @@
 
       // Matches link titles present on next line (original comment)
       // NOTE: Never gets called? linkTitle recognition is failing? (Jul 20)
-      if (state.linkTitle) {
-        state.linkTitle = false;
-        var matchCh = ch;
-        if (ch === '(') {
-          matchCh = ')';
-        }
-        matchCh = (matchCh + '').replace(/([.?*+^\[\]\\(){}|-])/g, "\\$1");
-        var regex = '^\\s*(?:[^' + matchCh + '\\\\]+|\\\\\\\\|\\\\.)' + matchCh;
-        if (stream.match(new RegExp(regex), true)) {
-          return tokenTypes.url;
+      // if (state.linkTitle) {
+      //   state.linkTitle = false;
+      //   var matchCh = ch;
+      //   if (ch === '(') {
+      //     matchCh = ')';
+      //   }
+      //   matchCh = (matchCh + '').replace(/([.?*+^\[\]\\(){}|-])/g, "\\$1");
+      //   var regex = '^\\s*(?:[^' + matchCh + '\\\\]+|\\\\\\\\|\\\\.)' + matchCh;
+      //   if (stream.match(new RegExp(regex), true)) {
+      //     return tokenTypes.url;
+      //   }
+      // }
+
+      // Autolink URL
+      if (ch === '<' && stream.match(/^(https?|ftps?):\/\/(?:[^\\>]|\\.)+>/, false)) {
+        state.formatting = true
+        state.link = true
+        state.autolinkUrl = true
+        return getType(state);
+      }
+
+      if (state.autolinkUrl) {
+        if (ch !== '>') {
+          // Jump to end of URL
+          stream.match(/^[^>]+/, true)
+          return getType(state)
+        } else {
+          // Close the autolink
+          state.formatting = true
+          var type = getType(state)
+          state.formatting = false
+          state.link = false
+          state.autolinkUrl = false
+          return type
         }
       }
 
-      // Code span
-      // ORIGINAL COMMENT: "If this block is changed, it may need to be updated in GFM mode"
-      // The original approach seems to have used a count to ensure that the open and 
-      // closing number of backticks were the same. I'm instead using a regex,
-      // and jumping to the end (with `true` inside stream.match)
-      // Demo: https://regex101.com/r/9WyAlW/2
-      if (ch === '`' && state.code !== 1 && stream.match(/(`*)( *).*?\2\1`/, true)) {
-
-        var previousFormatting = state.formatting;
-        if (modeCfg.highlightFormatting) state.formatting = "code";
-        return tokenTypes.code
-
-        // My first version:
-        // var previousFormatting = state.formatting;
-        // if (modeCfg.highlightFormatting) state.formatting = "code";
-        // state.code = 1
-        // return getType(state)
-
-        // ORIGINAL:
-        // var previousFormatting = state.formatting;
-        // if (modeCfg.highlightFormatting) state.formatting = "code";
-        // stream.eatWhile('`');
-        // var count = stream.current().length
-        // if (state.code == 0 && (!state.quote || count == 1)) {
-        //   state.code = count
-        //   return getType(state)
-        // } else if (count == state.code) { // Must be exact
-        //   var t = getType(state)
-        //   state.code = 0
-        //   return t
-        // } else {
-        //   state.formatting = previousFormatting
-        //   return getType(state)
-        // }
+      // Autolink Email
+      if (ch === '<' && stream.match(/^[^> \\]+@(?:[^\\>]|\\.)+>/, false)) {
+        state.formatting = true
+        state.link = true
+        state.autolinkEmail = true
+        return getType(state);
       }
-      //  else if (state.code) {
-      //   return getType(state);
+
+      if (state.autolinkEmail) {
+        if (ch !== '>') {
+          // Jump to end of URL
+          stream.match(/^[^>]+/, true)
+          return getType(state)
+        } else {
+          // Close the autolink
+          state.formatting = true
+          var type = getType(state)
+          state.formatting = false
+          state.link = false
+          state.autolinkEmail = false
+          return type
+        }
+      }
+
+      // Citation
+      // Demo: https://regex101.com/r/SFJ4q3/1
+      if (ch === '[' && stream.match(/^[^\[\]\(\)]*?-?@[a-z0-9_][a-z0-9_:.#$%&\-+?<>~/]*?.*?\](?!\()/, false)) {
+        // stream.backUp(1);
+        state.formatting = true;
+        state.citation = true;
+        var type = getType(state)
+        state.inline = state.f = citation
+        return type
+      }
+
+      // Code (span)
+      // Code spans open with 1 or more backtick (`) characters. For example, the following are valid: `test`, ``test``, and ```test```. Per: https://spec.commonmark.org/0.29/#code-spans. To be valid, there must be an equal number of opening and closing backticks. The code below 1) counts how many opening backticks there are, 2) tests whether the string ahead a matching set of backticks (a valid closing set), 3) if yes, saves the count to `state.code` (which in turn tells getType to apply the `code` style), and 4) finds the closing backtick set, whereupon it clears `state.code` back to 0.
+      if (ch === '`') {
+
+        stream.eatWhile('`')
+        var count = stream.current().length
+
+        // Opening backtick set
+        if (state.code == 0 && count >= 1) {
+
+          // Test that the string ahead has at least one backtick.
+          // Generate a string with the matching set of backticks
+          // Then a RegEx with that string
+          // Then use that RegExp in `match` to find a match.
+          // If there's a match, start the code span.
+          var backticks = '`'.repeat(count)
+          var re = new RegExp(backticks, "g")
+          if (stream.match(re, false)) {
+            state.code = count
+            state.formatting = true
+            return getType(state)
+          }
+        } else if (state.code >= 1 && count == state.code) {
+          // Closing backtick set
+          state.formatting = true
+          var type = getType(state)
+          state.code = 0
+          return type
+        }
+      } else if (state.code) {
+        return getType(state)
+      }
+
+      // if (state.code >= 1) {
+      //   if (ch !== '`') {
+      //     // Jump to end of the code span
+      //     // Demo: https://regex101.com/r/o43CjK/2
+      //     stream.match(/[^\n]+(?=`)/)
+      //     return getType(state)
+      //   } else {
+      //     state.formatting = true
+      //     stream.match(/`+/)
+      //     var type = getType(state)
+      //     state.code = 0
+      //     return type
+      //   }
       // }
 
-      // if (ch === '`' && state.code == 1) {
-      //   console.log("there")
-      //   var type = getType(state)
-      //   state.code = 0;
-      //   return type
-      // }
+      // Emoji
+      if (modeCfg.emoji && ch === ":" && stream.match(/^(?:[a-z_\d+][a-z_\d+-]*|\-[a-z_\d+][a-z_\d+-]*):/)) {
+        state.emoji = true;
+        state.formatting = true
+        var retType = getType(state);
+        state.emoji = false;
+        return retType;
+      }
+
+      // Emphasis and Strong emphasis (aka: italic and bold)
+      // NOTE: This is mostly-unmodified original code.
+      if (ch === "*" || ch === "_") {
+        var len = 1
+        var before = stream.pos == 1 ? " " : stream.string.charAt(stream.pos - 2)
+        while (len < 3 && stream.eat(ch)) len++
+        var after = stream.peek() || " "
+        // See http://spec.commonmark.org/0.27/#emphasis-and-strong-emphasis
+        var leftFlanking = !/\s/.test(after) && (!punctuation.test(after) || /\s/.test(before) || punctuation.test(before))
+        var rightFlanking = !/\s/.test(before) && (!punctuation.test(before) || /\s/.test(after) || punctuation.test(after))
+        var setEm = null, setStrong = null
+        if (len % 2) { // Em
+          if (!state.em && leftFlanking && (ch === "*" || !rightFlanking || punctuation.test(before)))
+            setEm = true
+          else if (state.em == ch && rightFlanking && (ch === "*" || !leftFlanking || punctuation.test(after)))
+            setEm = false
+        }
+        if (len > 1) { // Strong
+          if (!state.strong && leftFlanking && (ch === "*" || !rightFlanking || punctuation.test(before)))
+            setStrong = true
+          else if (state.strong == ch && rightFlanking && (ch === "*" || !leftFlanking || punctuation.test(after)))
+            setStrong = false
+        }
+        if (setStrong != null || setEm != null) {
+          state.formatting = true
+          // if (modeCfg.highlightFormatting) state.formatting = setEm == null ? "strong" : setStrong == null ? "em" : "strong em"
+          if (setEm === true) state.em = ch
+          if (setStrong === true) state.strong = ch
+          var t = getType(state)
+          if (setEm === false) state.em = false
+          if (setStrong === false) state.strong = false
+          return t
+        }
+      } else if (ch === ' ') {
+        if (stream.eat('*') || stream.eat('_')) { // Probably surrounded by spaces
+          if (stream.peek() === ' ') { // Surrounded by spaces, ignore
+            return getType(state);
+          } else { // Not surrounded by spaces, back up pointer
+            stream.backUp(1);
+          }
+        }
+      }
 
       // Escape
+      // NOTE 9/10/2020: Am not sure what this does, exactly.
       if (ch === '\\') {
         stream.next();
         if (modeCfg.highlightFormatting) {
@@ -773,87 +843,54 @@
         }
       }
 
-      // Inline footnote
+      // Footnote (inline)
       if (ch === '^' && stream.peek() === '[') {
         // Skip ahead one. This prevents link parsing from triggering.
         stream.next()
-        if (modeCfg.highlightFormatting) state.formatting = "footnoteInline";
+        state.formatting = true;
         state.footnote = true
         state.footnoteInline = true
         return getType(state)
       }
 
-      // Inline footnote: Closing
+      // Footnote (inline): Closing
       if (ch === ']' && state.footnoteInline && !state.link) {
-        if (modeCfg.highlightFormatting) state.formatting = "footnoteInline";
+        state.formatting = true;
         var type = getType(state);
         state.footnote = false
         state.footnoteInline = false;
         return type;
       }
 
-      // Reference footnote
+      // Footnote (reference)
       // Demo: https://regex101.com/r/RH5vFf/2
       if (ch === '[' && !state.image && stream.match(/\^\S*\]/, false)) {
-        if (modeCfg.highlightFormatting) state.formatting = "footnoteReference";
+        state.formatting = true;
         state.footnote = true
         state.footnoteReference = true
         return getType(state)
       }
 
-      // Reference footnote: Closing
+      // Footnote (reference): Closing
       if (ch === ']' && state.footnoteReference) {
-        if (modeCfg.highlightFormatting) state.formatting = "footnoteReference";
+        state.formatting = true;
         var type = getType(state);
         state.footnote = false;
         state.footnoteReference = false;
         return type;
       }
 
-      // Citation
-      // Demo: https://regex101.com/r/SFJ4q3/1
-      // if (ch === '[' && stream.peek() === '@') {
-      // if (ch === '[' && stream.match(/^@.*?\]/, true)) {
-      // if (ch === '[' && stream.match(/^@.*?\](?!\()/, true)) {
-      if (ch === '[' && stream.match(/^[^\[\]\(\)]*?-?@[a-z0-9_][a-z0-9_:.#$%&\-+?<>~/]*?.*?\](?!\()/, false)) {
-        stream.backUp(1);
-        var type = getType(state)
-        state.citation = true;
-        state.inline = state.f = citation
-        return type
-
-        // NEWER
-        // return tokenTypes.citation
-
-        // OLD
-        // if (modeCfg.highlightFormatting) state.formatting = "citation";
-        // state.citation = true
-        // if (modeCfg.highlightFormatting) state.formatting = "citation";
-        // state.citation = true
-        // return getType(state)
-      }
-
-      // Citation: Closing `]`
-      // if (ch === ']' && state.citation === true) {
-      //   if (modeCfg.highlightFormatting) state.formatting = "citation";
-      //   var type = getType(state);  
-      //   state.citation = false;
-      //   state.f = state.inline = inlineNormal;
-      //   return type;
-      // }
-
-
       // Image
-      // if (ch === '!' && stream.match(/\[[^\]]*\] ?(?:\(|\[)/, false)) {
       if (ch === '!' && stream.match(/\[[^\]]*\]/, false)) {
         state.image = true;
-        // state.imageMarker = true;
-        if (modeCfg.highlightFormatting) state.formatting = "image";
+        state.formatting = true;
         return `${getType(state)} ${tokenTypes.imageMarker}`;
       }
 
       // Link: Opening `[`
       if (ch === '[' && !state.link) {
+
+        state.formatting = true
 
         if (stream.match(/[^\]]*?\]\(.*?\)/, false)) {
 
@@ -862,16 +899,20 @@
           //       ^
           state.link = true;
           state.linkInline = true;
+          var type = getType(state);
           state.linkText = true;
+          return type
 
-        } else if (stream.match(linkRefFullOrCollapsedRE, false)) {
+        } else if (stream.match(/[^\]]+?\]\[.*?\]/, false)) {
 
           // Reference link (full or collapsed): Start of text
           // E.g. `[text][label]` or `[text][]`
           //       ^                  ^
           state.link = true;
           state.linkReference = true
+          var type = getType(state);
           state.linkText = true;
+          return type
 
         } else if (stream.match(/[^\]]*?\](?!\[|\() /, false)) {
 
@@ -880,11 +921,10 @@
           //       ^
           state.link = true;
           state.linkReference = true
+          var type = getType(state);
           state.linkLabel = true;
+          return type
         }
-
-        if (state.link && modeCfg.highlightFormatting) state.formatting = "link";
-        return getType(state);
       }
 
       // Link: `]`
@@ -892,9 +932,7 @@
       // Handles both inline []() or reference [][] types.
       if (ch === ']' && state.link) {
 
-        if (modeCfg.highlightFormatting) state.formatting = "link";
-
-        var type = getType(state);
+        state.formatting = true
 
         if (state.linkInline && state.linkText && stream.match(/\(.*?\)/, false)) {
 
@@ -902,15 +940,17 @@
           // E.g. `[text](url "title")`
           //            ^
           state.linkText = false
+          var type = getType(state);
           state.inline = state.f = linkDestination
 
         } else if (state.linkReference && state.linkText && stream.peek() === '[') {
 
-          // Reference link (full or collapsed): End of text, start of label.
+          // Reference link (full or collapsed): End of text.
           // E.g. `[text][label]` or `[text][]`
           //            ^                  ^
           state.linkText = false
-          state.linkLabel = true
+          var type = getType(state);
+          // state.linkLabel = true
 
         } else if (state.linkReference) {
 
@@ -918,62 +958,24 @@
           // E.g. `[text][label]`, `[text][]`, `[label]`
           //                   ^           ^          ^
           state.linkLabel = false
+          var type = getType(state);
           state.linkReference = false
           state.link = false;
           state.image = false;
-          // state.inline = state.f = inlineNormal
         }
 
         return type;
       }
 
-      // Autolink URL
-      if (ch === '<' && stream.match(/^(https?|ftps?):\/\/(?:[^\\>]|\\.)+>/, false)) {
+      if (state.linkReference && ch === '[') {
 
-        // if (modeCfg.highlightFormatting) state.formatting = "link";
-        stream.match(/^[^>]+/, true);
-        stream.next() // Make sure to include the closing `>`
-        return tokenTypes.autolinkUrl;
-
-        // state.f = state.inline = autolink;
-        // if (modeCfg.highlightFormatting) state.formatting = "link";
-        // var type = getType(state);
-        // if (type) {
-        //   type += " ";
-        // } else {
-        //   type = "";
-        // }
-        // return type + tokenTypes.autolinkUrl;
-      }
-
-      // Autolink Email
-      if (ch === '<' && stream.match(/^[^> \\]+@(?:[^\\>]|\\.)+>/, false)) {
-
-        // if (modeCfg.highlightFormatting) state.formatting = "link";
-        stream.match(/^[^>]+/, true);
-        stream.next() // Make sure to include the closing `>`
-        return tokenTypes.autolinkEmail;
-
-        // state.f = state.inline = autolink;
-        // if (modeCfg.highlightFormatting) state.formatting = "link";
-        // var type = getType(state);
-        // if (type) {
-        //   type += " ";
-        // } else {
-        //   type = "";
-        // }
-        // return type + tokenTypes.autolinkEmail;
-      }
-
-      // Inline Tex Math 
-      // See: https://pandoc.org/MANUAL.html#math
-      // Demo: https://regex101.com/r/Plban8/1/
-      if (ch === '$' && stream.match(/[^\s][^$]+[^\s]\$(?!\d)/)) {
-        // if (modeCfg.highlightFormatting) state.formatting = "texMathInline";
-        // var type = getType(state);
-        // state.footnote = false
-        // state.footnoteInline = false;
-        return `${tokenTypes.texMathInline}`;
+        // Reference link (full or collapsed): Start of label.
+        // E.g. `[text][label]` or `[text][]`
+        //             ^                  ^
+        state.formatting = true
+        var type = getType(state);
+        state.linkLabel = true
+        return type;
       }
 
       // Raw HTML (XML?)
@@ -982,11 +984,7 @@
       // Demo: https://regex101.com/r/3d252R/6
       // if (modeCfg.xml && ch === '<' && !state.link && stream.match(/^(!--|\?|!\[CDATA\[|[a-z][a-z0-9-]*(?:\s+[a-z_:.\-]+(?:\s*=\s*[^>]+)?)*\s*(?:>|$))/i, false)) {
 
-      // My version (first attempt): 
-      // Demo: https://regex101.com/r/3d252R/9
-      // if (modeCfg.xml && ch === '<' && !state.link && stream.match(/^(!--|\?|!\[CDATA\[|[a-z][a-z0-9-]*(?:\s+[a-z_:.\-]+(?:\s*=(?:"\s*[^>"]+"|'\s*[^>']+'))?)*\s*(?:>|$)).*?<\//i, false)) {
-
-      // My version (second attempt)
+      // My version:
       // Demo: https://regex101.com/r/tzxq58/4
       if (modeCfg.xml && ch === '<' && !state.link && stream.match(/^((\/[a-z][a-z0-9-]*\s*>)|(!--(?!>)[\s\S]+?[^-]-->)|(\?.*?\?>)|(!\[CDATA\[.*?\]\]>)|(\!?[a-z][a-z0-9-]*(?:\s+[a-z_:.\-]+(?:\s*="\s*[^>]+"|'\s*[^>]+')?)*\s*\/?>))/i, false)) {
         var end = stream.string.indexOf(">", stream.pos);
@@ -1010,58 +1008,26 @@
       //   return "tag";
       // }
 
-      // Emphasis and Strong emphasis
-      // (Italic and Bold)
-      if (ch === "*" || ch === "_") {
-        var len = 1, before = stream.pos == 1 ? " " : stream.string.charAt(stream.pos - 2)
-        while (len < 3 && stream.eat(ch)) len++
-        var after = stream.peek() || " "
-        // See http://spec.commonmark.org/0.27/#emphasis-and-strong-emphasis
-        var leftFlanking = !/\s/.test(after) && (!punctuation.test(after) || /\s/.test(before) || punctuation.test(before))
-        var rightFlanking = !/\s/.test(before) && (!punctuation.test(before) || /\s/.test(after) || punctuation.test(after))
-        var setEm = null, setStrong = null
-        if (len % 2) { // Em
-          if (!state.em && leftFlanking && (ch === "*" || !rightFlanking || punctuation.test(before)))
-            setEm = true
-          else if (state.em == ch && rightFlanking && (ch === "*" || !leftFlanking || punctuation.test(after)))
-            setEm = false
-        }
-        if (len > 1) { // Strong
-          if (!state.strong && leftFlanking && (ch === "*" || !rightFlanking || punctuation.test(before)))
-            setStrong = true
-          else if (state.strong == ch && rightFlanking && (ch === "*" || !leftFlanking || punctuation.test(after)))
-            setStrong = false
-        }
-        if (setStrong != null || setEm != null) {
-          if (modeCfg.highlightFormatting) state.formatting = setEm == null ? "strong" : setStrong == null ? "em" : "strong em"
-          if (setEm === true) state.em = ch
-          if (setStrong === true) state.strong = ch
-          var t = getType(state)
-          if (setEm === false) state.em = false
-          if (setStrong === false) state.strong = false
-          return t
-        }
-      } else if (ch === ' ') {
-        if (stream.eat('*') || stream.eat('_')) { // Probably surrounded by spaces
-          if (stream.peek() === ' ') { // Surrounded by spaces, ignore
-            return getType(state);
-          } else { // Not surrounded by spaces, back up pointer
-            stream.backUp(1);
-          }
+      // Space
+      if (ch === ' ') {
+        if (stream.match(/^ +$/, false)) {
+          state.trailingSpace++;
+        } else if (state.trailingSpace) {
+          state.trailingSpaceNewLine = true;
         }
       }
 
       // Strikethrough
       if (modeCfg.strikethrough) {
         if (ch === '~' && stream.eatWhile(ch)) {
-          if (state.strikethrough) {// Remove strikethrough
-            if (modeCfg.highlightFormatting) state.formatting = "strikethrough";
+          if (state.strikethrough) { // Remove strikethrough
+            state.formatting = true
             var t = getType(state);
             state.strikethrough = false;
             return t;
-          } else if (stream.match(/^[^\s]/, false)) {// Add strikethrough
+          } else if (stream.match(/^[^\s]/, false)) { // Add strikethrough
             state.strikethrough = true;
-            if (modeCfg.highlightFormatting) state.formatting = "strikethrough";
+            state.formatting = true
             return getType(state);
           }
         } else if (ch === ' ') {
@@ -1075,50 +1041,30 @@
         }
       }
 
-      // Emoji
-      if (modeCfg.emoji && ch === ":" && stream.match(/^(?:[a-z_\d+][a-z_\d+-]*|\-[a-z_\d+][a-z_\d+-]*):/)) {
-        state.emoji = true;
-        if (modeCfg.highlightFormatting) state.formatting = "emoji";
-        var retType = getType(state);
-        state.emoji = false;
-        return retType;
+      // Tex Math (inline)
+      // See: https://pandoc.org/MANUAL.html#math
+      // Demo: https://regex101.com/r/Plban8/1/
+      if (!state.texMathInline && ch === '$' && stream.match(/[^\s][^$]+[^\s]\$(?!\d)/, false)) {
+        console.log("Hi")
+        state.formatting = true
+        state.texMathInline = true
+        return getType(state);
       }
 
-      // Space
-      if (ch === ' ') {
-        if (stream.match(/^ +$/, false)) {
-          state.trailingSpace++;
-        } else if (state.trailingSpace) {
-          state.trailingSpaceNewLine = true;
+      if (state.texMathInline) {
+        if (ch !== '$') {
+          stream.match(/[^$]*$/) // Jump to end
+          return getType(state)
+        } else {
+          state.formatting = true
+          var type = getType(state)
+          state.texMathInline = false
+          return type
         }
       }
 
       return getType(state);
     }
-
-    // TODO: Rename to autolinks, per commmonmark spec?
-    // Handle autolinks
-    // E.g. <http://foo.bar.baz>
-    // See: https://spec.commonmark.org/0.29/#autolink
-    // function autolink(stream, state) {
-    //   var ch = stream.next();
-
-    //   if (ch === ">") {
-    //     state.f = state.inline = inlineNormal;
-    //     if (modeCfg.highlightFormatting) state.formatting = "link";
-    //     var type = getType(state);
-    //     if (type) {
-    //       type += " ";
-    //     } else {
-    //       type = "";
-    //     }
-    //     return type + tokenTypes.autolinkUrl;
-    //   }
-
-    //   stream.match(/^[^>]+/, true);
-
-    //   return tokenTypes.autolinkUrl;
-    // }
 
     // Parse link destinations inside parentheses (...)
     // Used for both (non-reference type) links []() and images ![]()
@@ -1132,20 +1078,41 @@
       // Start
       if (ch === '(') {
 
-        // Start states
-        state.linkUrl = true;
-        if (modeCfg.highlightFormatting) state.formatting = "link-string";
+        state.formatting = true
 
-        // Is there a title? If yes, jump to it and set `state.linkTitle` true.
-        // Else, jump to closing ')'
-        if (stream.match(linkWithTitleRE)) {
-          var returnState = getType(state)
+        // Handle case where URL is missing `()`
+        if (stream.peek() == ')') {
+          stream.next()
+          state.linkUrl = true
+          var type = getType(state)
+          reset()
+          return type
+        }
+
+        // Start states
+        var type = getType(state)
+        state.linkUrl = true;
+        return type
+      }
+
+      if (state.linkUrl) {
+
+        // Is there a title after the URL? 
+        // If yes, jump to it and set `state.linkTitle` true. Else, jump to closing ')'
+        // Find URL with title following. Demo: https://regex101.com/r/anM7bj/3
+        // TODO: Improve to filter out erroneous titles (e.g. line breaks?)
+        if (stream.match(/^(?:[^\\\(\)]|\\.|\((?:[^\\\(\)]|\\.))*?(?=\s(".*?")|\s('.*?')|\s(\(.*?\)))/)) {
+          var type = getType(state)
           state.linkUrl = false;
           state.linkTitle = true
-          return returnState
+          return type
         } else {
-          stream.match(linkRE)
-          return getType(state);
+          // Jump to end of URL, inside link destination that doesn't have a title. 
+          // Demo: https://regex101.com/r/ljZwpn/1
+          stream.match(/.*?(?=\))/)
+          var type = getType(state);
+          state.linkUrl = false;
+          return type
         }
       }
 
@@ -1158,46 +1125,71 @@
 
       // End
       if (ch === ')') {
+        state.linkUrl = false;
+        state.linkTitle = false;
+        state.formatting = true
+        var type = getType(state);
+        reset()
+        return type;
+      }
 
-        if (modeCfg.highlightFormatting) state.formatting = "link-string";
-        var returnState = getType(state);
-
-        // Reset to normal
+      // Reset to normal
+      function reset() {
         state.f = state.inline = inlineNormal;
         state.link = false
         state.linkInline = false
         state.linkReference = false
-        state.linkUrl = false;
-        state.linkTitle = false;
+        state.linkUrl = false
         state.image = false
-
-        return returnState;
       }
     }
 
     // Parse reference link definitions.
     function linkReferenceDefinition(stream, state) {
 
+      var ch = stream.next()
+
       // Label
-      if (!state.link && stream.match(/^\[[^\]]+?\]:/)) {
+      if (ch == '[') {
+        // if (!state.link && stream.match(/^\[[^\]]+?\]:/), false) {
         state.link = true
         state.linkReferenceDefinition = true
-        state.linkLabel = true
-        return getType(state)
-      }
-
-      // Url
-      if (state.linkLabel && stream.match(linkUrlRE)) {
-        state.linkLabel = false
-        state.linkUrl = true
+        state.formatting = true
         var type = getType(state)
-        if (!stream.match(linkTitleRE, false)) reset()
+        state.linkLabel = true
         return type
       }
 
-      // Title
-      if (state.linkUrl && stream.match(linkTitleRE)) {
+      // Jump to end of the label
+      if (state.linkLabel && ch !== ']') {
+        stream.match(/.*?(?=\])/)
+        var type = getType(state)
+        state.linkLabel = false
+        return type
+      }
+
+      if (ch === ']') {
+        stream.match(/:\s*/)
+        state.formatting = true
+        var type = getType(state)
+        state.linkUrl = true
+        return type
+      }
+
+
+      if (state.linkUrl && stream.match(/(?:<[^<>\n]*>|(?!<)[^\s]+)/)) {
+        var type = getType(state)
         state.linkUrl = false
+
+        // If we're al eol(), or there are only spaces left, reset().
+        if (stream.eol() || stream.match(/\s+$/)) {
+          reset()
+        }
+        return type
+      }
+
+      // Title found
+      if (stream.match(/(".*?")|('.*?')|(\(.*?\))/)) {
         state.linkTitle = true
         var type = getType(state)
         reset()
@@ -1241,7 +1233,7 @@
       // End
       if (ch === ']') {
 
-        if (modeCfg.highlightFormatting) state.formatting = "citation";
+        state.formatting = true
         var type = getType(state);
 
         // Reset to normal
@@ -1255,16 +1247,16 @@
       return getType(state)
     }
 
-    // function texMathEquation(stream, state) {
+    // function texMathDisplay(stream, state) {
     //   var ch = stream.next()
     //   // End
     //   if (ch === '$$') {
 
-    //     if (modeCfg.highlightFormatting) state.formatting = "texMathEquation";
+    //     if (modeCfg.highlightFormatting) state.formatting = "texMathDisplay";
     //     var type = getType(state);
 
     //     // Reset to normal
-    //     state.texMathEquation = false
+    //     state.texMathDisplay = false
     //     state.f = state.inline = inlineNormal;
 
     //     return type;
@@ -1356,8 +1348,12 @@
           linkLabel: false,
           linkUrl: false,
           linkTitle: false,
+          autolinkUrl: false,
+          autolinkEmail: false,
+          automaticLink: false,
 
           texMathInline: false,
+          texMathDisplay: false,
 
           citation: false,
           code: 0,
@@ -1374,7 +1370,6 @@
           trailingSpace: 0,
           trailingSpaceNewLine: false,
           strikethrough: false,
-          texMathEquation: false,
           emoji: false,
           fencedEndRE: null
         };
@@ -1413,15 +1408,18 @@
           linkLabel: s.linkLabel,
           linkUrl: s.linkUrl,
           linkTitle: s.linkTitle,
+          autolinkUrl: s.autolinkUrl,
+          autolinkEmail: s.autolinkUrl,
+          automaticLink: s.autolinkUrl,
 
           texMathInline: s.texMathInline,
+          texMathDisplay: s.texMathDisplay,
 
           citation: s.citation,
           code: s.code,
           em: s.em,
           strong: s.strong,
           strikethrough: s.strikethrough,
-          texMathEquation: s.texMathEquation,
           emoji: s.emoji,
           header: s.header,
           setext: s.setext,
@@ -1448,7 +1446,7 @@
         // This is a good place to perform line checks.
         if (stream != state.thisLine.stream) {
 
-          // Update state.
+          // Update state
           state.header = 0;
           state.hr = false;
 
@@ -1463,7 +1461,7 @@
           state.thisLine = { stream: stream }
 
           // Reset state.taskList
-          state.taskList = false;
+          // state.taskList = false;
 
           // Reset state.trailingSpace
           state.trailingSpace = 0;
@@ -1471,10 +1469,10 @@
 
           // Check if we're in TeX mode ($$...$$)
           // It's started in blockNormal, and we check for the end characters here.
-          if (state.texMathEquation) {
+          if (state.texMathDisplay) {
             if (stream.match(texMathRE)) {
               var type = getType(state)
-              state.texMathEquation = false
+              state.texMathDisplay = false
               state.localMode = null
               state.f = state.block = blockNormal;
               return type
@@ -1504,12 +1502,15 @@
           }
         }
 
-        // Check for URL:
-        // This is an odd place to do it, but I couldn't figure out how to make it 
-        // work in inlineNormal. The code is adapted from GitHub-Flavored mode:
-        // https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L99
+        // Automatic links
+        // This is an odd place to find and flag these, but I couldn't figure out how to make it work in inlineNormal. The code is adapted from GitHub-Flavored mode: https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L99
         if (!state.link && stream.match(urlRE)) {
-          return `${tokenTypes.link} ${tokenTypes.linkInline}`
+          state.link = true
+          state.automaticLink = true
+          var type = getType(state)
+          state.link = false
+          state.automaticLink = false
+          return type
         }
 
         return state.f(stream, state);

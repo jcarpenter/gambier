@@ -102,7 +102,7 @@ module.exports = (editor, citation) => {
 
 
 
-  return
+  // return
 
   let line = citation.line
   let start = citation.start

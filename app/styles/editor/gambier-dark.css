@@ -44,6 +44,7 @@
 
 .cm-s-gambier-dark .cm-em {
   color: var(--clr-blue);
+  font-style: italic;
 }
 
 .cm-s-gambier-dark .cm-em.cm-flank {
@@ -216,6 +217,7 @@
 
 .cm-s-gambier-dark .cm-strong {
   color: var(--clr-blue);
+  font-weight: 700;
 }
 
 .cm-s-gambier-dark .cm-strong.cm-flank {

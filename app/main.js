@@ -53,6 +53,7 @@ const storeDefault = {
   selectedSideBarItem: {},
 
   showFilesList: true,
+  sourceMode: false,
 
   // Editor theme
   editorTheme: 'gambier-light',
@@ -471,18 +472,23 @@ async function reducers(state = {}, action) {
       break
     }
 
-    case 'SELECT_EDITOR_THEME': {
-      newState.editorTheme = action.theme;
-      newState.changed.push('editorTheme');
-      break
-    }
-
-
     // -------- EDITOR -------- //
 
     case 'LOAD_PATH_IN_EDITOR': {
       newState.editingFileId = action.id;
       newState.changed.push('editingFileId');
+      break
+    }
+
+    case 'SET_SOURCE_MODE': {
+      newState.sourceMode = action.active;
+      newState.changed.push('sourceMode');
+      break
+    }
+
+    case 'SELECT_EDITOR_THEME': {
+      newState.editorTheme = action.theme;
+      newState.changed.push('editorTheme');
       break
     }
 
@@ -1069,6 +1075,22 @@ function setup(gambierStore) {
 
   // -------- View -------- //
 
+  var source_mode = new electron.MenuItem({
+    label: 'Source mode',
+    type: 'checkbox',
+    checked: state.sourceMode,
+    accelerator: 'CmdOrCtrl+/',
+    click(item, focusedWindow) {
+      if (focusedWindow) {
+        store.dispatch({
+          type: 'SET_SOURCE_MODE',
+          active: !state.sourceMode,
+        });
+        // focusedWindow.webContents.send('mainRequestsToggleSource', item.checked)
+      }
+    }
+  });
+
   var select_editor_theme_dark = new electron.MenuItem({
     label: 'Dark',
     type: 'checkbox',
@@ -1098,18 +1120,7 @@ function setup(gambierStore) {
     {
       label: 'View',
       submenu: [
-        {
-          label: 'Source mode',
-          type: 'checkbox',
-          checked: false,
-          accelerator: 'CmdOrCtrl+/',
-          click(item, focusedWindow) {
-            console.log(state.editorTheme);
-            if (focusedWindow) {
-              focusedWindow.webContents.send('mainRequestsToggleSource', item.checked);
-            }
-          }
-        },
+        source_mode,
         {
           label: 'Theme',
           submenu: [
@@ -1117,21 +1128,21 @@ function setup(gambierStore) {
             select_editor_theme_light
           ]
         },
-        // { type: 'separator' },
-        // {
-        //   label: 'Reload',
-        //   accelerator: 'CmdOrCtrl+R',
-        //   click(item, focusedWindow) {
-        //     if (focusedWindow) focusedWindow.reload()
-        //   }
-        // },
-        // {
-        //   label: 'Toggle Developer Tools',
-        //   accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-        //   click(item, focusedWindow) {
-        //     if (focusedWindow) focusedWindow.webContents.toggleDevTools()
-        //   }
-        // },
+        { type: 'separator' },
+        {
+          label: 'Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click(item, focusedWindow) {
+            if (focusedWindow) focusedWindow.reload();
+          }
+        },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+          click(item, focusedWindow) {
+            if (focusedWindow) focusedWindow.webContents.toggleDevTools();
+          }
+        },
         { type: 'separator' },
         { role: 'resetzoom' },
         { role: 'zoomin' },
@@ -1198,6 +1209,10 @@ function setup(gambierStore) {
 
   store.onDidAnyChange((newState, oldState) => {
     state = newState;
+  });
+
+  store.onDidChange('sourceMode', () => {
+    source_mode.checked = state.sourceMode;
   });
 
   store.onDidChange('focusedLayoutSection', () => {

@@ -6,11 +6,12 @@ import markInlineLinks from './markInlineLinks'
 import markCitations from './markCitations'
 import markFigures from './markFigures'
 import markList from './markList'
+import markTaskList from './markTaskList'
 // import keyboardCommands from './keyboardCommands'
 
 import BracketsWidget from '../component/BracketsWidget.svelte'
 import { mountReplace } from '../utils'
-import { getCharAt } from '../editor/editor-utils'
+import { getCharAt, getLineStyles, getTextFromRange } from '../editor/editor-utils'
 
 
 // -------- SHARED VARIABLES -------- //
@@ -62,42 +63,143 @@ function startNewDoc() {
  * Find each citation in the specified line, and collape + replace them.
  */
 function findAndMark() {
+  // console.log('findAndMark')
+
   if (!makeMarks) return
   editor.operation(() => {
     editor.eachLine((lineHandle) => {
-      const tokens = editor.getLineTokens(lineHandle.lineNo())
-      const isFigure = tokens.some((t) => t.type !== null && t.type.includes('figure'))
-      // const isFigure = tokens[0] !== undefined && tokens[0].type.includes('figure')
-      const isList = tokens[0] !== undefined && tokens[0].type !== null && tokens[0].type.includes('list')
 
-      if (isFigure) {
-        // markFigures(editor, lineHandle, tokens, mediaBasePath)
-      } else {
-        if (isList) {
-          markList(editor, lineHandle, tokens)
-        }
-        markInlineLinks(editor, lineHandle, tokens)
-        // markCitations(editor, lineHandle, tokens)
-      }
+      // Skip blank lines
+      if (!lineHandle.styles || lineHandle.styleClasses == undefined) return
+
+      // For line, create array of classes, with start and stop points
+      const tokens = editor.getLineTokens(lineHandle.lineNo())
+
+      console.log(getLineStyles(editor, lineHandle))
+
+      return
+
+      // Array of tokens for the line. 
+      // Each is an object, with: `{start: 2, end: 3, string: "[", type: "line-taskOpen"}`
+      // const tokens = editor.getLineTokens(lineHandle.lineNo())
+
+      // // String of classes found in the line: `list-1 ul taskClosed
+      // const lineStyles = lineHandle.styleClasses.textClass
+      // const textStyles = lineHandle.styles
+
+      // // List
+      // if (lineStyles.includes('list')) {
+      //   // markList(editor, lineHandle, tokens)
+      //   if (lineStyles.includes('task')) {
+      //     markTaskList(editor, lineHandle, tokens)
+      //   }
+      // }
+
+      // // Figure
+      // if (lineStyles.includes('figure')) {
+      //   console.log("Figure")
+      // }
+
+      // // Links
+      // if (textStyles.some((s) => typeof s === 'string' && s.includes('link'))) { 
+      //   markInlineLinks(editor, lineHandle, tokens)
+      // }
+
+      // markFigures(editor, lineHandle, tokens, mediaBasePath)
+      // markCitations(editor, lineHandle, tokens)
+
     })
   })
 }
+
+/**
+ * Set marks, mode and theme according to `sourceMode` state. 
+ * E.g. If `sourceMode` is true, we want to strip out the widgets, so we disable `makeMarks`.
+ * @param {*} sourceMode 
+ */
+function toggleSource(sourceMode) {
+
+  // Set mode
+  // const mode = sourceMode ? 'markdown' : 'gambier'
+  // editor.setOption('mode', mode)
+
+  // Set theme
+  // const theme = sourceMode ? 'markdown' : 'gambier'
+  // editor.setOption('theme', theme)
+
+  // Enable or disable marks
+  if (sourceMode) {
+    makeMarks = false
+    editor.getAllMarks().forEach((m) => m.clear())
+  } else {
+    makeMarks = true
+    findAndMark()
+  }
+}
+
+
+/**
+ * Wrap text
+ * @param {*} textarea 
+ */
+function wrapText(character) {
+  if (character == '_') {
+    const selection = editor.getSelection()
+    if (selection) {
+      editor.replaceSelection(`_${selection}_`)
+    } else {
+
+    }
+    console.log('italics')
+    console.log(editor.getSelection())
+  }
+}
+
+
 
 
 // -------- EVENT HANDLERS -------- //
 
 /**
- * Every time cursor updates, check last line it was in for citations. We have to do this, because TODO... (along lines of: citations open/close when they're clicked into and out-of)
+ * "This event is fired before a change is applied, and its handler may choose to modify or cancel the change" — https://codemirror.net/doc/manual.html#event_beforeChange
+ * Handle paste operations. If URL, generate link; else, if HTML, convert to markdown.
  */
-function onCursorActivity() {
-  lastCursorLine = editor.getCursor().line
-  // editor.addWidget(editor.getCursor(), el)
+async function onBeforeChange(cm, change) {
+  // console.log('onBeforeChange')
 
-  // TODO: June 23: Revisit this. Turned off temporarily.
-  findAndMark()
+  if (change.origin === 'paste') {
+    const selection = editor.getSelection()
+    const isURL = isUrl(change.text)
+
+    if (isURL) {
+      if (selection) {
+        const text = selection
+        const url = change.text
+        const newText = change.text.map((line) => line = `[${text}](${url})`)
+        change.update(null, null, newText)
+      }
+    } else {
+      change.cancel()
+      const formats = await window.api.invoke('getFormatOfClipboard')
+      if (formats.length === 1 && formats[0] === 'text/plain') {
+        cm.replaceSelection(change.text.join('\n'))
+      } else if (formats.includes('text/html')) {
+        const html = await window.api.invoke('getHTMLFromClipboard')
+        const markdown = turndownService.turndown(html)
+        cm.replaceSelection(markdown)
+      }
+    }
+  }
 }
 
+
+/**
+ * "Fires every time the content of the editor is changed. This event is fired before the end of an operation, before the DOM updates happen." — https://codemirror.net/doc/manual.html#event_change
+ */
 function onChange(cm, change) {
+  // console.log('onChange')
+  return
+
   const text = change.text[0]
   // const from = { line: change.from.line, ch: change.from.ch }
   // const to = { line: change.to.line, ch: change.to.ch }
@@ -128,54 +230,27 @@ function onChange(cm, change) {
   }
 }
 
-
 /**
- * Handle paste operations
- * If URL, generate link.
- * Else, if HTML, convert to markdown} cm 
+ * "Like the "change" event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation.
+" — https://codemirror.net/doc/manual.html#event_changes
+ * @param {*} cm 
+ * @param {*} changes 
  */
-async function onBeforeChange(cm, change) {
-
-  if (change.origin === 'paste') {
-    const selection = editor.getSelection()
-    const isURL = isUrl(change.text)
-
-    if (isURL) {
-      if (selection) {
-        const text = selection
-        const url = change.text
-        const newText = change.text.map((line) => line = `[${text}](${url})`)
-        change.update(null, null, newText)
-      }
-    } else {
-      change.cancel()
-      const formats = await window.api.invoke('getFormatOfClipboard')
-      if (formats.length === 1 && formats[0] === 'text/plain') {
-        cm.replaceSelection(change.text.join('\n'))
-      } else if (formats.includes('text/html')) {
-        const html = await window.api.invoke('getHTMLFromClipboard')
-        const markdown = turndownService.turndown(html)
-        cm.replaceSelection(markdown)
-      }
-    }
-  }
+function onChanges(cm, changes) {
+  // console.log('onChanges')
+  findAndMark()
 }
 
 /**
- * Wrap text
- * @param {*} textarea 
+ * Every time cursor updates, check last line it was in for citations. We have to do this, because TODO... (along lines of: citations open/close when they're clicked into and out-of)
  */
-function wrapText(character) {
- if (character == '_') {
-   const selection =  editor.getSelection()
-   if (selection) {
-     editor.replaceSelection(`_${selection}_`)
-   } else {
+function onCursorActivity() {
+  // lastCursorLine = editor.getCursor().line
+  // editor.addWidget(editor.getCursor(), el)
+  // console.log('onCursorActivity')
 
-   }
-   console.log('italics')
-   console.log(editor.getSelection())
- }
+  // TODO: June 23: Revisit this. Turned off temporarily.
+  // findAndMark()
 }
 
 
@@ -201,13 +276,14 @@ function makeEditor(textarea) {
     // We use closebracket.js for character-closing behaviour. 
     // https://codemirror.net/doc/manual.html#addon_closebrackets
     // We add support for `**` and `__` by copying the default config object from closebrackets.js, and adding `**__` to the pairs property.
-    autoCloseBrackets: { 
+    autoCloseBrackets: {
       pairs: "**__()[]{}''\"\"",
       closeBefore: ")]}'\":;>",
       triples: "",
       explode: "[]{}"
     },
-    keyMap: 'sublime',
+    // Turning on `keyMap: 'sublime'` activates -all- sublime keymaps. We instead want to pick and choose, using `extraKeys`
+    // keyMap: 'sublime',
     extraKeys: {
       'Shift-Cmd-K': 'deleteLine',
       'Cmd-L': 'selectLine',
@@ -225,25 +301,23 @@ function makeEditor(textarea) {
   })
 
   // Setup event listeners
-  editor.on("cursorActivity", onCursorActivity)
-  // editor.on("change", onChange)
-
-  /**
-   * "This event is fired before a change is applied, and its handler may choose to modify or cancel the change"
-   * See: https://codemirror.net/doc/manual.html#event_beforeChange
-   */
   editor.on('beforeChange', onBeforeChange)
+  editor.on("change", onChange)
+  editor.on("changes", onChanges)
+  editor.on("cursorActivity", onCursorActivity)
 
   return editor
 }
+
 
 async function setup(textarea, initialState) {
 
   state = initialState
 
   // Make editor
-  editor = makeEditor(textarea)
+  editor = makeEditor(textarea, initialState)
   editor.setOption("theme", initialState.editorTheme)
+  toggleSource(initialState.sourceMode)
 
   // Setup change listeners
   window.api.receive('stateChanged', async (newState, oldState) => {
@@ -259,8 +333,11 @@ async function setup(textarea, initialState) {
       }
     }
 
-    if (state.changed.includes('newDoc')) {
+    if (state.changed.includes('sourceMode')) {
+      toggleSource(state.sourceMode)
+    }
 
+    if (state.changed.includes('newDoc')) {
       // Place the cursor at the end of the document.
       // We have to wait a moment before calling.
       // Per: https://stackoverflow.com/a/61934020
@@ -283,24 +360,23 @@ async function setup(textarea, initialState) {
   })
 
   // "Source mode" toggle reverts displayed text to plain markdown (without widgets, etc) when activated. 
-  window.api.receive('mainRequestsToggleSource', (showSource) => {
-    const mode = showSource ? 'markdown' : 'gambier'
-    const theme = showSource ? 'markdown' : 'test'
-    // editor.setOption('mode', mode)
+  // window.api.receive('mainRequestsToggleSource', (showSource) => {
+  //   const mode = showSource ? 'markdown' : 'gambier'
+  //   const theme = showSource ? 'markdown' : 'test'
+  //   // editor.setOption('mode', mode)
 
-    // Set theme
-    editor.setOption('theme', theme)
+  //   // Set theme
+  //   editor.setOption('theme', theme)
 
-    // Enable or disable marks
-    if (showSource) {
-      makeMarks = false
-      editor.getAllMarks().forEach((m) => m.clear())
-    } else {
-      makeMarks = true
-      findAndMark()
-    }
-
-  })
+  //   // Enable or disable marks
+  //   if (showSource) {
+  //     makeMarks = false
+  //     editor.getAllMarks().forEach((m) => m.clear())
+  //   } else {
+  //     makeMarks = true
+  //     findAndMark()
+  //   }
+  // })
 
   if (state.openDoc.path) {
     loadFileByPath(state.openDoc.path)

@@ -31,19 +31,20 @@
 }
 
 .cm-s-gambier-light .cm-code {
-  color: #13570b;
-  background-color: #e7f9e8;
-  padding: 0.1em 0 0.2em;
   font-size: 0.9em;
   font-family: "SFMono-Regular";
+  background-color: #e7f9e8;
+  color: #13570b;
+  padding: 0.1em 0 0.2em;
 }
 
-.cm-s-gambier-light .cm-code.cm-flank {
-  color: #92e290;
+.cm-s-gambier-light .cm-code.cm-md {
+  color: #4db14c;
 }
 
 .cm-s-gambier-light .cm-em {
   color: var(--clr-blue);
+  font-style: italic;
 }
 
 .cm-s-gambier-light .cm-em.cm-flank {
@@ -51,6 +52,8 @@
 }
 
 .cm-s-gambier-light .CodeMirror-line.fencedcodeblock {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
   background-color: rgba(214, 214, 214, 0.5) !important;
 }
 
@@ -168,14 +171,14 @@
   opacity: 1;
 }
 
-.cm-s-gambier-light .CodeMirror-line.list--1 .list-marker,
+.cm-s-gambier-light .CodeMirror-line.list-1 .list-marker,
 .cm-s-gambier-light .CodeMirror-line.list-2 .list-marker,
 .cm-s-gambier-light .CodeMirror-line.list-3 .list-marker,
 .cm-s-gambier-light .CodeMirror-line.list-4 .list-marker {
   position: relative;
 }
 
-.cm-s-gambier-light .CodeMirror-line.list--1 .list-marker::before,
+.cm-s-gambier-light .CodeMirror-line.list-1 .list-marker::before,
 .cm-s-gambier-light .CodeMirror-line.list-2 .list-marker::before,
 .cm-s-gambier-light .CodeMirror-line.list-3 .list-marker::before,
 .cm-s-gambier-light .CodeMirror-line.list-4 .list-marker::before {
@@ -184,6 +187,12 @@
   user-select: none;
   position: absolute;
   left: -1em;
+}
+
+.cm-s-gambier-light .taskOpen .cm-md,
+.cm-s-gambier-light .taskClosed .cm-md {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
 }
 
 .cm-s-gambier-light .CodeMirror-line.list-1 {
@@ -203,10 +212,14 @@
 }
 
 .cm-s-gambier-light .cm-texmath-inline {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
   background-color: rgba(214, 214, 214, 0.5) !important;
 }
 
-.cm-s-gambier-light .CodeMirror-line.texmath-equation {
+.cm-s-gambier-light .CodeMirror-line.texmath-display {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
   background-color: rgba(214, 214, 214, 0.5) !important;
 }
 
@@ -214,8 +227,13 @@
   text-decoration: line-through;
 }
 
+.cm-s-gambier-light .cm-md {
+  color: red;
+}
+
 .cm-s-gambier-light .cm-strong {
   color: var(--clr-blue);
+  font-weight: 700;
 }
 
 .cm-s-gambier-light .cm-strong.cm-flank {

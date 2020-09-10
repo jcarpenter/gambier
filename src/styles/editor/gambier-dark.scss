@@ -56,6 +56,7 @@
 
     .cm-em {
         color: var(--clr-blue);
+        font-style: italic;
         &.cm-flank {
             color: var(--clr-blue-light);
         }
@@ -263,6 +264,7 @@
 
     .cm-strong {
         color: var(--clr-blue);
+        font-weight: 700;
         &.cm-flank {
             color: var(--clr-blue-light);
         }
