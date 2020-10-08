@@ -1,0 +1,9 @@
+{
+	"version": 3,
+	"file": "macOS-DynamicFontVariants-mixins.css",
+	"sources": [
+		"../../src/styles/macOS-DynamicFontVariants-mixins.scss"
+	],
+	"names": [],
+	"mappings": ""
+}

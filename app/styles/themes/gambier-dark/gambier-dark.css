@@ -1,0 +1,715 @@
+/* -------------- Font mixins -------------- */
+/* -------------- Layout mixins -------------- */
+:root {
+  /* -------------- Layouts (CSS grid) -------------- */
+  --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]
+        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];
+  /* -------------- Colors -------------- */
+  --clr-editorText: #24292e;
+  --side-bar-bg-color: #fafafa;
+  --control-text-color: #777;
+  --body-color: rgb(51, 51, 51);
+  --body-color-light: rgb(96, 96, 96);
+  --clr-warning: rgba(255, 50, 50, 0.4);
+  --clr-warning-dark: rgba(255, 50, 50, 0.75);
+  --clr-gray-darkest: hsl(0, 0%, 7.5%);
+  --clr-gray-darker: hsl(0, 0%, 15%);
+  --clr-gray-dark: hsl(0, 0%, 30%);
+  --clr-gray: hsl(0, 0%, 50%);
+  --clr-gray-light: hsl(0, 0%, 70%);
+  --clr-gray-lighter: hsl(0, 0%, 85%);
+  --clr-gray-lightest: hsl(0, 0%, 92.5%);
+  --clr-blue: rgb(13, 103, 220);
+  --clr-blue-light: #b9d0ee;
+  --clr-blue-lighter: rgb(232, 242, 255);
+  /* -------------- Type sizes -------------- */
+  --baseFontSize: 16px;
+  --baseLineHeight: 1.625rem;
+  /* 26px */
+  --baseFontScale: 1.125;
+  --font-base-size: 1rem;
+  --font-sml-3: calc(var(--font-sml-2) / var(--baseFontScale));
+  /* 11.237 */
+  --font-sml-2: calc(var(--font-sml-1) / var(--baseFontScale));
+  /* 12.641 */
+  --font-sml-1: calc(var(--font-base-size) / var(--baseFontScale));
+  /* 14.222 */
+  --font-lg-1: calc(var(--font-base-size) * var(--baseFontScale));
+  /* 18.000 */
+  --font-lg-2: calc(var(--font-lg-1) * var(--baseFontScale));
+  /* 20.250 */
+  --font-lg-3: calc(var(--font-lg-2) * var(--baseFontScale));
+  /* 22.781 */
+  --font-lg-4: calc(var(--font-lg-3) * var(--baseFontScale));
+  /* 25.628 */
+  --font-lg-5: calc(var(--font-lg-4) * var(--baseFontScale));
+  /* 28.832 */
+  --font-lg-6: calc(var(--font-lg-5) * var(--baseFontScale));
+  /* 32.436 */
+  --font-lg-7: calc(var(--font-lg-6) * var(--baseFontScale));
+  /* 36.491 */
+  --font-lg-8: calc(var(--font-lg-7) * var(--baseFontScale));
+  /* 41.052 */
+  /* -------------- Grid units -------------- */
+  --grid: var(--baseLineHeight);
+  --grid-eighth: calc(var(--grid) * 0.125);
+  --grid-sixth: calc(var(--grid) * 0.166);
+  --grid-quarter: calc(var(--grid) * 0.25);
+  --grid-half: calc(var(--grid) * 0.5);
+  --grid-three-quarters: calc(var(--grid) * 0.75);
+  --grid-1-and-quarter: calc(var(--grid) * 1.25);
+  --grid-1-and-half: calc(var(--grid) * 1.5);
+  --grid-1-and-three-quarters: calc(var(--grid) * 1.75);
+  --grid-2: calc(var(--grid) * 2);
+  --grid-3: calc(var(--grid) * 3);
+  --grid-4: calc(var(--grid) * 4);
+  --grid-5: calc(var(--grid) * 5);
+  --grid-6: calc(var(--grid) * 6);
+  --grid-7: calc(var(--grid) * 7);
+  --grid-8: calc(var(--grid) * 8);
+  --grid-9: calc(var(--grid) * 9);
+  --grid-10: calc(var(--grid) * 10);
+  --grid-12: calc(var(--grid) * 12);
+  --grid-14: calc(var(--grid) * 14);
+  --grid-16: calc(var(--grid) * 16);
+  --grid-24: calc(var(--grid) * 24);
+  --grid-32: calc(var(--grid) * 32);
+}
+
+.cm-s-gambier-dark {
+  --clr-blue: rgb(13, 103, 220);
+  --clr-blue-light: #b9d0ee;
+  --clr-blue-lighter: rgb(232, 242, 255);
+  --clr-gray-darker: hsl(0, 0%, 15%);
+  --clr-gray-lighter: hsl(0, 0%, 85%);
+}
+
+.cm-s-gambier-dark #autocomplete {
+  position: relative;
+}
+
+.cm-s-gambier-dark #autocomplete:focus, .cm-s-gambier-dark #autocomplete:focus-within {
+  outline: 1px solid transparent;
+}
+
+.cm-s-gambier-dark #autocompleteMenu {
+  width: 10em;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  background: var(--clr-blue-lighter);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.cm-s-gambier-dark #autocompleteMenu .label {
+  flex-grow: 1;
+}
+
+.cm-s-gambier-dark #autocompleteMenu .preview {
+  opacity: 0.5;
+}
+
+.cm-s-gambier-dark #autocompleteMenu.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.cm-s-gambier-dark #autocompleteMenu ul,
+.cm-s-gambier-dark #autocompleteMenu li {
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+}
+
+.cm-s-gambier-dark #autocompleteMenu li {
+  padding: 0 0.3em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+}
+
+.cm-s-gambier-dark #autocompleteMenu li.selected {
+  background-color: var(--clr-blue-light);
+}
+
+.cm-s-gambier-dark .widget.editable {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 0.15em;
+  text-decoration: none;
+  box-sizing: content-box;
+}
+
+.cm-s-gambier-dark .widget.editable :focus {
+  outline: none;
+}
+
+.cm-s-gambier-dark .widget.editable::before, .cm-s-gambier-dark .widget.editable::after {
+  content: "|";
+  opacity: 0;
+}
+
+.cm-s-gambier-dark .widget.reference .select {
+  border: 1px solid red;
+  background-image: url(img/down-arrow-notch.svg);
+}
+
+.cm-s-gambier-dark .widget:not(.editable) {
+  box-sizing: border-box;
+  padding: 0 0.2em;
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.1);
+  border-radius: 0.15em;
+}
+
+.cm-s-gambier-dark .widget.error {
+  box-shadow: 0px 1px rgba(255, 0, 0, 0.5);
+}
+
+.cm-s-gambier-dark .widget:focus {
+  outline: none;
+}
+
+.cm-s-gambier-dark [data-metakeydown="true"] .widget.reference:hover,
+.cm-s-gambier-dark [data-metakeydown="true"] .widget.cm-image:hover,
+.cm-s-gambier-dark [data-metakeydown="true"] .widget.cm-link:hover {
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.cm-s-gambier-dark #preview {
+  --notch-size: 0.6em;
+  --popup-distance: -0.5em;
+  --show: 0.05s;
+  --hide: 0.05s;
+  --delay: 1s;
+  background-color: #f2f2f2;
+  border-radius: var(--grid-eighth);
+  color: var(--clr-gray-darker);
+  font-size: var(--font-sml-2);
+  line-height: var(--grid-three-quarters);
+  opacity: 0;
+  padding: var(--grid-quarter);
+  position: absolute;
+  transform: translate(0%, 2em);
+  white-space: normal;
+  width: 20em;
+  z-index: 100;
+  outline: none;
+}
+
+.cm-s-gambier-dark #preview.hide {
+  opacity: 0;
+}
+
+.cm-s-gambier-dark #preview.error {
+  border: 1px solid rgba(255, 0, 0, 0.5);
+}
+
+.cm-s-gambier-dark #preview #tip {
+  opacity: 0.5;
+  margin-top: var(--grid-eigth);
+}
+
+.cm-s-gambier-dark #preview #url {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--grid-quarter);
+}
+
+.cm-s-gambier-dark #preview #url #dir {
+  opacity: 0.5;
+}
+
+.cm-s-gambier-dark #preview #url #base {
+  opacity: 1;
+}
+
+.cm-s-gambier-dark #preview #image-preview {
+  max-width: 100%;
+  min-height: 4em;
+}
+
+.cm-s-gambier-dark #preview #image-preview img {
+  width: 100%;
+}
+
+.cm-s-gambier-dark [data-metakeydown="false"] #preview.show {
+  transition: opacity 0.1s ease-in 0.2s;
+  opacity: 1;
+}
+
+.cm-s-gambier-dark [data-metakeydown="true"] #preview.show {
+  opacity: 1;
+}
+
+.cm-s-gambier-dark #wizard {
+  --notch-size: 0.6em;
+  --popup-distance: -0.5em;
+  --show: 0.05s;
+  --hide: 0.05s;
+  --delay: 0.5s;
+  background-color: #f2f2f2;
+  border-radius: var(--grid-eighth);
+  color: var(--clr-gray-darker);
+  font-size: var(--font-sml-1);
+  line-height: var(--grid-three-quarters);
+  opacity: 0;
+  padding: var(--grid-quarter);
+  position: absolute;
+  transform: translate(0%, 2em);
+  transition-delay: var(--delay);
+  transition-timing-function: ease-out;
+  transition: opacity var(--hide);
+  white-space: normal;
+  width: 20em;
+  z-index: 100;
+  /* Notch */
+}
+
+.cm-s-gambier-dark #wizard.visible {
+  outline: none;
+  opacity: 1;
+  transition: opacity var(--show);
+  transition-timing-function: ease-in;
+}
+
+.cm-s-gambier-dark #wizard.error {
+  border: 1px solid rgba(255, 0, 0, 0.5);
+}
+
+.cm-s-gambier-dark #wizard #contents.reference {
+  margin-bottom: 0.5em;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.5em;
+  border-radius: 0.2em;
+}
+
+.cm-s-gambier-dark #wizard #contents :disabled {
+  opacity: 0.5;
+}
+
+.cm-s-gambier-dark #wizard header {
+  display: flex;
+}
+
+.cm-s-gambier-dark #wizard header h1 {
+  flex-grow: 1;
+  margin: 0;
+  padding: 0.5em 0 0;
+}
+
+.cm-s-gambier-dark #wizard h1,
+.cm-s-gambier-dark #wizard h2,
+.cm-s-gambier-dark #wizard label,
+.cm-s-gambier-dark #wizard input {
+  margin: 0;
+  font-size: var(--font-sml-1);
+  line-height: var(--grid-three-quarters);
+}
+
+.cm-s-gambier-dark #wizard h1,
+.cm-s-gambier-dark #wizard h2 {
+  padding-bottom: var(--grid-quarter);
+}
+
+.cm-s-gambier-dark #wizard label {
+  padding-bottom: var(--grid-eighth);
+}
+
+.cm-s-gambier-dark #wizard input {
+  margin-bottom: var(--grid-quarter);
+}
+
+.cm-s-gambier-dark #wizard textarea {
+  display: block;
+  width: 100%;
+  font-size: var(--font-sml-1);
+  padding: var(--grid-sixth);
+}
+
+.cm-s-gambier-dark #wizard label {
+  display: block;
+}
+
+.cm-s-gambier-dark #wizard label:not([required]) {
+  opacity: 0.5;
+}
+
+.cm-s-gambier-dark #wizard label:not([required])::after {
+  content: "Optional";
+  font-style: italic;
+}
+
+.cm-s-gambier-dark #wizard input {
+  border-radius: 0.15em;
+  width: 100%;
+}
+
+.cm-s-gambier-dark .CodeMirror-cursor {
+  border-left: 1px solid gray;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.quote {
+  color: var(--clr-blue);
+  font-style: italic;
+  text-indent: -0.85em;
+  padding-left: 1em;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.quote::first-letter {
+  color: var(--clr-blue-light);
+}
+
+.cm-s-gambier-dark .cm-citation {
+  background-color: lightgoldenrodyellow;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.cm-s-gambier-dark .cm-citation.cm-key {
+  text-decoration: underline;
+  color: black;
+}
+
+.cm-s-gambier-dark .citation {
+  color: rgba(0, 0, 0, 0.5);
+  background-color: lightgoldenrodyellow;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.cm-s-gambier-dark .cm-code {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
+  background-color: #e7f9e8;
+  color: #13570b;
+  padding: 0.1em 0 0.2em;
+}
+
+.cm-s-gambier-dark .cm-code.cm-md {
+  color: #4db14c;
+}
+
+.cm-s-gambier-dark .cm-em {
+  color: var(--clr-blue);
+  font-style: italic;
+}
+
+.cm-s-gambier-dark .cm-em.cm-flank {
+  color: var(--clr-blue-light);
+}
+
+.cm-s-gambier-dark .CodeMirror-line.fencedcodeblock {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
+  background-color: rgba(214, 214, 214, 0.5) !important;
+}
+
+.cm-s-gambier-dark .widget.cm-footnote {
+  font-weight: normal;
+}
+
+.cm-s-gambier-dark .widget.cm-footnote:before {
+  content: "fn";
+}
+
+.cm-s-gambier-dark .widget.cm-footnote.highlight {
+  background-color: rgba(171, 80, 152, 0.5);
+}
+
+.cm-s-gambier-dark .cm-footnote {
+  background-color: rgba(219, 178, 211, 0.5);
+}
+
+.cm-s-gambier-dark .CodeMirror-line.footnote-reference-definition,
+.cm-s-gambier-dark .CodeMirror-line.footnote-reference-definition-continued {
+  background-color: rgba(241, 186, 231, 0.2) !important;
+  font-style: italic !important;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.frontmatter {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.cm-s-gambier-dark .header {
+  color: var(--clr-gray-lighter);
+}
+
+.cm-s-gambier-dark .header.h1 {
+  font-weight: 700;
+}
+
+.cm-s-gambier-dark .header.h2 {
+  font-weight: 700;
+}
+
+.cm-s-gambier-dark .header.h3 {
+  font-weight: 500;
+}
+
+.cm-s-gambier-dark .header.h3, .cm-s-gambier-dark .header.h4, .cm-s-gambier-dark .header.h5, .cm-s-gambier-dark .header.h6 {
+  color: #9c9c9c;
+}
+
+.cm-s-gambier-dark .cm-header-1 {
+  text-decoration: underline;
+}
+
+.cm-s-gambier-dark .cm-header-1::first-letter {
+  text-decoration: none;
+}
+
+.cm-s-gambier-dark .cm-header-1.cm-header-hash {
+  text-decoration: none;
+}
+
+.cm-s-gambier-dark .cm-header-3 {
+  font-weight: normal;
+  font-style: italic;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.hr {
+  background-color: rgba(198, 198, 198, 0.2) !important;
+}
+
+.cm-s-gambier-dark .cm-image {
+  background-color: rgba(241, 188, 127, 0.5) !important;
+}
+
+.cm-s-gambier-dark .widget.cm-image {
+  padding: 0 0.4em;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.figure {
+  background-color: rgba(241, 188, 127, 0.2) !important;
+}
+
+.cm-s-gambier-dark .widget.cm-link {
+  color: var(--clr-blue);
+  border-color: var(--clr-blue-light);
+  font-weight: normal;
+}
+
+.cm-s-gambier-dark .widget.cm-link.highlight {
+  color: white;
+  background-color: var(--clr-blue);
+  border-color: var(--clr-blue);
+}
+
+.cm-s-gambier-dark .cm-link,
+.cm-s-gambier-dark .cm-autolink-url,
+.cm-s-gambier-dark .cm-autolink-email {
+  background-color: var(--clr-blue-lighter);
+  text-decoration: none;
+}
+
+.cm-s-gambier-dark .cm-reference.cm-label {
+  font-weight: bold;
+}
+
+.cm-s-gambier-dark .cm-reference.cm-label.widget {
+  font-weight: normal;
+}
+
+.cm-s-gambier-dark .cm-image.cm-url,
+.cm-s-gambier-dark .cm-link.cm-url {
+  opacity: 0.8;
+  color: var(--clr-blue);
+  text-decoration: underline;
+}
+
+.cm-s-gambier-dark .cm-image.cm-title,
+.cm-s-gambier-dark .cm-link.cm-title {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.cm-s-gambier-dark .cm-link.cm-url:hover {
+  opacity: 1;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.link-reference-definition {
+  background-color: rgba(232, 242, 255, 0.4) !important;
+  font-style: italic !important;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.list-1 .list-marker,
+.cm-s-gambier-dark .CodeMirror-line.list-2 .list-marker,
+.cm-s-gambier-dark .CodeMirror-line.list-3 .list-marker,
+.cm-s-gambier-dark .CodeMirror-line.list-4 .list-marker {
+  position: relative;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.list-1 .list-marker::before,
+.cm-s-gambier-dark .CodeMirror-line.list-2 .list-marker::before,
+.cm-s-gambier-dark .CodeMirror-line.list-3 .list-marker::before,
+.cm-s-gambier-dark .CodeMirror-line.list-4 .list-marker::before {
+  content: attr(data-marker);
+  color: var(--clr-blue);
+  user-select: none;
+  position: absolute;
+  left: -1em;
+}
+
+.cm-s-gambier-dark .taskOpen .cm-md,
+.cm-s-gambier-dark .taskClosed .cm-md {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
+}
+
+.cm-s-gambier-dark .CodeMirror-line.list-1 {
+  padding-left: 2em;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.list-2 {
+  padding-left: 4em;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.list-3 {
+  padding-left: 6em;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.list-4 {
+  padding-left: 8em;
+}
+
+.cm-s-gambier-dark .cm-texmath-inline {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
+  background-color: rgba(214, 214, 214, 0.5) !important;
+}
+
+.cm-s-gambier-dark .CodeMirror-line.texmath-display {
+  font-size: 0.9em;
+  font-family: "SFMono-Regular";
+  background-color: rgba(214, 214, 214, 0.5) !important;
+}
+
+.cm-s-gambier-dark .cm-strikethrough {
+  text-decoration: line-through;
+}
+
+.cm-s-gambier-dark .cm-md {
+  color: red;
+}
+
+.cm-s-gambier-dark .cm-strong {
+  color: var(--clr-blue);
+  font-weight: 700;
+}
+
+.cm-s-gambier-dark .cm-strong.cm-flank {
+  color: var(--clr-blue-light);
+}
+
+.cm-s-gambier-dark.CodeMirror {
+  background-color: #fff;
+  color: #24292e;
+}
+
+.cm-s-gambier-dark .CodeMirror-cursor {
+  border-left: 1px solid #24292e;
+}
+
+.cm-s-gambier-dark .CodeMirror-gutters {
+  background: #fff;
+  color: #24292e;
+  border: none;
+}
+
+.cm-s-gambier-dark .CodeMirror-guttermarker,
+.cm-s-gambier-dark .CodeMirror-guttermarker-subtle,
+.cm-s-gambier-dark .CodeMirror-linenumber {
+  color: #fff;
+}
+
+.cm-s-gambier-dark.CodeMirror-focused div.CodeMirror-selected {
+  background: #b2d7ff;
+}
+
+.cm-s-gambier-dark div.CodeMirror-selected {
+  background: #f0f0f0;
+}
+
+.cm-s-gambier-dark .cm-atom {
+  color: #219;
+}
+
+.cm-s-gambier-dark .cm-attribute {
+  color: #00c;
+}
+
+.cm-s-gambier-dark .cm-bracket {
+  color: #997;
+}
+
+.cm-s-gambier-dark .cm-builtin {
+  color: #30a;
+}
+
+.cm-s-gambier-dark .cm-comment {
+  color: #a50;
+}
+
+.cm-s-gambier-dark .cm-def {
+  color: #00f;
+}
+
+.cm-s-gambier-dark .cm-error {
+  color: #f00;
+}
+
+.cm-s-gambier-dark .cm-keyword {
+  color: #708;
+}
+
+.cm-s-gambier-dark .cm-meta {
+  color: #555;
+}
+
+.cm-s-gambier-dark .cm-negative {
+  color: #d44;
+}
+
+.cm-s-gambier-dark .cm-number {
+  color: #164;
+}
+
+.cm-s-gambier-dark .cm-positive {
+  color: #292;
+}
+
+.cm-s-gambier-dark .cm-qualifier {
+  color: #555;
+}
+
+.cm-s-gambier-dark .cm-string {
+  color: #a11;
+}
+
+.cm-s-gambier-dark .cm-string-2 {
+  color: #f50;
+}
+
+.cm-s-gambier-dark .cm-tag {
+  color: #170;
+}
+
+.cm-s-gambier-dark .cm-type {
+  color: #085;
+}
+
+.cm-s-gambier-dark .cm-variable-2 {
+  color: #05a;
+}
+
+.cm-s-gambier-dark .cm-variable-3 {
+  color: #085;
+}
+
+/*# sourceMappingURL=gambier-dark.css.map */

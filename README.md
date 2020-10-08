@@ -25,22 +25,20 @@ Bracket closing is enabled by the [closebrackets](https://codemirror.net/doc/man
 Style the app UI with:
 
 * App.scss: 
-  * Lives in `src/styles/app.scss`, imports `src/styles/_variables.scss`, and compiles to `app/styles/app.css`.
+  * For basic non-themeable styles.
+  * Lives in `src/styles/app.scss`. Compiles to `app/styles/app.css`.
   * Linked from `index.html`.
-* Indivual Svelte components
-  * Define their own encapsulated styles. 
-  * Can also import `_variables.scss`, using [this approach](https://medium.com/@sean_27490/svelte-sapper-with-sass-271fff662da9).
 
-Style the editor with:
+* Theme stylesheets
+  * For unique theme-specific styles.
+  * Edit in `src/styles/themes/`. Compiles to `app/styles/themes/`
+  * Each theme's .css file must live in folder of the same name. E.g. `solaris` folder contains `solaris.css`. 
+  * The top-level theme class must follow convention format `.cm-s-[name]`. E.g. `.cm-s-solaris`. Per the CodeMirror [requirements](https://codemirror.net/doc/manual.html#option_theme).
+  * Non-editor-specific styles can live in top-level of stylesheet.
+  * Is loaded into the app by `setTheme` function in renderer.js. It detects `state.theme` changes, and inserts the new theme's `href` into the `<link rel="stylesheet" id="theme-stylesheet" href="">` element in the head of index.html.
+  * Is applied to CodeMirror by Editor.svelte. It detects `state.theme` changes, and sets the new `state.theme` value (e.g. 'gambier-light') on our CodeMirror instance: `cm.setOption('theme', state.theme)`. This adds `.cm-s-gambier-light` to the class list of the top-level Editor element.
 
-* Editor themes
-  * Live in `src/styles/editor/`. Compile to `app/styles/themes/.` 
-  * All themes are linked from `index.html`. 
-  * Saved in state in `editorTheme` string.
-
-Regarding themes, per the CodeMirror [docs](https://codemirror.net/doc/manual.html#option_theme)
-
-> The theme to style the editor with. You must make sure the CSS file defining the corresponding `.cm-s-[name]` styles is loaded (see the theme directory in the distribution). The default is "default", for which colors are included in codemirror.css. It is possible to use multiple theming classes at once—for example "foo bar" will assign both the cm-s-foo and the cm-s-bar classes to the editor.
+Note: We're not using styles inside Svelte components currently (2/10/2020). Because it makes themeing unnecessarily hard. Once we have a better understanding of what is consistent between themes, we can extract non-changing styles into component styles, and/or app.scss.
 
 ## Editor Widgets
 

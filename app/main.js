@@ -55,8 +55,8 @@ const storeDefault = {
   showFilesList: true,
   sourceMode: false,
 
-  // Editor theme
-  editorTheme: 'gambier-light',
+  // App theme. See Readme.
+  theme: 'gambier-light',
 
   // User specified path to folder containing their project files
   projectPath: '',
@@ -472,23 +472,24 @@ async function reducers(state = {}, action) {
       break
     }
 
-    // -------- EDITOR -------- //
-
-    case 'LOAD_PATH_IN_EDITOR': {
-      newState.editingFileId = action.id;
-      newState.changed.push('editingFileId');
+    case 'SELECT_THEME': {
+      newState.theme = action.theme;
+      newState.changed.push('theme');
       break
     }
+
+
+    // -------- EDITOR -------- //
+
+    // case 'LOAD_PATH_IN_EDITOR': {
+    //   newState.editingFileId = action.id
+    //   newState.changed.push('editingFileId')
+    //   break
+    // }
 
     case 'SET_SOURCE_MODE': {
       newState.sourceMode = action.active;
       newState.changed.push('sourceMode');
-      break
-    }
-
-    case 'SELECT_EDITOR_THEME': {
-      newState.editorTheme = action.theme;
-      newState.changed.push('editorTheme');
       break
     }
 
@@ -1086,30 +1087,29 @@ function setup(gambierStore) {
           type: 'SET_SOURCE_MODE',
           active: !state.sourceMode,
         });
-        // focusedWindow.webContents.send('mainRequestsToggleSource', item.checked)
       }
     }
   });
 
-  var select_editor_theme_dark = new electron.MenuItem({
+  var SELECT_THEME_dark = new electron.MenuItem({
     label: 'Dark',
     type: 'checkbox',
-    checked: state.editorTheme == 'gambier-dark',
+    checked: state.theme == 'gambier-dark',
     click(item, focusedWindow) {
       store.dispatch({
-        type: 'SELECT_EDITOR_THEME',
+        type: 'SELECT_THEME',
         theme: 'gambier-dark',
       });
     }
   });
 
-  var select_editor_theme_light = new electron.MenuItem({
+  var SELECT_THEME_light = new electron.MenuItem({
     label: 'Light',
     type: 'checkbox',
-    checked: state.editorTheme == 'gambier-light',
+    checked: state.theme == 'gambier-light',
     click() {
       store.dispatch({
-        type: 'SELECT_EDITOR_THEME',
+        type: 'SELECT_THEME',
         theme: 'gambier-light',
       });
     }
@@ -1124,8 +1124,8 @@ function setup(gambierStore) {
         {
           label: 'Theme',
           submenu: [
-            select_editor_theme_dark,
-            select_editor_theme_light
+            SELECT_THEME_dark,
+            SELECT_THEME_light
           ]
         },
         { type: 'separator' },
@@ -1223,9 +1223,9 @@ function setup(gambierStore) {
     }
   });
 
-  store.onDidChange('editorTheme', () => {
-    select_editor_theme_dark.checked = state.editorTheme == 'gambier-dark';
-    select_editor_theme_light.checked = state.editorTheme == 'gambier-light';
+  store.onDidChange('theme', () => {
+    SELECT_THEME_dark.checked = state.theme == 'gambier-dark';
+    SELECT_THEME_light.checked = state.theme == 'gambier-light';
   });
 
 
@@ -1734,8 +1734,10 @@ const avFormats = [
 // -------- Variables -------- //
 
 // Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
-let win = undefined;
-let store$2 = undefined;
+let win = null;
+let store$2 = null;
+let canQuitAppSafely = false;
+let canCloseWindowSafely = false;
 
 // -------- Process variables -------- //
 
@@ -1764,6 +1766,7 @@ require('electron-reload')(watchAndReload, {
   //   pollInterval: 50
   // },
   electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+  hardResetMethod: 'exit'
   // argv: ['--inspect=5858'],
 });
 
@@ -1779,12 +1782,12 @@ store$2 = new Store();
 
 // Setup store change listeners
 store$2.onDidAnyChange((newState, oldState) => {
-  if (win !== undefined) {
+  if (win !== undefined && electron.BrowserWindow.getAllWindows().length) {
     win.webContents.send('stateChanged', newState, oldState);
   }
 });
 
-// TEMP
+// TODO: Temporarily setting projectPath here, manually, in code.
 store$2.set('projectPath', '/Users/josh/Desktop/Test notes');
 
 // Do initial project map, if projectPath has been set)
@@ -1795,13 +1798,45 @@ if (store$2.store.projectPath !== '') {
 // Create watcher
 setup$1(store$2);
 
+// Send `appQuit` to renderer on quit
+electron.app.on('before-quit', (evt) => {
+  // If `canQuitAppSafely` is false, prevent window closing and prompt renderer to save file.
+  if (!canQuitAppSafely && win !== undefined) {
+    evt.preventDefault();
+    win.webContents.send('mainWantsToQuitApp');
+  } else {
+    // Reset and close
+    canQuitAppSafely = false;
+  }
+});
+
+// All windows closed
+electron.app.on('window-all-closed', () => {
+  console.log('window-all-closed');
+  // "On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q" — https://www.geeksforgeeks.org/save-files-in-electronjs/
+  if (process.platform !== 'darwin') {
+    electron.app.quit();
+  }
+});
+
+// MacOS-only: "Emitted when the application is activated. Various actions can trigger this event, such as launching the application for the first time, attempting to re-launch the application when it's already running, or clicking on the application's dock or taskbar icon." — https://github.com/electron/electron/blob/master/docs/api/app.md#event-activate-macos
+electron.app.on('activate', (evt, hasVisibleWindows) => {
+  console.log('activate');
+  // "On macOS it's common to re-create a window in the app when the dock icon is clicked and there are no other windows open." — https://www.geeksforgeeks.org/save-files-in-electronjs/
+  if (!hasVisibleWindows) {
+    createWindow();
+  }
+  // if (BrowserWindow.getAllWindows().length === 0) {
+  //   createWindow()
+  // }
+});
 
 // -------- Create window -------- //
 
 function createWindow() {
 
   win = new electron.BrowserWindow({
-    show: true,
+    show: false,
     width: 1600,
     height: 900,
     vibrancy: 'sidebar',
@@ -1824,19 +1859,33 @@ function createWindow() {
     }
   });
 
+  win.on('close', (evt) => {
+    // If `canCloseWindowSafely` is false, 
+    if (!canCloseWindowSafely) {
+      evt.preventDefault();
+      win.webContents.send('mainWantsToCloseWindow');
+    } else {
+      // Reset and close
+      canCloseWindowSafely = false;
+    }
+  });
+
   // Open DevTools
   win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'));
-
+  
   // Setup menu bar
   setup(store$2);
-
+  
+  // NOTE: We're not using this. Instead, we're calling `win.show()` from renderer, via IPC call.
   // Send state to render process once dom is ready
   // win.once('ready-to-show', () => {
+  //   win.show()
   // })
 }
+
 
 
 // -------- Kickoff -------- //
@@ -1847,8 +1896,23 @@ electron.app.allowRendererProcessReuse = true;
 electron.app.whenReady().then(createWindow);
 
 
+// -------- IPC: Renderer "sends" to Main -------- //
 
-// -------- IPC: Send/Receive -------- //
+electron.ipcMain.on('saveFileThenCloseWindow', async (event, path, data) => {
+  await fsExtra.writeFile(path, data, 'utf8');
+  canCloseWindowSafely = true;
+  win.close();
+});
+
+electron.ipcMain.on('saveFileThenQuitApp', async (event, path, data) => {
+  await fsExtra.writeFile(path, data, 'utf8');
+  canQuitAppSafely = true;
+  electron.app.quit();
+});
+
+electron.ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
+  electron.shell.openExternal(url);
+});
 
 electron.ipcMain.on('showWindow', (event) => {
   win.show();
@@ -1894,6 +1958,41 @@ electron.ipcMain.on('dispatch', async (event, action) => {
 
 
 // -------- IPC: Invoke -------- //
+
+electron.ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
+  // return path.resolve(basePath, filepath)
+
+  /*
+  Element: Image, link, backlink, link reference definition
+  File type: directory, html, png|jpg|gif, md|mmd|markdown
+  */
+
+  console.log('- - - - - -');
+  // console.log(pathToCheck.match(/.{0,2}\//))
+  const directory = path.parse(docPath).dir;
+  const resolvedPath = path.resolve(directory, pathToCheck);
+
+  const docPathExists = await fsExtra.pathExists(docPath);
+  const pathToCheckExists = await fsExtra.pathExists(pathToCheck);
+  const resolvedPathExists = await fsExtra.pathExists(resolvedPath);
+
+  console.log('docPath: ', docPath);
+  console.log('pathToCheck: ', pathToCheck);
+  console.log('resolvedPath: ', resolvedPath);
+  console.log(docPathExists, pathToCheckExists, resolvedPathExists);
+
+  // if (pathToCheck.match(/.{0,2}\//)) {
+  //   console.log()
+  // }
+});
+
+electron.ipcMain.handle('getResolvedPath', async (event, basePath, filepath) => {
+  return path.resolve(basePath, filepath)
+});
+
+electron.ipcMain.handle('getParsedPath', async (event, filepath) => {
+  return path.parse(filepath)
+});
 
 electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
   const exists = await fsExtra.pathExists(filepath);

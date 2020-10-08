@@ -23,18 +23,6 @@
 </script>
 
 <style type="text/scss">
-  @import "../../../styles/_variables.scss";
-
-  .flexLayout {
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
-
-  #mainSection {
-    width: 100%;
-    height: 100%;
-  }
 </style>
 
 <svelte:options accessors />
@@ -42,7 +30,7 @@
 {#if state.projectPath == ''}
   <FirstRun />
 {:else}
-  <div class="flexLayout">
+  <div id="flexLayout">
     <FlexPanel
       visible={state.sideBar.show}
       min={160}
@@ -60,11 +48,9 @@
         <DocList {state} {oldState} />
       </FlexPanel>
     {/if}
-    <div id="mainSection">
-        <Editor
-          state={state}
-          visible={isEditorVisible}
-          on:click={() => setLayoutFocus('editor')} />
-    </div>
+    <Editor
+      state={state}
+      visible={isEditorVisible}
+      on:click={() => setLayoutFocus('editor')} />
   </div>
 {/if}

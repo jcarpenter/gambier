@@ -3,9 +3,9 @@
     <head>
         <meta charset="UTF-8">
         <title>Gambier</title>
-        <!-- Per: https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline' 'self'">
-        <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+
+        <!-- Security: https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src * ;style-src 'unsafe-inline' 'self'">
 
         <!-- CodeMirror (UMD module, exports `CodeMirror` to global namespace) -->
         <script src="./js/third-party/codemirror/lib/codemirror.js"></script>
@@ -34,11 +34,9 @@
         <!-- Turndown (ES6 module) -->
         <script src="./js/third-party/turndown/turndown.es.js" type="module"></script>
 
-        <!-- CSS: App UI -->
+        <!-- Styles -->
         <link rel="stylesheet" href="./styles/app.css">
-        <!-- CSS: Editor themes -->
-        <link rel="stylesheet" href="./styles/editor/gambier-dark.css">
-        <link rel="stylesheet" href="./styles/editor/gambier-light.css">
+        <link rel="stylesheet" id="theme-stylesheet" href="">
     </head>
     <body>
 
@@ -47,12 +45,6 @@
         <!--<div id="bracketsWidget" style="display: none">Choose</div>-->
 
         <!--<span class="cm-citation-collapsed"><button class="icon"></button><div class="popup" tabindex="0"><header><h1>Citation</h1><span class="instructions"><span class="update">Enter to Update, </span>Esc to Cancel</span></header><p class="wrapper"></p><p contenteditable="true" class="input"></p></div><div class="tooltip"></div></span>-->
-
-        <!--<div id="folders"></div>
-        <div id="files"></div>
-        <div id="editor">
-            <textarea style="display: none;"></textarea>
-        </div>-->
 
         <script src="./js/renderer.js" type="module"></script>
     </body>

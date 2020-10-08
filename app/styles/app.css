@@ -88,6 +88,7 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 #layout {
@@ -97,10 +98,260 @@ body {
   padding: 0;
 }
 
+#flexLayout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.flexPanel {
+  height: 100%;
+  overflow-x: hidden;
+  position: relative;
+  display: none;
+}
+
+.flexPanel.visible {
+  display: block;
+}
+
+.flexPanel .divider {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(50%, 0);
+  width: 8px;
+  height: 100%;
+  z-index: 200;
+  cursor: ew-resize;
+}
+
+#firstrun {
+  padding: var(--grid-2);
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  position: fixed;
+  background-color: white;
+}
+
+#firstrun h1 {
+  font-family: 'SF Pro Display';
+  font-weight: bold;
+  font-size: 20px;
+  line-height: 24px;
+  letter-spacing: -0.12px;
+}
+
+#firstrun h2 {
+  font: caption;
+  font-weight: normal;
+  font-size: 13px;
+  line-height: 15px;
+  letter-spacing: -0.08px;
+  color: gray;
+  margin: 4em 0 1em;
+}
+
+#firstrun button {
+  font: caption;
+  font-weight: normal;
+  font-size: 13px;
+  line-height: 15px;
+  letter-spacing: -0.08px;
+}
+
+#sidebar {
+  width: 100%;
+  height: 100%;
+  background-color: lightgray;
+  overflow-y: scroll;
+  position: relative;
+  border-right: 1px solid black;
+  user-select: none;
+}
+
+#sidebar.focused {
+  background-color: red;
+}
+
+#sidebar .title {
+  font: caption;
+  font-weight: bold;
+  font-size: 11px;
+  line-height: 13px;
+  letter-spacing: 0.07px;
+  margin: 15px 0 0 9px;
+}
+
+#sidebar .title:first-of-type {
+  margin-top: 9px;
+}
+
+.sideBarItem {
+  overflow: hidden;
+  position: relative;
+}
+
+.sideBarItem #flex-row {
+  margin-top: 2px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.sideBarItem .selected > #flex-row {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.sideBarItem #disclosure-triangle {
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  margin-left: 4px;
+  width: 13px;
+  height: 13px;
+  background-color: transparent;
+}
+
+.sideBarItem #disclosure-triangle img {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+.sideBarItem #disclosure-triangle.expandable img {
+  display: inline;
+}
+
+.sideBarItem #disclosure-triangle.expanded img {
+  transform: rotate(90deg);
+}
+
+.sideBarItem [data-nestDepth="1"] #disclosure-triangle {
+  margin-left: calc(4px + calc(16px * 1));
+}
+
+.sideBarItem [data-nestDepth="2"] #disclosure-triangle {
+  margin-left: calc(4px + calc(16px * 2));
+}
+
+.sideBarItem [data-nestDepth="3"] #disclosure-triangle {
+  margin-left: calc(4px + calc(16px * 3));
+}
+
+.sideBarItem #icon {
+  margin-left: 4px;
+  width: 18px;
+  height: 18px;
+}
+
+.sideBarItem #label {
+  font: caption;
+  font-weight: normal;
+  font-size: 13px;
+  line-height: 15px;
+  letter-spacing: -0.08px;
+  white-space: nowrap;
+  overflow: hidden;
+  margin-left: 6px;
+  flex: 1;
+}
+
+.sideBarItem #children {
+  height: 0;
+}
+
+.sideBarItem #children.expanded {
+  height: auto;
+}
+
+#docList {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+}
+
+#docList #header {
+  margin: 0;
+  padding: 0.5rem;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+  width: 100%;
+  z-index: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  height: 2rem;
+}
+
+#docList #header h1 {
+  font: caption;
+  font-weight: normal;
+  font-size: 13px;
+  line-height: 15px;
+  letter-spacing: -0.08px;
+  font-weight: bold;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+}
+
+#docList #header:hover #sorting-options {
+  display: block;
+}
+
+#docList #sorting-options {
+  font: caption;
+  font-weight: normal;
+  font-size: 11px;
+  line-height: 13px;
+  letter-spacing: 0.07px;
+  display: none;
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  transform: translate(0%, -50%);
+  background: white;
+  box-shadow: 0px 0px 15px 20px white;
+}
+
+#docList #sorting-options select {
+  font: caption;
+  font-weight: normal;
+  font-size: 11px;
+  line-height: 13px;
+  letter-spacing: 0.07px;
+  font-weight: bold;
+}
+
+#docList #docs {
+  width: 100%;
+  flex-grow: 1;
+  overflow-y: scroll;
+  border-right: 1px solid black;
+  padding: 0;
+  user-select: none;
+}
+
+#editor {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
 .CodeMirror {
   width: 100%;
   height: 100%;
-  background: #fff;
+  overflow: hidden;
   font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
   font-size: var(--font-sml-1);
   line-height: var(--baseLineHeight);

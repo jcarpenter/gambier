@@ -2,29 +2,29 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // Whitelist channels
 
-// Renderer --> Main
-let validSendChannels = ['hideWindow', 'showWindow', 'dispatch']
+// Renderer "receives" from Main
+let validReceiveChannels = ['mainWantsToCloseWindow', 'mainWantsToQuitApp', 'mainRequestsSaveFile', 'mainRequestsDeleteFile', 'stateChanged']
 
-// Main --> Renderer
-let validReceiveChannels = ['mainRequestsToggleSource', 'mainRequestsSaveFile', 'mainRequestsDeleteFile', 'stateChanged']
+// Renderer "sends" to Main
+let validSendChannels = ['saveFileThenCloseWindow', 'saveFileThenQuitApp', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch']
 
-// Renderer --> Main --> Renderer
-let validInvokeChannels = ['ifPathExists', 'getState', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard']
+// Round trip: Renderer --> Main --> Renderer
+let validInvokeChannels = ['getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getState', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard']
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 contextBridge.exposeInMainWorld(
   'api',
   {
-    send: (channel, ...args) => {
-      if (validSendChannels.includes(channel)) {
-        ipcRenderer.send(channel, ...args)
-      }
-    },
-
     receive: (channel, func) => {
       if (validReceiveChannels.includes(channel)) {
         // Deliberately strip event as it includes `sender` 
         ipcRenderer.on(channel, (event, ...args) => func(...args))
+      }
+    },
+
+    send: (channel, ...args) => {
+      if (validSendChannels.includes(channel)) {
+        ipcRenderer.send(channel, ...args)
       }
     },
 

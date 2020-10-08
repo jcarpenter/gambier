@@ -1,1 +1,0 @@
-Research by Ensia suggests that at least 100 U.S., European, and Asian nuclear power stations built just a few meters above sea level could be threatened by serious caused by accelerating sea-level rise and more frequent storm surges.[@web-AreCoastalNuclear-18, pages 23]

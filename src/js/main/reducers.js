@@ -259,23 +259,24 @@ async function reducers(state = {}, action) {
       break
     }
 
-    // -------- EDITOR -------- //
-
-    case 'LOAD_PATH_IN_EDITOR': {
-      newState.editingFileId = action.id
-      newState.changed.push('editingFileId')
+    case 'SELECT_THEME': {
+      newState.theme = action.theme
+      newState.changed.push('theme')
       break
     }
+
+
+    // -------- EDITOR -------- //
+
+    // case 'LOAD_PATH_IN_EDITOR': {
+    //   newState.editingFileId = action.id
+    //   newState.changed.push('editingFileId')
+    //   break
+    // }
 
     case 'SET_SOURCE_MODE': {
       newState.sourceMode = action.active
       newState.changed.push('sourceMode')
-      break
-    }
-
-    case 'SELECT_EDITOR_THEME': {
-      newState.editorTheme = action.theme
-      newState.changed.push('editorTheme')
       break
     }
 

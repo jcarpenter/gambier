@@ -41,30 +41,6 @@
 </script>
 
 <style type="text/scss">
-  @import "../../../styles/_variables.scss";
-
-  #sidebar {
-    width: 100%;
-    height: 100%;
-    background-color: lightgray;
-    overflow-y: scroll;
-    position: relative;
-    border-right: 1px solid black;
-    user-select: none;
-
-    &.focused {
-      background-color: red;
-    }
-  }
-
-  .title {
-    @include label-normal-small-bold;
-    margin: 15px 0 0 9px;
-
-    &:first-of-type {
-      margin-top: 9px;
-    }
-  }
 </style>
 
 <div id="sidebar" class:focused>

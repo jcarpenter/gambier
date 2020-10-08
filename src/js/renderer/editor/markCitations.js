@@ -1,69 +1,31 @@
-import { getTextFromRange, replaceMarkWithElement } from './editor-utils'
+import { replaceMarkWithElement } from './editor-utils'
 import Citation from "../component/Citation.svelte";
 
-function Details() {
-  this.start;
-  this.end;
-  this.textStart;
-  this.textEnd;
-  this.text;
-}
-
 /**
- * For the specified line, find links, and for each found, create a new object with their details, push it into an array, and return the array.
- * See Link object (above) for what is included.
+ * Find and mark citations for the given line
  */
-function find(editor, lineNo, tokens) {
-
-  let hit
-  let hits = []
-
-  // Find open and closing tokens
-  for (const token of tokens) {
-    if (token.type !== null) {
-      if (token.type.includes('citation')) {
-        // console.log(token)
-        switch (token.string) {
-          case "[":
-            hit = new Details()
-            hit.start = token.start
-            hit.textStart = token.start
-            hits.push(hit)
-            break
-          case "]":
-            hit.textEnd = token.end
-            hit.text = getTextFromRange(editor, lineNo, hit.textStart + 1, hit.textEnd - 1)
-            break
-        }
-      }
-    }
-  }
-
-  return hits
-}
-
-
-/**
- * Find and mark links for the given line
- */
-export default function markCitations(editor, lineHandle, tokens) {
+export default function markCitations(editor, lineHandle, citations) {
   
-  const line = lineHandle.lineNo()
-  const citations = find(editor, line, tokens)
-  // console.log(citations)
   if (citations.length > 0) {
-    citations.map((c) => {
-
+    citations.forEach((c) => {
+      
       const frag = document.createDocumentFragment();
+
+      const text = c.text
+      let keys = []
+
+      // let key = c.children.find((c) => c.class.includes('key'))
+      // key = key ? key.text : "Default"
 
       const component = new Citation({
         target: frag,
         props: {
-          text: c.text,
+          text: text,
+          keys: keys
         }
       });
 
-      replaceMarkWithElement(editor, frag, line, c.start, c.end)
+      replaceMarkWithElement(editor, frag, lineHandle.lineNo(), c.start, c.end)
     })
   }
 }

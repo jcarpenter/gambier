@@ -131,30 +131,29 @@ function setup(gambierStore) {
           type: 'SET_SOURCE_MODE',
           active: !state.sourceMode,
         })
-        // focusedWindow.webContents.send('mainRequestsToggleSource', item.checked)
       }
     }
   })
 
-  var select_editor_theme_dark = new MenuItem({
+  var SELECT_THEME_dark = new MenuItem({
     label: 'Dark',
     type: 'checkbox',
-    checked: state.editorTheme == 'gambier-dark',
+    checked: state.theme == 'gambier-dark',
     click(item, focusedWindow) {
       store.dispatch({
-        type: 'SELECT_EDITOR_THEME',
+        type: 'SELECT_THEME',
         theme: 'gambier-dark',
       })
     }
   })
 
-  var select_editor_theme_light = new MenuItem({
+  var SELECT_THEME_light = new MenuItem({
     label: 'Light',
     type: 'checkbox',
-    checked: state.editorTheme == 'gambier-light',
+    checked: state.theme == 'gambier-light',
     click() {
       store.dispatch({
-        type: 'SELECT_EDITOR_THEME',
+        type: 'SELECT_THEME',
         theme: 'gambier-light',
       })
     }
@@ -169,8 +168,8 @@ function setup(gambierStore) {
         {
           label: 'Theme',
           submenu: [
-            select_editor_theme_dark,
-            select_editor_theme_light
+            SELECT_THEME_dark,
+            SELECT_THEME_light
           ]
         },
         { type: 'separator' },
@@ -268,9 +267,9 @@ function setup(gambierStore) {
     }
   })
 
-  store.onDidChange('editorTheme', () => {
-    select_editor_theme_dark.checked = state.editorTheme == 'gambier-dark'
-    select_editor_theme_light.checked = state.editorTheme == 'gambier-light'
+  store.onDidChange('theme', () => {
+    SELECT_THEME_dark.checked = state.theme == 'gambier-dark'
+    SELECT_THEME_light.checked = state.theme == 'gambier-light'
   })
 
 

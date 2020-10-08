@@ -164,8 +164,10 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {color: #a22;}
   overflow: scroll !important; /* Things will break if this is overridden */
   /* 50px is the magic margin used to hide the element's real scrollbars */
   /* See overflow: hidden in .CodeMirror */
-  margin-bottom: -50px; margin-right: -50px;
-  padding-bottom: 50px;
+  margin-right: -50px;
+  /* Josh 10/2: Disabled this because it was screwing up keeping cursor visible. When auto-scrolling to keep cursor visible, if we were scrolling down page, it wouldn't scroll far enough, and cursor was not visible. By about one line height. */
+  /* margin-bottom: -50px;  */
+  /* padding-bottom: 50px; */
   height: 100%;
   outline: none; /* Prevent dragging from highlighting the element */
   position: relative;
@@ -274,7 +276,9 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {color: #a22;}
   padding: 0.1px; /* Force widget margins to stay inside of the container */
 }
 
-.CodeMirror-widget {}
+.CodeMirror-widget {
+  z-index: 100;
+}
 
 .CodeMirror-rtl pre { direction: rtl; }
 

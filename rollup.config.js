@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import svelte from 'rollup-plugin-svelte'
-import autoPreprocess from 'svelte-preprocess'
+import sveltePreprocess from 'svelte-preprocess'
 
 export default [
   
@@ -40,7 +40,7 @@ export default [
     },
     plugins: [
       svelte({
-        preprocess: autoPreprocess(),
+        preprocess: sveltePreprocess(),
         generate: 'dom'
         // enable run-time checks when not in production
         // dev: !production,

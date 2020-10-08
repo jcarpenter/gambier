@@ -6,6 +6,7 @@ async function setup() {
 
   const initialState = await window.api.invoke('getState');
 
+  // Apply `Layout` svelte component
   const layout = new Layout({
     target: document.querySelector('#layout'),
     props: { 
@@ -15,21 +16,31 @@ async function setup() {
   });
 
   window.api.receive("stateChanged", (newState, oldState) => {
+    
+    // Update Layout component `state` assignments. This then ripples throughout the rest of the app, as each component passes the update state on to it's children, successively.
     layout.state = newState
     layout.oldState = oldState
+
+    // Update theme
+    if (newState.changed.includes("theme")) {
+      setTheme(newState.theme)
+    }
   });
 
+  // Set theme on initial load
+  setTheme(initialState.theme)
+
+  // Show the window once setup is done.
   window.api.send('showWindow')
 
-
-  // Editor.setup(initialState)
-
-  // // Set variable colors
-  // let test = getComputedStyle(document.documentElement)
-  //   .getPropertyValue('--clr-blue'); // #999999
-  //   console.log(test)
-
 }
+
+function setTheme(themeName) {
+  const stylesheet = document.getElementById('theme-stylesheet')
+  const href = `./styles/themes/${themeName}/${themeName}.css`
+  stylesheet.setAttribute('href', href)
+}
+
 window.addEventListener('DOMContentLoaded', setup)
 
 // function reloading() {

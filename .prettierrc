@@ -1,0 +1,13 @@
+{
+  "htmlWhitespaceSensitivity": "ignore",
+  "semi": false,
+  "singleQuote": true,
+  "svelteAllowShorthand": true,
+  "svelteBracketNewLine": false,
+  "svelteIndentScriptAndStyle": true,
+  "svelteSortOrder" : "scripts-styles-markup",
+  "svelteStrictMode": false,
+  "tabs": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+}

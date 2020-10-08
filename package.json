@@ -6,11 +6,12 @@
   "main": "./app/main.js",
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
-    "sass": "node-sass --watch src/styles -o app/styles --source-map true --output-style expanded",
+    "sass": "node-sass --watch --recursive src/styles -o app/styles --source-map true --output-style expanded",
     "rollup:dev": "rollup --config --watch",
     "rollup:build": "rollup --config",
-    "dev": "run-p sass rollup:dev",
-    "build": "run-p sass rollup:build",
+    "svg": "svgo -f src/styles -o app/styles --recursive",
+    "dev": "run-p sass svg rollup:dev",
+    "build": "run-p sass svg rollup:build",
     "start": "electron .",
     "pack": "electron-builder --dir",
     "release": "electron-builder"
@@ -64,6 +65,7 @@
     "sass": "^1.26.5",
     "svelte": "^3.22.3",
     "svelte-preprocess": "^3.7.4",
+    "svgo": "^1.3.2",
     "xml-js": "^1.6.11"
   }
 }

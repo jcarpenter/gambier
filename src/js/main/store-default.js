@@ -13,8 +13,8 @@ const storeDefault = {
   showFilesList: true,
   sourceMode: false,
 
-  // Editor theme
-  editorTheme: 'gambier-light',
+  // App theme. See Readme.
+  theme: 'gambier-light',
 
   // User specified path to folder containing their project files
   projectPath: '',

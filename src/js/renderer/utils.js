@@ -12,7 +12,6 @@ function getSideBarItemById(state, id) {
   }
 }
 
-
 /**
  * Check if object is empty" {}
  */

@@ -298,76 +298,11 @@
 </script>
 
 <style type="text/scss">
-  @import "../../../styles/_variables.scss";
-
-  #list {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    background-color: white;
-  }
-
-  #header {
-    margin: 0;
-    padding: 0.5rem;
-    border-right: 1px solid black;
-    border-bottom: 1px solid black;
-    width: 100%;
-    z-index: 1;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: space-between;
-    height: 2rem;
-
-    h1 {
-      @include label-normal;
-      font-weight: bold;
-      margin: 0;
-      padding: 0;
-      white-space: nowrap;
-    }
-
-    &:hover #sorting-options {
-      display: block;
-    }
-  }
-
-  #sorting-options {
-    @include label-normal-small;
-
-    display: none;
-    position: absolute;
-    right: 0.5em;
-    top: 50%;
-    transform: translate(0%, -50%);
-    background: white;
-    // padding-left: 0.5rem;
-    box-shadow: 0px 0px 15px 20px white;
-
-    select {
-      @include label-normal-small;
-      font-weight: bold;
-    }
-  }
-
-  #docs {
-    width: 100%;
-    flex-grow: 1;
-    overflow-y: scroll;
-    border-right: 1px solid black;
-    padding: 0;
-    user-select: none;
-  }
 </style>
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div id="list">
+<div id="docList">
   <div id="header">
     <h1>{sideBarItem.label}</h1>
     <div id="sorting-options">
