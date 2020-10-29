@@ -2,7 +2,9 @@
 
 An experimental markdown editor.
 
-## Keyboard Shortcuts
+## Features
+
+### Keyboard Shortcuts
 
 * `Shift-Cmd-K`: Delete line
 * `Cmd-L`: Select line
@@ -20,7 +22,52 @@ We use CodeMirror's [Sublime Keymap](https://codemirror.net/demo/sublime.html).
 
 Bracket closing is enabled by the [closebrackets](https://codemirror.net/doc/manual.html#addon_closebrackets) CodeMirror addon. 
 
-## Styling
+## MacOS Conformability
+
+We want to be a good citizen macOS app! We support the following features
+
+### Dark Mode
+
+* See: [Electron Docs: Supporting macOS Dark Mode](https://www.electronjs.org/docs/tutorial/mojave-dark-mode-guide)
+* User chooses between `Match System`, `Light`, or `Dark` in `View > Appearance`
+* `menuBar.js` dispatches `SET_APPEARANCE` action to reducers, which update store `appearance.userPref` and `appearance.theme` properties.
+* On store change...
+  * Listener in `main.js` sets `nativeTheme.themeSource` accordingly. Per [Electron docs](https://www.electronjs.org/docs/api/native-theme#nativethemethemesource), this tells Electron to render OS UI such as context menus, dev tools, etc in dark or light mode.
+  * Listener in `renderer.js` sets app stylesheet in `index.html` to `state.appearance.theme` value. If theme is `gambier-light`, for example, it sets `<link rel="stylesheet" id="theme-stylesheet" href="styles/themes/gambier-light.css">`.
+  * Listener in `Editor.svelte` sets CodeMirror theme to `state.appearance.theme` value. E.g. `cm.setOption('theme', state.appearance.theme)`. This adds `.cm-s-gambier-light` to the class list of the top-level Editor element.
+
+### App Icon
+
+* See: https://www.electron.build/icons
+* See: [Apple HIG: App Icon](https://developer.apple.com/design/human-interface-guidelines/macos/icons-and-images/app-icon/)  
+* Mac:  
+  * PNG.
+  * Color space: Display P3 (wide-gamut color), sRGB (color), or Gray Gamma 2.2 (grayscale)
+  * Layers: Flattened with transparency as appropriate
+  * Manually create icon alpha (e.g. rounded rect and drop shadow), and incude in export (as I understand it).
+  * Specify in `electron-builder.yml` settings, under mac key, ala `icon: "icon_512x512.png"`. Path is relative to the `assets` directory. Per https://www.electron.build/configuration/mac.
+* A Sketch macOS icon template is available from [Apple Design Resources](https://developer.apple.com/design/resources/).
+
+
+## Development
+
+### Project structure
+
+* `src` - Files that require processing (transpile / compile). Are output into `app`.
+* `app` - Files that don’t require further processing. Are ready to be packaged into our builds.
+* `assets` - Support assets for our builds. E.g. icons, marketing images, etc .
+* `dist` - Builds are output here.
+
+### Scripts
+
+* `npm run build` - Process files from `src`. Outputs to `app`.
+* `npm run start` - Load our app (from the `app` directory) in our local build of electron (from top-level `node_modules`). Any third-party dependency NPM packages are also loaded from `node_modules`.
+
+### Development-only code
+
+We use `if (!app.isPackaged) { ... }` to define code that should only be run if the app is NOT packaged (that is to say, in a development enviroment).
+
+### Styles
 
 Style the app UI with:
 
@@ -30,60 +77,30 @@ Style the app UI with:
   * Linked from `index.html`.
 
 * Theme stylesheets
-  * For unique theme-specific styles.
+  * For theme-specific styles.
   * Edit in `src/styles/themes/`. Compiles to `app/styles/themes/`
   * Each theme's .css file must live in folder of the same name. E.g. `solaris` folder contains `solaris.css`. 
-  * The top-level theme class must follow convention format `.cm-s-[name]`. E.g. `.cm-s-solaris`. Per the CodeMirror [requirements](https://codemirror.net/doc/manual.html#option_theme).
-  * Non-editor-specific styles can live in top-level of stylesheet.
-  * Is loaded into the app by `setTheme` function in renderer.js. It detects `state.theme` changes, and inserts the new theme's `href` into the `<link rel="stylesheet" id="theme-stylesheet" href="">` element in the head of index.html.
-  * Is applied to CodeMirror by Editor.svelte. It detects `state.theme` changes, and sets the new `state.theme` value (e.g. 'gambier-light') on our CodeMirror instance: `cm.setOption('theme', state.theme)`. This adds `.cm-s-gambier-light` to the class list of the top-level Editor element.
+  * CodeMirror-styles must live under a top-level `.cm-s-[name]` class. E.g. `.cm-s-solaris { ... }`. Per the CodeMirror [requirements](https://codemirror.net/doc/manual.html#option_theme).
 
 Note: We're not using styles inside Svelte components currently (2/10/2020). Because it makes themeing unnecessarily hard. Once we have a better understanding of what is consistent between themes, we can extract non-changing styles into component styles, and/or app.scss.
 
-## Editor Widgets
+### Dependencies
 
-* editor.js: `findAndMark`. "Find each citation in the specified line, and collape + replace them." 
-
-## Structure
-
-* `src` - Files that require processing (transpile / compile). Are output into `app`.
-* `app` - Files that don’t require further processing. Are ready to be packaged into our builds.
-* `assets` - Support assets for our builds. E.g. icons, marketing images, etc .
-* `dist` - Builds are output here.
-
-## Development
-
-* `npm run build` - Process files from `src`. Outputs to `app`.
-* `npm run start` - Load our app (from the `app` directory) in our local build of electron (from top-level `node_modules`). Any third-party dependency NPM packages are also loaded from `node_modules`.
-
-## Building executables and installers
-
-These commands bundle electron (the version specified in package.json `devDependencies`), `app`, `assets`, and any of our dependency npm packages into executables and distributable installers (e.g. dmg), and output to `dist`. 
-
-We use [electron-builder](https://www.electron.build) for the build. Per configurations in `electron-builder.yml` and `package.json`. Dependency copying is handled by `"postinstall": "electron-builder install-app-deps"` npm script, which runs automatically after `electron-builder` commands.
-
-* `npm run pack` - Builds just the executable, for just the local OS/architecture. Does not create installers, etc. Uses `--dir` electron-builder setting ([docs](https://www.electron.build/cli)). Useful for quickly testing.
-* `npm run release` - Builds both the executable for the local OS/architecture, and distributable installers.
-
-## Security
-
-Main and preload access sensitive low-level dependencies (electron, node, third party packages, etc). Render process code does not. It is isolated. It requests what it needs from main process via IPC channels exposed in preload. Render process code also cannot  `require` NPM packages.
-
-## Main process dependencies
+#### Main process
 
 * `main.js` and `preload.js` are output as CJS modules.
-* Third-party dependencies are not bundled. They live in `node_modules`. Electron-builder `postinstall` takes care of copying the dependencies at build time (see notes above).
 * I use ES6 module syntax (import/export) for sake of consistency with Render process code, so I'm using same syntax project-wide. Rollup then transpiles back to CommonJS.
+* Third-party NPM packages are not bundled. They live in `node_modules`. At build time, electron-builder `postinstall` script in package.json copies them into our build.
 
-## Render process dependencies
+#### Render process
 
-There are several options:
+There are several ways to work with dependencies in the render process:
 
 1. Bundle them with Rollup. Works for ES6 modules or NPM packages.
 2. Import at run time. Only works for ES6 modules.
 3. Load into and access from the global namespace. Works for UMD modules and (old-school) raw JS files.
 
-### Examples
+##### Examples
 
 Bundle with Rollup:
 
@@ -169,3 +186,24 @@ Load into and access from the global namespace.
 // Access the global name. No need to `import`
 console.log(CSL)
 ```
+
+## State
+
+TODO
+
+## Security
+
+Main and preload access sensitive low-level dependencies (electron, node, third party packages, etc). Render process code does not. It is isolated. It requests what it needs from main process via IPC channels exposed in preload. Render process code also cannot  `require` NPM packages.
+
+## Build
+
+### Scripts
+
+* `npm run pack` - Builds just the executable, for just the local OS/architecture. Does not create installers, etc. Uses `--dir` electron-builder setting ([docs](https://www.electron.build/cli)). Useful for quickly testing.
+* `npm run release` - Builds both the executable for the local OS/architecture, and distributable installers.
+
+These commands bundle electron (the version specified in package.json `devDependencies`), `app`, `assets`, and any of our dependency npm packages into the target executables and/or distributable installers (e.g. dmg) in `dist`. 
+
+We use [electron-builder](https://www.electron.build). Configure in `electron-builder.yml` and `package.json`. 
+
+NPM package dependencies are copied by `"postinstall": "electron-builder install-app-deps"` script in package.json. It runs automatically after `electron-builder` commands. It should also ensure that our dependencies match our electron version.

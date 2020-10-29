@@ -1,4 +1,5 @@
 @import "variables";
+@import "mixins";
 // @import "citation-collapsed";
 
 * {
@@ -63,45 +64,93 @@ body {
     background-color: white;
 
     h1 {
-      @include label-large-bold;
+        @include label-large-bold;
     }
 
     h2 {
-      @include label-normal;
-      color: gray;
-      margin: 4em 0 1em;
+        @include label-normal;
+        color: gray;
+        margin: 4em 0 1em;
     }
 
     button {
-      @include label-normal;
+        @include label-normal;
     }
-  }
-
+}
 
 // -------------- SIDEBAR -------------- //
 
 #sidebar {
     width: 100%;
     height: 100%;
-    background-color: lightgray;
     overflow-y: scroll;
     position: relative;
-    border-right: 1px solid black;
+    border-right: 1px solid var(--separatorColor);
     user-select: none;
+    background-color: var(--sidebarMaterial);
 
     &.focused {
         background-color: red;
     }
 
-    .title {
+    h1 {
         @include label-normal-small-bold;
         margin: 15px 0 0 9px;
+        color: var(--labelColor);
 
         &:first-of-type {
             margin-top: 9px;
         }
     }
 }
+
+// -------------- SIDEBAR 2-------------- //
+
+#sidebar2 {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    margin: 0;
+    padding: 40px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    & > div {
+        max-height: 100%;
+    }
+
+    header {
+        margin: 0 10px;
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        h1 {
+            @include label-normal;
+            font-weight: bold;
+            font-size: 13px;
+        }
+    }
+
+    
+
+    ul,
+    li {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    input[type="search"] {
+        border: none;
+        outline: none;
+        height: 20px;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.04);
+        border-radius: 4px;
+    }
+}
+
 
 .sideBarItem {
     overflow: hidden;
@@ -160,12 +209,11 @@ body {
 
     #label {
         @include label-normal;
-        white-space: nowrap;
-
-        overflow: hidden;
-
-        margin-left: 6px;
+        color: var(--labelColor);
         flex: 1;
+        margin-left: 6px;
+        overflow: hidden;
+        white-space: nowrap;
     }
 
     // Children
@@ -186,13 +234,16 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background-color: white;
+    backdrop-filter: brightness(0.4);
+    background-color: rgba(255, 255, 255, 0.1);
+    // background-color: rgba(255, 255, 255, 0.6);
+    // background-color: var(--windowBackgroundColor);
 
     #header {
         margin: 0;
         padding: 0.5rem;
-        border-right: 1px solid black;
-        border-bottom: 1px solid black;
+        border-right: 1px solid var(--separatorColor);
+        border-bottom: 1px solid var(--separatorColor);
         width: 100%;
         z-index: 1;
         position: relative;
@@ -209,6 +260,7 @@ body {
             margin: 0;
             padding: 0;
             white-space: nowrap;
+            color: var(--labelColor);
         }
 
         &:hover #sorting-options {
@@ -225,6 +277,7 @@ body {
         top: 50%;
         transform: translate(0%, -50%);
         background: white;
+        color: var(--labelColor);
         // padding-left: 0.5rem;
         box-shadow: 0px 0px 15px 20px white;
 
@@ -238,9 +291,58 @@ body {
         width: 100%;
         flex-grow: 1;
         overflow-y: scroll;
-        border-right: 1px solid black;
+        border-right: 1px solid var(--separatorColor);
         padding: 0;
         user-select: none;
+    }
+
+    .doc {
+        padding: 0.5em 1em 0.5em;
+        overflow-y: hidden;
+        border-bottom: 1px solid var(--separatorColor);
+        contain: content;
+
+        &:focus {
+            outline: none;
+        }
+    }
+
+    h2,
+    p {
+        margin: 0;
+        padding: 0;
+        pointer-events: none;
+        word-break: break-word;
+    }
+
+    h2 {
+        @include column;
+        color: var(--labelColor);
+    }
+
+    p {
+        @include column;
+        color: var(--secondaryLabelColor);
+        height: 4em;
+        // display: -webkit-box;
+        // -webkit-line-clamp: 3;
+        // -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .selected {
+        background-color: var(--unemphasizedSelectedContentBackgroundColor);
+    }
+
+    .focused.selected {
+        h2 {
+            color: var(--selectedMenuItemTextColor);
+        }
+        p {
+            color: var(--selectedMenuItemTextColor);
+            opacity: 0.8;
+        }
+        background-color: var(--controlAccentColor);
     }
 }
 

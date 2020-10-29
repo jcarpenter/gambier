@@ -14,6 +14,7 @@ export default async function (filePath, stats = undefined, parentId = '', exten
 		stats = await stat(filePath)
 	}
 
+	media.name = path.basename(filePath)
   media.filetype = extension == undefined ? path.extname(filePath) : extension
 	media.path = filePath
 	media.id = `media-${stats.ino}`

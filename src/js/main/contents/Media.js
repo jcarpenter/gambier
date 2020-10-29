@@ -1,4 +1,6 @@
 const Media = {
+  type: 'media',
+  name: '',
   filetype: '',
   path: '',
   id: '',

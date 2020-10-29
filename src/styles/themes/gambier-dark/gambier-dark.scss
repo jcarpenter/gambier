@@ -1,5 +1,95 @@
 @import "../../../styles/_variables.scss";
 
+:root {
+    
+    // -------------- Materials -------------- //
+    // Faking macOS materials
+   
+    --titlebarMaterial: rgba();
+    --selectionMaterial: rgba();
+    --menuMaterial: rgba();
+    --popoverMaterial: rgba();
+    --sidebarMaterial: rgba(255, 255, 255, 0);
+    --headerMaterial: rgba();
+    // Meant to be used for overlay sheets. Could simulate with blur effect.
+    --sheetMaterial: rgba();
+    --windowMaterial: rgba();
+    --hudMaterial: rgba();
+    --fullscreenMaterial-ui: rgba();
+    --tooltipMaterial: rgba();
+    --contentMaterial: rgba();
+
+    // -------------- System Colors -------------- //
+
+    --systemBlue: rgba(10, 132, 255, 1);
+    --systemBrown: rgba(172, 142, 104, 1);
+    --systemGray: rgba(152, 152, 157, 1);
+    --systemGreen: rgba(50, 215, 75, 1);
+    --systemIndigo: rgba(94, 92, 230, 1);
+    --systemOrange: rgba(255, 159, 10, 1);
+    --systemPink: rgba(255, 55, 95, 1);
+    --systemPurple: rgba(191, 90, 242, 1);
+    --systemRed: rgba(255, 69, 58, 1);
+    --systemTeal: rgba(100, 210, 255, 1);
+    --systemYellow: rgba(255, 214, 10, 1);
+
+    // -------------- Label Colors -------------- //
+
+    --labelColor: rgba(255, 255, 255, 0.847);
+    --secondaryLabelColor: rgba(255, 255, 255, 0.549);
+    --tertiaryLabelColor: rgba(255, 255, 255, 0.247);
+    --quaternaryLabelColor: rgba(255, 255, 255, 0.098);
+
+    // -------------- Text Colors -------------- //
+
+    --textColor: rgba(255, 255, 255, 1);
+    --placeholderTextColor: rgba(255, 255, 255, 0.247);
+    --selectedTextColor: rgba(255, 255, 255, 1);
+    --textBackgroundColor: rgba(30, 30, 30, 1);
+    --selectedTextBackgroundColor: rgba(63, 99, 139, 1);
+    --keyboardFocusIndicatorColor: rgba(26, 169, 255, 0.298);
+    --unemphasizedSelectedTextColor: rgba(255, 255, 255, 1);
+    --unemphasizedSelectedTextBackgroundColor: rgba(70, 70, 70, 1);
+
+    // -------------- Content Colors -------------- //
+
+    --linkColor: rgba(65, 156, 255, 1);
+    --separatorColor: rgba(255, 255, 255, 0.098);
+    --selectedContentBackgroundColor: rgba(0, 88, 208, 1);
+    --unemphasizedSelectedContentBackgroundColor: rgba(70, 70, 70, 1);
+
+    // -------------- Menu Colors -------------- //
+
+    --selectedMenuItemTextColor: rgba(255, 255, 255, 1);
+
+    // -------------- Table Colors -------------- //
+
+    --gridColor: rgba(255, 255, 255, 0.098);
+    --headerTextColor: rgba(255, 255, 255, 1);
+
+    // -------------- Control Colors -------------- //
+
+    --controlAccentColor: rgba(0, 122, 255, 1);
+    --controlColor: rgba(255, 255, 255, 0.247);
+    --controlBackgroundColor: rgba(30, 30, 30, 1);
+    --controlTextColor: rgba(255, 255, 255, 0.847);
+    --disabledControlTextColor: rgba(255, 255, 255, 0.247);
+    --selectedControlColor: rgba(63, 99, 139, 1);
+    --selectedControlTextColor: rgba(255, 255, 255, 0.847);
+    --alternateSelectedControlTextColor: rgba(255, 255, 255, 1);
+
+    // -------------- Window Colors -------------- //
+
+    --windowBackgroundColor: rgba(50, 50, 50, 1);
+    --windowFrameTextColor: rgba(255, 255, 255, 0.847);
+
+    // -------------- Highlight & Shadow Colors -------------- //
+
+    --findHighlightColor: rgba(255, 255, 0, 1);
+    --highlightColor: rgba(180, 180, 180, 1);
+    --shadowColor: rgba(0, 0, 0, 1);
+}
+
 .cm-s-gambier-dark {
     --clr-blue: rgb(13, 103, 220);
     --clr-blue-light: #b9d0ee;
@@ -70,50 +160,83 @@
 
     // -------------- Widget -------------- //
 
-    // Editable
+    // NOT editable:
+
+    .widget:not(.editable) {
+        // padding: 0 0.2em;
+    }
+
+    // Editable:
 
     .widget.editable {
-        border-width: 1px;
-        border-style: solid;
-        border-radius: 0.15em;
+        // box-sizing: content-box;
         text-decoration: none;
-        box-sizing: content-box;
 
         :focus {
             outline: none;
         }
+
+        &::before {
+            content: "|";
+            opacity: 0;
+        }
     }
 
-    .widget.editable {
-
-        &::before,
+    .widget.editable:not(.reference) {
         &::after {
             content: "|";
             opacity: 0;
         }
     }
 
-    .widget.reference .select {
-        border: 1px solid red;
-        background-image: url(img/down-arrow-notch.svg);
+    // Reference:
+
+    .widget.reference {
+        overflow-y: hidden;
     }
 
-    .widget:not(.editable) {
-        box-sizing: border-box;
-        padding: 0 0.2em;
-        border-width: 1px;
-        border-style: solid;
-        border-color: rgba(0, 0, 0, 0.1);
-        border-radius: 0.15em;
+    // .widget.reference::after {
+    //     content: " ";
+    //     background-image: url(img/down-arrow-notch.svg);
+    //     background-repeat: no-repeat;
+    //     background-position: center;
+    //     padding: 0 0.4em !important;
+    // }
+
+    .widget .select {
+        background-image: url(img/down-arrow-notch.svg);
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 60%;
+        padding: 0 0.5em !important;
+        opacity: 0.5;
+        // display: inline-block;
+        // height: 1em;
+        // width: 1em;
+        cursor: default;
+
+        &:hover {
+            // background-color: rgba(0, 0, 0, 0.2);
+            opacity: 0.8;
+        }
     }
+
+    .highlight.widget .select {
+        filter: brightness(100);
+    }
+
+    // Shared
 
     .widget.error {
         box-shadow: 0px 1px rgba(255, 0, 0, 0.5);
     }
 
-    // Shared
-
     .widget {
+        border-radius: 0.15em;
+        border-width: 1px;
+        border-style: solid;
+        border-color: rgba(0, 0, 0, 0.1);
+        // box-sizing: border-box;
         &:focus {
             // NOTE: Individual element set their own colors
             outline: none;
@@ -251,7 +374,6 @@
         }
 
         #contents {
-
             &.reference {
                 margin-bottom: 0.5em;
                 background-color: rgba(0, 0, 0, 0.05);
@@ -264,7 +386,6 @@
                 opacity: 0.5;
             }
         }
-
 
         header {
             display: flex;
@@ -433,19 +554,20 @@
     // Widget
 
     .widget.cm-footnote {
-        // color: var(--clr-blue);
-        // border-color: var(--clr-blue-light);
         font-weight: normal;
+        padding-left: 0.3em;
 
         &:before {
             content: "fn";
         }
 
         &.highlight {
-            // color: white;
             background-color: rgba(171, 80, 152, 0.5);
-            // border-color: var(--clr-blue);
         }
+    }
+
+    .widget.cm-footnote:not(.reference) {
+        padding-right: 0.3em;
     }
 
     // Inline
@@ -537,7 +659,11 @@
     }
 
     .widget.cm-image {
-        padding: 0 0.4em;
+        padding-left: 0.4em;
+    }
+
+    .widget.cm-image:not(.reference) {
+        padding-right: 0.4em;
     }
 
     .CodeMirror-line.figure {
@@ -548,7 +674,7 @@
 
     // Widget
 
-    .widget.cm-link {
+    .widget.cm-link:not(.select) {
         color: var(--clr-blue);
         border-color: var(--clr-blue-light);
         font-weight: normal;

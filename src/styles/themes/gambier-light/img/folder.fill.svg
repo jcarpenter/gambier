@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="88px" height="71px" viewBox="0 0 88 71" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Shape</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="folder.fill" transform="translate(-1406.000000, -625.000000)" fill="#000000" fill-rule="nonzero">
+            <g id="Symbols" transform="translate(491.000000, 621.000000)">
+                <g id="Regular-S" transform="translate(914.300000, 4.000000)">
+                    <path d="M75.8633,7.084 L39.291,7.084 C36.8984,7.084 35.3359,6.4004 33.4805,4.8867 L31.0391,2.9336 C28.5,0.834 26.4004,0.1016 22.6895,0.1016 L11.752,0.1016 C4.8672,0.1016 0.76562,4.1055 0.76562,12.2598 L0.76562,21.8789 L88.3145,21.8789 L88.3145,19.3398 C88.3145,11.1367 84.1641,7.084 75.8633,7.084 Z M13.2168,70.9023438 L77.2793,70.9023438 C84.2129,70.9023438 88.3145,66.80078 88.3145,58.5977 L88.3145,27.543 L0.76562,27.543 L0.76562,58.5977 C0.76562,66.80078 4.916,70.9023438 13.2168,70.9023438 Z" id="Shape"></path>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

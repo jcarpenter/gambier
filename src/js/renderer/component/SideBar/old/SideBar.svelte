@@ -45,17 +45,17 @@
 
 <div id="sidebar" class:focused>
   
-  <h1 class="title">Folders</h1>
+  <h1>Folders</h1>
   {#each folders as item}
     <SideBarItem state={state} item={item} />
   {/each}
   
-  <h1 class="title">Documents</h1>
+  <h1>Documents</h1>
   {#each documents as item}
     <SideBarItem state={state} item={item} />
   {/each}
   
-  <h1 class="title">Media</h1>
+  <h1>Media</h1>
   {#each media as item}
     <SideBarItem state={state} item={item} />
   {/each}

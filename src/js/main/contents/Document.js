@@ -1,5 +1,7 @@
 const Document = {
+  type: 'doc',
   title: '',
+  name: '',
   path: '',
   id: '',
   parentId: '',

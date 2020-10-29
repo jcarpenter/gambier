@@ -671,7 +671,7 @@ async function setup(textarea, initialState) {
 
   // Make editor
   cm = makeEditor(textarea, initialState)
-  cm.setOption("theme", initialState.theme)
+  // cm.setOption("theme", initialState.theme)
 
   // Source mode
   sourceMode = initialState.sourceMode

@@ -1,32 +1,87 @@
+# Per electron-builder mac configuration options: 
+# https://www.electron.build/configuration/mac
+# https://www.electron.build/configuration/configuration
+
+# "product name for your executable" — https://www.electron.build/configuration/configuration#configuration
+productName: Gambier
+
+# "The application id. Used as CFBundleIdentifier for MacOS" — https://www.electron.build/configuration/configuration#configuration. 
+# See CFBundleIdentifier details at developer.apple.com: "Uniquely identifies the bundle. Each distinct app or bundle on the system must have a unique bundle ID. The system uses this string to identify your app in many ways. For example, the preferences system uses this string to identify the app for which a given preference applies; Launch Services uses the bundle identifier to locate an app capable of opening a particular file, using the first app it finds with the given identifier; in iOS, the bundle identifier is used in validating the app’s signature. The bundle ID string must be a uniform type identifier (UTI) that contains only alphanumeric (A-Z,a-z,0-9), hyphen (-), and period (.) characters. The string should also be in reverse-DNS format. For example, if your company’s domain is Ajax.com and you create an app named Hello, you could assign the string com.Ajax.Hello as your app’s bundle identifier." — https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html#//apple_ref/doc/uid/20001431-102070
 appId: com.josh-carpenter.gambier
-# artifactName: "${productName}-${os}-${arch}-${version}.${ext}"
+
+# "The artifact file name template" — Am not sure what this means or does
+artifactName: ${productName}-${os}-${arch}-${version}.${ext}
+
+# "Whether to package the application’s source code into an archive, using Electron’s archive format." — https://www.electron.build/configuration/configuration#overridable-per-platform-options
 asar: true
+
+# "compression = normal “store” | “normal” | “maximum” - The compression level. If you want to rapidly test build, store can reduce build time significantly. maximum doesn’t lead to noticeable size difference, but increase build time." — https://www.electron.build/configuration/configuration#overridable-per-platform-options
 # compression: maximum
-copyright: "Copyright © Josh Carpenter"
+
+copyright: Copyright © 2020 Josh Carpenter
+
 directories:
   buildResources: assets
   output: dist
-# dmg:
-#   background: "assets/appdmg.png"
-#   contents:
-#     - path: /Applications
-#       type: link
-#       x: 532
-#       y: 249
-#     - type: file
-#       x: 281
-#       y: 249
-#   icon: "assets/icon.icns"
-#   iconSize: 128
+
+# "The top-level dmg key contains set of options instructing electron-builder on how it should build DMG." - https://www.electron.build/configuration/dmg
+dmg:
+  
+  # "The path to background image (default: build/background.tiff or build/background.png if exists). The resolution of this file determines the resolution of the installer window. If background is not specified, use window.size. Default locations expected background size to be 540x380"
+  # background: "assets/appdmg.png"
+  
+  # "The content — to customize icon locations. The x and y coordinates refer to the position of the center of the icon (at 1x scale), and do not take the label into account."
+  # contents:
+  #   - path: /Applications
+  #     type: link
+  #     x: 532
+  #     y: 249
+  #   - type: file
+  #     x: 281
+  #     y: 249
+
+  # "The DMG windows position and size"
+  # window: 
+    # x: 400
+    # y: 100
+    # width: 540
+    # height: 380
+  
+  # "The path to DMG icon (volume icon), which will be shown when mounted, relative to the build resources or to the project directory. Defaults to the application icon (build/icon.icns)."
+  # icon: "assets/icon.png"
+  
+  # "The size of all the icons inside the DMG"
+  iconSize: 128
+
 files:
-  - "app/**/*"
-  - "node_modules/**/*"
-  - "package.json"
+  - app/**/*
+  - node_modules/**/*
+  - package.json
+
 publish: null
+
 # forceCodeSigning: false
-# mac:
-#   category: public.app-category.productivity
-#   minimumSystemVersion: "10.14"
+
+# "The top-level mac key contains set of options instructing electron-builder on how it should build macOS targets. These options applicable for any macOS target." — https://www.electron.build/configuration/mac
+mac:
+  # "The application category type, as shown in the Finder via View -> Arrange by Application Category when viewing the Applications directory. ... Valid categories are listed in: https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/LaunchServicesKeys.html#//apple_ref/doc/uid/TP40009250-SW8"
+  category: public.app-category.productivity
+  
+  # "The path to application icon"
+  icon: icon_512x512.png  
+  
+  # "Whether a dark mode is supported."
+  darkModeSupport: true
+  
+  # "target package type: list of default, dmg, mas, mas-dev, pkg, 7z, zip, tar.xz, tar.lz, tar.gz, tar.bz2, dir. Defaults to default (dmg and zip for Squirrel.Mac)."
+  target: dmg
+  
+  # "The minimum version of macOS required for the app to run. Corresponds to LSMinimumSystemVersion."
+  # minimumSystemVersion: "10.14"
+
+# "Whether to execute node-gyp rebuild before starting to package the app." - https://www.electron.build/configuration/configuration#Configuration-nodeGypRebuild/ 
+# "If you have native addons of your own that are part of the application (not as a dependency), set nodeGypRebuild to true." - https://www.electron.build/#quick-setup-guide
 nodeGypRebuild: false
+
+# "Whether to rebuild native dependencies before starting to package the app." — https://www.electron.build/configuration/configuration#Configuration-npmRebuild
 npmRebuild: true
-productName: Gambier

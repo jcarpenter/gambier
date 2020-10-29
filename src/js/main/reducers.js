@@ -259,9 +259,10 @@ async function reducers(state = {}, action) {
       break
     }
 
-    case 'SELECT_THEME': {
-      newState.theme = action.theme
-      newState.changed.push('theme')
+    case 'SET_APPEARANCE': {
+      if (action.userPref) newState.appearance.userPref = action.userPref
+      if (action.theme) newState.appearance.theme = action.theme
+      newState.changed.push('appearance')
       break
     }
 
@@ -317,9 +318,9 @@ async function reducers(state = {}, action) {
       newState.documents = newState.documents.concat(action.documents)
       newState.changed.push('documents')
 
-      // Increment parent folders `childFileCount`
+      // Increment parent folders `directChildCount`
       action.documents.forEach((d) => {
-        newState.folders.find((f) => f.path == path.dirname(d.path)).childFileCount++
+        newState.folders.find((f) => f.path == path.dirname(d.path)).directChildCount++
       })
 
       // When we create a new document in-app (e.g. via File > New Document), we want to select it.
@@ -376,9 +377,9 @@ async function reducers(state = {}, action) {
       newState.media = newState.media.concat(action.media)
       newState.changed.push('media')
 
-      // Increment parent folder `childFileCount`
+      // Increment parent folder `directChildCount`
       action.media.forEach((m) => {
-        newState.folders.find((f) => f.path == path.dirname(m.path)).childFileCount++
+        newState.folders.find((f) => f.path == path.dirname(m.path)).directChildCount++
       })
 
       updateSideBarAndFiles(newState)
@@ -428,8 +429,8 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.documents.splice(index, 1)
         }
-        // Decrement parent folder `childFileCount`
-        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--
+        // Decrement parent folder `directChildCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).directChildCount--
       }
       newState.changed.push('documents', 'folders')
 
@@ -449,8 +450,8 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.media.splice(index, 1)
         }
-        // Decrement parent folder `childFileCount`
-        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--
+        // Decrement parent folder `directChildCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).directChildCount--
       }
       newState.changed.push('media', 'folders')
 
@@ -460,7 +461,33 @@ async function reducers(state = {}, action) {
     }
 
 
+    // -------- SIDEBAR 2 -------- //
+
+    case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
+      newState.sideBar2.activeTab.index = action.index
+      newState.sideBar2.activeTab.name = newState.sideBar2.tabs[action.index].name
+      newState.changed.push('sideBar.activeTab')
+      break
+    }
+
+    case 'SELECT_SIDEBAR_ITEMS': {
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
+      tab.lastSelectedItem = action.lastSelectedItem
+      tab.selectedItems = action.selectedItems
+      newState.changed.push(`sideBar.tabs.${action.tabName}`)
+      break
+    }
+
+    case 'EXPAND_SIDEBAR_ITEMS': {
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
+      tab.expandedItems = action.expandedItems
+      newState.changed.push(`sideBar.tabs.${action.tabName}`)
+      break
+    }
+
+
     // -------- SIDEBAR -------- //
+
 
     case 'SELECT_SIDEBAR_ITEM': {
 

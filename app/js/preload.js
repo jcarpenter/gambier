@@ -11,7 +11,7 @@ let validReceiveChannels = ['mainWantsToCloseWindow', 'mainWantsToQuitApp', 'mai
 let validSendChannels = ['saveFileThenCloseWindow', 'saveFileThenQuitApp', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch'];
 
 // Round trip: Renderer --> Main --> Renderer
-let validInvokeChannels = ['getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getState', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard'];
+let validInvokeChannels = ['getSystemColors', 'getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getState', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard'];
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 electron.contextBridge.exposeInMainWorld(

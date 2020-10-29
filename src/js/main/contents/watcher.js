@@ -169,7 +169,6 @@ async function onFilesChanged(filesChanged) {
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         media.push(await mapMedia(f.path, f.stats, parentId, ext))
       }
-
     })
   )
 

@@ -38,6 +38,7 @@ export default async function (filePath, stats = undefined, parentId = '') {
 
 	// Set title. E.g. "Sea Level Rise"
 	doc.title = getTitle(gm, path.basename(filePath))
+	doc.name = doc.title
 
 	return doc
 

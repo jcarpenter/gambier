@@ -1,6 +1,5 @@
-/* -------------- Font mixins -------------- */
-/* -------------- Layout mixins -------------- */
 :root {
+  /* -------------- Images -------------- */
   /* -------------- Layouts (CSS grid) -------------- */
   --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]
         minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];
@@ -76,6 +75,64 @@
   --grid-32: calc(var(--grid) * 32);
 }
 
+:root {
+  --titlebarMaterial: rgba();
+  --selectionMaterial: rgba();
+  --menuMaterial: rgba();
+  --popoverMaterial: rgba();
+  --sidebarMaterial: rgba(255, 255, 255, 0);
+  --headerMaterial: rgba();
+  --sheetMaterial: rgba();
+  --windowMaterial: rgba();
+  --hudMaterial: rgba();
+  --fullscreenMaterial-ui: rgba();
+  --tooltipMaterial: rgba();
+  --contentMaterial: rgba();
+  --systemBlue: rgba(10, 132, 255, 1);
+  --systemBrown: rgba(172, 142, 104, 1);
+  --systemGray: rgba(152, 152, 157, 1);
+  --systemGreen: rgba(50, 215, 75, 1);
+  --systemIndigo: rgba(94, 92, 230, 1);
+  --systemOrange: rgba(255, 159, 10, 1);
+  --systemPink: rgba(255, 55, 95, 1);
+  --systemPurple: rgba(191, 90, 242, 1);
+  --systemRed: rgba(255, 69, 58, 1);
+  --systemTeal: rgba(100, 210, 255, 1);
+  --systemYellow: rgba(255, 214, 10, 1);
+  --labelColor: rgba(255, 255, 255, 0.847);
+  --secondaryLabelColor: rgba(255, 255, 255, 0.549);
+  --tertiaryLabelColor: rgba(255, 255, 255, 0.247);
+  --quaternaryLabelColor: rgba(255, 255, 255, 0.098);
+  --textColor: rgba(255, 255, 255, 1);
+  --placeholderTextColor: rgba(255, 255, 255, 0.247);
+  --selectedTextColor: rgba(255, 255, 255, 1);
+  --textBackgroundColor: rgba(30, 30, 30, 1);
+  --selectedTextBackgroundColor: rgba(63, 99, 139, 1);
+  --keyboardFocusIndicatorColor: rgba(26, 169, 255, 0.298);
+  --unemphasizedSelectedTextColor: rgba(255, 255, 255, 1);
+  --unemphasizedSelectedTextBackgroundColor: rgba(70, 70, 70, 1);
+  --linkColor: rgba(65, 156, 255, 1);
+  --separatorColor: rgba(255, 255, 255, 0.098);
+  --selectedContentBackgroundColor: rgba(0, 88, 208, 1);
+  --unemphasizedSelectedContentBackgroundColor: rgba(70, 70, 70, 1);
+  --selectedMenuItemTextColor: rgba(255, 255, 255, 1);
+  --gridColor: rgba(255, 255, 255, 0.098);
+  --headerTextColor: rgba(255, 255, 255, 1);
+  --controlAccentColor: rgba(0, 122, 255, 1);
+  --controlColor: rgba(255, 255, 255, 0.247);
+  --controlBackgroundColor: rgba(30, 30, 30, 1);
+  --controlTextColor: rgba(255, 255, 255, 0.847);
+  --disabledControlTextColor: rgba(255, 255, 255, 0.247);
+  --selectedControlColor: rgba(63, 99, 139, 1);
+  --selectedControlTextColor: rgba(255, 255, 255, 0.847);
+  --alternateSelectedControlTextColor: rgba(255, 255, 255, 1);
+  --windowBackgroundColor: rgba(50, 50, 50, 1);
+  --windowFrameTextColor: rgba(255, 255, 255, 0.847);
+  --findHighlightColor: rgba(255, 255, 0, 1);
+  --highlightColor: rgba(180, 180, 180, 1);
+  --shadowColor: rgba(0, 0, 0, 1);
+}
+
 .cm-s-gambier-dark {
   --clr-blue: rgb(13, 103, 220);
   --clr-blue-light: #b9d0ee;
@@ -135,38 +192,54 @@
 }
 
 .cm-s-gambier-dark .widget.editable {
-  border-width: 1px;
-  border-style: solid;
-  border-radius: 0.15em;
   text-decoration: none;
-  box-sizing: content-box;
 }
 
 .cm-s-gambier-dark .widget.editable :focus {
   outline: none;
 }
 
-.cm-s-gambier-dark .widget.editable::before, .cm-s-gambier-dark .widget.editable::after {
+.cm-s-gambier-dark .widget.editable::before {
   content: "|";
   opacity: 0;
 }
 
-.cm-s-gambier-dark .widget.reference .select {
-  border: 1px solid red;
-  background-image: url(img/down-arrow-notch.svg);
+.cm-s-gambier-dark .widget.editable:not(.reference)::after {
+  content: "|";
+  opacity: 0;
 }
 
-.cm-s-gambier-dark .widget:not(.editable) {
-  box-sizing: border-box;
-  padding: 0 0.2em;
-  border-width: 1px;
-  border-style: solid;
-  border-color: rgba(0, 0, 0, 0.1);
-  border-radius: 0.15em;
+.cm-s-gambier-dark .widget.reference {
+  overflow-y: hidden;
+}
+
+.cm-s-gambier-dark .widget .select {
+  background-image: url(img/down-arrow-notch.svg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%;
+  padding: 0 0.5em !important;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cm-s-gambier-dark .widget .select:hover {
+  opacity: 0.8;
+}
+
+.cm-s-gambier-dark .highlight.widget .select {
+  filter: brightness(100);
 }
 
 .cm-s-gambier-dark .widget.error {
   box-shadow: 0px 1px rgba(255, 0, 0, 0.5);
+}
+
+.cm-s-gambier-dark .widget {
+  border-radius: 0.15em;
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .cm-s-gambier-dark .widget:focus {
@@ -412,6 +485,7 @@
 
 .cm-s-gambier-dark .widget.cm-footnote {
   font-weight: normal;
+  padding-left: 0.3em;
 }
 
 .cm-s-gambier-dark .widget.cm-footnote:before {
@@ -420,6 +494,10 @@
 
 .cm-s-gambier-dark .widget.cm-footnote.highlight {
   background-color: rgba(171, 80, 152, 0.5);
+}
+
+.cm-s-gambier-dark .widget.cm-footnote:not(.reference) {
+  padding-right: 0.3em;
 }
 
 .cm-s-gambier-dark .cm-footnote {
@@ -482,20 +560,24 @@
 }
 
 .cm-s-gambier-dark .widget.cm-image {
-  padding: 0 0.4em;
+  padding-left: 0.4em;
+}
+
+.cm-s-gambier-dark .widget.cm-image:not(.reference) {
+  padding-right: 0.4em;
 }
 
 .cm-s-gambier-dark .CodeMirror-line.figure {
   background-color: rgba(241, 188, 127, 0.2) !important;
 }
 
-.cm-s-gambier-dark .widget.cm-link {
+.cm-s-gambier-dark .widget.cm-link:not(.select) {
   color: var(--clr-blue);
   border-color: var(--clr-blue-light);
   font-weight: normal;
 }
 
-.cm-s-gambier-dark .widget.cm-link.highlight {
+.cm-s-gambier-dark .widget.cm-link:not(.select).highlight {
   color: white;
   background-color: var(--clr-blue);
   border-color: var(--clr-blue);

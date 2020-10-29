@@ -301,7 +301,7 @@
     editorState.sourceMode = state.sourceMode
 
     // Create the editor
-    cm = createEditor(editor, state.theme, editorState)
+    cm = createEditor(editor, state.appearance.theme, editorState)
 
     // Setup listeners
     // cm.on('beforeChange', onBeforeChange)
@@ -381,8 +381,8 @@
         toggleSource(cm)
       }
 
-      if (state.changed.includes('theme')) {
-        cm.setOption('theme', newState.theme)
+      if (state.changed.includes('appearance')) {
+        cm.setOption('theme', newState.appearance.theme)
       }
     })
 

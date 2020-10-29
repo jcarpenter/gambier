@@ -44,6 +44,24 @@ function makeSideBarItem(type, label, id, parentId, icon, showFilesList, filter,
 
 const storeDefault = {
 
+  // ----------- APP ----------- //
+
+  // App theme. See Readme.
+  appearance: {
+    userPref: 'match-system',
+    theme: 'gambier-light'
+  },
+
+
+  // ----------- WINDOW ----------- //
+
+  // User specified path to folder containing their project files
+  projectPath: '',
+
+  // User specified path to CSL-JSON file containing their citatons
+  projectCitations: '',
+
+
   focusedLayoutSection: 'navigation',
 
   // A copy of the object of the document currently visible in the editor.
@@ -53,58 +71,110 @@ const storeDefault = {
   selectedSideBarItem: {},
 
   showFilesList: true,
-  sourceMode: false,
 
-  // App theme. See Readme.
-  theme: 'gambier-light',
-
-  // User specified path to folder containing their project files
-  projectPath: '',
-
-  // User specified path to CSL-JSON file containing their citatons
-  projectCitations: '',
+  // SideBar
+  sideBar2: {
+    show: true,
+    activeTab: {
+      index: 0,
+      name: "project"
+    },
+    tabs: [
+      {
+        title: 'Project', name: 'project',
+        lastSelectedItem: 0,
+        selectedItems: [],
+        expandedItems: [],
+      },
+      {
+        title: 'All Documents', name: 'all-documents',
+        lastSelectedIndex: 0,
+        selectedItems: [],
+      },
+      {
+        title: 'Most Recent', name: 'most-recent',
+        lastSelectedIndex: 0,
+        selectedItems: [],
+      },
+      {
+        title: 'Tags', name: 'tags',
+        lastSelectedIndex: 0,
+        selectedItems: [],
+      },
+      {
+        title: 'Media', name: 'media',
+        lastSelectedIndex: 0,
+        selectedItems: [],
+      },
+      {
+        title: 'Citations', name: 'citations',
+        lastSelectedIndex: 0,
+        selectedItems: [],
+      },
+      {
+        title: 'Search', name: 'search',
+        lastSelectedIndex: 0,
+        selectedItems: [],
+      }
+    ],
+  },
 
   // Contents
   folders: [],
   documents: [],
   media: [],
-  contents: [],
+
+
+  // ----------- PANEL / TAB ----------- //
+
+  panels: [],
+
+  panel1: {
+    tabs: []
+  },
+
+  sourceMode: false,
+
+
+
+
+  // ----------- OLD ----------- //
 
   // SideBar
   sideBar: {
     show: true,
     folders: [],
     documents: [
-      makeSideBarItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true, 
-      {
-        lookInFolderId: '*',
-        includeChildren: true,
-        filetypes: ['.md', '.markdown'],
-        tags: [],
-        dateModified: { use: false, from: '',to: '' },
-        dateCreated: { use: false, from: '', to: '' },
-      },
-      { by: 'title', order: 'ascending' }),
-      makeSideBarItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true, 
-      {
-        lookInFolderId: '*',
-        includeChildren: true,
-        filetypes: ['.md', '.markdown'],
-        tags: ['favorite'],
-        dateModified: { use: false, from: '',to: '' },
-        dateCreated: { use: false, from: '', to: '' },
-      },
-      { by: 'title', order: 'ascending' }),
-      makeSideBarItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true, 
-      {
-        lookInFolderId: '*',
-        includeChildren: true,
-        filetypes: ['.md', '.markdown'],
-        tags: [],
-        dateModified: { use: true, from: 'NOW', to: '7-DAYS-AGO' },
-        dateCreated: { use: false, from: '', to: '' },
-      },
-      { by: 'date-modified', order: 'ascending' })
+      makeSideBarItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true,
+        {
+          lookInFolderId: '*',
+          includeChildren: true,
+          filetypes: ['.md', '.markdown'],
+          tags: [],
+          dateModified: { use: false, from: '', to: '' },
+          dateCreated: { use: false, from: '', to: '' },
+        },
+        { by: 'title', order: 'ascending' }),
+      makeSideBarItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true,
+        {
+          lookInFolderId: '*',
+          includeChildren: true,
+          filetypes: ['.md', '.markdown'],
+          tags: ['favorite'],
+          dateModified: { use: false, from: '', to: '' },
+          dateCreated: { use: false, from: '', to: '' },
+        },
+        { by: 'title', order: 'ascending' }),
+      makeSideBarItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true,
+        {
+          lookInFolderId: '*',
+          includeChildren: true,
+          filetypes: ['.md', '.markdown'],
+          tags: [],
+          dateModified: { use: true, from: 'NOW', to: '7-DAYS-AGO' },
+          dateCreated: { use: false, from: '', to: '' },
+        },
+        { by: 'date-modified', order: 'ascending' })
     ],
     media: [
       makeSideBarItem('filter', 'All', 'media-all', '', 'images/sidebar-default-icon.svg', true)
@@ -131,7 +201,7 @@ function mapFolders(sideBar, newState) {
     const oldFolder = oldFolders.find((oldF) => oldF.id == f.id);
 
     // Determine icon
-    const icon = f.childFileCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg';
+    const icon = f.directChildCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg';
 
     // Make new version
     const newFolder = makeSideBarItem(
@@ -472,9 +542,10 @@ async function reducers(state = {}, action) {
       break
     }
 
-    case 'SELECT_THEME': {
-      newState.theme = action.theme;
-      newState.changed.push('theme');
+    case 'SET_APPEARANCE': {
+      if (action.userPref) newState.appearance.userPref = action.userPref;
+      if (action.theme) newState.appearance.theme = action.theme;
+      newState.changed.push('appearance');
       break
     }
 
@@ -530,9 +601,9 @@ async function reducers(state = {}, action) {
       newState.documents = newState.documents.concat(action.documents);
       newState.changed.push('documents');
 
-      // Increment parent folders `childFileCount`
+      // Increment parent folders `directChildCount`
       action.documents.forEach((d) => {
-        newState.folders.find((f) => f.path == path.dirname(d.path)).childFileCount++;
+        newState.folders.find((f) => f.path == path.dirname(d.path)).directChildCount++;
       });
 
       // When we create a new document in-app (e.g. via File > New Document), we want to select it.
@@ -589,9 +660,9 @@ async function reducers(state = {}, action) {
       newState.media = newState.media.concat(action.media);
       newState.changed.push('media');
 
-      // Increment parent folder `childFileCount`
+      // Increment parent folder `directChildCount`
       action.media.forEach((m) => {
-        newState.folders.find((f) => f.path == path.dirname(m.path)).childFileCount++;
+        newState.folders.find((f) => f.path == path.dirname(m.path)).directChildCount++;
       });
 
       updateSideBarAndFiles(newState);
@@ -641,8 +712,8 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.documents.splice(index, 1);
         }
-        // Decrement parent folder `childFileCount`
-        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--;
+        // Decrement parent folder `directChildCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).directChildCount--;
       }
       newState.changed.push('documents', 'folders');
 
@@ -662,8 +733,8 @@ async function reducers(state = {}, action) {
         if (index !== -1) {
           newState.media.splice(index, 1);
         }
-        // Decrement parent folder `childFileCount`
-        newState.folders.find((f) => f.path == path.dirname(p)).childFileCount--;
+        // Decrement parent folder `directChildCount`
+        newState.folders.find((f) => f.path == path.dirname(p)).directChildCount--;
       }
       newState.changed.push('media', 'folders');
 
@@ -673,7 +744,33 @@ async function reducers(state = {}, action) {
     }
 
 
+    // -------- SIDEBAR 2 -------- //
+
+    case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
+      newState.sideBar2.activeTab.index = action.index;
+      newState.sideBar2.activeTab.name = newState.sideBar2.tabs[action.index].name;
+      newState.changed.push('sideBar.activeTab');
+      break
+    }
+
+    case 'SELECT_SIDEBAR_ITEMS': {
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
+      tab.lastSelectedItem = action.lastSelectedItem;
+      tab.selectedItems = action.selectedItems;
+      newState.changed.push(`sideBar.tabs.${action.tabName}`);
+      break
+    }
+
+    case 'EXPAND_SIDEBAR_ITEMS': {
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
+      tab.expandedItems = action.expandedItems;
+      newState.changed.push(`sideBar.tabs.${action.tabName}`);
+      break
+    }
+
+
     // -------- SIDEBAR -------- //
+
 
     case 'SELECT_SIDEBAR_ITEM': {
 
@@ -968,10 +1065,14 @@ function setup(gambierStore) {
   store = gambierStore;
   state = gambierStore.store;
 
+  const isMac = process.platform === 'darwin';
+  const separator = new electron.MenuItem({ type: 'separator' });
+
   const menu = new electron.Menu();
 
-  // -------- App -------- //
-  if (process.platform === 'darwin') {
+  // -------- App (Mac-only) -------- //
+
+  if (isMac) {
     const appMenu = new electron.MenuItem(
       {
         label: electron.app.name,
@@ -993,20 +1094,18 @@ function setup(gambierStore) {
   }
 
 
-  // -------- File -------- //
-  if (process.platform === 'darwin') {
+  // -------- File (Mac-only) -------- //
+  if (isMac) {
 
-    var saveNewFile = new electron.MenuItem({
+    const saveNewFile = new electron.MenuItem({
       label: 'New Document',
       accelerator: 'CmdOrCtrl+N',
       async click(item, focusedWindow) {
-
         store.dispatch(await newFile(state));
       }
     });
 
-
-    var save = new electron.MenuItem({
+    const save = new electron.MenuItem({
       label: 'Save',
       accelerator: 'CmdOrCtrl+S',
       click(item, focusedWindow) {
@@ -1017,6 +1116,7 @@ function setup(gambierStore) {
     var moveToTrash = new electron.MenuItem({
       label: 'Move to Trash',
       accelerator: 'CmdOrCtrl+Backspace',
+      enabled: state.focusedLayoutSection == 'navigation',
       click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsDeleteFile');
       }
@@ -1037,46 +1137,62 @@ function setup(gambierStore) {
 
   // -------- Edit -------- //
 
+  const undo = new electron.MenuItem({ label: 'Undo', role: 'undo' });
+  const redo = new electron.MenuItem({ label: 'Redo', role: 'redo' });
+  const cut = new electron.MenuItem({ role: 'cut' });
+  const copy = new electron.MenuItem({ role: 'copy' });
+  const paste = new electron.MenuItem({ role: 'paste' });
+  const deleteItem = new electron.MenuItem({ role: 'delete' });
+  const selectall = new electron.MenuItem({ role: 'selectall' });
+  const startspeaking = new electron.MenuItem({ role: 'startspeaking' });
+  const stopspeaking = new electron.MenuItem({ role: 'stopspeaking' });
+
+  const findInFiles = new electron.MenuItem({
+    label: 'Find in Files',
+    type: 'normal',
+    accelerator: 'CmdOrCtrl+Shift+F',
+    click(item, focusedWindow) {
+      if (focusedWindow) {
+        focusedWindow.webContents.send('findInFiles');
+      }
+    }
+  });
+
   const edit = new electron.MenuItem(
     {
       label: 'Edit',
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'delete' },
-        { role: 'selectall' }
+        undo,
+        redo,
+        separator,
+        cut,
+        copy,
+        paste,
+        deleteItem,
+        selectall,
+        separator,
+        findInFiles,
+        // If macOS, add speech options to Edit menu
+        ...isMac ? [
+          separator,
+          {
+            label: 'Speech',
+            submenu: [
+              startspeaking,
+              stopspeaking
+            ]
+          }
+        ] : []
       ]
     }
   );
-
-  // If macOS, add speech options to Edit menu
-  if (process.platform === 'darwin') {
-    edit.submenu.append(
-      new electron.MenuItem(
-        { type: 'separator' }
-      ),
-      new electron.MenuItem(
-        {
-          label: 'Speech',
-          submenu: [
-            { role: 'startspeaking' },
-            { role: 'stopspeaking' }
-          ]
-        }
-      ),
-    );
-  }
 
   menu.append(edit);
 
 
   // -------- View -------- //
 
-  var source_mode = new electron.MenuItem({
+  const source_mode = new electron.MenuItem({
     label: 'Source mode',
     type: 'checkbox',
     checked: state.sourceMode,
@@ -1091,67 +1207,99 @@ function setup(gambierStore) {
     }
   });
 
-  var SELECT_THEME_dark = new electron.MenuItem({
-    label: 'Dark',
+  const appearance_system = new electron.MenuItem({
+    label: 'Match System',
     type: 'checkbox',
-    checked: state.theme == 'gambier-dark',
+    checked: state.appearance.userPref == 'match-system',
     click(item, focusedWindow) {
       store.dispatch({
-        type: 'SELECT_THEME',
-        theme: 'gambier-dark',
+        type: 'SET_APPEARANCE',
+        userPref: 'match-system',
+        theme: electron.nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
       });
     }
   });
 
-  var SELECT_THEME_light = new electron.MenuItem({
+  const appearance_light = new electron.MenuItem({
     label: 'Light',
     type: 'checkbox',
-    checked: state.theme == 'gambier-light',
+    checked: state.appearance.userPref == 'light',
     click() {
       store.dispatch({
-        type: 'SELECT_THEME',
-        theme: 'gambier-light',
+        type: 'SET_APPEARANCE',
+        userPref: 'light',
+        theme: 'gambier-light'
       });
     }
   });
 
-
-  const view = new electron.MenuItem(
-    {
-      label: 'View',
-      submenu: [
-        source_mode,
-        {
-          label: 'Theme',
-          submenu: [
-            SELECT_THEME_dark,
-            SELECT_THEME_light
-          ]
-        },
-        { type: 'separator' },
-        {
-          label: 'Reload',
-          accelerator: 'CmdOrCtrl+R',
-          click(item, focusedWindow) {
-            if (focusedWindow) focusedWindow.reload();
-          }
-        },
-        {
-          label: 'Toggle Developer Tools',
-          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-          click(item, focusedWindow) {
-            if (focusedWindow) focusedWindow.webContents.toggleDevTools();
-          }
-        },
-        { type: 'separator' },
-        { role: 'resetzoom' },
-        { role: 'zoomin' },
-        { role: 'zoomout' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
+  const appearance_dark = new electron.MenuItem({
+    label: 'Dark',
+    type: 'checkbox',
+    checked: state.appearance.userPref == 'dark',
+    click(item, focusedWindow) {
+      store.dispatch({
+        type: 'SET_APPEARANCE',
+        userPref: 'dark',
+        theme: 'gambier-dark'
+      });
     }
-  );
+  });
+
+  const appearance = new electron.MenuItem({
+    label: 'Appearance',
+    submenu: [
+      appearance_system,
+      separator,
+      appearance_light,
+      appearance_dark
+    ]
+  });
+
+  const toggle_dev_tools = new electron.MenuItem({
+    label: 'Toggle Developer Tools',
+    accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+    role: 'toggleDevTools'
+    // click(item, focusedWindow) {
+    //   if (focusedWindow) focusedWindow.webContents.toggleDevTools()
+    // }
+  });
+
+  const reload = new electron.MenuItem({
+    label: 'Reload',
+    accelerator: 'CmdOrCtrl+R',
+    role: 'reload'
+    // click(item, focusedWindow) {
+    //   if (focusedWindow) focusedWindow.reload()
+    // }
+  });
+
+  const sideBarTabs = state.sideBar2.tabs.map((t, index) => {
+    return new electron.MenuItem({
+      label: t.title,
+      type: 'checkbox',
+      accelerator: `Cmd+${index + 1}`,
+      checked: state.sideBar2.activeTab.index == index,
+      click(item, focusedWindow) {
+        store.dispatch({
+          type: 'SELECT_SIDEBAR_TAB_BY_INDEX',
+          index: index
+        });
+      }
+    })
+  });
+
+  const view = new electron.MenuItem({
+    label: 'View',
+    // submenu: new Menu()
+    submenu: [
+      source_mode,
+      appearance,
+      ...electron.app.isPackaged ? [] : [separator, toggle_dev_tools, reload],
+      separator,
+      ...sideBarTabs
+    ]
+  });
 
   menu.append(view);
 
@@ -1159,7 +1307,7 @@ function setup(gambierStore) {
   // -------- Window -------- //
 
   // Different menus for macOS vs others
-  if (process.platform === 'darwin') {
+  if (isMac) {
 
     const window = new electron.MenuItem(
       {
@@ -1202,7 +1350,7 @@ function setup(gambierStore) {
 
   // -------- Set initial values -------- //
 
-  moveToTrash.enabled = store.store.focusedLayoutSection == 'navigation';
+
 
 
   // -------- Change listeners -------- //
@@ -1216,16 +1364,19 @@ function setup(gambierStore) {
   });
 
   store.onDidChange('focusedLayoutSection', () => {
-    if (store.store.focusedLayoutSection == 'navigation') {
-      moveToTrash.enabled = true;
-    } else {
-      moveToTrash.enabled = false;
-    }
+    moveToTrash.enabled = state.focusedLayoutSection == 'navigation';
   });
 
-  store.onDidChange('theme', () => {
-    SELECT_THEME_dark.checked = state.theme == 'gambier-dark';
-    SELECT_THEME_light.checked = state.theme == 'gambier-light';
+  store.onDidChange('appearance', () => {
+    appearance_system.checked = state.appearance.userPref == 'match-system';
+    appearance_light.checked = state.appearance.userPref == 'light';
+    appearance_dark.checked = state.appearance.userPref == 'dark';
+  });
+
+  store.onDidChange('sideBar2', () => {
+    sideBarTabs.forEach((t, index) => {
+      t.checked = state.sideBar2.activeTab.index == index;
+    });
   });
 
 
@@ -1243,7 +1394,7 @@ function setup(gambierStore) {
  * @param {*} parentId - Optional. If undefined, we regard the folder as `root`
  * @param {*} recursive - Optional. If true, map descendant directories also.
  */
-async function mapFolder (folderPath, stats = undefined, parentId = '', recursive = false) {
+async function mapFolder (folderPath, stats = undefined, parentId = '', recursive = false, nestDepth = 0) {
 
   // Stub out return object
   let contents = {
@@ -1265,37 +1416,69 @@ async function mapFolder (folderPath, stats = undefined, parentId = '', recursiv
   folder.id = `folder-${stats.ino}`;
   folder.parentId = parentId;
   folder.modified = stats.mtime.toISOString();
+  folder.children = [];
+  folder.nestDepth = nestDepth;
 
   contents.folders.push(folder);
-
 
   // -------- Contents -------- //
 
   // Get everything in directory with `readdir`.
-  // Returns array of file name and file type pairs. If empty, return.
+  // Returns array of `fs.Dirent` objects.
+  // https://nodejs.org/api/fs.html#fs_class_fs_dirent
   const everything = await fsExtra.readdir(folderPath, { withFileTypes: true });
   // if (!everything.length > 0) return contents
+  // console.log(folder.name, "---")
+
+  // everything.forEach(async (e) => {
+
+  //   if (e.isFile()) {
+
+  //     const ePath = path.join(folder.path, e.name)
+  //     const ext = path.extname(e.name)
+  //     const stats = await stat(ePath)
+
+  //     if (ext == '.md' || ext == '.markdown') {
+  //       folder.children.push(`doc-${stats.ino}`)
+  //     }
+  //   }
+  // })
 
   await Promise.all(
-   everything.map(async (e) => {
+    everything.map(async (e) => {
 
       // Get path by combining folderPath with file name.
       const ePath = path.join(folderPath, e.name);
       const ext = path.extname(e.name);
       const stats = await fsExtra.stat(ePath);
-    
+
       if (e.isDirectory() && recursive) {
-        const { folders, documents, media } = await mapFolder(ePath, stats, folder.id, true);
+        const { folders, documents, media } = await mapFolder(ePath, stats, folder.id, true, nestDepth + 1);
         // Concat findings into respective `contents` arrays
         contents.folders = contents.folders.concat(folders);
         contents.documents = contents.documents.concat(documents);
         contents.media = contents.media.concat(media);
+
+        folder.directChildCount++;
+        folder.recursiveChildCount++;
+       
+        folders.forEach((f) => {
+          folder.recursiveChildCount += f.directChildCount;
+        });
+    
       } else if (ext == '.md' || ext == '.markdown') {
-        contents.documents.push(await mapDocument(ePath, stats, folder.id));
-        folder.childFileCount++;
+        const doc = await mapDocument(ePath, stats, folder.id);
+        contents.documents.push(doc);
+        // folder.children.push(doc.id)
+        folder.directChildCount++;
+        folder.recursiveChildCount++;
+
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-        contents.media.push(await mapMedia(ePath, stats, folder.id, ext));
-        folder.childFileCount++;
+        const media = await mapMedia(ePath, stats, folder.id, ext);
+        contents.media.push(media);
+        // folder.children.push(media.id)
+        folder.directChildCount++;
+        folder.recursiveChildCount++;
       }
     })
   );
@@ -1467,7 +1650,6 @@ async function onFilesChanged(filesChanged) {
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
         media.push(await mapMedia(f.path, f.stats, parentId, ext));
       }
-
     })
   );
 
@@ -1540,7 +1722,9 @@ async function onFilesUnlinked(filesUnlinked) {
 }
 
 const Document = {
+  type: 'doc',
   title: '',
+  name: '',
   path: '',
   id: '',
   parentId: '',
@@ -1551,15 +1735,20 @@ const Document = {
 };
 
 const Folder = {
+  type: 'folder',
   name: '',
   path: '',
   id: '',
   parentId: '',
   modified: '',
-  childFileCount: 0,
+  directChildCount: 0,
+  recursiveChildCount: 0,
+  nestDepth: 0
 };
 
 const Media = {
+  type: 'media',
+  name: '',
   filetype: '',
   path: '',
   id: '',
@@ -1602,6 +1791,7 @@ async function mapDocument (filePath, stats = undefined, parentId = '') {
 
 	// Set title. E.g. "Sea Level Rise"
 	doc.title = getTitle(gm, path.basename(filePath));
+	doc.name = doc.title;
 
 	return doc
 
@@ -1675,6 +1865,7 @@ async function mapMedia (filePath, stats = undefined, parentId = '', extension =
 		stats = await fsExtra.stat(filePath);
 	}
 
+	media.name = path.basename(filePath);
   media.filetype = extension == undefined ? path.extname(filePath) : extension;
 	media.path = filePath;
 	media.id = `media-${stats.ino}`;
@@ -1703,7 +1894,7 @@ async function mapProject(projectPath, store) {
   try {
 
     // Map project path, recursively
-    const { folders, documents, media } = await mapFolder(projectPath, undefined, '', true);
+    const { tree, folders, documents, media } = await mapFolder(projectPath, undefined, '', true, 0);
     
     // Dispatch results to store
     store.dispatch({
@@ -1728,9 +1919,6 @@ const avFormats = [
 
 // External dependencies
 
-// Dev only
-// import colors from 'colors'
-
 // -------- Variables -------- //
 
 // Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
@@ -1743,39 +1931,44 @@ let canCloseWindowSafely = false;
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
 
-// -------- Reload -------- //
+// -------- Reload (Development-only) -------- //
 
-// Not sure how this works with our packaged build. Want it for dev, but not distribution.
-const watchAndReload = [
-  path.join(__dirname, '**/*.js'),
-  path.join(__dirname, '**/*.html'),
-  path.join(__dirname, '**/*.css'),
-  path.join(__dirname, '**/*.xml')
-  // 'main.js',
-  // '**/*.js',
-  // '**/*.html',
-  // '**/*.css',
-  // '**/*.xml',
-  // '**/*.png',
-  // '**/*.jpg',
-];
+if (!electron.app.isPackaged) {
 
-require('electron-reload')(watchAndReload, {
-  // awaitWriteFinish: {
-  //   stabilityThreshold: 10,
-  //   pollInterval: 50
-  // },
-  electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-  hardResetMethod: 'exit'
-  // argv: ['--inspect=5858'],
-});
+  const watchAndReload = [
+    path.join(__dirname, '**/*.js'),
+    path.join(__dirname, '**/*.html'),
+    path.join(__dirname, '**/*.css'),
+    path.join(__dirname, '**/*.xml')
+    // 'main.js',
+    // '**/*.js',
+    // '**/*.html',
+    // '**/*.css',
+    // '**/*.xml',
+    // '**/*.png',
+    // '**/*.jpg',
+  ];
 
-console.log('- - - - - - - - - - - - - - -');
-console.log(`Setup`, `(Main.js)`);
+  require('electron-reload')(watchAndReload, {
+    // awaitWriteFinish: {
+    //   stabilityThreshold: 10,
+    //   pollInterval: 50
+    // },
+    electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+    hardResetMethod: 'exit'
+    // argv: ['--inspect=5858'],
+  });
+
+  console.log('- - - - - - - - - - - - - - -');
+  console.log(`Setup`, `(Main.js)`);
+}
+
 
 
 
 // -------- Setup -------- //
+
+console.log(process.versions['chrome']);
 
 // Create store
 store$2 = new Store();
@@ -1795,7 +1988,7 @@ if (store$2.store.projectPath !== '') {
   mapProject(store$2.store.projectPath, store$2);
 }
 
-// Create watcher
+// Setup watcher
 setup$1(store$2);
 
 // Send `appQuit` to renderer on quit
@@ -1819,9 +2012,9 @@ electron.app.on('window-all-closed', () => {
   }
 });
 
-// MacOS-only: "Emitted when the application is activated. Various actions can trigger this event, such as launching the application for the first time, attempting to re-launch the application when it's already running, or clicking on the application's dock or taskbar icon." — https://github.com/electron/electron/blob/master/docs/api/app.md#event-activate-macos
+// Mac-only: "Emitted when the application is activated. Various actions can trigger this event, such as launching the application for the first time, attempting to re-launch the application when it's already running, or clicking on the application's dock or taskbar icon." — https://github.com/electron/electron/blob/master/docs/api/app.md#event-activate-macos
 electron.app.on('activate', (evt, hasVisibleWindows) => {
-  console.log('activate');
+
   // "On macOS it's common to re-create a window in the app when the dock icon is clicked and there are no other windows open." — https://www.geeksforgeeks.org/save-files-in-electronjs/
   if (!hasVisibleWindows) {
     createWindow();
@@ -1831,6 +2024,72 @@ electron.app.on('activate', (evt, hasVisibleWindows) => {
   // }
 });
 
+
+// -------- Set theme -------- //
+
+/**
+ * When OS appearance changes, update app theme to match (dark or light):
+ * Listen for changes to nativeTheme. These are triggered when the OS appearance changes (e.g. when the user modifies "Appearance" in System Preferences > General, on Mac). If the user has selected the "Match System" appearance option in the app, we need to match the new OS appearance. Check the `nativeTheme.shouldUseDarkColors` value, and set the theme accordingly (dark or light).
+ * nativeTheme.on('updated'): "Emitted when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
+ */
+electron.nativeTheme.on('updated', () => {
+
+  // console.log("nativeTheme updated:")
+  // console.log(nativeTheme.themeSource)
+  // console.log(nativeTheme.shouldUseDarkColors)
+  // console.log(nativeTheme.shouldUseHighContrastColors)
+  // console.log(nativeTheme.shouldUseInvertedColorScheme)
+  // console.log('selected-text-background = ', systemPreferences.getColor('selected-text-background'))
+
+  const userPref = store$2.store.appearance.userPref;
+  if (userPref == 'match-system') {
+    store$2.dispatch({
+      type: 'SET_APPEARANCE',
+      theme: electron.nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
+    });
+  }
+});
+
+/**
+ * When user modifies "Appearance" setting (e.g in `View` menu), update `nativeTheme`
+ */
+store$2.onDidChange('appearance', () => {
+  setNativeTheme();
+});
+
+/**
+ * Update `nativeTheme` electron property
+ * Setting `nativeTheme.themeSource` has several effects. E.g. it tells Chrome how to UI elements such as menus, window frames, etc; it sets `prefers-color-scheme` css query; it sets `nativeTheme.shouldUseDarkColors` value.
+ * Per: https://www.electronjs.org/docs/api/native-theme
+ */
+function setNativeTheme() {
+  const userPref = store$2.store.appearance.userPref;
+  switch (userPref) {
+    case 'match-system':
+      electron.nativeTheme.themeSource = 'system';
+      break
+    case 'light':
+      electron.nativeTheme.themeSource = 'light';
+      break
+    case 'dark':
+      electron.nativeTheme.themeSource = 'dark';
+      break
+  }
+
+  // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
+  // console.log('setNativeTheme(). userPref = ', userPref)
+  // console.log('setNativeTheme(). systemPreferences.getAccentColor() = ', systemPreferences.getAccentColor())
+  // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
+  // 
+
+  // Reload (close then open) DevTools to force it to load the new theme. Unfortunately DevTools does not respond to `nativeTheme.themeSource` changes automatically. In Electron, or in Chrome.
+  if (!electron.app.isPackaged && win && win.webContents && win.webContents.isDevToolsOpened()) {
+    win.webContents.closeDevTools();
+    win.webContents.openDevTools();
+  }
+}
+
+
 // -------- Create window -------- //
 
 function createWindow() {
@@ -1839,10 +2098,13 @@ function createWindow() {
     show: false,
     width: 1600,
     height: 900,
+    zoomFactor: 1.0,
     vibrancy: 'sidebar',
+    transparent: true,
+    titleBarStyle: 'hiddenInset',
     webPreferences: {
       scrollBounce: false,
-      // Security
+      // Security:
       allowRunningInsecureContent: false,
       contextIsolation: true,
       enableRemoteModule: false,
@@ -1871,19 +2133,29 @@ function createWindow() {
   });
 
   // Open DevTools
-  win.webContents.openDevTools();
+  if (!electron.app.isPackaged) win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'));
-  
+
   // Setup menu bar
   setup(store$2);
-  
+
   // NOTE: We're not using this. Instead, we're calling `win.show()` from renderer, via IPC call.
   // Send state to render process once dom is ready
   // win.once('ready-to-show', () => {
   //   win.show()
   // })
+
+  // console.log("Hi ------ ")
+  // console.log(systemPreferences.isDarkMode())
+  // console.log(systemPreferences.getUserDefault('AppleInterfaceStyle', 'string'))
+  // console.log(systemPreferences.getUserDefault('AppleAquaColorVariant', 'integer'))
+  // console.log(systemPreferences.getUserDefault('AppleHighlightColor', 'string'))
+  // console.log(systemPreferences.getUserDefault('AppleShowScrollBars', 'string'))
+  // console.log(systemPreferences.getAccentColor())
+  // console.log(systemPreferences.getSystemColor('blue'))
+  // console.log(systemPreferences.effectiveAppearance)
 }
 
 
@@ -1893,7 +2165,9 @@ function createWindow() {
 // Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
 electron.app.allowRendererProcessReuse = true;
 
-electron.app.whenReady().then(createWindow);
+electron.app.whenReady()
+  .then(setNativeTheme)
+  .then(createWindow);
 
 
 // -------- IPC: Renderer "sends" to Main -------- //
@@ -1916,16 +2190,14 @@ electron.ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
 
 electron.ipcMain.on('showWindow', (event) => {
   win.show();
+
+  // Have to manually set this to 1.0. That should be the default, but somewhere it's being set to 0.91, resulting in the UI being slightly too-small.
+  win.webContents.zoomFactor = 1.0;
+
 });
 
 electron.ipcMain.on('dispatch', async (event, action) => {
   switch (action.type) {
-    case ('SET_SORT'):
-      store$2.dispatch(action);
-      break
-    case ('LOAD_PATH_IN_EDITOR'):
-      store$2.dispatch(action);
-      break
     case ('SET_PROJECT_PATH'):
       store$2.dispatch(await setProjectPath());
       break
@@ -1938,18 +2210,17 @@ electron.ipcMain.on('dispatch', async (event, action) => {
     case ('DELETE_FILES'):
       store$2.dispatch(await deleteFiles(action.paths));
       break
+    case ('SET_SORT'):
+    case ('LOAD_PATH_IN_EDITOR'):
+    // SideBar 2
+    case ('SELECT_SIDEBAR_TAB_BY_INDEX'):
+    case ('SELECT_SIDEBAR_ITEMS'):
+    case ('EXPAND_SIDEBAR_ITEMS'):
+    // SideBar (old)
     case ('SELECT_SIDEBAR_ITEM'):
-      store$2.dispatch(action);
-      break
     case ('TOGGLE_SIDEBAR_ITEM_EXPANDED'):
-      store$2.dispatch(action);
-      break
     case ('SET_LAYOUT_FOCUS'):
-      store$2.dispatch(action);
-      break
     case ('SELECT_FILES'):
-      store$2.dispatch(action);
-      break
     case ('SAVE_SIDEBAR_SCROLL_POSITION'):
       store$2.dispatch(action);
       break
@@ -1959,6 +2230,90 @@ electron.ipcMain.on('dispatch', async (event, action) => {
 
 // -------- IPC: Invoke -------- //
 
+electron.ipcMain.handle('getSystemColors', () => {
+
+  // Get accent color, chop off last two characters (always `ff`, for 100% alpha), and prepend `#`.
+  // `0a5fffff` --> `#0a5fff`
+  let controlAccentColor = `#${electron.systemPreferences.getAccentColor().slice(0, -2)}`;
+
+  const systemColors = [
+
+    // -------------- System Colors -------------- //
+    // Note: Indigo and Teal exist in NSColor, but do not seem to be supported by Electron.
+
+    { name: 'systemBlue', color: electron.systemPreferences.getSystemColor('blue') },
+    { name: 'systemBrown', color: electron.systemPreferences.getSystemColor('brown') },
+    { name: 'systemGray', color: electron.systemPreferences.getSystemColor('gray') },
+    { name: 'systemGreen', color: electron.systemPreferences.getSystemColor('green') },
+    // { name: 'systemIndigo', color: systemPreferences.getSystemColor('systemIndigo')},
+    { name: 'systemOrange', color: electron.systemPreferences.getSystemColor('orange') },
+    { name: 'systemPink', color: electron.systemPreferences.getSystemColor('pink') },
+    { name: 'systemPurple', color: electron.systemPreferences.getSystemColor('purple') },
+    { name: 'systemRed', color: electron.systemPreferences.getSystemColor('red') },
+    // { name: 'systemTeal', color: systemPreferences.getSystemColor('teal')},
+    { name: 'systemYellow', color: electron.systemPreferences.getSystemColor('yellow') },
+
+    // -------------- Label Colors -------------- //
+
+    { name: 'labelColor', color: electron.systemPreferences.getColor('label') },
+    { name: 'secondaryLabelColor', color: electron.systemPreferences.getColor('secondary-label') },
+    { name: 'tertiaryLabelColor', color: electron.systemPreferences.getColor('tertiary-label') },
+    { name: 'quaternaryLabelColor', color: electron.systemPreferences.getColor('quaternary-label') },
+
+    // -------------- Text Colors -------------- //
+
+    { name: 'textColor', color: electron.systemPreferences.getColor('text') },
+    { name: 'placeholderTextColor', color: electron.systemPreferences.getColor('placeholder-text') },
+    { name: 'selectedTextColor', color: electron.systemPreferences.getColor('selected-text') },
+    { name: 'textBackgroundColor', color: electron.systemPreferences.getColor('text-background') },
+    { name: 'selectedTextBackgroundColor', color: electron.systemPreferences.getColor('selected-text-background') },
+    { name: 'keyboardFocusIndicatorColor', color: electron.systemPreferences.getColor('keyboard-focus-indicator') },
+    { name: 'unemphasizedSelectedTextColor', color: electron.systemPreferences.getColor('unemphasized-selected-text') },
+    { name: 'unemphasizedSelectedTextBackgroundColor', color: electron.systemPreferences.getColor('unemphasized-selected-text-background') },
+
+    // -------------- Content Colors -------------- //
+
+    { name: 'linkColor', color: electron.systemPreferences.getColor('link') },
+    { name: 'separatorColor', color: electron.systemPreferences.getColor('separator') },
+    { name: 'selectedContentBackgroundColor', color: electron.systemPreferences.getColor('selected-content-background') },
+    { name: 'unemphasizedSelectedContentBackgroundColor', color: electron.systemPreferences.getColor('unemphasized-selected-content-background') },
+
+    // -------------- Menu Colors -------------- //
+
+    { name: 'selectedMenuItemTextColor', color: electron.systemPreferences.getColor('selected-menu-item-text') },
+
+    // -------------- Table Colors -------------- //
+
+    { name: 'gridColor', color: electron.systemPreferences.getColor('grid') },
+    { name: 'headerTextColor', color: electron.systemPreferences.getColor('header-text') },
+
+    // -------------- Control Colors -------------- //
+
+    { name: 'controlAccentColor', color: controlAccentColor },
+    { name: 'controlColor', color: electron.systemPreferences.getColor('control') },
+    { name: 'controlBackgroundColor', color: electron.systemPreferences.getColor('control-background') },
+    { name: 'controlTextColor', color: electron.systemPreferences.getColor('control-text') },
+    { name: 'disabledControlTextColor', color: electron.systemPreferences.getColor('disabled-control-text') },
+    { name: 'selectedControlColor', color: electron.systemPreferences.getColor('selected-control') },
+    { name: 'selectedControlTextColor', color: electron.systemPreferences.getColor('selected-control-text') },
+    { name: 'alternateSelectedControlTextColor', color: electron.systemPreferences.getColor('alternate-selected-control-text') },
+
+    // -------------- Window Colors -------------- //
+
+    { name: 'windowBackgroundColor', color: electron.systemPreferences.getColor('window-background') },
+    { name: 'windowFrameTextColor', color: electron.systemPreferences.getColor('window-frame-text') },
+
+    // -------------- Highlight & Shadow Colors -------------- //
+
+    { name: 'findHighlightColor', color: electron.systemPreferences.getColor('find-highlight') },
+    { name: 'highlightColor', color: electron.systemPreferences.getColor('highlight') },
+    { name: 'shadowColor', color: electron.systemPreferences.getColor('shadow') },
+  ];
+
+  return systemColors
+});
+
+
 electron.ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
   // return path.resolve(basePath, filepath)
 
@@ -1967,7 +2322,7 @@ electron.ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCh
   File type: directory, html, png|jpg|gif, md|mmd|markdown
   */
 
-  console.log('- - - - - -');
+  // console.log('- - - - - -')
   // console.log(pathToCheck.match(/.{0,2}\//))
   const directory = path.parse(docPath).dir;
   const resolvedPath = path.resolve(directory, pathToCheck);
@@ -1976,10 +2331,10 @@ electron.ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCh
   const pathToCheckExists = await fsExtra.pathExists(pathToCheck);
   const resolvedPathExists = await fsExtra.pathExists(resolvedPath);
 
-  console.log('docPath: ', docPath);
-  console.log('pathToCheck: ', pathToCheck);
-  console.log('resolvedPath: ', resolvedPath);
-  console.log(docPathExists, pathToCheckExists, resolvedPathExists);
+  // console.log('docPath: ', docPath)
+  // console.log('pathToCheck: ', pathToCheck)
+  // console.log('resolvedPath: ', resolvedPath)
+  // console.log(docPathExists, pathToCheckExists, resolvedPathExists)
 
   // if (pathToCheck.match(/.{0,2}\//)) {
   //   console.log()

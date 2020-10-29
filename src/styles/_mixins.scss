@@ -1,0 +1,87 @@
+/* -------------- Misc -------------- */
+
+@mixin centered_background_image {
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+@mixin absolute-vertical-center {
+    position: absolute;
+    top: 50%;
+    transform: translate(0, -50%);
+}
+
+@mixin unstyled-button {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+}
+
+@mixin absolute_centered {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@mixin absolute_vertical_centered {
+    position: absolute;
+    top: 50%;
+    transform: translate(0, -50%);
+}
+
+@mixin absolute_horizontal_centered {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+/* -------------- Typography -------------- */
+
+// Labels - Normal
+@mixin label-normal-small {
+    font: caption;
+    font-weight: normal;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 0.07px;
+}
+
+@mixin label-normal-small-bold {
+    font: caption;
+    font-weight: bold;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 0.07px;
+}
+
+@mixin label-normal {
+    font: caption;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: 15px;
+    letter-spacing: -0.08px;
+    color: var(--labelColor);
+}
+
+// Labels - Large
+@mixin label-large-bold {
+    font-family: 'SF Pro Display';
+    font-weight: bold;
+    font-size: 20px;
+    line-height: 24px;
+    letter-spacing: -0.12px;
+}
+
+// Columns
+@mixin column {
+    font: caption;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: -0.07px;
+}
+

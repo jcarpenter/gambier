@@ -2,9 +2,10 @@
   import { onMount } from "svelte";
   import FirstRun from "./FirstRun.svelte";
   import FlexPanel from "./FlexPanel.svelte";
-  import SideBar from "./SideBar.svelte";
+  import SideBar from "./SideBar/SideBar.svelte";
   import DocList from "./DocList.svelte";
   import Editor from "./Editor.svelte";
+  import UITests from "./UITests.svelte";
 
   export let state = {};
   export let oldState = {};
@@ -33,13 +34,13 @@
   <div id="flexLayout">
     <FlexPanel
       visible={state.sideBar.show}
-      min={160}
-      max={220}
-      start={180}
+      min={250}
+      max={300}
+      start={250}
       on:click={() => setLayoutFocus('navigation')}>
-      <SideBar {state} />
+      <SideBar {state} focused={state.focusedLayoutSection == "navigation"}/>
     </FlexPanel>
-    {#if state.showFilesList}
+    <!-- {#if state.showFilesList}
       <FlexPanel
         min={260}
         max={360}
@@ -47,10 +48,11 @@
         on:click={() => setLayoutFocus('navigation')}>
         <DocList {state} {oldState} />
       </FlexPanel>
-    {/if}
-    <Editor
+    {/if} -->
+    <UITests />
+    <!-- <Editor
       state={state}
       visible={isEditorVisible}
-      on:click={() => setLayoutFocus('editor')} />
+      on:click={() => setLayoutFocus('editor')} /> -->
   </div>
 {/if}

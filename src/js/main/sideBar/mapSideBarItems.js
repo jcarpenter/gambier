@@ -17,7 +17,7 @@ function mapFolders(sideBar, newState) {
     const oldFolder = oldFolders.find((oldF) => oldF.id == f.id)
 
     // Determine icon
-    const icon = f.childFileCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg'
+    const icon = f.directChildCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg'
 
     // Make new version
     const newFolder = makeSideBarItem(

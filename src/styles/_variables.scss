@@ -1,63 +1,10 @@
-/* -------------- Font mixins -------------- */
-
-// Labels - Normal
-@mixin label-normal-small {
-    font: caption;
-    font-weight: normal;
-    font-size: 11px;
-    line-height: 13px;
-    letter-spacing: 0.07px;
-}
-
-@mixin label-normal-small-bold {
-    font: caption;
-    font-weight: bold;
-    font-size: 11px;
-    line-height: 13px;
-    letter-spacing: 0.07px;
-}
-
-@mixin label-normal {
-    font: caption;
-    font-weight: normal;
-    font-size: 13px;
-    line-height: 15px;
-    letter-spacing: -0.08px;
-}
-
-// Labels - Large
-@mixin label-large-bold {
-    font-family: 'SF Pro Display';
-    font-weight: bold;
-    font-size: 20px;
-    line-height: 24px;
-    letter-spacing: -0.12px;
-}
-
-// Columns
-@mixin column {
-    font: caption;
-    font-weight: 500;
-    font-size: 12px;
-    line-height: 16px;
-    letter-spacing: -0.07px;
-}
-
-/* -------------- Layout mixins -------------- */
-@mixin absolute-vertical-center {
-    position: absolute;
-    top: 50%;
-    transform: translate(0, -50%);
-}
-
-@mixin unstyled-button {
-    border: none;
-    outline: none;
-    padding: 0;
-    margin: 0;
-}
-
 :root {
+
+    /* -------------- Images -------------- */
+
+    // --img-folder-fill: url(img/folder.svg);
+
+
     /* -------------- Layouts (CSS grid) -------------- */
 
     --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]

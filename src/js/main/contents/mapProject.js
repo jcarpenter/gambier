@@ -19,7 +19,7 @@ export default async function(projectPath, store) {
   try {
 
     // Map project path, recursively
-    const { folders, documents, media } = await mapFolder(projectPath, undefined, '', true)
+    const { tree, folders, documents, media } = await mapFolder(projectPath, undefined, '', true, 0)
     
     // Dispatch results to store
     store.dispatch({
