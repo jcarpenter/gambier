@@ -7,7 +7,7 @@ import path from 'path'
 /**
  * For specified path, return document details
  */
-export default async function (filePath, stats = undefined, parentId = '') {
+export default async function (filePath, stats = undefined, parentId = '', nestDepth) {
 
 	const doc = Object.assign({}, Document)
 
@@ -20,6 +20,7 @@ export default async function (filePath, stats = undefined, parentId = '') {
 	doc.parentId = parentId
 	doc.modified = stats.mtime.toISOString()
 	doc.created = stats.birthtime.toISOString()
+	doc.nestDepth = nestDepth
 
 	// Get front matter
 	const gm = matter.read(filePath)

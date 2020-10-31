@@ -9,6 +9,7 @@ const Document = {
   created: '',
   excerpt: '',
   tags: [],
+  nestDepth: 0,
 }
 
 export { Document }

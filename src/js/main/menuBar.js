@@ -3,19 +3,243 @@ import { newFile } from './actions/index.js'
 
 let store = {}
 let state = {}
+let menuItems = {}
 
-/**
- * Note: App and File menus are macOS only. 
- */
-function setup(gambierStore) {
+const isMac = process.platform === 'darwin'
+const separator = new MenuItem({ type: 'separator' })
 
-  store = gambierStore
-  state = gambierStore.store
+function makeMenuItems() {
 
-  const isMac = process.platform === 'darwin'
-  const separator = new MenuItem({ type: 'separator' })
+  const mI = { topLevel: [] } // reset
+
+
+  // -------- File (Mac-only) -------- //
+  if (isMac) {
+
+    mI.saveNewFile = new MenuItem({
+      label: 'New Document',
+      accelerator: 'CmdOrCtrl+N',
+      async click(item, focusedWindow) {
+        store.dispatch(await newFile(state))
+      }
+    })
+
+    mI.save = new MenuItem({
+      label: 'Save',
+      accelerator: 'CmdOrCtrl+S',
+      click(item, focusedWindow) {
+        focusedWindow.webContents.send('mainRequestsSaveFile')
+      }
+    })
+
+    mI.moveToTrash = new MenuItem({
+      label: 'Move to Trash',
+      accelerator: 'CmdOrCtrl+Backspace',
+      enabled: state.focusedLayoutSection == 'navigation',
+      click(item, focusedWindow) {
+        focusedWindow.webContents.send('mainRequestsDeleteFile')
+      }
+    })
+
+    mI.topLevel.push(new MenuItem({
+      label: 'File',
+      submenu: [
+        mI.saveNewFile,
+        mI.save,
+        mI.moveToTrash
+      ]
+    }))
+  }
+
+
+  // -------- Edit -------- //
+
+  mI.undo = new MenuItem({ label: 'Undo', role: 'undo' })
+  mI.redo = new MenuItem({ label: 'Redo', role: 'redo' })
+  mI.cut = new MenuItem({ role: 'cut' })
+  mI.copy = new MenuItem({ role: 'copy' })
+  mI.paste = new MenuItem({ role: 'paste' })
+  mI.deleteItem = new MenuItem({ role: 'delete' })
+  mI.selectall = new MenuItem({ role: 'selectall' })
+  mI.startspeaking = new MenuItem({ role: 'startspeaking' })
+  mI.stopspeaking = new MenuItem({ role: 'stopspeaking' })
+  mI.findInFiles = new MenuItem({
+    label: 'Find in Files',
+    type: 'normal',
+    accelerator: 'CmdOrCtrl+Shift+F',
+    click(item, focusedWindow) {
+      if (focusedWindow) {
+        focusedWindow.webContents.send('findInFiles')
+      }
+    }
+  })
+
+  mI.topLevel.push(new MenuItem(
+    {
+      label: 'Edit',
+      submenu: [
+        mI.undo,
+        mI.redo,
+        separator,
+        mI.cut,
+        mI.copy,
+        mI.paste,
+        mI.deleteItem,
+        mI.selectall,
+        separator,
+        mI.findInFiles,
+        // If macOS, add speech options to Edit menu
+        ...isMac ? [
+          separator,
+          {
+            label: 'Speech',
+            submenu: [
+              mI.startspeaking,
+              mI.stopspeaking
+            ]
+          }
+        ] : []
+      ]
+    }
+  ))
+
+  // -------- View -------- //
+
+  mI.source_mode = new MenuItem({
+    label: 'Source mode',
+    type: 'checkbox',
+    checked: state.sourceMode,
+    accelerator: 'CmdOrCtrl+/',
+    click(item, focusedWindow) {
+      if (focusedWindow) {
+        store.dispatch({
+          type: 'SET_SOURCE_MODE',
+          active: !state.sourceMode,
+        })
+      }
+    }
+  })
+
+  mI.appearance_system = new MenuItem({
+    label: 'Match System',
+    type: 'checkbox',
+    checked: state.appearance.userPref == 'match-system',
+    click(item, focusedWindow) {
+      store.dispatch({
+        type: 'SET_APPEARANCE',
+        userPref: 'match-system',
+        theme: nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
+      })
+    }
+  })
+
+  mI.appearance_light = new MenuItem({
+    label: 'Light',
+    type: 'checkbox',
+    checked: state.appearance.userPref == 'light',
+    click() {
+      store.dispatch({
+        type: 'SET_APPEARANCE',
+        userPref: 'light',
+        theme: 'gambier-light'
+      })
+    }
+  })
+
+  mI.appearance_dark = new MenuItem({
+    label: 'Dark',
+    type: 'checkbox',
+    checked: state.appearance.userPref == 'dark',
+    click(item, focusedWindow) {
+      store.dispatch({
+        type: 'SET_APPEARANCE',
+        userPref: 'dark',
+        theme: 'gambier-dark'
+      })
+    }
+  })
+
+  mI.appearance = new MenuItem({
+    label: 'Appearance',
+    submenu: [
+      mI.appearance_system,
+      separator,
+      mI.appearance_light,
+      mI.appearance_dark
+    ]
+  })
+
+  mI.toggle_dev_tools = new MenuItem({
+    label: 'Toggle Developer Tools',
+    accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+    role: 'toggleDevTools'
+    // click(item, focusedWindow) {
+    //   if (focusedWindow) focusedWindow.webContents.toggleDevTools()
+    // }
+  })
+
+  mI.reload = new MenuItem({
+    label: 'Reload',
+    accelerator: 'CmdOrCtrl+R',
+    role: 'reload'
+    // click(item, focusedWindow) {
+    //   if (focusedWindow) focusedWindow.reload()
+    // }
+  })
+
+  mI.togglePreview = new MenuItem({
+    label: state.sideBar2.preview.isOpen ? 'Hide Preview' : 'Show Preview',
+    accelerator: 'Alt+CmdOrCtrl+P',
+    click(item, focusedWindow) {
+      if (focusedWindow) {
+        store.dispatch({ type: 'TOGGLE_SIDEBAR_PREVIEW' })
+      }
+    }
+  })
+
+  mI.sideBarTabs = state.sideBar2.tabs.map((t, index) => {
+    return new MenuItem({
+      index: index,
+      label: t.title,
+      type: 'checkbox',
+      accelerator: `Cmd+${index + 1}`,
+      checked: state.sideBar2.activeTab.index == index,
+      click(item, focusedWindow) {
+        store.dispatch({
+          type: 'SELECT_SIDEBAR_TAB_BY_INDEX',
+          index: index
+        })
+      }
+    })
+  })
+
+  mI.topLevel.push(new MenuItem({
+    label: 'View',
+    submenu: [
+      mI.source_mode,
+      mI.appearance,
+      ...app.isPackaged ? [] : [separator, mI.toggle_dev_tools, mI.reload],
+      separator,
+      mI.togglePreview,
+      separator,
+      ...mI.sideBarTabs
+    ]
+  }))
+
+  return mI
+}
+
+function makeMenu() {
 
   const menu = new Menu()
+  menuItems = makeMenuItems()
+  // console.log(menuItems)
+  // for (const item in menuItems) {
+  //   console.log(`menuItems.${item} = ${menuItems[item]}`);
+  // }
+  // menuItems.topLevel.forEach((item) => console.log(item))
+  menuItems.topLevel.forEach((item) => menu.append(item))
+  return menu
 
   // -------- App (Mac-only) -------- //
 
@@ -40,215 +264,6 @@ function setup(gambierStore) {
     menu.append(appMenu)
   }
 
-
-  // -------- File (Mac-only) -------- //
-  if (isMac) {
-
-    const saveNewFile = new MenuItem({
-      label: 'New Document',
-      accelerator: 'CmdOrCtrl+N',
-      async click(item, focusedWindow) {
-        store.dispatch(await newFile(state))
-      }
-    })
-
-    const save = new MenuItem({
-      label: 'Save',
-      accelerator: 'CmdOrCtrl+S',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('mainRequestsSaveFile')
-      }
-    })
-
-    var moveToTrash = new MenuItem({
-      label: 'Move to Trash',
-      accelerator: 'CmdOrCtrl+Backspace',
-      enabled: state.focusedLayoutSection == 'navigation',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('mainRequestsDeleteFile')
-      }
-    })
-
-    const file = new MenuItem({
-      label: 'File',
-      submenu: [
-        saveNewFile,
-        save,
-        moveToTrash
-      ]
-    })
-
-    menu.append(file)
-  }
-
-
-  // -------- Edit -------- //
-
-  const undo = new MenuItem({ label: 'Undo', role: 'undo' })
-  const redo = new MenuItem({ label: 'Redo', role: 'redo' })
-  const cut = new MenuItem({ role: 'cut' })
-  const copy = new MenuItem({ role: 'copy' })
-  const paste = new MenuItem({ role: 'paste' })
-  const deleteItem = new MenuItem({ role: 'delete' })
-  const selectall = new MenuItem({ role: 'selectall' })
-  const startspeaking = new MenuItem({ role: 'startspeaking' })
-  const stopspeaking = new MenuItem({ role: 'stopspeaking' })
-
-  const findInFiles = new MenuItem({
-    label: 'Find in Files',
-    type: 'normal',
-    accelerator: 'CmdOrCtrl+Shift+F',
-    click(item, focusedWindow) {
-      if (focusedWindow) {
-        focusedWindow.webContents.send('findInFiles')
-      }
-    }
-  })
-
-  const edit = new MenuItem(
-    {
-      label: 'Edit',
-      submenu: [
-        undo,
-        redo,
-        separator,
-        cut,
-        copy,
-        paste,
-        deleteItem,
-        selectall,
-        separator,
-        findInFiles,
-        // If macOS, add speech options to Edit menu
-        ...isMac ? [
-          separator,
-          {
-            label: 'Speech',
-            submenu: [
-              startspeaking,
-              stopspeaking
-            ]
-          }
-        ] : []
-      ]
-    }
-  )
-
-  menu.append(edit)
-
-
-  // -------- View -------- //
-
-  const source_mode = new MenuItem({
-    label: 'Source mode',
-    type: 'checkbox',
-    checked: state.sourceMode,
-    accelerator: 'CmdOrCtrl+/',
-    click(item, focusedWindow) {
-      if (focusedWindow) {
-        store.dispatch({
-          type: 'SET_SOURCE_MODE',
-          active: !state.sourceMode,
-        })
-      }
-    }
-  })
-
-  const appearance_system = new MenuItem({
-    label: 'Match System',
-    type: 'checkbox',
-    checked: state.appearance.userPref == 'match-system',
-    click(item, focusedWindow) {
-      store.dispatch({
-        type: 'SET_APPEARANCE',
-        userPref: 'match-system',
-        theme: nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
-      })
-    }
-  })
-
-  const appearance_light = new MenuItem({
-    label: 'Light',
-    type: 'checkbox',
-    checked: state.appearance.userPref == 'light',
-    click() {
-      store.dispatch({
-        type: 'SET_APPEARANCE',
-        userPref: 'light',
-        theme: 'gambier-light'
-      })
-    }
-  })
-
-  const appearance_dark = new MenuItem({
-    label: 'Dark',
-    type: 'checkbox',
-    checked: state.appearance.userPref == 'dark',
-    click(item, focusedWindow) {
-      store.dispatch({
-        type: 'SET_APPEARANCE',
-        userPref: 'dark',
-        theme: 'gambier-dark'
-      })
-    }
-  })
-
-  const appearance = new MenuItem({
-    label: 'Appearance',
-    submenu: [
-      appearance_system,
-      separator,
-      appearance_light,
-      appearance_dark
-    ]
-  })
-
-  const toggle_dev_tools = new MenuItem({
-    label: 'Toggle Developer Tools',
-    accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-    role: 'toggleDevTools'
-    // click(item, focusedWindow) {
-    //   if (focusedWindow) focusedWindow.webContents.toggleDevTools()
-    // }
-  })
-
-  const reload = new MenuItem({
-    label: 'Reload',
-    accelerator: 'CmdOrCtrl+R',
-    role: 'reload'
-    // click(item, focusedWindow) {
-    //   if (focusedWindow) focusedWindow.reload()
-    // }
-  })
-
-  const sideBarTabs = state.sideBar2.tabs.map((t, index) => {
-    return new MenuItem({
-      label: t.title,
-      type: 'checkbox',
-      accelerator: `Cmd+${index + 1}`,
-      checked: state.sideBar2.activeTab.index == index,
-      click(item, focusedWindow) {
-        store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_INDEX',
-          index: index
-        })
-      }
-    })
-  })
-
-  const view = new MenuItem({
-    label: 'View',
-    // submenu: new Menu()
-    submenu: [
-      source_mode,
-      appearance,
-      ...app.isPackaged ? [] : [separator, toggle_dev_tools, reload],
-      separator,
-      ...sideBarTabs
-    ]
-  })
-
-  menu.append(view)
 
 
   // -------- Window -------- //
@@ -294,42 +309,53 @@ function setup(gambierStore) {
     menu.append(window)
   }
 
+  return menu
+}
 
-  // -------- Set initial values -------- //
-
-
-
-
-  // -------- Change listeners -------- //
-
-  store.onDidAnyChange((newState, oldState) => {
-    state = newState
-  })
-
-  store.onDidChange('sourceMode', () => {
-    source_mode.checked = state.sourceMode
-  })
-
-  store.onDidChange('focusedLayoutSection', () => {
-    moveToTrash.enabled = state.focusedLayoutSection == 'navigation'
-  })
-
-  store.onDidChange('appearance', () => {
-    appearance_system.checked = state.appearance.userPref == 'match-system'
-    appearance_light.checked = state.appearance.userPref == 'light'
-    appearance_dark.checked = state.appearance.userPref == 'dark'
-  })
-
-  store.onDidChange('sideBar2', () => {
-    sideBarTabs.forEach((t, index) => {
-      t.checked = state.sideBar2.activeTab.index == index
-    });
-  })
-
-
-  // -------- Create menu -------- //
-
+function rebuild() {
+  const menu = makeMenu()
   Menu.setApplicationMenu(menu)
+}
+
+function update() {
+
+}
+
+/**
+ * Note: App and File menus are macOS only. 
+ */
+function setup(gambierStore) {
+
+  store = gambierStore
+  state = gambierStore.store
+  Menu.setApplicationMenu(makeMenu())
+
+  // -------- Setup change listeners -------- //
+
+  // store.onDidAnyChange((newState, oldState) => {
+  //   state = newState
+  // })
+
+  // store.onDidChange('sourceMode', () => {
+  //   source_mode.checked = state.sourceMode
+  // })
+
+  // store.onDidChange('focusedLayoutSection', () => {
+  //   moveToTrash.enabled = state.focusedLayoutSection == 'navigation'
+  // })
+
+  // store.onDidChange('appearance', () => {
+  //   appearance_system.checked = state.appearance.userPref == 'match-system'
+  //   appearance_light.checked = state.appearance.userPref == 'light'
+  //   appearance_dark.checked = state.appearance.userPref == 'dark'
+  // })
+
+  // store.onDidChange('sideBar2', () => {
+  //   sideBarTabs.forEach((t, index) => {
+  //     t.checked = state.sideBar2.activeTab.index == index
+  //   });
+  // })
+
 }
 
 export { setup } 

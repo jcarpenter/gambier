@@ -79,41 +79,44 @@ const storeDefault = {
       index: 0,
       name: "project"
     },
+    preview: {
+      isOpen: true,
+    },
     tabs: [
       {
         title: 'Project', name: 'project',
-        lastSelectedItem: 0,
-        selectedItems: [],
-        expandedItems: [],
+        lastSelectedItem: {}, // id and type
+        selectedItems: [], // Array of ids
+        expandedItems: [], // Array of folder ids
       },
       {
         title: 'All Documents', name: 'all-documents',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Most Recent', name: 'most-recent',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Tags', name: 'tags',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Media', name: 'media',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Citations', name: 'citations',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Search', name: 'search',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       }
     ],
@@ -746,25 +749,32 @@ async function reducers(state = {}, action) {
 
     // -------- SIDEBAR 2 -------- //
 
+    case 'EXPAND_SIDEBAR_ITEMS': {
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
+      tab.expandedItems = action.expandedItems;
+      newState.changed.push(`sideBar.tabs.${action.tabName}`);
+      break
+    }
+
+    case 'SELECT_SIDEBAR_ITEMS': {
+      console.log(action);
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
+      tab.lastSelectedItem = action.lastSelectedItem;
+      tab.selectedItems = action.selectedItems;
+      newState.changed.push(`sideBar.tabs.${action.tabName}`);
+      newState.changed.push(`sideBar.activeTab`);
+      break
+    }
+
     case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
       newState.sideBar2.activeTab.index = action.index;
       newState.sideBar2.activeTab.name = newState.sideBar2.tabs[action.index].name;
       newState.changed.push('sideBar.activeTab');
       break
     }
-
-    case 'SELECT_SIDEBAR_ITEMS': {
-      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
-      tab.lastSelectedItem = action.lastSelectedItem;
-      tab.selectedItems = action.selectedItems;
-      newState.changed.push(`sideBar.tabs.${action.tabName}`);
-      break
-    }
-
-    case 'EXPAND_SIDEBAR_ITEMS': {
-      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
-      tab.expandedItems = action.expandedItems;
-      newState.changed.push(`sideBar.tabs.${action.tabName}`);
+    case 'TOGGLE_SIDEBAR_PREVIEW': {
+      newState.sideBar2.preview.isOpen = !newState.sideBar2.preview.isOpen;
+      newState.changed.push(`sideBar.preview`);
       break
     }
 
@@ -1056,48 +1066,20 @@ async function setProjectPath () {
 
 let store = {};
 let state = {};
+let menuItems = {};
 
-/**
- * Note: App and File menus are macOS only. 
- */
-function setup(gambierStore) {
+const isMac = process.platform === 'darwin';
+const separator = new electron.MenuItem({ type: 'separator' });
 
-  store = gambierStore;
-  state = gambierStore.store;
+function makeMenuItems() {
 
-  const isMac = process.platform === 'darwin';
-  const separator = new electron.MenuItem({ type: 'separator' });
-
-  const menu = new electron.Menu();
-
-  // -------- App (Mac-only) -------- //
-
-  if (isMac) {
-    const appMenu = new electron.MenuItem(
-      {
-        label: electron.app.name,
-        submenu: [
-          { role: 'about' },
-          { type: 'separator' },
-          { role: 'services', submenu: [] },
-          { type: 'separator' },
-          { role: 'hide' },
-          { role: 'hideothers' },
-          { role: 'unhide' },
-          { type: 'separator' },
-          { role: 'quit' }
-        ]
-      }
-    );
-
-    menu.append(appMenu);
-  }
+  const mI = { topLevel: [] }; // reset
 
 
   // -------- File (Mac-only) -------- //
   if (isMac) {
 
-    const saveNewFile = new electron.MenuItem({
+    mI.saveNewFile = new electron.MenuItem({
       label: 'New Document',
       accelerator: 'CmdOrCtrl+N',
       async click(item, focusedWindow) {
@@ -1105,7 +1087,7 @@ function setup(gambierStore) {
       }
     });
 
-    const save = new electron.MenuItem({
+    mI.save = new electron.MenuItem({
       label: 'Save',
       accelerator: 'CmdOrCtrl+S',
       click(item, focusedWindow) {
@@ -1113,7 +1095,7 @@ function setup(gambierStore) {
       }
     });
 
-    var moveToTrash = new electron.MenuItem({
+    mI.moveToTrash = new electron.MenuItem({
       label: 'Move to Trash',
       accelerator: 'CmdOrCtrl+Backspace',
       enabled: state.focusedLayoutSection == 'navigation',
@@ -1122,32 +1104,29 @@ function setup(gambierStore) {
       }
     });
 
-    const file = new electron.MenuItem({
+    mI.topLevel.push(new electron.MenuItem({
       label: 'File',
       submenu: [
-        saveNewFile,
-        save,
-        moveToTrash
+        mI.saveNewFile,
+        mI.save,
+        mI.moveToTrash
       ]
-    });
-
-    menu.append(file);
+    }));
   }
 
 
   // -------- Edit -------- //
 
-  const undo = new electron.MenuItem({ label: 'Undo', role: 'undo' });
-  const redo = new electron.MenuItem({ label: 'Redo', role: 'redo' });
-  const cut = new electron.MenuItem({ role: 'cut' });
-  const copy = new electron.MenuItem({ role: 'copy' });
-  const paste = new electron.MenuItem({ role: 'paste' });
-  const deleteItem = new electron.MenuItem({ role: 'delete' });
-  const selectall = new electron.MenuItem({ role: 'selectall' });
-  const startspeaking = new electron.MenuItem({ role: 'startspeaking' });
-  const stopspeaking = new electron.MenuItem({ role: 'stopspeaking' });
-
-  const findInFiles = new electron.MenuItem({
+  mI.undo = new electron.MenuItem({ label: 'Undo', role: 'undo' });
+  mI.redo = new electron.MenuItem({ label: 'Redo', role: 'redo' });
+  mI.cut = new electron.MenuItem({ role: 'cut' });
+  mI.copy = new electron.MenuItem({ role: 'copy' });
+  mI.paste = new electron.MenuItem({ role: 'paste' });
+  mI.deleteItem = new electron.MenuItem({ role: 'delete' });
+  mI.selectall = new electron.MenuItem({ role: 'selectall' });
+  mI.startspeaking = new electron.MenuItem({ role: 'startspeaking' });
+  mI.stopspeaking = new electron.MenuItem({ role: 'stopspeaking' });
+  mI.findInFiles = new electron.MenuItem({
     label: 'Find in Files',
     type: 'normal',
     accelerator: 'CmdOrCtrl+Shift+F',
@@ -1158,41 +1137,38 @@ function setup(gambierStore) {
     }
   });
 
-  const edit = new electron.MenuItem(
+  mI.topLevel.push(new electron.MenuItem(
     {
       label: 'Edit',
       submenu: [
-        undo,
-        redo,
+        mI.undo,
+        mI.redo,
         separator,
-        cut,
-        copy,
-        paste,
-        deleteItem,
-        selectall,
+        mI.cut,
+        mI.copy,
+        mI.paste,
+        mI.deleteItem,
+        mI.selectall,
         separator,
-        findInFiles,
+        mI.findInFiles,
         // If macOS, add speech options to Edit menu
         ...isMac ? [
           separator,
           {
             label: 'Speech',
             submenu: [
-              startspeaking,
-              stopspeaking
+              mI.startspeaking,
+              mI.stopspeaking
             ]
           }
         ] : []
       ]
     }
-  );
-
-  menu.append(edit);
-
+  ));
 
   // -------- View -------- //
 
-  const source_mode = new electron.MenuItem({
+  mI.source_mode = new electron.MenuItem({
     label: 'Source mode',
     type: 'checkbox',
     checked: state.sourceMode,
@@ -1207,7 +1183,7 @@ function setup(gambierStore) {
     }
   });
 
-  const appearance_system = new electron.MenuItem({
+  mI.appearance_system = new electron.MenuItem({
     label: 'Match System',
     type: 'checkbox',
     checked: state.appearance.userPref == 'match-system',
@@ -1220,7 +1196,7 @@ function setup(gambierStore) {
     }
   });
 
-  const appearance_light = new electron.MenuItem({
+  mI.appearance_light = new electron.MenuItem({
     label: 'Light',
     type: 'checkbox',
     checked: state.appearance.userPref == 'light',
@@ -1233,7 +1209,7 @@ function setup(gambierStore) {
     }
   });
 
-  const appearance_dark = new electron.MenuItem({
+  mI.appearance_dark = new electron.MenuItem({
     label: 'Dark',
     type: 'checkbox',
     checked: state.appearance.userPref == 'dark',
@@ -1246,17 +1222,17 @@ function setup(gambierStore) {
     }
   });
 
-  const appearance = new electron.MenuItem({
+  mI.appearance = new electron.MenuItem({
     label: 'Appearance',
     submenu: [
-      appearance_system,
+      mI.appearance_system,
       separator,
-      appearance_light,
-      appearance_dark
+      mI.appearance_light,
+      mI.appearance_dark
     ]
   });
 
-  const toggle_dev_tools = new electron.MenuItem({
+  mI.toggle_dev_tools = new electron.MenuItem({
     label: 'Toggle Developer Tools',
     accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
     role: 'toggleDevTools'
@@ -1265,7 +1241,7 @@ function setup(gambierStore) {
     // }
   });
 
-  const reload = new electron.MenuItem({
+  mI.reload = new electron.MenuItem({
     label: 'Reload',
     accelerator: 'CmdOrCtrl+R',
     role: 'reload'
@@ -1274,8 +1250,19 @@ function setup(gambierStore) {
     // }
   });
 
-  const sideBarTabs = state.sideBar2.tabs.map((t, index) => {
+  mI.togglePreview = new electron.MenuItem({
+    label: state.sideBar2.preview.isOpen ? 'Hide Preview' : 'Show Preview',
+    accelerator: 'Alt+CmdOrCtrl+P',
+    click(item, focusedWindow) {
+      if (focusedWindow) {
+        store.dispatch({ type: 'TOGGLE_SIDEBAR_PREVIEW' });
+      }
+    }
+  });
+
+  mI.sideBarTabs = state.sideBar2.tabs.map((t, index) => {
     return new electron.MenuItem({
+      index: index,
       label: t.title,
       type: 'checkbox',
       accelerator: `Cmd+${index + 1}`,
@@ -1289,100 +1276,70 @@ function setup(gambierStore) {
     })
   });
 
-  const view = new electron.MenuItem({
+  mI.topLevel.push(new electron.MenuItem({
     label: 'View',
-    // submenu: new Menu()
     submenu: [
-      source_mode,
-      appearance,
-      ...electron.app.isPackaged ? [] : [separator, toggle_dev_tools, reload],
+      mI.source_mode,
+      mI.appearance,
+      ...electron.app.isPackaged ? [] : [separator, mI.toggle_dev_tools, mI.reload],
       separator,
-      ...sideBarTabs
+      mI.togglePreview,
+      separator,
+      ...mI.sideBarTabs
     ]
-  });
+  }));
 
-  menu.append(view);
+  return mI
+}
 
+function makeMenu() {
 
-  // -------- Window -------- //
+  const menu = new electron.Menu();
+  menuItems = makeMenuItems();
+  // console.log(menuItems)
+  // for (const item in menuItems) {
+  //   console.log(`menuItems.${item} = ${menuItems[item]}`);
+  // }
+  // menuItems.topLevel.forEach((item) => console.log(item))
+  menuItems.topLevel.forEach((item) => menu.append(item));
+  return menu
+}
 
-  // Different menus for macOS vs others
-  if (isMac) {
+/**
+ * Note: App and File menus are macOS only. 
+ */
+function setup(gambierStore) {
 
-    const window = new electron.MenuItem(
-      {
-        role: 'window',
-        submenu: [
-          {
-            label: 'Close',
-            accelerator: 'CmdOrCtrl+W',
-            role: 'close'
-          },
-          {
-            label: 'Minimize',
-            accelerator: 'CmdOrCtrl+M',
-            role: 'minimize'
-          },
-          { label: 'Zoom', role: 'zoom' },
-          { type: 'separator' },
-          { label: 'Bring All to Front', role: 'front' }
-        ]
-      }
-    );
+  store = gambierStore;
+  state = gambierStore.store;
+  electron.Menu.setApplicationMenu(makeMenu());
 
-    menu.append(window);
+  // -------- Setup change listeners -------- //
 
-  } else {
+  // store.onDidAnyChange((newState, oldState) => {
+  //   state = newState
+  // })
 
-    const window = new electron.MenuItem(
-      {
-        role: 'window',
-        submenu: [
-          { role: 'minimize' },
-          { role: 'close' }
-        ]
-      }
-    );
+  // store.onDidChange('sourceMode', () => {
+  //   source_mode.checked = state.sourceMode
+  // })
 
-    menu.append(window);
-  }
+  // store.onDidChange('focusedLayoutSection', () => {
+  //   moveToTrash.enabled = state.focusedLayoutSection == 'navigation'
+  // })
 
+  // store.onDidChange('appearance', () => {
+  //   appearance_system.checked = state.appearance.userPref == 'match-system'
+  //   appearance_light.checked = state.appearance.userPref == 'light'
+  //   appearance_dark.checked = state.appearance.userPref == 'dark'
+  // })
 
-  // -------- Set initial values -------- //
+  // store.onDidChange('sideBar2', () => {
+  //   sideBarTabs.forEach((t, index) => {
+  //     t.checked = state.sideBar2.activeTab.index == index
+  //   });
+  // })
 
-
-
-
-  // -------- Change listeners -------- //
-
-  store.onDidAnyChange((newState, oldState) => {
-    state = newState;
-  });
-
-  store.onDidChange('sourceMode', () => {
-    source_mode.checked = state.sourceMode;
-  });
-
-  store.onDidChange('focusedLayoutSection', () => {
-    moveToTrash.enabled = state.focusedLayoutSection == 'navigation';
-  });
-
-  store.onDidChange('appearance', () => {
-    appearance_system.checked = state.appearance.userPref == 'match-system';
-    appearance_light.checked = state.appearance.userPref == 'light';
-    appearance_dark.checked = state.appearance.userPref == 'dark';
-  });
-
-  store.onDidChange('sideBar2', () => {
-    sideBarTabs.forEach((t, index) => {
-      t.checked = state.sideBar2.activeTab.index == index;
-    });
-  });
-
-
-  // -------- Create menu -------- //
-
-  electron.Menu.setApplicationMenu(menu);
 }
 
 /**
@@ -1467,14 +1424,14 @@ async function mapFolder (folderPath, stats = undefined, parentId = '', recursiv
         });
     
       } else if (ext == '.md' || ext == '.markdown') {
-        const doc = await mapDocument(ePath, stats, folder.id);
+        const doc = await mapDocument(ePath, stats, folder.id, nestDepth + 1);
         contents.documents.push(doc);
         // folder.children.push(doc.id)
         folder.directChildCount++;
         folder.recursiveChildCount++;
 
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-        const media = await mapMedia(ePath, stats, folder.id, ext);
+        const media = await mapMedia(ePath, stats, folder.id, ext, nestDepth + 1);
         contents.media.push(media);
         // folder.children.push(media.id)
         folder.directChildCount++;
@@ -1732,6 +1689,7 @@ const Document = {
   created: '',
   excerpt: '',
   tags: [],
+  nestDepth: 0,
 };
 
 const Folder = {
@@ -1750,17 +1708,19 @@ const Media = {
   type: 'media',
   name: '',
   filetype: '',
+  disksize: '',
   path: '',
   id: '',
   parentId: '',
   modified: '',
   created: '',
+  nestDepth: 0,
 };
 
 /**
  * For specified path, return document details
  */
-async function mapDocument (filePath, stats = undefined, parentId = '') {
+async function mapDocument (filePath, stats = undefined, parentId = '', nestDepth) {
 
 	const doc = Object.assign({}, Document);
 
@@ -1773,6 +1733,7 @@ async function mapDocument (filePath, stats = undefined, parentId = '') {
 	doc.parentId = parentId;
 	doc.modified = stats.mtime.toISOString();
 	doc.created = stats.birthtime.toISOString();
+	doc.nestDepth = nestDepth;
 
 	// Get front matter
 	const gm = matter.read(filePath);
@@ -1857,7 +1818,7 @@ function getExcerpt(content) {
 /**
  * For specified path, return document details
  */
-async function mapMedia (filePath, stats = undefined, parentId = '', extension = undefined) {
+async function mapMedia (filePath, stats = undefined, parentId = '', extension = undefined, nestDepth) {
 
 	const media = Object.assign({}, Media);
 
@@ -1872,6 +1833,7 @@ async function mapMedia (filePath, stats = undefined, parentId = '', extension =
 	media.parentId = parentId;
 	media.modified = stats.mtime.toISOString();
 	media.created = stats.birthtime.toISOString();
+	media.nestDepth = nestDepth;
 
 	return media
 }
@@ -2078,7 +2040,7 @@ function setNativeTheme() {
 
   // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
   // console.log('setNativeTheme(). userPref = ', userPref)
-  // console.log('setNativeTheme(). systemPreferences.getAccentColor() = ', systemPreferences.getAccentColor())
+  // console.log('setNativeTheme(). systemPreferences.getAccent   Color() = ', systemPreferences.getAccentColor())
   // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
   // 
 
@@ -2133,7 +2095,7 @@ function createWindow() {
   });
 
   // Open DevTools
-  if (!electron.app.isPackaged) win.webContents.openDevTools();
+  // if (!app.isPackaged) win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'));
@@ -2213,9 +2175,10 @@ electron.ipcMain.on('dispatch', async (event, action) => {
     case ('SET_SORT'):
     case ('LOAD_PATH_IN_EDITOR'):
     // SideBar 2
-    case ('SELECT_SIDEBAR_TAB_BY_INDEX'):
-    case ('SELECT_SIDEBAR_ITEMS'):
     case ('EXPAND_SIDEBAR_ITEMS'):
+    case ('SELECT_SIDEBAR_ITEMS'):
+    case ('SELECT_SIDEBAR_TAB_BY_INDEX'):
+    case ('TOGGLE_SIDEBAR_PREVIEW'):
     // SideBar (old)
     case ('SELECT_SIDEBAR_ITEM'):
     case ('TOGGLE_SIDEBAR_ITEM_EXPANDED'):

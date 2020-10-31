@@ -150,7 +150,7 @@
       height: 10px;
 
       [role='button'] {
-        @include centered_background_image;
+        @include centered_mask_image;
         background-image: var(--img-chevron-right);
         position: absolute;
         display: inline-block;
@@ -167,7 +167,7 @@
     }
 
     .icon {
-      @include centered_background_image;
+      @include centered_mask_image;
       @include absolute-vertical-center;
       left: calc(var(--nestOffset) + 20px);
       width: 14px;

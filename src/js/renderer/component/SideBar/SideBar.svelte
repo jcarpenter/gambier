@@ -1,15 +1,17 @@
 <script>
   import { getSideBarItemById, isEmpty } from '../../utils'
   import { onMount } from 'svelte'
+  // SideBar
+  import Preview from './Preview.svelte'
   import Project from './Project.svelte'
   import AllDocuments from './AllDocuments.svelte'
+  // UI
   import Separator from '../UI/Separator.svelte'
 
   export let state = {}
   export let focused
 
   $: tabs = state.sideBar2.tabs
-  //   $: selectedTab = state.sideBar2.tabs.find((t) => t.active)
 
   function clickTab(evt, index) {
     window.api.send('dispatch', {
@@ -18,11 +20,26 @@
     })
   }
 
-  //   onMount(() => {})
 </script>
 
 <style type="text/scss">
   @import '../../../../styles/_mixins.scss';
+
+  #sidebar2 {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    margin: 0;
+    padding: 40px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--separatorColor);
+
+    & > div {
+      max-height: 100%;
+    }
+  }
 
   #tabs {
     min-height: 30px;
@@ -34,16 +51,20 @@
       margin: 0;
       list-style-type: none;
       display: flex;
+      flex-direction: row;
+      align-items: center;
 
       li {
-        @include centered_background_image;
+        @include centered_mask_image;
+        background-color: var(--controlTextColor);
         list-style-type: none;
         margin: 0 12px 0 0;
         padding: 0;
-        width: 15px;
-        height: 15px;
-        opacity: 60%;
+        width: 14px;
+        height: 14px;
+        opacity: 70%;
         &.active {
+          background-color: var(--controlAccentColor);
           opacity: 100%;
         }
       }
@@ -56,46 +77,46 @@
 
   // Icons
   .project {
-    background-image: var(--img-folder);
+    -webkit-mask-image: var(--img-folder);
   }
   .project.active {
-    background-image: var(--img-folder-fill);
+    -webkit-mask-image: var(--img-folder-fill);
   }
   .all-documents {
-    background-image: var(--img-doc-on-doc);
+    -webkit-mask-image: var(--img-doc-on-doc);
   }
   .all-documents.active {
-    background-image: var(--img-doc-on-doc-fill);
+    -webkit-mask-image: var(--img-doc-on-doc-fill);
   }
   .most-recent {
-    background-image: var(--img-clock);
+    -webkit-mask-image: var(--img-clock);
   }
   .most-recent.active {
-    background-image: var(--img-clock-fill);
+    -webkit-mask-image: var(--img-clock-fill);
   }
   .tags {
-    background-image: var(--img-tag);
+    -webkit-mask-image: var(--img-tag);
   }
   .tags.active {
-    background-image: var(--img-tag-fill);
+    -webkit-mask-image: var(--img-tag-fill);
   }
   .media {
-    background-image: var(--img-photo);
+    -webkit-mask-image: var(--img-photo);
   }
   .media.active {
-    background-image: var(--img-photo-fill);
+    -webkit-mask-image: var(--img-photo-fill);
   }
   .citations {
-    background-image: var(--img-quote-bubble);
+    -webkit-mask-image: var(--img-quote-bubble);
   }
   .citations.active {
-    background-image: var(--img-quote-bubble-fill);
+    -webkit-mask-image: var(--img-quote-bubble-fill);
   }
   .search {
-    background-image: var(--img-magnifyingglass);
+    -webkit-mask-image: var(--img-magnifyingglass);
   }
   .search.active {
-    background-image: var(--img-magnifyingglass);
+    -webkit-mask-image: var(--img-magnifyingglass);
   }
 </style>
 
@@ -117,4 +138,7 @@
   <!-- Sections -->
   <Project {state} {focused} />
   <AllDocuments {state} {focused} />
+  
+  <!-- Preview -->
+  <Preview {state} />
 </div>

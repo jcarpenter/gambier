@@ -99,8 +99,16 @@ body {
   padding: 0;
 }
 
-#flexLayout {
+.flexContainerRow {
   display: flex;
+  flex-direction: horizontal;
+  width: 100%;
+  height: 100%;
+}
+
+.flexContainerColumn {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
 }
@@ -162,83 +170,6 @@ body {
   line-height: 15px;
   letter-spacing: -0.08px;
   color: var(--labelColor);
-}
-
-#sidebar {
-  width: 100%;
-  height: 100%;
-  overflow-y: scroll;
-  position: relative;
-  border-right: 1px solid var(--separatorColor);
-  user-select: none;
-  background-color: var(--sidebarMaterial);
-}
-
-#sidebar.focused {
-  background-color: red;
-}
-
-#sidebar h1 {
-  font: caption;
-  font-weight: bold;
-  font-size: 11px;
-  line-height: 13px;
-  letter-spacing: 0.07px;
-  margin: 15px 0 0 9px;
-  color: var(--labelColor);
-}
-
-#sidebar h1:first-of-type {
-  margin-top: 9px;
-}
-
-#sidebar2 {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  margin: 0;
-  padding: 40px 0 0 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-#sidebar2 > div {
-  max-height: 100%;
-}
-
-#sidebar2 header {
-  margin: 0 10px;
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-}
-
-#sidebar2 header h1 {
-  font: caption;
-  font-weight: normal;
-  font-size: 13px;
-  line-height: 15px;
-  letter-spacing: -0.08px;
-  color: var(--labelColor);
-  font-weight: bold;
-  font-size: 13px;
-}
-
-#sidebar2 ul,
-#sidebar2 li {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-#sidebar2 input[type="search"] {
-  border: none;
-  outline: none;
-  height: 20px;
-  width: 100%;
-  background-color: rgba(0, 0, 0, 0.04);
-  border-radius: 4px;
 }
 
 .sideBarItem {

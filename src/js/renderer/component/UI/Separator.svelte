@@ -1,13 +1,12 @@
 <script>
+  export let marginSides = '0';
 </script>
 
 <style type="text/scss">
   hr {
     min-height: 1px;
-    padding: 0;
     border: 0;
-    background-color: #ccc; // TODO
-    margin: 0;
+    background-color: var(--separatorColor);
 
     &.full {
       margin: 0;
@@ -19,4 +18,4 @@
   }
 </style>
 
-<hr />
+<hr style="margin: 0 {marginSides}px" />

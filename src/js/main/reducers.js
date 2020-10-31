@@ -463,25 +463,32 @@ async function reducers(state = {}, action) {
 
     // -------- SIDEBAR 2 -------- //
 
+    case 'EXPAND_SIDEBAR_ITEMS': {
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
+      tab.expandedItems = action.expandedItems
+      newState.changed.push(`sideBar.tabs.${action.tabName}`)
+      break
+    }
+
+    case 'SELECT_SIDEBAR_ITEMS': {
+      console.log(action)
+      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
+      tab.lastSelectedItem = action.lastSelectedItem
+      tab.selectedItems = action.selectedItems
+      newState.changed.push(`sideBar.tabs.${action.tabName}`)
+      newState.changed.push(`sideBar.activeTab`)
+      break
+    }
+
     case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
       newState.sideBar2.activeTab.index = action.index
       newState.sideBar2.activeTab.name = newState.sideBar2.tabs[action.index].name
       newState.changed.push('sideBar.activeTab')
       break
     }
-
-    case 'SELECT_SIDEBAR_ITEMS': {
-      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
-      tab.lastSelectedItem = action.lastSelectedItem
-      tab.selectedItems = action.selectedItems
-      newState.changed.push(`sideBar.tabs.${action.tabName}`)
-      break
-    }
-
-    case 'EXPAND_SIDEBAR_ITEMS': {
-      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
-      tab.expandedItems = action.expandedItems
-      newState.changed.push(`sideBar.tabs.${action.tabName}`)
+    case 'TOGGLE_SIDEBAR_PREVIEW': {
+      newState.sideBar2.preview.isOpen = !newState.sideBar2.preview.isOpen
+      newState.changed.push(`sideBar.preview`)
       break
     }
 

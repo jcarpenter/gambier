@@ -25,8 +25,16 @@ body {
     padding: 0;
 }
 
-#flexLayout {
+.flexContainerRow {
     display: flex;
+    flex-direction: horizontal;
+    width: 100%;
+    height: 100%;
+}
+
+.flexContainerColumn {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: 100%;
 }
@@ -80,76 +88,33 @@ body {
 
 // -------------- SIDEBAR -------------- //
 
-#sidebar {
-    width: 100%;
-    height: 100%;
-    overflow-y: scroll;
-    position: relative;
-    border-right: 1px solid var(--separatorColor);
-    user-select: none;
-    background-color: var(--sidebarMaterial);
+// #sidebar {
+//     width: 100%;
+//     height: 100%;
+//     overflow-y: scroll;
+//     position: relative;
+//     border-right: 1px solid var(--separatorColor);
+//     user-select: none;
+//     background-color: var(--sidebarMaterial);
 
-    &.focused {
-        background-color: red;
-    }
+//     &.focused {
+//         background-color: red;
+//     }
 
-    h1 {
-        @include label-normal-small-bold;
-        margin: 15px 0 0 9px;
-        color: var(--labelColor);
+//     h1 {
+//         @include label-normal-small-bold;
+//         margin: 15px 0 0 9px;
+//         color: var(--labelColor);
 
-        &:first-of-type {
-            margin-top: 9px;
-        }
-    }
-}
+//         &:first-of-type {
+//             margin-top: 9px;
+//         }
+//     }
+// }
 
 // -------------- SIDEBAR 2-------------- //
 
-#sidebar2 {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    margin: 0;
-    padding: 40px 0 0 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
 
-    & > div {
-        max-height: 100%;
-    }
-
-    header {
-        margin: 0 10px;
-        width: 100%;
-        display: inline-flex;
-        align-items: center;
-        h1 {
-            @include label-normal;
-            font-weight: bold;
-            font-size: 13px;
-        }
-    }
-
-    
-
-    ul,
-    li {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    input[type="search"] {
-        border: none;
-        outline: none;
-        height: 20px;
-        width: 100%;
-        background-color: rgba(0, 0, 0, 0.04);
-        border-radius: 4px;
-    }
-}
 
 
 .sideBarItem {

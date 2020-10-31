@@ -85,14 +85,14 @@ export default async function (folderPath, stats = undefined, parentId = '', rec
         })
     
       } else if (ext == '.md' || ext == '.markdown') {
-        const doc = await mapDocument(ePath, stats, folder.id)
+        const doc = await mapDocument(ePath, stats, folder.id, nestDepth + 1)
         contents.documents.push(doc)
         // folder.children.push(doc.id)
         folder.directChildCount++
         folder.recursiveChildCount++
 
       } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-        const media = await mapMedia(ePath, stats, folder.id, ext)
+        const media = await mapMedia(ePath, stats, folder.id, ext, nestDepth + 1)
         contents.media.push(media)
         // folder.children.push(media.id)
         folder.directChildCount++

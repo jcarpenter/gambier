@@ -3,19 +3,18 @@
   import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
 
-  export let item = {}
+  export let parent = {}
   export let listHasFocus = false
+  export let item = {}
+  export let nestDepth = 0
   export let isQueryEmpty = true
 
   let type = null
 
-  $: isSelected = item.isSelected
-  $: indexInLocalVisibleItems = item.indexInLocalVisibleItems
-  $: nestDepth = item.nestDepth
-  $: isExpandable =
-    item.type == 'folder' && item.children && item.children.length > 0
-  $: isExpanded = isExpandable && item.isExpanded
-  $: numberOfVisibleChildren = item.numberOfVisibleChildren
+  $: isSelected = parent.selectedItems.find((id) => id == item.id)
+  $: isExpandable = item.type == 'folder' && item.children.length > 0
+  $: isExpanded =
+    isExpandable && parent.expandedItems.some((id) => id == item.id)
 
   // Set `type`
   $: {
@@ -41,24 +40,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
-
-  .wrapper {
-    --indexInLocalVisibleItems: 0;
-    --itemWidth: 230px;
-    --itemHeight: 28px;
-    --sidesPadding: 10px;
-    --transitionSpeed: 600ms;
-
-    position: absolute;
-    // top: calc(var(--indexInLocalVisibleItems) * var(--itemHeight));
-    transform: translate(
-      0,
-      calc(var(--indexInLocalVisibleItems) * var(--itemHeight))
-    );
-    left: 0;
-    transition: transform var(--transitionSpeed);
-  }
 
   .item.folder .icon {
     -webkit-mask-image: var(--img-folder);
@@ -111,13 +92,12 @@
 
   // Shared
   .item {
-    --nestOffset: 0px;
-    position: absolute;
-    // min-height: 28px;
+    position: relative;
+    min-height: 28px;
+    overflow: hidden;
     user-select: none;
+    --nestOffset: 0px;
     margin-bottom: 1px;
-    width: 230px;
-    height: var(--itemHeight);
 
     .disclosure {
       @include absolute-vertical-center;
@@ -169,80 +149,59 @@
     }
   }
 
-  .children {
-    --numberOfVisibleChildren: 0;
-    position: absolute;
-    transform: translate(0, var(--itemHeight));
-    width: var(--itemWidth);
-    height: calc(var(--numberOfVisibleChildren) * var(--itemHeight));
-    background: rgba(117, 233, 169, 0.2);
-    // clip: rect(
-    //   0,
-    //   var(--itemWidth),
-    //   calc(var(--numberOfVisibleChildren) * var(--itemHeight)),
-    //   0
-    // );
-    overflow: hidden;
-    // transition: clip 250ms ease 0, height 0 step(0, end) 250ms;
-    transition: height var(--transitionSpeed);
-  }
-
-  .children:not(.isExpanded) {
-    height: 0;
-    transition: height var(--transitionSpeed);
-  }
+  //   .children:not(.isExpanded) {
+  //     height: 0;
+  //     overflow: hidden;
+  //   }
 </style>
 
 <div
-  class="wrapper"
-  style={`--indexInLocalVisibleItems: ${indexInLocalVisibleItems}`}>
-  <div
-    style={`--nestOffset: ${(nestDepth - 1) * 15}px`}
-    class="item {type}"
-    on:mousedown={(domEvent) => dispatch('mousedown', {
-        item: item,
-        isSelected: isSelected,
-        domEvent: domEvent,
-      })}
-    class:listHasFocus
-    class:isSelected
-    class:isExpandable>
-    {#if isExpandable}
-      <div class="disclosure" class:isExpanded>
-        <div
-          role="button"
-          alt="Toggle Expanded"
-          on:mousedown|stopPropagation={() => dispatch('toggleExpanded', {
-              item: item,
-              isExpanded: isExpanded,
-            })} />
-      </div>
-    {/if}
-    <div class="icon" />
-    <div class="label">{item.name}</div>
-    {#if isExpandable}
-      <div class="counter">{item.children.length}</div>
-    {/if}
-  </div>
-
-  <!-- {#if isQueryEmpty} -->
+  style={`--nestOffset: ${nestDepth * 20}px`}
+  class="item {type}"
+  on:mousedown={(domEvent) => dispatch('mousedown', {
+      item: item,
+      isSelected: isSelected,
+      domEvent: domEvent,
+    })}
+  class:listHasFocus
+  class:isSelected
+  class:isExpandable>
   {#if isExpandable}
-    <div
+    <div class="disclosure" class:isExpanded>
+      <div
+        role="button"
+        alt="Toggle Expanded"
+        on:mousedown|stopPropagation={() => dispatch('toggleExpanded', {
+          item: item,
+          isExpanded: isExpanded,
+        })} />
+    </div>
+  {/if}
+  <div class="icon" />
+  <div class="label">{item.name}</div>
+  {#if isExpandable}
+    <div class="counter">{item.children.length}</div>
+  {/if}
+</div>
+
+{#if isQueryEmpty}
+  {#if isExpandable && isExpanded}
+    <ul
       class:isExpanded
       class="children"
-      style={`--numberOfVisibleChildren: ${numberOfVisibleChildren};`}>
+      transition:slide|local={{ duration: 350 }}>
       {#each item.children as child}
+        <li class="row">
           <svelte:self
-            item={child}
             listHasFocus
             isQueryEmpty
             on:mousedown
             on:toggleExpanded
-            />
+            {parent}
+            item={child}
+            nestDepth={nestDepth + 1} />
+        </li>
       {/each}
-    </div> 
+    </ul>
   {/if}
-  <!-- {/if} -->
-</div>
-
-<!-- transition:slide|local={{ duration: 350 }} -->
+{/if}

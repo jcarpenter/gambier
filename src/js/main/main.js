@@ -169,7 +169,7 @@ function setNativeTheme() {
 
   // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
   // console.log('setNativeTheme(). userPref = ', userPref)
-  // console.log('setNativeTheme(). systemPreferences.getAccentColor() = ', systemPreferences.getAccentColor())
+  // console.log('setNativeTheme(). systemPreferences.getAccent   Color() = ', systemPreferences.getAccentColor())
   // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
   // 
 
@@ -224,7 +224,7 @@ function createWindow() {
   })
 
   // Open DevTools
-  if (!app.isPackaged) win.webContents.openDevTools();
+  // if (!app.isPackaged) win.webContents.openDevTools();
 
   // Load index.html
   win.loadFile(path.join(__dirname, 'index.html'))
@@ -304,9 +304,10 @@ ipcMain.on('dispatch', async (event, action) => {
     case ('SET_SORT'):
     case ('LOAD_PATH_IN_EDITOR'):
     // SideBar 2
-    case ('SELECT_SIDEBAR_TAB_BY_INDEX'):
-    case ('SELECT_SIDEBAR_ITEMS'):
     case ('EXPAND_SIDEBAR_ITEMS'):
+    case ('SELECT_SIDEBAR_ITEMS'):
+    case ('SELECT_SIDEBAR_TAB_BY_INDEX'):
+    case ('TOGGLE_SIDEBAR_PREVIEW'):
     // SideBar (old)
     case ('SELECT_SIDEBAR_ITEM'):
     case ('TOGGLE_SIDEBAR_ITEM_EXPANDED'):

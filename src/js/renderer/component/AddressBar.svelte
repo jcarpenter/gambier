@@ -1,9 +1,12 @@
 <script>
+  export let state = {}
   export let placeholder = 'Search'
   export let query = ''
   export let focused = false
 
   let input = null
+
+  // $: console.log(state.openDoc)
 
   function handleKeydown(evt) {
     if (!focused) return
@@ -14,15 +17,20 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
+  @import '../../../styles/_mixins.scss';
+
+  #addressbar {
+    margin: 0 auto;
+  }
 
   .searchfield {
     @include label-normal;
-    margin: 10px 10px 0;
     position: relative;
     background-color: rgba(0, 0, 0, 0.04);
     border-radius: 4px;
     min-height: 20px;
+    min-width: 20rem;
+    max-width: 40rem;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -77,10 +85,12 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="searchfield">
-  <div
-    on:mousedown|preventDefault={() => input.select()}
-    class="magnifying-glass" />
-  {#if !query}<span class="placeholder">{placeholder}</span>{/if}
-  <input type="text" bind:this={input} bind:value={query} />
+<div id="addressbar">
+  <div class="searchfield">
+    <div
+      on:mousedown|preventDefault={() => input.select()}
+      class="magnifying-glass" />
+    {#if !query}<span class="placeholder">{placeholder}</span>{/if}
+    <input type="text" bind:this={input} bind:value={query} />
+  </div>
 </div>

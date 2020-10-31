@@ -37,41 +37,44 @@ const storeDefault = {
       index: 0,
       name: "project"
     },
+    preview: {
+      isOpen: true,
+    },
     tabs: [
       {
         title: 'Project', name: 'project',
-        lastSelectedItem: 0,
-        selectedItems: [],
-        expandedItems: [],
+        lastSelectedItem: {}, // id and type
+        selectedItems: [], // Array of ids
+        expandedItems: [], // Array of folder ids
       },
       {
         title: 'All Documents', name: 'all-documents',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Most Recent', name: 'most-recent',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Tags', name: 'tags',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Media', name: 'media',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Citations', name: 'citations',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       },
       {
         title: 'Search', name: 'search',
-        lastSelectedIndex: 0,
+        lastSelectedItem: {},
         selectedItems: [],
       }
     ],
