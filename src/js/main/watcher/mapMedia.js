@@ -1,5 +1,5 @@
 import { stat } from 'fs-extra'
-import { Media } from './index.js'
+import { Media } from './formats'
 import path from 'path'
 
 
@@ -8,14 +8,12 @@ import path from 'path'
  */
 export default async function (filePath, stats = undefined, parentId = '', extension = undefined, nestDepth) {
 
-	const media = Object.assign({}, Media)
+	const media = { ...Media }
 
-	if (stats == undefined) {
-		stats = await stat(filePath)
-	}
+	if (stats == undefined) stats = await stat(filePath)	
 
 	media.name = path.basename(filePath)
-  media.filetype = extension == undefined ? path.extname(filePath) : extension
+	media.filetype = extension == undefined ? path.extname(filePath) : extension
 	media.path = filePath
 	media.id = `media-${stats.ino}`
 	media.parentId = parentId

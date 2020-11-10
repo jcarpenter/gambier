@@ -1,13 +1,13 @@
+import { app, BrowserWindow } from 'electron'
 import ElectronStore from 'electron-store'
-// import { StoreSchema } from './store-schema'
-import { storeDefault } from './store-default'
-import reducers from './reducers'
+import { update } from './reducers'
 
 import colors from 'colors'
 import deepEql from 'deep-eql'
-// import { updatedDiff, detailedDiff } from 'deep-object-diff'
+import { detailedDiff } from 'deep-object-diff'
 
-class Store extends ElectronStore {
+
+export class Store extends ElectronStore {
   constructor() {
     // Note: `super` lets us access and call functions on object's parent (MDN)
     // We pass in our config options for electron-store
@@ -19,43 +19,134 @@ class Store extends ElectronStore {
     })
   }
 
-  getCurrentState() {
-    return this.store
-  }
+  async dispatch(action, windowId = undefined) {
 
-  async dispatch(action) {
-
-    // Optional: Log the changes (useful for debug)
-    this.logTheAction(action)
+    if (!app.isPackaged) this.logTheAction(action)
 
     // Get next state
-    const nextState = await reducers(this.getCurrentState(), action)
+    // const nextState = await reducers(action, windowId)
 
-    // Optional: Log the diff (useful for debug)
-    this.logTheDiff(this.getCurrentState(), nextState)
+    const [nextState, patches, inversePatches] = update(store.store, action, windowId)
 
-    // Set the next state
+    // if (!app.isPackaged) this.logTheDiff(global.state(), nextState)
+
+    // Apply nextState to Store
     this.set(nextState)
+
+    // Send patches to render proces
+    const windows = BrowserWindow.getAllWindows()
+    if (windows.length) {
+      windows.forEach((win) => win.webContents.send('statePatchesFromMain', patches))
+    }
   }
 
   logTheAction(action) {
     console.log(
-      `Action:`.bgBrightGreen.black,
+      // `Action:`.bgBrightGreen.black,
       `${action.type}`.bgBrightGreen.black.bold,
-      `(Store.js)`.green
+      // `(Store.js)`.green
     )
   }
 
-  logTheDiff(currentState, nextState) {
-    const hasChanged = !deepEql(currentState, nextState)
-    if (hasChanged) {
-      // const diff = detailedDiff(currentState, nextState)
-      // console.log(diff)
-      console.log(`Changed: ${nextState.changed}`.yellow)
-    } else {
-      console.log('No changes'.yellow)
-    }
-  }
+  // logTheDiff(currentState, nextState) {
+  //   const hasChanged = !deepEql(currentState, nextState)
+  //   if (hasChanged) {
+  //     // const diff = detailedDiff(currentState, nextState)
+  //     // console.log(`Changed: ${JSON.stringify(diff, null, 2)}`.yellow)
+  //     console.log(`Changed: ${nextState.changed}`.bgBrightGreen.black.bold)
+  //   } else {
+  //     console.log('No changes'.bgBrightGreen.black.bold)
+  //   }
+  // }
 }
 
-export { Store }
+const storeDefault = {
+
+  // ----------- APP ----------- //
+
+  appStatus: 'open',
+
+  // App theme. See Readme.
+  appearance: {
+    userPref: 'match-system',
+    theme: 'gambier-light'
+  },
+
+  // ----------- PROJECTS ----------- //
+
+  projects: []
+
+}
+
+export const newProject = {
+
+  window: {
+    // Used to associate windows with projects
+    id: 0,
+    // Used when closing window (to check if it's safe to do so or not)
+    status: 'open'
+  },
+
+  // User specified directory to folder containing their project files
+  directory: '',
+
+  // User specified path to CSL-JSON file containing their citatons
+  citations: '',
+
+  focusedLayoutSection: 'sidebar',
+
+  // A copy of the object of the document currently visible in the editor.
+  openDoc: {},
+
+  // SideBar
+  sidebar: {
+    isOpen: true,
+    previewIsOpen: true,
+    width: 250,
+    tabs: [
+      {
+        title: 'Project', name: 'project',
+        active: true,
+        lastSelectedItem: {}, // id and type
+        selectedItems: [], // Array of ids
+        expandedItems: [], // Array of folder ids
+      },
+      {
+        title: 'All Documents', name: 'all-documents',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Most Recent', name: 'most-recent',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Tags', name: 'tags',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Media', name: 'media',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Citations', name: 'citations',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Search', name: 'search',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      }
+    ],
+  }
+}

@@ -26,5 +26,3 @@ function makeSideBarItem(type, label, id, parentId, icon, showFilesList, filter,
 }
 
 export { makeSideBarItem }
-
-

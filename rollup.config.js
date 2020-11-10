@@ -13,7 +13,7 @@ export default [
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff'],
+    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff', 'xml-js', 'immer'],
   },
 
   // Electron | Preload
@@ -34,6 +34,7 @@ export default [
       sourcemap: true,
       format: 'es',
       file: 'app/js/renderer.js',
+      banner: '// WORKAROUND for immer.js esm (see https://github.com/immerjs/immer/issues/557)\nwindow.process = { env: { NODE_ENV: "production" } };',
       // globals: {
       //   test: 'test'
       // }
@@ -56,7 +57,7 @@ export default [
     external: [
       './third-party/citeproc/citeproc.js',
       './third-party/fuse/fuse.esm.js',
-      '../third-party/turndown/turndown.es.js'
+      './third-party/turndown/turndown.es.js'
     ]
   }
 ]

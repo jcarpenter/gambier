@@ -1,7 +1,7 @@
 import { stat } from 'fs-extra'
 import matter from 'gray-matter'
 import removeMd from 'remove-markdown'
-import { Document } from './index.js'
+import { Document } from './formats'
 import path from 'path'
 
 /**

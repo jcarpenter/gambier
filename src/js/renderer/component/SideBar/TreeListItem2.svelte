@@ -1,5 +1,4 @@
 <script>
-  import { slide } from 'svelte/transition'
   import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
 
@@ -10,12 +9,18 @@
   let type = null
 
   $: isSelected = item.isSelected
-  $: indexInLocalVisibleItems = item.indexInLocalVisibleItems
+  $: indexInLocalVisibleItems = item.indexAmongSiblings
   $: nestDepth = item.nestDepth
   $: isExpandable =
     item.type == 'folder' && item.children && item.children.length > 0
   $: isExpanded = isExpandable && item.isExpanded
   $: numberOfVisibleChildren = item.numberOfVisibleChildren
+
+  $: {
+    if (item.name == "Images and Figures") {
+      console.log("nestDepth")
+    }
+  }
 
   // Set `type`
   $: {
@@ -48,15 +53,14 @@
     --itemWidth: 230px;
     --itemHeight: 28px;
     --sidesPadding: 10px;
-    --transitionSpeed: 600ms;
+    --transitionSpeed: 300ms;
 
     position: absolute;
-    // top: calc(var(--indexInLocalVisibleItems) * var(--itemHeight));
     transform: translate(
       0,
       calc(var(--indexInLocalVisibleItems) * var(--itemHeight))
     );
-    left: 0;
+    // left: 0;
     transition: transform var(--transitionSpeed);
   }
 
@@ -74,18 +78,6 @@
 
   .item.av .icon {
     -webkit-mask-image: var(--img-play-rectangle);
-  }
-
-  ul,
-  li {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  // Selected
-  .item.isSelected {
-    border-radius: 4px;
   }
 
   // Selected, and parent list IS focused
@@ -111,6 +103,7 @@
 
   // Shared
   .item {
+    border-radius: 4px;
     --nestOffset: 0px;
     position: absolute;
     // min-height: 28px;
@@ -172,24 +165,24 @@
   .children {
     --numberOfVisibleChildren: 0;
     position: absolute;
-    transform: translate(0, var(--itemHeight));
-    width: var(--itemWidth);
-    height: calc(var(--numberOfVisibleChildren) * var(--itemHeight));
-    background: rgba(117, 233, 169, 0.2);
+    transform: translate(0, var(--itemHeight)) scale(1, 1);
+    // width: var(--itemWidth);
+    // height: calc(var(--numberOfVisibleChildren) * var(--itemHeight));
+    // background-color: rgba(117, 233, 169, 0.2);    
     // clip: rect(
     //   0,
     //   var(--itemWidth),
     //   calc(var(--numberOfVisibleChildren) * var(--itemHeight)),
     //   0
     // );
-    overflow: hidden;
+    // overflow: hidden;
     // transition: clip 250ms ease 0, height 0 step(0, end) 250ms;
-    transition: height var(--transitionSpeed);
+    // transition: height var(--transitionSpeed);
   }
 
   .children:not(.isExpanded) {
-    height: 0;
-    transition: height var(--transitionSpeed);
+    transform: scale(1, 0);
+    // transition: height var(--transitionSpeed);
   }
 </style>
 

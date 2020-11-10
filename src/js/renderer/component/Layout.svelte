@@ -1,68 +1,34 @@
 <script>
-  import { onMount } from 'svelte'
+  import { state, project } from '../StateManager'
   import FirstRun from './FirstRun.svelte'
-  import FlexPanel from './FlexPanel.svelte'
-  import ToolBar from './ToolBar.svelte'
   import SideBar from './SideBar/SideBar.svelte'
-  // import DocList from './DocList.svelte'
-  import Editor from './Editor.svelte'
-  import UITests from './UITests.svelte'
-  import Separator from "./UI/Separator.svelte";
-
-  export let state = {}
-  export let oldState = {}
-
-  let focusedSection
-
-  $: isEditorVisible = state.openDoc.id
-
-  function setLayoutFocus(section) {
-    if (state.focusedLayoutSection == section) return
-    window.api.send('dispatch', {
-      type: 'SET_LAYOUT_FOCUS',
-      section: section,
-    })
-  }
+  import StateDisplay from './StateDisplay.svelte'
+  import Toolbar from './Toolbar.svelte'
+  import Separator from './UI/Separator.svelte'
 </script>
 
 <style type="text/scss">
-  #body {
+  @import '../../../styles/_mixins.scss';
+
+  #main {
     background-color: var(--windowBackgroundColor);
+    width: calc(100vw - 250px);
+    transform: translate(250px, 0);
+    position: absolute;
+    top: 0;
+    left: 0;
   }
 </style>
 
-<svelte:options accessors />
+<SideBar />
 
-{#if state.projectPath == ''}
+{#if $project.directory == ''}
   <FirstRun />
 {:else}
-  <div class="flexContainerRow">
-    <FlexPanel
-      visible={state.sideBar.show}
-      min={250}
-      max={300}
-      start={250}
-      on:click={() => setLayoutFocus('navigation')}>
-      <SideBar {state} focused={state.focusedLayoutSection == 'navigation'} />
-    </FlexPanel>
-    <div class="flexContainerColumn" id="body">
-      <ToolBar {state} />
-      <Separator />
-      <!-- <UITests /> -->
-    </div>
-
-    <!-- {#if state.showFilesList}
-      <FlexPanel
-        min={260}
-        max={360}
-        start={280}
-        on:click={() => setLayoutFocus('navigation')}>
-        <DocList {state} {oldState} />
-      </FlexPanel>
-    {/if} -->
-    <!-- <Editor
-      state={state}
-      visible={isEditorVisible}
-      on:click={() => setLayoutFocus('editor')} /> -->
+  <div id="main" class="flexContainerColumn">
+    <Toolbar />
+    <Separator />
+    <StateDisplay />
+    <!-- <UITests /> -->
   </div>
 {/if}

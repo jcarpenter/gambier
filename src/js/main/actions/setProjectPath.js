@@ -2,8 +2,6 @@ import { BrowserWindow, dialog } from 'electron'
 
 export default async function () {
 
-  // console.log(BrowserWindow.getFocusedWindow())
-
   const win = BrowserWindow.getFocusedWindow()
 
   const selection = await dialog.showOpenDialog(win, {
@@ -12,8 +10,6 @@ export default async function () {
   })
 
   if (!selection.canceled) {
-    return { type: 'SET_PROJECTPATH_SUCCESS', path: selection.filePaths[0] }
-  } else {
-    return { type: 'SET_PROJECTPATH_FAIL' }
+    return { type: 'SET_PROJECT_DIRECTORY', directory: selection.filePaths[0] }
   }
 }

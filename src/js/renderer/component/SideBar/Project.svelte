@@ -1,70 +1,27 @@
 <script>
+  import { project, sidebar } from '../../StateManager'
   import { createTreeHierarchy, createFlatHierarchy } from 'hierarchy-js'
+
+  import Header from './Header.svelte'
   import SearchField from '../UI/SearchField.svelte'
   import Separator from '../UI/Separator.svelte'
-  import Header from './Header.svelte'
   import TreeListItem2 from './TreeListItem2.svelte'
 
-  export let state = {}
-  export let focused
-
-  // State
-  let tab = {}
-  let folders = []
-  let files = []
-
-  // Local
-  let firstRun = true
-  let active = false
-  let query = ''
+  $: focused = $project.focusedLayoutSection == 'sidebar'
+  $: tab = $sidebar.tabs.find((t) => t.name == 'project')
+  $: folders = [] // TODO
+  $: files = [] // TODO
+  $: transitionTime = query == '' ? 300 : 0
+  
+  let query = '' // Bound to search field
   let resultsTree = []
   let resultsFlat = []
   let resultsVisible = []
 
-  // -------- STATE -------- //
-
-  $: transitionTime = query == '' ? 300 : 0
-
-  $: onStateChange(state)
-
-  // State changes
-  function onStateChange(state) {
-    let shouldUpdateResults = false
-
-    if (state.changed.includes('sideBar.tabs.project') || firstRun) {
-      tab = state.sideBar2.tabs.find((t) => t.name == 'project')
-      shouldUpdateResults = true
-    }
-
-    if (state.changed.includes('sideBar.activeTab') || firstRun) {
-      active = state.sideBar2.activeTab.name == 'project'
-      shouldUpdateResults = true
-    }
-
-    if (
-      state.changed.includes('folders') ||
-      state.changed.includes('documents') ||
-      state.changed.includes('media') ||
-      firstRun
-    ) {
-      folders = state.folders
-      files = [].concat(...[state.documents, state.media])
-      shouldUpdateResults = true
-    }
-
-    if (state.changed.includes('openDoc') || firstRun) {
-      // console.log('openDoc changed')
-      shouldUpdateResults = true
-    }
-
-    if (shouldUpdateResults) updateResults()
-
-    firstRun = false
-  }
 
   /*
-Each item needs to know it's index among visible items. But only it's local index.
-*/
+  Each item needs to know it's index among visible items. But only it's local index.
+  */
 
   // -------- RESULTS -------- //
 
@@ -84,18 +41,18 @@ Each item needs to know it's index among visible items. But only it's local inde
     if (query == '') {
       const foldersAndFiles = [].concat(...[folders, files])
       results2Tree = createTreeHierarchy(foldersAndFiles)[0].children
-      sortChildren(results2Tree, true, 0)
+      sortChildren(results2Tree)
+      orderChildren(results2Tree, true, 0)
+
       // console.log(results2Tree)
+      // results2Tree[0].children.forEach((c) => console.log(c.name, c.indexAmongSiblings))
 
-      // results2Flat = createFlatHierarchy(results2Tree, {
-      //   saveExtractedChildren: true,
-      // })
+      results2Flat = createFlatHierarchy(results2Tree)
 
-      // results2Flat.forEach((r) => {
-      //   if (r.type == 'folder' && r.children && r.children.length) {
-      //     r.children = r.children.map((c) => c.id)
-      //   }
-      // })
+      results2Flat.forEach((r, index) => {
+        const color = r.type == 'folder' ? 'black' : 'green'
+        // console.log(`%c${r.indexAmongSiblings} ${'—'.repeat(r.nestDepth)} ${r.name}`, `color:${color}`)
+      })
     }
   }
 
@@ -308,17 +265,24 @@ Each item needs to know it's index among visible items. But only it's local inde
    * Sort array of child items by sorting criteria
    * // TODO: Criteria is currently hard coded to alphabetical and A-Z.
    */
-  function sortChildren(children, parentHierarchyIsExpanded, parentOffset) {
-
-    let indexAmongSiblings = 0
-    
+  function sortChildren(children) {
     // Sort
     children.sort((a, b) => a.name.localeCompare(b.name))
+    // Recursively sort children
+    children.forEach((c) => {
+      if (c.type == 'folder' && c.children.length > 0) {
+        sortChildren(c.children)
+      }
+    })
+  }
+
+  function orderChildren(children, parentHierarchyIsExpanded, parentOffset) {
+    let indexAmongSiblings = 0
 
     // For each child, set properties (e.g. indexes)
     children.forEach((c) => {
       // Set index within all items
-      c.indexInAllItems = index++
+      // c.indexInAllItems = index++
 
       // Set index within all visible items
       if (parentHierarchyIsExpanded) {
@@ -326,13 +290,11 @@ Each item needs to know it's index among visible items. But only it's local inde
       }
 
       // Set index within local visible items. We use this to set vertical position of element, within siblings.
-      if (c.nestDepth > 1) {
-        c.indexInLocalVisibleItems =
-          c.indexInAllVisibleItems - parentOffset - 1
-      } else {
-        c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset
-      }
-
+      // if (c.nestDepth > 1) {
+      //   c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset - 1
+      // } else {
+      //   c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset
+      // }
 
       // Set index within siblings. Depends on if siblings are expanded or not.
       c.indexAmongSiblings = indexAmongSiblings++
@@ -348,10 +310,12 @@ Each item needs to know it's index among visible items. But only it's local inde
         // Set expanded
         c.isExpanded = tab.expandedItems.some((id) => id == c.id)
 
+        if (c.isExpanded) indexAmongSiblings += c.children.length
+
         // Recursively sort children
         if (c.children.length > 0) {
           const isParentExpanded = parentHierarchyIsExpanded && c.isExpanded
-          sortChildren(c.children, isParentExpanded, c.indexInLocalVisibleItems)
+          orderChildren(c.children, isParentExpanded, 0)
         }
       }
     })
@@ -375,11 +339,9 @@ Each item needs to know it's index among visible items. But only it's local inde
           // c.numberOfVisibleChildren = 0
         }
       }
-
-      console.log(c.name, c.indexAmongSiblings)
-
     })
 
+    return indexAmongSiblings
   }
 
   function toggleExpanded(item, isExpanded) {
@@ -439,13 +401,13 @@ Each item needs to know it's index among visible items. But only it's local inde
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div id="project" class="wrapper" class:focused class:active>
+<div id="project" class="wrapper" class:focused class:active={tab.active}>
   <Header title={tab.title}>
     <!-- Sort -->
   </Header>
   <Separator marginSides={10} />
   <SearchField focused bind:query placeholder={'Name'} />
-  <div id="results">
+  <!-- <div id="results">
     {#each results2Tree as item}
       <TreeListItem2
         {item}
@@ -456,5 +418,5 @@ Each item needs to know it's index among visible items. But only it's local inde
           toggleExpanded(evt.detail.item, evt.detail.isExpanded)
         }} />
     {/each}
-  </div>
+  </div> -->
 </div>

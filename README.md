@@ -86,13 +86,29 @@ Note: We're not using styles inside Svelte components currently (2/10/2020). Bec
 
 ### Dependencies
 
-#### Main process
+I use ES6 module `import/export` syntax (instead of CommonJS) project-wide during development, for the sake of consistency. Rollup then transpiles `main.js` and `preload.js` back to CJS syntax.
 
-* `main.js` and `preload.js` are output as CJS modules.
-* I use ES6 module syntax (import/export) for sake of consistency with Render process code, so I'm using same syntax project-wide. Rollup then transpiles back to CommonJS.
-* Third-party NPM packages are not bundled. They live in `node_modules`. At build time, electron-builder `postinstall` script in package.json copies them into our build.
+#### Main process dependencies
 
-#### Render process
+Third-party NPM packages for use by main process are _copied_ (not bundled) into our build by electron-builder, at build time. See `"postinstall": "electron-builder install-app-deps",` in package.json. NOTE: This script also ensures "...your native dependencies are always matched electron version" ([docs](https://www.electron.build/index.html)).
+
+What is a main-process only dependency? For example, anything that touches the file system (e.g. path, chokidar). 
+
+To install a new third-party NPM package to be used by main process do the following:
+
+* Install into `dependencies`. E.g. `npm i nanoid`
+  * NOTE: It also works if we install into `devDependencies`, but conceptually I find it helps to keep run time dependencies distinct from build-related dependencies.
+* Add to `external` array in `rollup.config.js` (under the first `main.js` object). E.g. `external: ['nanoid'].
+* Use in code with `import { nanoid } from 'nanoid'.
+
+##### Why not bundle main process dependencies, the same way we bundle render dependencies? 
+
+Nov 3 2020: I can't recall why I went this path. Possibly it's a performance thing. But that doesn't make a lot of sense. Electron docs [specifically recommend](https://www.electronjs.org/docs/tutorial/performance#7-bundle-your-code) bundling modules to reduce `require()` calls:
+
+> ...calling require() is an expensive operation. If you are able to do so, bundle your application's code into a single file. ...to ensure that the overhead included in calling require() is only paid once when your application loads.
+
+
+#### Render process dependencies
 
 There are several ways to work with dependencies in the render process:
 
@@ -100,28 +116,23 @@ There are several ways to work with dependencies in the render process:
 2. Import at run time. Only works for ES6 modules.
 3. Load into and access from the global namespace. Works for UMD modules and (old-school) raw JS files.
 
-##### Examples
-
-Bundle with Rollup:
+##### How to: Bundle NPM dependencies with Rollup:
 
 ```bash
-// terminal
-npm i -D citeproc
+// terminal: Install into dependencies
+npm i citeproc
 ```
 
 ```json
-// package.json
-"devDependencies": {
+// package.json: Install adds to `dependencies`.
+"dependencies": {
   "citeproc": "^2.3.8",
 }
 ```
 
 ```js
-// main.js
-// Two examples: Importing local ES6 module, relative to main.js, and importing citeproc from  `node_modules`.
-import test from './test'
+// main.js: Import from  `node_modules`.
 import csl from 'citeproc'
-test()
 citeproc = new csl.Engine(...) // etc
 
 // rollup.config.js
@@ -148,11 +159,10 @@ export default [
 <script src="./js/main.js"></script>
 ```
 
-Import at run time, without bundling:
+##### How to: Import ES6 module at run time, without bundling:
 
 ```js
-// main.js
-// Use a relative path for the dependency. Relative to where the output main.js will be. Rollup does not try to bundle relative paths.
+// main.js: Use a relative path for the dependency. Relative to where the output main.js will be. Rollup does not try to bundle relative paths.
 import test from './third-party/test.js'
 test()
 
@@ -173,7 +183,7 @@ external: [
 <script src="./js/main.js" type="module"></script>
 ```
 
-Load into and access from the global namespace.
+##### How to: Load UMD and old-school JS files into global namespace
 
 ```js
 // index.html - Simply load the file. No `type="module"`

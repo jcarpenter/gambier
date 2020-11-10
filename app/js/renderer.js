@@ -1,3 +1,933 @@
+// WORKAROUND for immer.js esm (see https://github.com/immerjs/immer/issues/557)
+window.process = { env: { NODE_ENV: "production" } };
+var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+function createCommonjsModule(fn, basedir, module) {
+	return module = {
+	  path: basedir,
+	  exports: {},
+	  require: function (path, base) {
+      return commonjsRequire(path, (base === undefined || base === null) ? module.path : base);
+    }
+	}, fn(module, module.exports), module.exports;
+}
+
+function commonjsRequire () {
+	throw new Error('Dynamic requires are not currently supported by @rollup/plugin-commonjs');
+}
+
+var typeDetect = createCommonjsModule(function (module, exports) {
+(function (global, factory) {
+	 module.exports = factory() ;
+}(commonjsGlobal, (function () {
+/* !
+ * type-detect
+ * Copyright(c) 2013 jake luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+var promiseExists = typeof Promise === 'function';
+
+/* eslint-disable no-undef */
+var globalObject = typeof self === 'object' ? self : commonjsGlobal; // eslint-disable-line id-blacklist
+
+var symbolExists = typeof Symbol !== 'undefined';
+var mapExists = typeof Map !== 'undefined';
+var setExists = typeof Set !== 'undefined';
+var weakMapExists = typeof WeakMap !== 'undefined';
+var weakSetExists = typeof WeakSet !== 'undefined';
+var dataViewExists = typeof DataView !== 'undefined';
+var symbolIteratorExists = symbolExists && typeof Symbol.iterator !== 'undefined';
+var symbolToStringTagExists = symbolExists && typeof Symbol.toStringTag !== 'undefined';
+var setEntriesExists = setExists && typeof Set.prototype.entries === 'function';
+var mapEntriesExists = mapExists && typeof Map.prototype.entries === 'function';
+var setIteratorPrototype = setEntriesExists && Object.getPrototypeOf(new Set().entries());
+var mapIteratorPrototype = mapEntriesExists && Object.getPrototypeOf(new Map().entries());
+var arrayIteratorExists = symbolIteratorExists && typeof Array.prototype[Symbol.iterator] === 'function';
+var arrayIteratorPrototype = arrayIteratorExists && Object.getPrototypeOf([][Symbol.iterator]());
+var stringIteratorExists = symbolIteratorExists && typeof String.prototype[Symbol.iterator] === 'function';
+var stringIteratorPrototype = stringIteratorExists && Object.getPrototypeOf(''[Symbol.iterator]());
+var toStringLeftSliceLength = 8;
+var toStringRightSliceLength = -1;
+/**
+ * ### typeOf (obj)
+ *
+ * Uses `Object.prototype.toString` to determine the type of an object,
+ * normalising behaviour across engine versions & well optimised.
+ *
+ * @param {Mixed} object
+ * @return {String} object type
+ * @api public
+ */
+function typeDetect(obj) {
+  /* ! Speed optimisation
+   * Pre:
+   *   string literal     x 3,039,035 ops/sec ±1.62% (78 runs sampled)
+   *   boolean literal    x 1,424,138 ops/sec ±4.54% (75 runs sampled)
+   *   number literal     x 1,653,153 ops/sec ±1.91% (82 runs sampled)
+   *   undefined          x 9,978,660 ops/sec ±1.92% (75 runs sampled)
+   *   function           x 2,556,769 ops/sec ±1.73% (77 runs sampled)
+   * Post:
+   *   string literal     x 38,564,796 ops/sec ±1.15% (79 runs sampled)
+   *   boolean literal    x 31,148,940 ops/sec ±1.10% (79 runs sampled)
+   *   number literal     x 32,679,330 ops/sec ±1.90% (78 runs sampled)
+   *   undefined          x 32,363,368 ops/sec ±1.07% (82 runs sampled)
+   *   function           x 31,296,870 ops/sec ±0.96% (83 runs sampled)
+   */
+  var typeofObj = typeof obj;
+  if (typeofObj !== 'object') {
+    return typeofObj;
+  }
+
+  /* ! Speed optimisation
+   * Pre:
+   *   null               x 28,645,765 ops/sec ±1.17% (82 runs sampled)
+   * Post:
+   *   null               x 36,428,962 ops/sec ±1.37% (84 runs sampled)
+   */
+  if (obj === null) {
+    return 'null';
+  }
+
+  /* ! Spec Conformance
+   * Test: `Object.prototype.toString.call(window)``
+   *  - Node === "[object global]"
+   *  - Chrome === "[object global]"
+   *  - Firefox === "[object Window]"
+   *  - PhantomJS === "[object Window]"
+   *  - Safari === "[object Window]"
+   *  - IE 11 === "[object Window]"
+   *  - IE Edge === "[object Window]"
+   * Test: `Object.prototype.toString.call(this)``
+   *  - Chrome Worker === "[object global]"
+   *  - Firefox Worker === "[object DedicatedWorkerGlobalScope]"
+   *  - Safari Worker === "[object DedicatedWorkerGlobalScope]"
+   *  - IE 11 Worker === "[object WorkerGlobalScope]"
+   *  - IE Edge Worker === "[object WorkerGlobalScope]"
+   */
+  if (obj === globalObject) {
+    return 'global';
+  }
+
+  /* ! Speed optimisation
+   * Pre:
+   *   array literal      x 2,888,352 ops/sec ±0.67% (82 runs sampled)
+   * Post:
+   *   array literal      x 22,479,650 ops/sec ±0.96% (81 runs sampled)
+   */
+  if (
+    Array.isArray(obj) &&
+    (symbolToStringTagExists === false || !(Symbol.toStringTag in obj))
+  ) {
+    return 'Array';
+  }
+
+  // Not caching existence of `window` and related properties due to potential
+  // for `window` to be unset before tests in quasi-browser environments.
+  if (typeof window === 'object' && window !== null) {
+    /* ! Spec Conformance
+     * (https://html.spec.whatwg.org/multipage/browsers.html#location)
+     * WhatWG HTML$7.7.3 - The `Location` interface
+     * Test: `Object.prototype.toString.call(window.location)``
+     *  - IE <=11 === "[object Object]"
+     *  - IE Edge <=13 === "[object Object]"
+     */
+    if (typeof window.location === 'object' && obj === window.location) {
+      return 'Location';
+    }
+
+    /* ! Spec Conformance
+     * (https://html.spec.whatwg.org/#document)
+     * WhatWG HTML$3.1.1 - The `Document` object
+     * Note: Most browsers currently adher to the W3C DOM Level 2 spec
+     *       (https://www.w3.org/TR/DOM-Level-2-HTML/html.html#ID-26809268)
+     *       which suggests that browsers should use HTMLTableCellElement for
+     *       both TD and TH elements. WhatWG separates these.
+     *       WhatWG HTML states:
+     *         > For historical reasons, Window objects must also have a
+     *         > writable, configurable, non-enumerable property named
+     *         > HTMLDocument whose value is the Document interface object.
+     * Test: `Object.prototype.toString.call(document)``
+     *  - Chrome === "[object HTMLDocument]"
+     *  - Firefox === "[object HTMLDocument]"
+     *  - Safari === "[object HTMLDocument]"
+     *  - IE <=10 === "[object Document]"
+     *  - IE 11 === "[object HTMLDocument]"
+     *  - IE Edge <=13 === "[object HTMLDocument]"
+     */
+    if (typeof window.document === 'object' && obj === window.document) {
+      return 'Document';
+    }
+
+    if (typeof window.navigator === 'object') {
+      /* ! Spec Conformance
+       * (https://html.spec.whatwg.org/multipage/webappapis.html#mimetypearray)
+       * WhatWG HTML$8.6.1.5 - Plugins - Interface MimeTypeArray
+       * Test: `Object.prototype.toString.call(navigator.mimeTypes)``
+       *  - IE <=10 === "[object MSMimeTypesCollection]"
+       */
+      if (typeof window.navigator.mimeTypes === 'object' &&
+          obj === window.navigator.mimeTypes) {
+        return 'MimeTypeArray';
+      }
+
+      /* ! Spec Conformance
+       * (https://html.spec.whatwg.org/multipage/webappapis.html#pluginarray)
+       * WhatWG HTML$8.6.1.5 - Plugins - Interface PluginArray
+       * Test: `Object.prototype.toString.call(navigator.plugins)``
+       *  - IE <=10 === "[object MSPluginsCollection]"
+       */
+      if (typeof window.navigator.plugins === 'object' &&
+          obj === window.navigator.plugins) {
+        return 'PluginArray';
+      }
+    }
+
+    if ((typeof window.HTMLElement === 'function' ||
+        typeof window.HTMLElement === 'object') &&
+        obj instanceof window.HTMLElement) {
+      /* ! Spec Conformance
+      * (https://html.spec.whatwg.org/multipage/webappapis.html#pluginarray)
+      * WhatWG HTML$4.4.4 - The `blockquote` element - Interface `HTMLQuoteElement`
+      * Test: `Object.prototype.toString.call(document.createElement('blockquote'))``
+      *  - IE <=10 === "[object HTMLBlockElement]"
+      */
+      if (obj.tagName === 'BLOCKQUOTE') {
+        return 'HTMLQuoteElement';
+      }
+
+      /* ! Spec Conformance
+       * (https://html.spec.whatwg.org/#htmltabledatacellelement)
+       * WhatWG HTML$4.9.9 - The `td` element - Interface `HTMLTableDataCellElement`
+       * Note: Most browsers currently adher to the W3C DOM Level 2 spec
+       *       (https://www.w3.org/TR/DOM-Level-2-HTML/html.html#ID-82915075)
+       *       which suggests that browsers should use HTMLTableCellElement for
+       *       both TD and TH elements. WhatWG separates these.
+       * Test: Object.prototype.toString.call(document.createElement('td'))
+       *  - Chrome === "[object HTMLTableCellElement]"
+       *  - Firefox === "[object HTMLTableCellElement]"
+       *  - Safari === "[object HTMLTableCellElement]"
+       */
+      if (obj.tagName === 'TD') {
+        return 'HTMLTableDataCellElement';
+      }
+
+      /* ! Spec Conformance
+       * (https://html.spec.whatwg.org/#htmltableheadercellelement)
+       * WhatWG HTML$4.9.9 - The `td` element - Interface `HTMLTableHeaderCellElement`
+       * Note: Most browsers currently adher to the W3C DOM Level 2 spec
+       *       (https://www.w3.org/TR/DOM-Level-2-HTML/html.html#ID-82915075)
+       *       which suggests that browsers should use HTMLTableCellElement for
+       *       both TD and TH elements. WhatWG separates these.
+       * Test: Object.prototype.toString.call(document.createElement('th'))
+       *  - Chrome === "[object HTMLTableCellElement]"
+       *  - Firefox === "[object HTMLTableCellElement]"
+       *  - Safari === "[object HTMLTableCellElement]"
+       */
+      if (obj.tagName === 'TH') {
+        return 'HTMLTableHeaderCellElement';
+      }
+    }
+  }
+
+  /* ! Speed optimisation
+  * Pre:
+  *   Float64Array       x 625,644 ops/sec ±1.58% (80 runs sampled)
+  *   Float32Array       x 1,279,852 ops/sec ±2.91% (77 runs sampled)
+  *   Uint32Array        x 1,178,185 ops/sec ±1.95% (83 runs sampled)
+  *   Uint16Array        x 1,008,380 ops/sec ±2.25% (80 runs sampled)
+  *   Uint8Array         x 1,128,040 ops/sec ±2.11% (81 runs sampled)
+  *   Int32Array         x 1,170,119 ops/sec ±2.88% (80 runs sampled)
+  *   Int16Array         x 1,176,348 ops/sec ±5.79% (86 runs sampled)
+  *   Int8Array          x 1,058,707 ops/sec ±4.94% (77 runs sampled)
+  *   Uint8ClampedArray  x 1,110,633 ops/sec ±4.20% (80 runs sampled)
+  * Post:
+  *   Float64Array       x 7,105,671 ops/sec ±13.47% (64 runs sampled)
+  *   Float32Array       x 5,887,912 ops/sec ±1.46% (82 runs sampled)
+  *   Uint32Array        x 6,491,661 ops/sec ±1.76% (79 runs sampled)
+  *   Uint16Array        x 6,559,795 ops/sec ±1.67% (82 runs sampled)
+  *   Uint8Array         x 6,463,966 ops/sec ±1.43% (85 runs sampled)
+  *   Int32Array         x 5,641,841 ops/sec ±3.49% (81 runs sampled)
+  *   Int16Array         x 6,583,511 ops/sec ±1.98% (80 runs sampled)
+  *   Int8Array          x 6,606,078 ops/sec ±1.74% (81 runs sampled)
+  *   Uint8ClampedArray  x 6,602,224 ops/sec ±1.77% (83 runs sampled)
+  */
+  var stringTag = (symbolToStringTagExists && obj[Symbol.toStringTag]);
+  if (typeof stringTag === 'string') {
+    return stringTag;
+  }
+
+  var objPrototype = Object.getPrototypeOf(obj);
+  /* ! Speed optimisation
+  * Pre:
+  *   regex literal      x 1,772,385 ops/sec ±1.85% (77 runs sampled)
+  *   regex constructor  x 2,143,634 ops/sec ±2.46% (78 runs sampled)
+  * Post:
+  *   regex literal      x 3,928,009 ops/sec ±0.65% (78 runs sampled)
+  *   regex constructor  x 3,931,108 ops/sec ±0.58% (84 runs sampled)
+  */
+  if (objPrototype === RegExp.prototype) {
+    return 'RegExp';
+  }
+
+  /* ! Speed optimisation
+  * Pre:
+  *   date               x 2,130,074 ops/sec ±4.42% (68 runs sampled)
+  * Post:
+  *   date               x 3,953,779 ops/sec ±1.35% (77 runs sampled)
+  */
+  if (objPrototype === Date.prototype) {
+    return 'Date';
+  }
+
+  /* ! Spec Conformance
+   * (http://www.ecma-international.org/ecma-262/6.0/index.html#sec-promise.prototype-@@tostringtag)
+   * ES6$25.4.5.4 - Promise.prototype[@@toStringTag] should be "Promise":
+   * Test: `Object.prototype.toString.call(Promise.resolve())``
+   *  - Chrome <=47 === "[object Object]"
+   *  - Edge <=20 === "[object Object]"
+   *  - Firefox 29-Latest === "[object Promise]"
+   *  - Safari 7.1-Latest === "[object Promise]"
+   */
+  if (promiseExists && objPrototype === Promise.prototype) {
+    return 'Promise';
+  }
+
+  /* ! Speed optimisation
+  * Pre:
+  *   set                x 2,222,186 ops/sec ±1.31% (82 runs sampled)
+  * Post:
+  *   set                x 4,545,879 ops/sec ±1.13% (83 runs sampled)
+  */
+  if (setExists && objPrototype === Set.prototype) {
+    return 'Set';
+  }
+
+  /* ! Speed optimisation
+  * Pre:
+  *   map                x 2,396,842 ops/sec ±1.59% (81 runs sampled)
+  * Post:
+  *   map                x 4,183,945 ops/sec ±6.59% (82 runs sampled)
+  */
+  if (mapExists && objPrototype === Map.prototype) {
+    return 'Map';
+  }
+
+  /* ! Speed optimisation
+  * Pre:
+  *   weakset            x 1,323,220 ops/sec ±2.17% (76 runs sampled)
+  * Post:
+  *   weakset            x 4,237,510 ops/sec ±2.01% (77 runs sampled)
+  */
+  if (weakSetExists && objPrototype === WeakSet.prototype) {
+    return 'WeakSet';
+  }
+
+  /* ! Speed optimisation
+  * Pre:
+  *   weakmap            x 1,500,260 ops/sec ±2.02% (78 runs sampled)
+  * Post:
+  *   weakmap            x 3,881,384 ops/sec ±1.45% (82 runs sampled)
+  */
+  if (weakMapExists && objPrototype === WeakMap.prototype) {
+    return 'WeakMap';
+  }
+
+  /* ! Spec Conformance
+   * (http://www.ecma-international.org/ecma-262/6.0/index.html#sec-dataview.prototype-@@tostringtag)
+   * ES6$24.2.4.21 - DataView.prototype[@@toStringTag] should be "DataView":
+   * Test: `Object.prototype.toString.call(new DataView(new ArrayBuffer(1)))``
+   *  - Edge <=13 === "[object Object]"
+   */
+  if (dataViewExists && objPrototype === DataView.prototype) {
+    return 'DataView';
+  }
+
+  /* ! Spec Conformance
+   * (http://www.ecma-international.org/ecma-262/6.0/index.html#sec-%mapiteratorprototype%-@@tostringtag)
+   * ES6$23.1.5.2.2 - %MapIteratorPrototype%[@@toStringTag] should be "Map Iterator":
+   * Test: `Object.prototype.toString.call(new Map().entries())``
+   *  - Edge <=13 === "[object Object]"
+   */
+  if (mapExists && objPrototype === mapIteratorPrototype) {
+    return 'Map Iterator';
+  }
+
+  /* ! Spec Conformance
+   * (http://www.ecma-international.org/ecma-262/6.0/index.html#sec-%setiteratorprototype%-@@tostringtag)
+   * ES6$23.2.5.2.2 - %SetIteratorPrototype%[@@toStringTag] should be "Set Iterator":
+   * Test: `Object.prototype.toString.call(new Set().entries())``
+   *  - Edge <=13 === "[object Object]"
+   */
+  if (setExists && objPrototype === setIteratorPrototype) {
+    return 'Set Iterator';
+  }
+
+  /* ! Spec Conformance
+   * (http://www.ecma-international.org/ecma-262/6.0/index.html#sec-%arrayiteratorprototype%-@@tostringtag)
+   * ES6$22.1.5.2.2 - %ArrayIteratorPrototype%[@@toStringTag] should be "Array Iterator":
+   * Test: `Object.prototype.toString.call([][Symbol.iterator]())``
+   *  - Edge <=13 === "[object Object]"
+   */
+  if (arrayIteratorExists && objPrototype === arrayIteratorPrototype) {
+    return 'Array Iterator';
+  }
+
+  /* ! Spec Conformance
+   * (http://www.ecma-international.org/ecma-262/6.0/index.html#sec-%stringiteratorprototype%-@@tostringtag)
+   * ES6$21.1.5.2.2 - %StringIteratorPrototype%[@@toStringTag] should be "String Iterator":
+   * Test: `Object.prototype.toString.call(''[Symbol.iterator]())``
+   *  - Edge <=13 === "[object Object]"
+   */
+  if (stringIteratorExists && objPrototype === stringIteratorPrototype) {
+    return 'String Iterator';
+  }
+
+  /* ! Speed optimisation
+  * Pre:
+  *   object from null   x 2,424,320 ops/sec ±1.67% (76 runs sampled)
+  * Post:
+  *   object from null   x 5,838,000 ops/sec ±0.99% (84 runs sampled)
+  */
+  if (objPrototype === null) {
+    return 'Object';
+  }
+
+  return Object
+    .prototype
+    .toString
+    .call(obj)
+    .slice(toStringLeftSliceLength, toStringRightSliceLength);
+}
+
+return typeDetect;
+
+})));
+});
+
+/* globals Symbol: false, Uint8Array: false, WeakMap: false */
+/*!
+ * deep-eql
+ * Copyright(c) 2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+
+function FakeMap() {
+  this._key = 'chai/deep-eql__' + Math.random() + Date.now();
+}
+
+FakeMap.prototype = {
+  get: function getMap(key) {
+    return key[this._key];
+  },
+  set: function setMap(key, value) {
+    if (Object.isExtensible(key)) {
+      Object.defineProperty(key, this._key, {
+        value: value,
+        configurable: true,
+      });
+    }
+  },
+};
+
+var MemoizeMap = typeof WeakMap === 'function' ? WeakMap : FakeMap;
+/*!
+ * Check to see if the MemoizeMap has recorded a result of the two operands
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {MemoizeMap} memoizeMap
+ * @returns {Boolean|null} result
+*/
+function memoizeCompare(leftHandOperand, rightHandOperand, memoizeMap) {
+  // Technically, WeakMap keys can *only* be objects, not primitives.
+  if (!memoizeMap || isPrimitive(leftHandOperand) || isPrimitive(rightHandOperand)) {
+    return null;
+  }
+  var leftHandMap = memoizeMap.get(leftHandOperand);
+  if (leftHandMap) {
+    var result = leftHandMap.get(rightHandOperand);
+    if (typeof result === 'boolean') {
+      return result;
+    }
+  }
+  return null;
+}
+
+/*!
+ * Set the result of the equality into the MemoizeMap
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {MemoizeMap} memoizeMap
+ * @param {Boolean} result
+*/
+function memoizeSet(leftHandOperand, rightHandOperand, memoizeMap, result) {
+  // Technically, WeakMap keys can *only* be objects, not primitives.
+  if (!memoizeMap || isPrimitive(leftHandOperand) || isPrimitive(rightHandOperand)) {
+    return;
+  }
+  var leftHandMap = memoizeMap.get(leftHandOperand);
+  if (leftHandMap) {
+    leftHandMap.set(rightHandOperand, result);
+  } else {
+    leftHandMap = new MemoizeMap();
+    leftHandMap.set(rightHandOperand, result);
+    memoizeMap.set(leftHandOperand, leftHandMap);
+  }
+}
+
+/*!
+ * Primary Export
+ */
+
+var deepEql = deepEqual;
+var MemoizeMap_1 = MemoizeMap;
+
+/**
+ * Assert deeply nested sameValue equality between two objects of any type.
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Object} [options] (optional) Additional options
+ * @param {Array} [options.comparator] (optional) Override default algorithm, determining custom equality.
+ * @param {Array} [options.memoize] (optional) Provide a custom memoization object which will cache the results of
+    complex objects for a speed boost. By passing `false` you can disable memoization, but this will cause circular
+    references to blow the stack.
+ * @return {Boolean} equal match
+ */
+function deepEqual(leftHandOperand, rightHandOperand, options) {
+  // If we have a comparator, we can't assume anything; so bail to its check first.
+  if (options && options.comparator) {
+    return extensiveDeepEqual(leftHandOperand, rightHandOperand, options);
+  }
+
+  var simpleResult = simpleEqual(leftHandOperand, rightHandOperand);
+  if (simpleResult !== null) {
+    return simpleResult;
+  }
+
+  // Deeper comparisons are pushed through to a larger function
+  return extensiveDeepEqual(leftHandOperand, rightHandOperand, options);
+}
+
+/**
+ * Many comparisons can be canceled out early via simple equality or primitive checks.
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @return {Boolean|null} equal match
+ */
+function simpleEqual(leftHandOperand, rightHandOperand) {
+  // Equal references (except for Numbers) can be returned early
+  if (leftHandOperand === rightHandOperand) {
+    // Handle +-0 cases
+    return leftHandOperand !== 0 || 1 / leftHandOperand === 1 / rightHandOperand;
+  }
+
+  // handle NaN cases
+  if (
+    leftHandOperand !== leftHandOperand && // eslint-disable-line no-self-compare
+    rightHandOperand !== rightHandOperand // eslint-disable-line no-self-compare
+  ) {
+    return true;
+  }
+
+  // Anything that is not an 'object', i.e. symbols, functions, booleans, numbers,
+  // strings, and undefined, can be compared by reference.
+  if (isPrimitive(leftHandOperand) || isPrimitive(rightHandOperand)) {
+    // Easy out b/c it would have passed the first equality check
+    return false;
+  }
+  return null;
+}
+
+/*!
+ * The main logic of the `deepEqual` function.
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Object} [options] (optional) Additional options
+ * @param {Array} [options.comparator] (optional) Override default algorithm, determining custom equality.
+ * @param {Array} [options.memoize] (optional) Provide a custom memoization object which will cache the results of
+    complex objects for a speed boost. By passing `false` you can disable memoization, but this will cause circular
+    references to blow the stack.
+ * @return {Boolean} equal match
+*/
+function extensiveDeepEqual(leftHandOperand, rightHandOperand, options) {
+  options = options || {};
+  options.memoize = options.memoize === false ? false : options.memoize || new MemoizeMap();
+  var comparator = options && options.comparator;
+
+  // Check if a memoized result exists.
+  var memoizeResultLeft = memoizeCompare(leftHandOperand, rightHandOperand, options.memoize);
+  if (memoizeResultLeft !== null) {
+    return memoizeResultLeft;
+  }
+  var memoizeResultRight = memoizeCompare(rightHandOperand, leftHandOperand, options.memoize);
+  if (memoizeResultRight !== null) {
+    return memoizeResultRight;
+  }
+
+  // If a comparator is present, use it.
+  if (comparator) {
+    var comparatorResult = comparator(leftHandOperand, rightHandOperand);
+    // Comparators may return null, in which case we want to go back to default behavior.
+    if (comparatorResult === false || comparatorResult === true) {
+      memoizeSet(leftHandOperand, rightHandOperand, options.memoize, comparatorResult);
+      return comparatorResult;
+    }
+    // To allow comparators to override *any* behavior, we ran them first. Since it didn't decide
+    // what to do, we need to make sure to return the basic tests first before we move on.
+    var simpleResult = simpleEqual(leftHandOperand, rightHandOperand);
+    if (simpleResult !== null) {
+      // Don't memoize this, it takes longer to set/retrieve than to just compare.
+      return simpleResult;
+    }
+  }
+
+  var leftHandType = typeDetect(leftHandOperand);
+  if (leftHandType !== typeDetect(rightHandOperand)) {
+    memoizeSet(leftHandOperand, rightHandOperand, options.memoize, false);
+    return false;
+  }
+
+  // Temporarily set the operands in the memoize object to prevent blowing the stack
+  memoizeSet(leftHandOperand, rightHandOperand, options.memoize, true);
+
+  var result = extensiveDeepEqualByType(leftHandOperand, rightHandOperand, leftHandType, options);
+  memoizeSet(leftHandOperand, rightHandOperand, options.memoize, result);
+  return result;
+}
+
+function extensiveDeepEqualByType(leftHandOperand, rightHandOperand, leftHandType, options) {
+  switch (leftHandType) {
+    case 'String':
+    case 'Number':
+    case 'Boolean':
+    case 'Date':
+      // If these types are their instance types (e.g. `new Number`) then re-deepEqual against their values
+      return deepEqual(leftHandOperand.valueOf(), rightHandOperand.valueOf());
+    case 'Promise':
+    case 'Symbol':
+    case 'function':
+    case 'WeakMap':
+    case 'WeakSet':
+      return leftHandOperand === rightHandOperand;
+    case 'Error':
+      return keysEqual(leftHandOperand, rightHandOperand, [ 'name', 'message', 'code' ], options);
+    case 'Arguments':
+    case 'Int8Array':
+    case 'Uint8Array':
+    case 'Uint8ClampedArray':
+    case 'Int16Array':
+    case 'Uint16Array':
+    case 'Int32Array':
+    case 'Uint32Array':
+    case 'Float32Array':
+    case 'Float64Array':
+    case 'Array':
+      return iterableEqual(leftHandOperand, rightHandOperand, options);
+    case 'RegExp':
+      return regexpEqual(leftHandOperand, rightHandOperand);
+    case 'Generator':
+      return generatorEqual(leftHandOperand, rightHandOperand, options);
+    case 'DataView':
+      return iterableEqual(new Uint8Array(leftHandOperand.buffer), new Uint8Array(rightHandOperand.buffer), options);
+    case 'ArrayBuffer':
+      return iterableEqual(new Uint8Array(leftHandOperand), new Uint8Array(rightHandOperand), options);
+    case 'Set':
+      return entriesEqual(leftHandOperand, rightHandOperand, options);
+    case 'Map':
+      return entriesEqual(leftHandOperand, rightHandOperand, options);
+    default:
+      return objectEqual(leftHandOperand, rightHandOperand, options);
+  }
+}
+
+/*!
+ * Compare two Regular Expressions for equality.
+ *
+ * @param {RegExp} leftHandOperand
+ * @param {RegExp} rightHandOperand
+ * @return {Boolean} result
+ */
+
+function regexpEqual(leftHandOperand, rightHandOperand) {
+  return leftHandOperand.toString() === rightHandOperand.toString();
+}
+
+/*!
+ * Compare two Sets/Maps for equality. Faster than other equality functions.
+ *
+ * @param {Set} leftHandOperand
+ * @param {Set} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+
+function entriesEqual(leftHandOperand, rightHandOperand, options) {
+  // IE11 doesn't support Set#entries or Set#@@iterator, so we need manually populate using Set#forEach
+  if (leftHandOperand.size !== rightHandOperand.size) {
+    return false;
+  }
+  if (leftHandOperand.size === 0) {
+    return true;
+  }
+  var leftHandItems = [];
+  var rightHandItems = [];
+  leftHandOperand.forEach(function gatherEntries(key, value) {
+    leftHandItems.push([ key, value ]);
+  });
+  rightHandOperand.forEach(function gatherEntries(key, value) {
+    rightHandItems.push([ key, value ]);
+  });
+  return iterableEqual(leftHandItems.sort(), rightHandItems.sort(), options);
+}
+
+/*!
+ * Simple equality for flat iterable objects such as Arrays, TypedArrays or Node.js buffers.
+ *
+ * @param {Iterable} leftHandOperand
+ * @param {Iterable} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+
+function iterableEqual(leftHandOperand, rightHandOperand, options) {
+  var length = leftHandOperand.length;
+  if (length !== rightHandOperand.length) {
+    return false;
+  }
+  if (length === 0) {
+    return true;
+  }
+  var index = -1;
+  while (++index < length) {
+    if (deepEqual(leftHandOperand[index], rightHandOperand[index], options) === false) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*!
+ * Simple equality for generator objects such as those returned by generator functions.
+ *
+ * @param {Iterable} leftHandOperand
+ * @param {Iterable} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+
+function generatorEqual(leftHandOperand, rightHandOperand, options) {
+  return iterableEqual(getGeneratorEntries(leftHandOperand), getGeneratorEntries(rightHandOperand), options);
+}
+
+/*!
+ * Determine if the given object has an @@iterator function.
+ *
+ * @param {Object} target
+ * @return {Boolean} `true` if the object has an @@iterator function.
+ */
+function hasIteratorFunction(target) {
+  return typeof Symbol !== 'undefined' &&
+    typeof target === 'object' &&
+    typeof Symbol.iterator !== 'undefined' &&
+    typeof target[Symbol.iterator] === 'function';
+}
+
+/*!
+ * Gets all iterator entries from the given Object. If the Object has no @@iterator function, returns an empty array.
+ * This will consume the iterator - which could have side effects depending on the @@iterator implementation.
+ *
+ * @param {Object} target
+ * @returns {Array} an array of entries from the @@iterator function
+ */
+function getIteratorEntries(target) {
+  if (hasIteratorFunction(target)) {
+    try {
+      return getGeneratorEntries(target[Symbol.iterator]());
+    } catch (iteratorError) {
+      return [];
+    }
+  }
+  return [];
+}
+
+/*!
+ * Gets all entries from a Generator. This will consume the generator - which could have side effects.
+ *
+ * @param {Generator} target
+ * @returns {Array} an array of entries from the Generator.
+ */
+function getGeneratorEntries(generator) {
+  var generatorResult = generator.next();
+  var accumulator = [ generatorResult.value ];
+  while (generatorResult.done === false) {
+    generatorResult = generator.next();
+    accumulator.push(generatorResult.value);
+  }
+  return accumulator;
+}
+
+/*!
+ * Gets all own and inherited enumerable keys from a target.
+ *
+ * @param {Object} target
+ * @returns {Array} an array of own and inherited enumerable keys from the target.
+ */
+function getEnumerableKeys(target) {
+  var keys = [];
+  for (var key in target) {
+    keys.push(key);
+  }
+  return keys;
+}
+
+/*!
+ * Determines if two objects have matching values, given a set of keys. Defers to deepEqual for the equality check of
+ * each key. If any value of the given key is not equal, the function will return false (early).
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Array} keys An array of keys to compare the values of leftHandOperand and rightHandOperand against
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+function keysEqual(leftHandOperand, rightHandOperand, keys, options) {
+  var length = keys.length;
+  if (length === 0) {
+    return true;
+  }
+  for (var i = 0; i < length; i += 1) {
+    if (deepEqual(leftHandOperand[keys[i]], rightHandOperand[keys[i]], options) === false) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*!
+ * Recursively check the equality of two Objects. Once basic sameness has been established it will defer to `deepEqual`
+ * for each enumerable key in the object.
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+function objectEqual(leftHandOperand, rightHandOperand, options) {
+  var leftHandKeys = getEnumerableKeys(leftHandOperand);
+  var rightHandKeys = getEnumerableKeys(rightHandOperand);
+  if (leftHandKeys.length && leftHandKeys.length === rightHandKeys.length) {
+    leftHandKeys.sort();
+    rightHandKeys.sort();
+    if (iterableEqual(leftHandKeys, rightHandKeys) === false) {
+      return false;
+    }
+    return keysEqual(leftHandOperand, rightHandOperand, leftHandKeys, options);
+  }
+
+  var leftHandEntries = getIteratorEntries(leftHandOperand);
+  var rightHandEntries = getIteratorEntries(rightHandOperand);
+  if (leftHandEntries.length && leftHandEntries.length === rightHandEntries.length) {
+    leftHandEntries.sort();
+    rightHandEntries.sort();
+    return iterableEqual(leftHandEntries, rightHandEntries, options);
+  }
+
+  if (leftHandKeys.length === 0 &&
+      leftHandEntries.length === 0 &&
+      rightHandKeys.length === 0 &&
+      rightHandEntries.length === 0) {
+    return true;
+  }
+
+  return false;
+}
+
+/*!
+ * Returns true if the argument is a primitive.
+ *
+ * This intentionally returns true for all objects that can be compared by reference,
+ * including functions and symbols.
+ *
+ * @param {Mixed} value
+ * @return {Boolean} result
+ */
+function isPrimitive(value) {
+  return value === null || typeof value !== 'object';
+}
+deepEql.MemoizeMap = MemoizeMap_1;
+
+function stringify(value) {
+  return JSON.stringify(value, null, '\t')
+}
+
+function extractKeysFromString(keyAsString) {
+	// Convert propAddress string to array of keys
+  // Before: "projects[5].window"
+  // After: ["projects", 5, "window"]
+  const regex = /[^\.\[\]]+?(?=\.|\[|\]|$)/g;
+  const keys = keyAsString.match(regex);
+  if (keys && keys.length) {
+    keys.forEach((p, index, thisArray) => {
+      // Find strings that are just integers, and convert to integers
+      if (/\d/.test(p)) {
+        thisArray[index] = parseInt(p, 10);
+      }
+    });
+  }
+  return keys
+}
+
+const getNestedObject = (nestedObj, pathArr) => {
+	return pathArr.reduce((obj, key) =>
+		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+};
+
+function hasChanged(keysAsString = undefined, objA, objB) {
+  if (keysAsString && keysAsString !== '*') {
+    const keys = extractKeysFromString(keysAsString);
+    const objAVal = getNestedObject(objA, keys);
+    const objBVal = getNestedObject(objB, keys);
+    if (objAVal == undefined || objBVal == undefined) {
+      // If either is undefined, return undefined
+      return undefined
+    } else if (typeof objAVal == 'object' && typeof objBVal == 'object') {
+      // If both are objects, do a deep object comparison
+      return !deepEql(objAVal, objBVal)
+    } else {
+      // Else, compare values
+      return objAVal !== objBVal
+    }
+  } else {
+    return !deepEql(objA, objB)
+  }
+}
+
+function hasChangedTo(keysAsString, value, objTo, objFrom) {
+  if (!keysAsString || !value ) {
+    // If either required arguments are missing or empty, return undefined
+    return undefined
+  } else {
+    const keys = extractKeysFromString(keysAsString);
+    const objToVal = getNestedObject(objTo, keys);
+    const objFromVal = getNestedObject(objFrom, keys);
+    if (typeof objToVal == 'object' || typeof objFromVal == 'object') {
+      // If either value is an object, return undefined.
+      // For now, we don't allow checking against objects.
+      return undefined
+    } else if (objToVal === objFromVal) {
+      // If no change, return false
+      return false
+    } else {
+      // Else, check if objTo equals value
+      return objToVal === value
+    }
+  }
+}
+
 function noop() { }
 function assign(tar, src) {
     // @ts-ignore
@@ -19,6 +949,19 @@ function is_function(thing) {
 }
 function safe_not_equal(a, b) {
     return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
+}
+function not_equal(a, b) {
+    return a != a ? b == b : a !== b;
+}
+function subscribe(store, ...callbacks) {
+    if (store == null) {
+        return noop;
+    }
+    const unsub = store.subscribe(...callbacks);
+    return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
+}
+function component_subscribe(component, store, callback) {
+    component.$$.on_destroy.push(subscribe(store, callback));
 }
 function create_slot(definition, ctx, $$scope, fn) {
     if (definition) {
@@ -51,9 +994,6 @@ function get_slot_changes(definition, $$scope, dirty, fn) {
 }
 function null_to_empty(value) {
     return value == null ? '' : value;
-}
-function action_destroyer(action_result) {
-    return action_result && is_function(action_result.destroy) ? action_result.destroy : noop;
 }
 
 function append(target, node) {
@@ -94,13 +1034,6 @@ function prevent_default(fn) {
         return fn.call(this, event);
     };
 }
-function stop_propagation(fn) {
-    return function (event) {
-        event.stopPropagation();
-        // @ts-ignore
-        return fn.call(this, event);
-    };
-}
 function attr(node, attribute, value) {
     if (value == null)
         node.removeAttribute(attribute);
@@ -126,46 +1059,10 @@ function set_style(node, key, value, important) {
 function toggle_class(element, name, toggle) {
     element.classList[toggle ? 'add' : 'remove'](name);
 }
-function custom_event(type, detail) {
-    const e = document.createEvent('CustomEvent');
-    e.initCustomEvent(type, false, false, detail);
-    return e;
-}
 
 let current_component;
 function set_current_component(component) {
     current_component = component;
-}
-function get_current_component() {
-    if (!current_component)
-        throw new Error(`Function called outside component initialization`);
-    return current_component;
-}
-function onMount(fn) {
-    get_current_component().$$.on_mount.push(fn);
-}
-function createEventDispatcher() {
-    const component = get_current_component();
-    return (type, detail) => {
-        const callbacks = component.$$.callbacks[type];
-        if (callbacks) {
-            // TODO are there situations where events could be dispatched
-            // in a server (non-DOM) environment?
-            const event = custom_event(type, detail);
-            callbacks.slice().forEach(fn => {
-                fn.call(component, event);
-            });
-        }
-    };
-}
-// TODO figure out if we still want to support
-// shorthand events, or if we want to implement
-// a real bubbling mechanism
-function bubble(component, event) {
-    const callbacks = component.$$.callbacks[event.type];
-    if (callbacks) {
-        callbacks.slice().forEach(fn => fn(event));
-    }
 }
 
 const dirty_components = [];
@@ -401,14 +1298,178 @@ class SvelteComponent {
     }
 }
 
+const subscriber_queue = [];
+/**
+ * Create a `Writable` store that allows both updating and reading by subscription.
+ * @param {*=}value initial value
+ * @param {StartStopNotifier=}start start and stop notifications for subscriptions
+ */
+function writable(value, start = noop) {
+    let stop;
+    const subscribers = [];
+    function set(new_value) {
+        if (safe_not_equal(value, new_value)) {
+            value = new_value;
+            if (stop) { // store is ready
+                const run_queue = !subscriber_queue.length;
+                for (let i = 0; i < subscribers.length; i += 1) {
+                    const s = subscribers[i];
+                    s[1]();
+                    subscriber_queue.push(s, value);
+                }
+                if (run_queue) {
+                    for (let i = 0; i < subscriber_queue.length; i += 2) {
+                        subscriber_queue[i][0](subscriber_queue[i + 1]);
+                    }
+                    subscriber_queue.length = 0;
+                }
+            }
+        }
+    }
+    function update(fn) {
+        set(fn(value));
+    }
+    function subscribe(run, invalidate = noop) {
+        const subscriber = [run, invalidate];
+        subscribers.push(subscriber);
+        if (subscribers.length === 1) {
+            stop = start(set) || noop;
+        }
+        run(value);
+        return () => {
+            const index = subscribers.indexOf(subscriber);
+            if (index !== -1) {
+                subscribers.splice(index, 1);
+            }
+            if (subscribers.length === 0) {
+                stop();
+                stop = null;
+            }
+        };
+    }
+    return { set, update, subscribe };
+}
+
+function n(n){for(var t=arguments.length,r=Array(t>1?t-1:0),e=1;e<t;e++)r[e-1]=arguments[e];if("production"!==process.env.NODE_ENV){var i=Y[n],o=i?"function"==typeof i?i.apply(null,r):i:"unknown error nr: "+n;throw Error("[Immer] "+o)}throw Error("[Immer] minified error nr: "+n+(r.length?" "+r.join(","):"")+". Find the full error at: https://bit.ly/3cXEKWf")}function t(n){return !!n&&!!n[Q]}function r(n){return !!n&&(function(n){if(!n||"object"!=typeof n)return !1;var t=Object.getPrototypeOf(n);return !t||t===Object.prototype}(n)||Array.isArray(n)||!!n[L]||!!n.constructor[L]||s(n)||v(n))}function i(n,t,r){void 0===r&&(r=!1),0===o(n)?(r?Object.keys:Z)(n).forEach((function(e){r&&"symbol"==typeof e||t(e,n[e],n);})):n.forEach((function(r,e){return t(e,r,n)}));}function o(n){var t=n[Q];return t?t.i>3?t.i-4:t.i:Array.isArray(n)?1:s(n)?2:v(n)?3:0}function u(n,t){return 2===o(n)?n.has(t):Object.prototype.hasOwnProperty.call(n,t)}function a(n,t){return 2===o(n)?n.get(t):n[t]}function f(n,t,r){var e=o(n);2===e?n.set(t,r):3===e?(n.delete(t),n.add(r)):n[t]=r;}function c(n,t){return n===t?0!==n||1/n==1/t:n!=n&&t!=t}function s(n){return X&&n instanceof Map}function v(n){return q&&n instanceof Set}function p(n){return n.o||n.t}function l(n){if(Array.isArray(n))return Array.prototype.slice.call(n);var t=nn(n);delete t[Q];for(var r=Z(t),e=0;e<r.length;e++){var i=r[e],o=t[i];!1===o.writable&&(o.writable=!0,o.configurable=!0),(o.get||o.set)&&(t[i]={configurable:!0,writable:!0,enumerable:o.enumerable,value:n[i]});}return Object.create(Object.getPrototypeOf(n),t)}function d(n,e){y(n)||t(n)||!r(n)||(o(n)>1&&(n.set=n.add=n.clear=n.delete=h),Object.freeze(n),e&&i(n,(function(n,t){return d(t,!0)}),!0));}function h(){n(2);}function y(n){return null==n||"object"!=typeof n||Object.isFrozen(n)}function b(t){var r=tn[t];return r||n("production"!==process.env.NODE_ENV?18:19,t),r}function m(n,t){tn[n]=t;}function _(){return "production"===process.env.NODE_ENV||U||n(0),U}function j(n,t){t&&(b("Patches"),n.u=[],n.s=[],n.v=t);}function g(n){O(n),n.p.forEach(S),n.p=null;}function O(n){n===U&&(U=n.l);}function w(n){return U={p:[],l:U,h:n,m:!0,_:0}}function S(n){var t=n[Q];0===t.i||1===t.i?t.j():t.g=!0;}function P(t,e){e._=e.p.length;var i=e.p[0],o=void 0!==t&&t!==i;return e.h.O||b("ES5").S(e,t,o),o?(i[Q].P&&(g(e),n(4)),r(t)&&(t=M(e,t),e.l||x(e,t)),e.u&&b("Patches").M(i[Q],t,e.u,e.s)):t=M(e,i,[]),g(e),e.u&&e.v(e.u,e.s),t!==H?t:void 0}function M(n,t,r){if(y(t))return t;var e=t[Q];if(!e)return i(t,(function(i,o){return A(n,e,t,i,o,r)}),!0),t;if(e.A!==n)return t;if(!e.P)return x(n,e.t,!0),e.t;if(!e.I){e.I=!0,e.A._--;var o=4===e.i||5===e.i?e.o=l(e.k):e.o;i(3===e.i?new Set(o):o,(function(t,i){return A(n,e,o,t,i,r)})),x(n,o,!1),r&&n.u&&b("Patches").R(e,r,n.u,n.s);}return e.o}function A(e,i,o,a,c,s){if("production"!==process.env.NODE_ENV&&c===o&&n(5),t(c)){var v=M(e,c,s&&i&&3!==i.i&&!u(i.D,a)?s.concat(a):void 0);if(f(o,a,v),!t(v))return;e.m=!1;}if(r(c)&&!y(c)){if(!e.h.N&&e._<1)return;M(e,c),i&&i.A.l||x(e,c);}}function x(n,t,r){void 0===r&&(r=!1),n.h.N&&n.m&&d(t,r);}function z(n,t){var r=n[Q];return (r?p(r):n)[t]}function I(n,t){if(t in n)for(var r=Object.getPrototypeOf(n);r;){var e=Object.getOwnPropertyDescriptor(r,t);if(e)return e;r=Object.getPrototypeOf(r);}}function E(n){n.P||(n.P=!0,n.l&&E(n.l));}function k(n){n.o||(n.o=l(n.t));}function R(n,t,r){var e=s(t)?b("MapSet").T(t,r):v(t)?b("MapSet").F(t,r):n.O?function(n,t){var r=Array.isArray(n),e={i:r?1:0,A:t?t.A:_(),P:!1,I:!1,D:{},l:t,t:n,k:null,o:null,j:null,C:!1},i=e,o=rn;r&&(i=[e],o=en);var u=Proxy.revocable(i,o),a=u.revoke,f=u.proxy;return e.k=f,e.j=a,f}(t,r):b("ES5").J(t,r);return (r?r.A:_()).p.push(e),e}function D(e){return t(e)||n(22,e),function n(t){if(!r(t))return t;var e,u=t[Q],c=o(t);if(u){if(!u.P&&(u.i<4||!b("ES5").K(u)))return u.t;u.I=!0,e=N(t,c),u.I=!1;}else e=N(t,c);return i(e,(function(t,r){u&&a(u.t,t)===r||f(e,t,n(r));})),3===c?new Set(e):e}(e)}function N(n,t){switch(t){case 2:return new Map(n);case 3:return Array.from(n)}return l(n)}function F(){function e(n){if(!r(n))return n;if(Array.isArray(n))return n.map(e);if(s(n))return new Map(Array.from(n.entries()).map((function(n){return [n[0],e(n[1])]})));if(v(n))return new Set(Array.from(n).map(e));var t=Object.create(Object.getPrototypeOf(n));for(var i in n)t[i]=e(n[i]);return t}function f(n){return t(n)?e(n):n}var c="add";m("Patches",{$:function(t,r){return r.forEach((function(r){for(var i=r.path,u=r.op,f=t,s=0;s<i.length-1;s++)"object"!=typeof(f=a(f,i[s]))&&n(15,i.join("/"));var v=o(f),p=e(r.value),l=i[i.length-1];switch(u){case"replace":switch(v){case 2:return f.set(l,p);case 3:n(16);default:return f[l]=p}case c:switch(v){case 1:return f.splice(l,0,p);case 2:return f.set(l,p);case 3:return f.add(p);default:return f[l]=p}case"remove":switch(v){case 1:return f.splice(l,1);case 2:return f.delete(l);case 3:return f.delete(r.value);default:return delete f[l]}default:n(17,u);}})),t},R:function(n,t,r,e){switch(n.i){case 0:case 4:case 2:return function(n,t,r,e){var o=n.t,s=n.o;i(n.D,(function(n,i){var v=a(o,n),p=a(s,n),l=i?u(o,n)?"replace":c:"remove";if(v!==p||"replace"!==l){var d=t.concat(n);r.push("remove"===l?{op:l,path:d}:{op:l,path:d,value:p}),e.push(l===c?{op:"remove",path:d}:"remove"===l?{op:c,path:d,value:f(v)}:{op:"replace",path:d,value:f(v)});}}));}(n,t,r,e);case 5:case 1:return function(n,t,r,e){var i=n.t,o=n.D,u=n.o;if(u.length<i.length){var a=[u,i];i=a[0],u=a[1];var s=[e,r];r=s[0],e=s[1];}for(var v=0;v<i.length;v++)if(o[v]&&u[v]!==i[v]){var p=t.concat([v]);r.push({op:"replace",path:p,value:f(u[v])}),e.push({op:"replace",path:p,value:f(i[v])});}for(var l=i.length;l<u.length;l++){var d=t.concat([l]);r.push({op:c,path:d,value:f(u[l])});}i.length<u.length&&e.push({op:"replace",path:t.concat(["length"]),value:i.length});}(n,t,r,e);case 3:return function(n,t,r,e){var i=n.t,o=n.o,u=0;i.forEach((function(n){if(!o.has(n)){var i=t.concat([u]);r.push({op:"remove",path:i,value:n}),e.unshift({op:c,path:i,value:n});}u++;})),u=0,o.forEach((function(n){if(!i.has(n)){var o=t.concat([u]);r.push({op:c,path:o,value:n}),e.unshift({op:"remove",path:o,value:n});}u++;}));}(n,t,r,e)}},M:function(n,t,r,e){r.push({op:"replace",path:[],value:t}),e.push({op:"replace",path:[],value:n.t});}});}var G,U,W="undefined"!=typeof Symbol&&"symbol"==typeof Symbol("x"),X="undefined"!=typeof Map,q="undefined"!=typeof Set,B="undefined"!=typeof Proxy&&void 0!==Proxy.revocable&&"undefined"!=typeof Reflect,H=W?Symbol.for("immer-nothing"):((G={})["immer-nothing"]=!0,G),L=W?Symbol.for("immer-draftable"):"__$immer_draftable",Q=W?Symbol.for("immer-state"):"__$immer_state",Y={0:"Illegal state",1:"Immer drafts cannot have computed properties",2:"This object has been frozen and should not be mutated",3:function(n){return "Cannot use a proxy that has been revoked. Did you pass an object from inside an immer function to an async process? "+n},4:"An immer producer returned a new value *and* modified its draft. Either return a new value *or* modify the draft.",5:"Immer forbids circular references",6:"The first or second argument to `produce` must be a function",7:"The third argument to `produce` must be a function or undefined",8:"First argument to `createDraft` must be a plain object, an array, or an immerable object",9:"First argument to `finishDraft` must be a draft returned by `createDraft`",10:"The given draft is already finalized",11:"Object.defineProperty() cannot be used on an Immer draft",12:"Object.setPrototypeOf() cannot be used on an Immer draft",13:"Immer only supports deleting array indices",14:"Immer only supports setting array indices and the 'length' property",15:function(n){return "Cannot apply patch, path doesn't resolve: "+n},16:'Sets cannot have "replace" patches.',17:function(n){return "Unsupported patch operation: "+n},18:function(n){return "The plugin for '"+n+"' has not been loaded into Immer. To enable the plugin, import and call `enable"+n+"()` when initializing your application."},19:"plugin not loaded",20:"Cannot use proxies if Proxy, Proxy.revocable or Reflect are not available",21:function(n){return "produce can only be called on things that are draftable: plain objects, arrays, Map, Set or classes that are marked with '[immerable]: true'. Got '"+n+"'"},22:function(n){return "'current' expects a draft, got: "+n},23:function(n){return "'original' expects a draft, got: "+n}},Z="undefined"!=typeof Reflect&&Reflect.ownKeys?Reflect.ownKeys:void 0!==Object.getOwnPropertySymbols?function(n){return Object.getOwnPropertyNames(n).concat(Object.getOwnPropertySymbols(n))}:Object.getOwnPropertyNames,nn=Object.getOwnPropertyDescriptors||function(n){var t={};return Z(n).forEach((function(r){t[r]=Object.getOwnPropertyDescriptor(n,r);})),t},tn={},rn={get:function(n,t){if(t===Q)return n;var e=p(n);if(!u(e,t))return function(n,t,r){var e,i=I(t,r);return i?"value"in i?i.value:null===(e=i.get)||void 0===e?void 0:e.call(n.k):void 0}(n,e,t);var i=e[t];return n.I||!r(i)?i:i===z(n.t,t)?(k(n),n.o[t]=R(n.A.h,i,n)):i},has:function(n,t){return t in p(n)},ownKeys:function(n){return Reflect.ownKeys(p(n))},set:function(n,t,r){var e=I(p(n),t);if(null==e?void 0:e.set)return e.set.call(n.k,r),!0;if(!n.P){var i=z(p(n),t),o=null==i?void 0:i[Q];if(o&&o.t===r)return n.o[t]=r,n.D[t]=!1,!0;if(c(r,i)&&(void 0!==r||u(n.t,t)))return !0;k(n),E(n);}return n.o[t]=r,n.D[t]=!0,!0},deleteProperty:function(n,t){return void 0!==z(n.t,t)||t in n.t?(n.D[t]=!1,k(n),E(n)):delete n.D[t],n.o&&delete n.o[t],!0},getOwnPropertyDescriptor:function(n,t){var r=p(n),e=Reflect.getOwnPropertyDescriptor(r,t);return e?{writable:!0,configurable:1!==n.i||"length"!==t,enumerable:e.enumerable,value:r[t]}:e},defineProperty:function(){n(11);},getPrototypeOf:function(n){return Object.getPrototypeOf(n.t)},setPrototypeOf:function(){n(12);}},en={};i(rn,(function(n,t){en[n]=function(){return arguments[0]=arguments[0][0],t.apply(this,arguments)};})),en.deleteProperty=function(t,r){return "production"!==process.env.NODE_ENV&&isNaN(parseInt(r))&&n(13),rn.deleteProperty.call(this,t[0],r)},en.set=function(t,r,e){return "production"!==process.env.NODE_ENV&&"length"!==r&&isNaN(parseInt(r))&&n(14),rn.set.call(this,t[0],r,e,t[0])};var on=function(){function e(n){this.O=B,this.N="production"!==process.env.NODE_ENV,"boolean"==typeof(null==n?void 0:n.useProxies)&&this.setUseProxies(n.useProxies),"boolean"==typeof(null==n?void 0:n.autoFreeze)&&this.setAutoFreeze(n.autoFreeze),this.produce=this.produce.bind(this),this.produceWithPatches=this.produceWithPatches.bind(this);}var i=e.prototype;return i.produce=function(t,e,i){if("function"==typeof t&&"function"!=typeof e){var o=e;e=t;var u=this;return function(n){var t=this;void 0===n&&(n=o);for(var r=arguments.length,i=Array(r>1?r-1:0),a=1;a<r;a++)i[a-1]=arguments[a];return u.produce(n,(function(n){var r;return (r=e).call.apply(r,[t,n].concat(i))}))}}var a;if("function"!=typeof e&&n(6),void 0!==i&&"function"!=typeof i&&n(7),r(t)){var f=w(this),c=R(this,t,void 0),s=!0;try{a=e(c),s=!1;}finally{s?g(f):O(f);}return "undefined"!=typeof Promise&&a instanceof Promise?a.then((function(n){return j(f,i),P(n,f)}),(function(n){throw g(f),n})):(j(f,i),P(a,f))}if(!t||"object"!=typeof t){if((a=e(t))===H)return;return void 0===a&&(a=t),this.N&&d(a,!0),a}n(21,t);},i.produceWithPatches=function(n,t){var r,e,i=this;return "function"==typeof n?function(t){for(var r=arguments.length,e=Array(r>1?r-1:0),o=1;o<r;o++)e[o-1]=arguments[o];return i.produceWithPatches(t,(function(t){return n.apply(void 0,[t].concat(e))}))}:[this.produce(n,t,(function(n,t){r=n,e=t;})),r,e]},i.createDraft=function(e){r(e)||n(8),t(e)&&(e=D(e));var i=w(this),o=R(this,e,void 0);return o[Q].C=!0,O(i),o},i.finishDraft=function(t,r){var e=t&&t[Q];"production"!==process.env.NODE_ENV&&(e&&e.C||n(9),e.I&&n(10));var i=e.A;return j(i,r),P(void 0,i)},i.setAutoFreeze=function(n){this.N=n;},i.setUseProxies=function(t){t&&!B&&n(20),this.O=t;},i.applyPatches=function(n,r){var e;for(e=r.length-1;e>=0;e--){var i=r[e];if(0===i.path.length&&"replace"===i.op){n=i.value;break}}var o=b("Patches").$;return t(n)?o(n,r):this.produce(n,(function(n){return o(n,r.slice(e+1))}))},e}(),un=new on,fn=un.produceWithPatches.bind(un),cn=un.setAutoFreeze.bind(un),sn=un.setUseProxies.bind(un),vn=un.applyPatches.bind(un),pn=un.createDraft.bind(un),ln=un.finishDraft.bind(un);
+
+F(); // Required by immer
+
+// -------- STORES -------- //
+
+let state = writable({});
+let project = writable({});
+let sidebar = writable({});
+let files = writable({});
+
+// This (seemingly redundant) `stateAsObject` variable is for performance reasons. When we applyPatches(state, patches), we need to pass it the current state. We could get that from `state` writable by using `get(state)`, but that creates and destroys a one-time subscriber every time. Which has performance implications given how often we modify state. Svelte specifically recommends against this type of use, in the docs: https://svelte.dev/docs#get. So instead we create an intemediary `stateAsObject`, apply patches to it, and then pass it to state.set(...).
+let stateAsObject = {};
+let filesAsObject = {};
+
+// -------- SETUP AND UPDATE -------- //
+
+class StateManager {
+  constructor(initialState, initialFiles) {
+
+    // Set `window.id`
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    window.id = urlParams.get('id');
+
+    // Update state when patches arrive from main...
+    window.api.receive("statePatchesFromMain", (patches) => {
+      stateAsObject = vn(stateAsObject, patches);
+      updateStores();
+    });
+
+    // Update files when patches arrive from main...
+    window.api.receive("filesPatchesFromMain", (patches) => {
+      filesAsObject = vn(filesAsObject, patches);
+      updateFiles();
+    });
+
+    // Set initial value
+    stateAsObject = initialState;
+    filesAsObject = initialFiles;
+    updateStores();
+  }
+}
+
+function updateStores() {
+
+  state.set(stateAsObject);
+  const proj = stateAsObject.projects.find((p) => p.window.id == window.id);
+  project.set(proj);
+  sidebar.set(proj.sidebar);
+
+  files.set(filesAsObject);
+}
+
+class ThemeManager {
+  constructor(initialState) {
+
+    this.root = document.documentElement;
+
+    window.api.receive("stateChanged", (state, oldState) => {
+
+      // Update appearance
+      if (hasChanged('appearance', state, oldState)) {
+        this.setTheme(state.appearance.theme);
+        this.setSystemColors();
+      }
+    });
+
+    // Set initial theme on initial load
+    this.setTheme(initialState.appearance.theme);
+
+    // Set system colors
+    this.setSystemColors();
+  }
+
+
+  /**
+   * Point stylesheet href in index.html to new theme's stylesheet.
+   * If stylesheet name = gambier-light
+   * ...stylesheet href = ./styles/themes/gambier-light/gambier-light.css
+   * @param {*} themeName - E.g. 'gambier-light'.
+   */
+  setTheme(themeName) {  
+    const stylesheet = document.getElementById('theme-stylesheet');
+    const href = `./styles/themes/${themeName}/${themeName}.css`;
+    stylesheet.setAttribute('href', href);
+  }
+
+  /**
+   * Get system colors from main, and write them to html element.
+   * NOTE: This is turned off for now because of problems with Electron: returned values do not match what we expect from macOS, based on developer documentation and tests with Xcode apps. In part (although not entirely) because Electron returns values without alphas.
+   */
+  async setSystemColors() {
+
+    return
+  }
+
+  hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+}
+
 /* src/js/renderer/component/FirstRun.svelte generated by Svelte v3.22.3 */
+
+function add_css() {
+	var style = element("style");
+	style.id = "svelte-1t85wyp-style";
+	style.textContent = "#firstrun.svelte-1t85wyp{padding:4rem;background-color:var(--windowBackgroundColor);overflow:scroll}h1.svelte-1t85wyp{font-family:'SF Pro Display';font-weight:bold;font-size:20px;line-height:24px;letter-spacing:-0.12px;color:var(--labelColor)}";
+	append(document.head, style);
+}
 
 function create_fragment(ctx) {
 	let div;
 	let h1;
 	let t1;
-	let h2;
-	let t3;
 	let button;
 	let dispose;
 
@@ -418,19 +1479,16 @@ function create_fragment(ctx) {
 			h1 = element("h1");
 			h1.textContent = "Gambier";
 			t1 = space();
-			h2 = element("h2");
-			h2.textContent = "Get started:";
-			t3 = space();
 			button = element("button");
 			button.textContent = "Choose Project Folder...";
+			attr(h1, "class", "svelte-1t85wyp");
 			attr(div, "id", "firstrun");
+			attr(div, "class", "svelte-1t85wyp");
 		},
 		m(target, anchor, remount) {
 			insert(target, div, anchor);
 			append(div, h1);
 			append(div, t1);
-			append(div, h2);
-			append(div, t3);
 			append(div, button);
 			if (remount) dispose();
 			dispose = listen(button, "click", /*click_handler*/ ctx[0]);
@@ -447,7 +1505,7 @@ function create_fragment(ctx) {
 
 function instance($$self) {
 	const click_handler = () => {
-		window.api.send("dispatch", { type: "SET_PROJECT_PATH" });
+		window.api.send("dispatch", { type: "SELECT_PROJECT_DIRECTORY" });
 	};
 
 	return [click_handler];
@@ -456,659 +1514,73 @@ function instance($$self) {
 class FirstRun extends SvelteComponent {
 	constructor(options) {
 		super();
+		if (!document.getElementById("svelte-1t85wyp-style")) add_css();
 		init(this, options, instance, create_fragment, safe_not_equal, {});
 	}
 }
 
-/**
- * Get a SideBar item object, based on id. 
- * NOTE: This is a copy of the same function in main/utils-main. If one changes, the other should also.
- */
+/* src/js/renderer/component/UI/Separator.svelte generated by Svelte v3.22.3 */
 
-// Copied from:
-// https://github.com/Rich-Harris/yootils/blob/master/src/number/clamp.ts
-function clamp(num, min, max) {
-  return num < min ? min : num > max ? max : num;
+function add_css$1() {
+	var style = element("style");
+	style.id = "svelte-1q6lmmr-style";
+	style.textContent = "hr.svelte-1q6lmmr{min-height:1px;border:0;background-color:var(--separatorColor)}";
+	append(document.head, style);
 }
 
-/* src/js/renderer/component/FlexPanel.svelte generated by Svelte v3.22.3 */
-
 function create_fragment$1(ctx) {
-	let div1;
-	let t;
-	let div0;
-	let drag_action;
-	let current;
-	let dispose;
-	const default_slot_template = /*$$slots*/ ctx[10].default;
-	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[9], null);
+	let hr;
 
 	return {
 		c() {
-			div1 = element("div");
-			if (default_slot) default_slot.c();
-			t = space();
-			div0 = element("div");
-			attr(div0, "class", "divider");
-			attr(div1, "class", "flexPanel");
-			set_style(div1, "flex", "0 0 " + /*width*/ ctx[2] + "px");
-			toggle_class(div1, "visible", /*visible*/ ctx[0]);
+			hr = element("hr");
+			set_style(hr, "margin", "0 " + /*marginSides*/ ctx[0] + "px");
+			attr(hr, "class", "svelte-1q6lmmr");
 		},
-		m(target, anchor, remount) {
-			insert(target, div1, anchor);
-
-			if (default_slot) {
-				default_slot.m(div1, null);
-			}
-
-			append(div1, t);
-			append(div1, div0);
-			/*div1_binding*/ ctx[12](div1);
-			current = true;
-			if (remount) run_all(dispose);
-
-			dispose = [
-				action_destroyer(drag_action = /*drag*/ ctx[4].call(null, div0, /*setPos*/ ctx[3])),
-				listen(div1, "click", /*click_handler*/ ctx[11])
-			];
+		m(target, anchor) {
+			insert(target, hr, anchor);
 		},
 		p(ctx, [dirty]) {
-			if (default_slot) {
-				if (default_slot.p && dirty & /*$$scope*/ 512) {
-					default_slot.p(get_slot_context(default_slot_template, ctx, /*$$scope*/ ctx[9], null), get_slot_changes(default_slot_template, /*$$scope*/ ctx[9], dirty, null));
-				}
-			}
-
-			if (!current || dirty & /*width*/ 4) {
-				set_style(div1, "flex", "0 0 " + /*width*/ ctx[2] + "px");
-			}
-
-			if (dirty & /*visible*/ 1) {
-				toggle_class(div1, "visible", /*visible*/ ctx[0]);
+			if (dirty & /*marginSides*/ 1) {
+				set_style(hr, "margin", "0 " + /*marginSides*/ ctx[0] + "px");
 			}
 		},
-		i(local) {
-			if (current) return;
-			transition_in(default_slot, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(default_slot, local);
-			current = false;
-		},
+		i: noop,
+		o: noop,
 		d(detaching) {
-			if (detaching) detach(div1);
-			if (default_slot) default_slot.d(detaching);
-			/*div1_binding*/ ctx[12](null);
-			run_all(dispose);
+			if (detaching) detach(hr);
 		}
 	};
 }
 
 function instance$1($$self, $$props, $$invalidate) {
-	let { min = 150 } = $$props;
-	let { max = 300 } = $$props;
-	let { start = 200 } = $$props;
-	let { visible = true } = $$props;
-	const refs = {};
-	let width;
-	let dragging = false;
-
-	function setPos(event) {
-		const { left } = refs.container.getBoundingClientRect();
-		$$invalidate(2, width = clamp(event.clientX - left, min, max));
-	}
-
-	function drag(node, callback) {
-		const mousedown = event => {
-			if (event.which !== 1) return;
-			event.preventDefault();
-			dragging = true;
-
-			const onmouseup = () => {
-				dragging = false;
-				window.removeEventListener("mousemove", callback, false);
-				window.removeEventListener("mouseup", onmouseup, false);
-			};
-
-			window.addEventListener("mousemove", callback, false);
-			window.addEventListener("mouseup", onmouseup, false);
-		};
-
-		node.addEventListener("mousedown", mousedown, false);
-
-		return {
-			destroy() {
-				node.removeEventListener("mousedown", onmousedown, false);
-			}
-		};
-	}
-
-	onMount(async () => {
-		$$invalidate(2, width = start);
-	});
-
-	let { $$slots = {}, $$scope } = $$props;
-
-	function click_handler(event) {
-		bubble($$self, event);
-	}
-
-	function div1_binding($$value) {
-		binding_callbacks[$$value ? "unshift" : "push"](() => {
-			refs.container = $$value;
-			$$invalidate(1, refs);
-		});
-	}
+	let { marginSides = "0" } = $$props;
 
 	$$self.$set = $$props => {
-		if ("min" in $$props) $$invalidate(5, min = $$props.min);
-		if ("max" in $$props) $$invalidate(6, max = $$props.max);
-		if ("start" in $$props) $$invalidate(7, start = $$props.start);
-		if ("visible" in $$props) $$invalidate(0, visible = $$props.visible);
-		if ("$$scope" in $$props) $$invalidate(9, $$scope = $$props.$$scope);
+		if ("marginSides" in $$props) $$invalidate(0, marginSides = $$props.marginSides);
 	};
 
-	return [
-		visible,
-		refs,
-		width,
-		setPos,
-		drag,
-		min,
-		max,
-		start,
-		dragging,
-		$$scope,
-		$$slots,
-		click_handler,
-		div1_binding
-	];
+	return [marginSides];
 }
 
-class FlexPanel extends SvelteComponent {
+class Separator extends SvelteComponent {
 	constructor(options) {
 		super();
-		init(this, options, instance$1, create_fragment$1, safe_not_equal, { min: 5, max: 6, start: 7, visible: 0 });
-	}
-}
-
-/* src/js/renderer/component/UI/ToolbarButton.svelte generated by Svelte v3.22.3 */
-
-function add_css() {
-	var style = element("style");
-	style.id = "svelte-141xp47-style";
-	style.textContent = ".button.svelte-141xp47{position:relative}.button.svelte-141xp47:hover{background-color:var(--disabledControlTextColor)}.icon.svelte-141xp47{position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;width:18px;height:18px}";
-	append(document.head, style);
-}
-
-// (48:2) {#if label}
-function create_if_block_1(ctx) {
-	let div;
-	let t;
-
-	return {
-		c() {
-			div = element("div");
-			t = text(/*label*/ ctx[0]);
-			attr(div, "class", "label");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			append(div, t);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*label*/ 1) set_data(t, /*label*/ ctx[0]);
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-		}
-	};
-}
-
-// (51:2) {#if tooltip}
-function create_if_block(ctx) {
-	let div;
-	let t;
-
-	return {
-		c() {
-			div = element("div");
-			t = text(/*tooltip*/ ctx[1]);
-			attr(div, "class", "tooltip");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			append(div, t);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*tooltip*/ 2) set_data(t, /*tooltip*/ ctx[1]);
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-		}
-	};
-}
-
-function create_fragment$2(ctx) {
-	let div1;
-	let div0;
-	let t0;
-	let t1;
-	let if_block0 = /*label*/ ctx[0] && create_if_block_1(ctx);
-	let if_block1 = /*tooltip*/ ctx[1] && create_if_block(ctx);
-
-	return {
-		c() {
-			div1 = element("div");
-			div0 = element("div");
-			t0 = space();
-			if (if_block0) if_block0.c();
-			t1 = space();
-			if (if_block1) if_block1.c();
-			attr(div0, "class", "icon svelte-141xp47");
-			attr(div0, "style", /*iconStyles*/ ctx[3]);
-			attr(div1, "class", "button svelte-141xp47");
-			attr(div1, "role", "button");
-			attr(div1, "style", /*buttonStyles*/ ctx[2]);
-		},
-		m(target, anchor) {
-			insert(target, div1, anchor);
-			append(div1, div0);
-			append(div1, t0);
-			if (if_block0) if_block0.m(div1, null);
-			append(div1, t1);
-			if (if_block1) if_block1.m(div1, null);
-		},
-		p(ctx, [dirty]) {
-			if (dirty & /*iconStyles*/ 8) {
-				attr(div0, "style", /*iconStyles*/ ctx[3]);
-			}
-
-			if (/*label*/ ctx[0]) {
-				if (if_block0) {
-					if_block0.p(ctx, dirty);
-				} else {
-					if_block0 = create_if_block_1(ctx);
-					if_block0.c();
-					if_block0.m(div1, t1);
-				}
-			} else if (if_block0) {
-				if_block0.d(1);
-				if_block0 = null;
-			}
-
-			if (/*tooltip*/ ctx[1]) {
-				if (if_block1) {
-					if_block1.p(ctx, dirty);
-				} else {
-					if_block1 = create_if_block(ctx);
-					if_block1.c();
-					if_block1.m(div1, null);
-				}
-			} else if (if_block1) {
-				if_block1.d(1);
-				if_block1 = null;
-			}
-
-			if (dirty & /*buttonStyles*/ 4) {
-				attr(div1, "style", /*buttonStyles*/ ctx[2]);
-			}
-		},
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(div1);
-			if (if_block0) if_block0.d();
-			if (if_block1) if_block1.d();
-		}
-	};
-}
-
-function instance$2($$self, $$props, $$invalidate) {
-	let { width = 34 } = $$props;
-	let { height = 28 } = $$props;
-	let { borderRadius = 6 } = $$props;
-	let { iconImage = null } = $$props;
-	let { iconColor = "--controlTextColor" } = $$props;
-	let { label = null } = $$props;
-	let { tooltip = null } = $$props;
-	let buttonStyles = "";
-	let iconStyles = "";
-
-	$$self.$set = $$props => {
-		if ("width" in $$props) $$invalidate(4, width = $$props.width);
-		if ("height" in $$props) $$invalidate(5, height = $$props.height);
-		if ("borderRadius" in $$props) $$invalidate(6, borderRadius = $$props.borderRadius);
-		if ("iconImage" in $$props) $$invalidate(7, iconImage = $$props.iconImage);
-		if ("iconColor" in $$props) $$invalidate(8, iconColor = $$props.iconColor);
-		if ("label" in $$props) $$invalidate(0, label = $$props.label);
-		if ("tooltip" in $$props) $$invalidate(1, tooltip = $$props.tooltip);
-	};
-
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*width, height, borderRadius*/ 112) {
-			// Button styles
-			 {
-				$$invalidate(2, buttonStyles = `width: ${width}px; height: ${height}px; border-radius: ${borderRadius}px;`);
-			}
-		}
-
-		if ($$self.$$.dirty & /*iconImage, iconColor*/ 384) {
-			// Icon styles
-			 {
-				if (iconImage) {
-					$$invalidate(3, iconStyles = `-webkit-mask-image: var(${iconImage}); background-color: var(${iconColor});`);
-				}
-			}
-		}
-	};
-
-	return [
-		label,
-		tooltip,
-		buttonStyles,
-		iconStyles,
-		width,
-		height,
-		borderRadius,
-		iconImage,
-		iconColor
-	];
-}
-
-class ToolbarButton extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-141xp47-style")) add_css();
-
-		init(this, options, instance$2, create_fragment$2, safe_not_equal, {
-			width: 4,
-			height: 5,
-			borderRadius: 6,
-			iconImage: 7,
-			iconColor: 8,
-			label: 0,
-			tooltip: 1
-		});
-	}
-}
-
-/* src/js/renderer/component/AddressBar.svelte generated by Svelte v3.22.3 */
-
-function add_css$1() {
-	var style = element("style");
-	style.id = "svelte-1qn5t4o-style";
-	style.textContent = "#addressbar.svelte-1qn5t4o{margin:0 auto}.searchfield.svelte-1qn5t4o{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);position:relative;background-color:rgba(0, 0, 0, 0.04);border-radius:4px;min-height:20px;min-width:20rem;max-width:40rem;display:flex;flex-direction:row;align-items:center}.searchfield.svelte-1qn5t4o:focus-within{animation-fill-mode:forwards;animation-name:svelte-1qn5t4o-selectField;animation-duration:0.3s}@keyframes svelte-1qn5t4o-selectField{from{box-shadow:0 0 0 10px transparent}to{box-shadow:0 0 0 3.5px rgba(59, 153, 252, 0.5)}}.magnifying-glass.svelte-1qn5t4o{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;position:absolute;top:50%;transform:translate(0, -50%);background-color:var(--controlTextColor);-webkit-mask-image:var(--img-magnifyingglass);position:absolute;width:13px;height:13px;left:5px;opacity:0.5}.placeholder.svelte-1qn5t4o{position:absolute;top:50%;transform:translate(0, -50%);color:var(--placeholderTextColor);left:24px;pointer-events:none}input.svelte-1qn5t4o{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);margin:1px 0 0 24px;width:100%;background:transparent;outline:none;border:none}";
-	append(document.head, style);
-}
-
-// (96:4) {#if !query}
-function create_if_block$1(ctx) {
-	let span;
-	let t;
-
-	return {
-		c() {
-			span = element("span");
-			t = text(/*placeholder*/ ctx[1]);
-			attr(span, "class", "placeholder svelte-1qn5t4o");
-		},
-		m(target, anchor) {
-			insert(target, span, anchor);
-			append(span, t);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*placeholder*/ 2) set_data(t, /*placeholder*/ ctx[1]);
-		},
-		d(detaching) {
-			if (detaching) detach(span);
-		}
-	};
-}
-
-function create_fragment$3(ctx) {
-	let div2;
-	let div1;
-	let div0;
-	let t0;
-	let t1;
-	let input_1;
-	let dispose;
-	let if_block = !/*query*/ ctx[0] && create_if_block$1(ctx);
-
-	return {
-		c() {
-			div2 = element("div");
-			div1 = element("div");
-			div0 = element("div");
-			t0 = space();
-			if (if_block) if_block.c();
-			t1 = space();
-			input_1 = element("input");
-			attr(div0, "class", "magnifying-glass svelte-1qn5t4o");
-			attr(input_1, "type", "text");
-			attr(input_1, "class", "svelte-1qn5t4o");
-			attr(div1, "class", "searchfield svelte-1qn5t4o");
-			attr(div2, "id", "addressbar");
-			attr(div2, "class", "svelte-1qn5t4o");
-		},
-		m(target, anchor, remount) {
-			insert(target, div2, anchor);
-			append(div2, div1);
-			append(div1, div0);
-			append(div1, t0);
-			if (if_block) if_block.m(div1, null);
-			append(div1, t1);
-			append(div1, input_1);
-			/*input_1_binding*/ ctx[7](input_1);
-			set_input_value(input_1, /*query*/ ctx[0]);
-			if (remount) run_all(dispose);
-
-			dispose = [
-				listen(window, "keydown", /*handleKeydown*/ ctx[3]),
-				listen(div0, "mousedown", prevent_default(/*mousedown_handler*/ ctx[6])),
-				listen(input_1, "input", /*input_1_input_handler*/ ctx[8])
-			];
-		},
-		p(ctx, [dirty]) {
-			if (!/*query*/ ctx[0]) {
-				if (if_block) {
-					if_block.p(ctx, dirty);
-				} else {
-					if_block = create_if_block$1(ctx);
-					if_block.c();
-					if_block.m(div1, t1);
-				}
-			} else if (if_block) {
-				if_block.d(1);
-				if_block = null;
-			}
-
-			if (dirty & /*query*/ 1 && input_1.value !== /*query*/ ctx[0]) {
-				set_input_value(input_1, /*query*/ ctx[0]);
-			}
-		},
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(div2);
-			if (if_block) if_block.d();
-			/*input_1_binding*/ ctx[7](null);
-			run_all(dispose);
-		}
-	};
-}
-
-function instance$3($$self, $$props, $$invalidate) {
-	let { state = {} } = $$props;
-	let { placeholder = "Search" } = $$props;
-	let { query = "" } = $$props;
-	let { focused = false } = $$props;
-	let input = null;
-
-	// $: console.log(state.openDoc)
-	function handleKeydown(evt) {
-		if (!focused) return;
-
-		if (evt.key == "f" && evt.metaKey) {
-			input.select();
-		}
-	}
-
-	const mousedown_handler = () => input.select();
-
-	function input_1_binding($$value) {
-		binding_callbacks[$$value ? "unshift" : "push"](() => {
-			$$invalidate(2, input = $$value);
-		});
-	}
-
-	function input_1_input_handler() {
-		query = this.value;
-		$$invalidate(0, query);
-	}
-
-	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(4, state = $$props.state);
-		if ("placeholder" in $$props) $$invalidate(1, placeholder = $$props.placeholder);
-		if ("query" in $$props) $$invalidate(0, query = $$props.query);
-		if ("focused" in $$props) $$invalidate(5, focused = $$props.focused);
-	};
-
-	return [
-		query,
-		placeholder,
-		input,
-		handleKeydown,
-		state,
-		focused,
-		mousedown_handler,
-		input_1_binding,
-		input_1_input_handler
-	];
-}
-
-class AddressBar extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-1qn5t4o-style")) add_css$1();
-
-		init(this, options, instance$3, create_fragment$3, safe_not_equal, {
-			state: 4,
-			placeholder: 1,
-			query: 0,
-			focused: 5
-		});
-	}
-}
-
-/* src/js/renderer/component/ToolBar.svelte generated by Svelte v3.22.3 */
-
-function add_css$2() {
-	var style = element("style");
-	style.id = "svelte-9lw767-style";
-	style.textContent = "#address-bar.svelte-9lw767{width:100%;height:40px;display:flex;flex-direction:row;align-items:center;padding:0 5px}";
-	append(document.head, style);
-}
-
-function create_fragment$4(ctx) {
-	let div;
-	let t0;
-	let t1;
-	let current;
-
-	const toolbarbutton0 = new ToolbarButton({
-			props: {
-				class: "sidebarBtn",
-				iconImage: "--img-sidebar-left"
-			}
-		});
-
-	const addressbar = new AddressBar({ props: { state: /*state*/ ctx[0] } });
-
-	const toolbarbutton1 = new ToolbarButton({
-			props: {
-				class: "gridBtn",
-				iconImage: "--img-rectangle-grid-2x2"
-			}
-		});
-
-	return {
-		c() {
-			div = element("div");
-			create_component(toolbarbutton0.$$.fragment);
-			t0 = space();
-			create_component(addressbar.$$.fragment);
-			t1 = space();
-			create_component(toolbarbutton1.$$.fragment);
-			attr(div, "id", "address-bar");
-			attr(div, "class", "svelte-9lw767");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			mount_component(toolbarbutton0, div, null);
-			append(div, t0);
-			mount_component(addressbar, div, null);
-			append(div, t1);
-			mount_component(toolbarbutton1, div, null);
-			current = true;
-		},
-		p(ctx, [dirty]) {
-			const addressbar_changes = {};
-			if (dirty & /*state*/ 1) addressbar_changes.state = /*state*/ ctx[0];
-			addressbar.$set(addressbar_changes);
-		},
-		i(local) {
-			if (current) return;
-			transition_in(toolbarbutton0.$$.fragment, local);
-			transition_in(addressbar.$$.fragment, local);
-			transition_in(toolbarbutton1.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(toolbarbutton0.$$.fragment, local);
-			transition_out(addressbar.$$.fragment, local);
-			transition_out(toolbarbutton1.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-			destroy_component(toolbarbutton0);
-			destroy_component(addressbar);
-			destroy_component(toolbarbutton1);
-		}
-	};
-}
-
-function instance$4($$self, $$props, $$invalidate) {
-	let { state = {} } = $$props;
-
-	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(0, state = $$props.state);
-	};
-
-	return [state];
-}
-
-class ToolBar extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-9lw767-style")) add_css$2();
-		init(this, options, instance$4, create_fragment$4, safe_not_equal, { state: 0 });
+		if (!document.getElementById("svelte-1q6lmmr-style")) add_css$1();
+		init(this, options, instance$1, create_fragment$1, safe_not_equal, { marginSides: 0 });
 	}
 }
 
 /* src/js/renderer/component/SideBar/Header.svelte generated by Svelte v3.22.3 */
 
-function add_css$3() {
+function add_css$2() {
 	var style = element("style");
 	style.id = "svelte-blyvv3-style";
 	style.textContent = "header.svelte-blyvv3.svelte-blyvv3{padding:0 10px;display:flex;flex-direction:row;align-items:center;min-height:30px}header.svelte-blyvv3 h1.svelte-blyvv3{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);color:var(--labelColor);user-select:none;font-weight:bold;font-size:13px;flex-grow:1;margin:0;padding:0}";
 	append(document.head, style);
 }
 
-function create_fragment$5(ctx) {
+function create_fragment$2(ctx) {
 	let header;
 	let h1;
 	let t0;
@@ -1168,7 +1640,7 @@ function create_fragment$5(ctx) {
 	};
 }
 
-function instance$5($$self, $$props, $$invalidate) {
+function instance$2($$self, $$props, $$invalidate) {
 	let { title = "Title" } = $$props;
 	let { $$slots = {}, $$scope } = $$props;
 
@@ -1183,937 +1655,8 @@ function instance$5($$self, $$props, $$invalidate) {
 class Header extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-blyvv3-style")) add_css$3();
-		init(this, options, instance$5, create_fragment$5, safe_not_equal, { title: 0 });
-	}
-}
-
-/* src/js/renderer/component/UI/DisclosureButton.svelte generated by Svelte v3.22.3 */
-
-function add_css$4() {
-	var style = element("style");
-	style.id = "svelte-1nfzmnc-style";
-	style.textContent = ".button.svelte-1nfzmnc{position:relative}.icon.svelte-1nfzmnc{position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat}";
-	append(document.head, style);
-}
-
-// (52:2) {#if label}
-function create_if_block_1$1(ctx) {
-	let div;
-	let t;
-
-	return {
-		c() {
-			div = element("div");
-			t = text(/*label*/ ctx[0]);
-			attr(div, "class", "label");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			append(div, t);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*label*/ 1) set_data(t, /*label*/ ctx[0]);
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-		}
-	};
-}
-
-// (55:2) {#if tooltip}
-function create_if_block$2(ctx) {
-	let div;
-	let t;
-
-	return {
-		c() {
-			div = element("div");
-			t = text(/*tooltip*/ ctx[1]);
-			attr(div, "class", "tooltip");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			append(div, t);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*tooltip*/ 2) set_data(t, /*tooltip*/ ctx[1]);
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-		}
-	};
-}
-
-function create_fragment$6(ctx) {
-	let div1;
-	let div0;
-	let t0;
-	let t1;
-	let dispose;
-	let if_block0 = /*label*/ ctx[0] && create_if_block_1$1(ctx);
-	let if_block1 = /*tooltip*/ ctx[1] && create_if_block$2(ctx);
-
-	return {
-		c() {
-			div1 = element("div");
-			div0 = element("div");
-			t0 = space();
-			if (if_block0) if_block0.c();
-			t1 = space();
-			if (if_block1) if_block1.c();
-			attr(div0, "class", "icon svelte-1nfzmnc");
-			attr(div0, "style", /*iconStyles*/ ctx[3]);
-			attr(div1, "class", "button svelte-1nfzmnc");
-			attr(div1, "style", /*buttonStyles*/ ctx[2]);
-			attr(div1, "role", "button");
-		},
-		m(target, anchor, remount) {
-			insert(target, div1, anchor);
-			append(div1, div0);
-			append(div1, t0);
-			if (if_block0) if_block0.m(div1, null);
-			append(div1, t1);
-			if (if_block1) if_block1.m(div1, null);
-			if (remount) dispose();
-			dispose = listen(div1, "mousedown", stop_propagation(/*mousedown_handler*/ ctx[11]));
-		},
-		p(ctx, [dirty]) {
-			if (dirty & /*iconStyles*/ 8) {
-				attr(div0, "style", /*iconStyles*/ ctx[3]);
-			}
-
-			if (/*label*/ ctx[0]) {
-				if (if_block0) {
-					if_block0.p(ctx, dirty);
-				} else {
-					if_block0 = create_if_block_1$1(ctx);
-					if_block0.c();
-					if_block0.m(div1, t1);
-				}
-			} else if (if_block0) {
-				if_block0.d(1);
-				if_block0 = null;
-			}
-
-			if (/*tooltip*/ ctx[1]) {
-				if (if_block1) {
-					if_block1.p(ctx, dirty);
-				} else {
-					if_block1 = create_if_block$2(ctx);
-					if_block1.c();
-					if_block1.m(div1, null);
-				}
-			} else if (if_block1) {
-				if_block1.d(1);
-				if_block1 = null;
-			}
-
-			if (dirty & /*buttonStyles*/ 4) {
-				attr(div1, "style", /*buttonStyles*/ ctx[2]);
-			}
-		},
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(div1);
-			if (if_block0) if_block0.d();
-			if (if_block1) if_block1.d();
-			dispose();
-		}
-	};
-}
-
-function instance$6($$self, $$props, $$invalidate) {
-	const dispatch = createEventDispatcher();
-	let { width = 34 } = $$props;
-	let { height = 28 } = $$props;
-	let { borderRadius = 2 } = $$props;
-	let { iconImage = "img-chevron-right" } = $$props;
-	let { iconColor = "controlTextColor" } = $$props;
-	let { iconInset = 4 } = $$props;
-	let { label = null } = $$props;
-	let { tooltip = null } = $$props;
-	let buttonStyles = "";
-	let iconStyles = "";
-	const mousedown_handler = () => dispatch("toggle");
-
-	$$self.$set = $$props => {
-		if ("width" in $$props) $$invalidate(5, width = $$props.width);
-		if ("height" in $$props) $$invalidate(6, height = $$props.height);
-		if ("borderRadius" in $$props) $$invalidate(7, borderRadius = $$props.borderRadius);
-		if ("iconImage" in $$props) $$invalidate(8, iconImage = $$props.iconImage);
-		if ("iconColor" in $$props) $$invalidate(9, iconColor = $$props.iconColor);
-		if ("iconInset" in $$props) $$invalidate(10, iconInset = $$props.iconInset);
-		if ("label" in $$props) $$invalidate(0, label = $$props.label);
-		if ("tooltip" in $$props) $$invalidate(1, tooltip = $$props.tooltip);
-	};
-
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*width, height, borderRadius*/ 224) {
-			// Button styles
-			 {
-				$$invalidate(2, buttonStyles = `width: ${width}px; height: ${height}px; border-radius: ${borderRadius}px;`);
-			}
-		}
-
-		if ($$self.$$.dirty & /*iconImage, iconColor, iconInset*/ 1792) {
-			// Icon styles
-			 {
-				if (iconImage) {
-					$$invalidate(3, iconStyles = `-webkit-mask-image: var(--${iconImage}); background-color: var(--${iconColor}); width: calc(100% - ${iconInset}px); height: calc(100% - ${iconInset}px);`);
-				}
-			}
-		}
-	};
-
-	return [
-		label,
-		tooltip,
-		buttonStyles,
-		iconStyles,
-		dispatch,
-		width,
-		height,
-		borderRadius,
-		iconImage,
-		iconColor,
-		iconInset,
-		mousedown_handler
-	];
-}
-
-class DisclosureButton extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-1nfzmnc-style")) add_css$4();
-
-		init(this, options, instance$6, create_fragment$6, safe_not_equal, {
-			width: 5,
-			height: 6,
-			borderRadius: 7,
-			iconImage: 8,
-			iconColor: 9,
-			iconInset: 10,
-			label: 0,
-			tooltip: 1
-		});
-	}
-}
-
-/* src/js/renderer/component/UI/Label.svelte generated by Svelte v3.22.3 */
-
-function add_css$5() {
-	var style = element("style");
-	style.id = "svelte-1c9xd1n-style";
-	style.textContent = "div.svelte-1c9xd1n{flex-grow:1}.primary.svelte-1c9xd1n{color:var(--labelColor)}.secondary.svelte-1c9xd1n{color:var(--secondaryLabelColor)}.tertiary.svelte-1c9xd1n{color:var(--tertiaryLabelColor)}.quaternary.svelte-1c9xd1n{color:var(--quaternaryLabelColor)}.label-normal.svelte-1c9xd1n{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor)}.label-normal-small.svelte-1c9xd1n{font:caption;font-weight:normal;font-size:11px;line-height:13px;letter-spacing:0.07px}.label-normal-small-bold.svelte-1c9xd1n{font:caption;font-weight:bold;font-size:11px;line-height:13px;letter-spacing:0.07px}.label-large-bold.svelte-1c9xd1n{font-family:'SF Pro Display';font-weight:bold;font-size:20px;line-height:24px;letter-spacing:-0.12px}.column.svelte-1c9xd1n{font:caption;font-weight:500;font-size:12px;line-height:16px;letter-spacing:-0.07px}";
-	append(document.head, style);
-}
-
-function create_fragment$7(ctx) {
-	let div;
-	let div_class_value;
-	let current;
-	const default_slot_template = /*$$slots*/ ctx[3].default;
-	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[2], null);
-
-	return {
-		c() {
-			div = element("div");
-			if (default_slot) default_slot.c();
-			attr(div, "class", div_class_value = "label " + /*color*/ ctx[0] + " " + /*typography*/ ctx[1] + " svelte-1c9xd1n");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-
-			if (default_slot) {
-				default_slot.m(div, null);
-			}
-
-			current = true;
-		},
-		p(ctx, [dirty]) {
-			if (default_slot) {
-				if (default_slot.p && dirty & /*$$scope*/ 4) {
-					default_slot.p(get_slot_context(default_slot_template, ctx, /*$$scope*/ ctx[2], null), get_slot_changes(default_slot_template, /*$$scope*/ ctx[2], dirty, null));
-				}
-			}
-
-			if (!current || dirty & /*color, typography*/ 3 && div_class_value !== (div_class_value = "label " + /*color*/ ctx[0] + " " + /*typography*/ ctx[1] + " svelte-1c9xd1n")) {
-				attr(div, "class", div_class_value);
-			}
-		},
-		i(local) {
-			if (current) return;
-			transition_in(default_slot, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(default_slot, local);
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-			if (default_slot) default_slot.d(detaching);
-		}
-	};
-}
-
-function instance$7($$self, $$props, $$invalidate) {
-	let { color = "primary" } = $$props;
-	let { typography = "label-normal" } = $$props;
-	let { $$slots = {}, $$scope } = $$props;
-
-	$$self.$set = $$props => {
-		if ("color" in $$props) $$invalidate(0, color = $$props.color);
-		if ("typography" in $$props) $$invalidate(1, typography = $$props.typography);
-		if ("$$scope" in $$props) $$invalidate(2, $$scope = $$props.$$scope);
-	};
-
-	return [color, typography, $$scope, $$slots];
-}
-
-class Label extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-1c9xd1n-style")) add_css$5();
-		init(this, options, instance$7, create_fragment$7, safe_not_equal, { color: 0, typography: 1 });
-	}
-}
-
-/* src/js/renderer/component/UI/Separator.svelte generated by Svelte v3.22.3 */
-
-function add_css$6() {
-	var style = element("style");
-	style.id = "svelte-1q6lmmr-style";
-	style.textContent = "hr.svelte-1q6lmmr{min-height:1px;border:0;background-color:var(--separatorColor)}";
-	append(document.head, style);
-}
-
-function create_fragment$8(ctx) {
-	let hr;
-
-	return {
-		c() {
-			hr = element("hr");
-			set_style(hr, "margin", "0 " + /*marginSides*/ ctx[0] + "px");
-			attr(hr, "class", "svelte-1q6lmmr");
-		},
-		m(target, anchor) {
-			insert(target, hr, anchor);
-		},
-		p(ctx, [dirty]) {
-			if (dirty & /*marginSides*/ 1) {
-				set_style(hr, "margin", "0 " + /*marginSides*/ ctx[0] + "px");
-			}
-		},
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(hr);
-		}
-	};
-}
-
-function instance$8($$self, $$props, $$invalidate) {
-	let { marginSides = "0" } = $$props;
-
-	$$self.$set = $$props => {
-		if ("marginSides" in $$props) $$invalidate(0, marginSides = $$props.marginSides);
-	};
-
-	return [marginSides];
-}
-
-class Separator extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-1q6lmmr-style")) add_css$6();
-		init(this, options, instance$8, create_fragment$8, safe_not_equal, { marginSides: 0 });
-	}
-}
-
-/* src/js/renderer/component/UI/Thumbnail.svelte generated by Svelte v3.22.3 */
-
-function add_css$7() {
-	var style = element("style");
-	style.id = "svelte-1rm7o7i-style";
-	style.textContent = ".thumbnail.svelte-1rm7o7i{flex-grow:1;overflow:hidden;width:100%;height:100%}img.svelte-1rm7o7i{width:100%;height:100%;object-fit:contain;object-position:center}";
-	append(document.head, style);
-}
-
-// (24:2) {:else}
-function create_else_block(ctx) {
-	let img;
-	let img_src_value;
-
-	return {
-		c() {
-			img = element("img");
-			if (img.src !== (img_src_value = "placeholder")) attr(img, "src", img_src_value);
-			attr(img, "class", "svelte-1rm7o7i");
-		},
-		m(target, anchor) {
-			insert(target, img, anchor);
-		},
-		p: noop,
-		d(detaching) {
-			if (detaching) detach(img);
-		}
-	};
-}
-
-// (22:2) {#if src}
-function create_if_block$3(ctx) {
-	let img;
-	let img_src_value;
-
-	return {
-		c() {
-			img = element("img");
-			if (img.src !== (img_src_value = /*src*/ ctx[0])) attr(img, "src", img_src_value);
-			attr(img, "class", "svelte-1rm7o7i");
-		},
-		m(target, anchor) {
-			insert(target, img, anchor);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*src*/ 1 && img.src !== (img_src_value = /*src*/ ctx[0])) {
-				attr(img, "src", img_src_value);
-			}
-		},
-		d(detaching) {
-			if (detaching) detach(img);
-		}
-	};
-}
-
-function create_fragment$9(ctx) {
-	let div;
-
-	function select_block_type(ctx, dirty) {
-		if (/*src*/ ctx[0]) return create_if_block$3;
-		return create_else_block;
-	}
-
-	let current_block_type = select_block_type(ctx);
-	let if_block = current_block_type(ctx);
-
-	return {
-		c() {
-			div = element("div");
-			if_block.c();
-			attr(div, "class", "thumbnail svelte-1rm7o7i");
-			set_style(div, "margin", /*margin*/ ctx[1]);
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			if_block.m(div, null);
-		},
-		p(ctx, [dirty]) {
-			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block) {
-				if_block.p(ctx, dirty);
-			} else {
-				if_block.d(1);
-				if_block = current_block_type(ctx);
-
-				if (if_block) {
-					if_block.c();
-					if_block.m(div, null);
-				}
-			}
-
-			if (dirty & /*margin*/ 2) {
-				set_style(div, "margin", /*margin*/ ctx[1]);
-			}
-		},
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(div);
-			if_block.d();
-		}
-	};
-}
-
-function instance$9($$self, $$props, $$invalidate) {
-	let { src } = $$props;
-	let { margin = "0 0 0 0" } = $$props;
-
-	$$self.$set = $$props => {
-		if ("src" in $$props) $$invalidate(0, src = $$props.src);
-		if ("margin" in $$props) $$invalidate(1, margin = $$props.margin);
-	};
-
-	return [src, margin];
-}
-
-class Thumbnail extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-1rm7o7i-style")) add_css$7();
-		init(this, options, instance$9, create_fragment$9, safe_not_equal, { src: 0, margin: 1 });
-	}
-}
-
-/* src/js/renderer/component/SideBar/Preview.svelte generated by Svelte v3.22.3 */
-
-function add_css$8() {
-	var style = element("style");
-	style.id = "svelte-1uqtl3v-style";
-	style.textContent = "#preview.svelte-1uqtl3v{flex-shrink:0;display:flex;flex-direction:column;height:255px;position:absolute;transform:translate(0, 100%)}#preview.svelte-1uqtl3v:not(.isOpen){bottom:30px}#preview.isOpen.svelte-1uqtl3v{bottom:255px}.media.svelte-1uqtl3v{padding:5px 10px 10px;display:flex;flex-direction:column;flex-grow:1;overflow:hidden}";
-	append(document.head, style);
-}
-
-// (91:2) <Header title={'Preview'}>
-function create_default_slot_3(ctx) {
-	let current;
-
-	const disclosurebutton = new DisclosureButton({
-			props: { width: 16, height: 16, iconInset: 4 }
-		});
-
-	disclosurebutton.$on("toggle", toggleOpenClose);
-
-	return {
-		c() {
-			create_component(disclosurebutton.$$.fragment);
-		},
-		m(target, anchor) {
-			mount_component(disclosurebutton, target, anchor);
-			current = true;
-		},
-		p: noop,
-		i(local) {
-			if (current) return;
-			transition_in(disclosurebutton.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(disclosurebutton.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			destroy_component(disclosurebutton, detaching);
-		}
-	};
-}
-
-// (102:33) 
-function create_if_block_2(ctx) {
-	let div;
-	let t0;
-	let t1;
-	let t2;
-	let current;
-
-	const thumbnail = new Thumbnail({
-			props: {
-				src: /*item*/ ctx[0].path,
-				margin: "0 0 10px 0"
-			}
-		});
-
-	const label0 = new Label({
-			props: {
-				color: "primary",
-				typography: "label-normal-small-bold",
-				$$slots: { default: [create_default_slot_2] },
-				$$scope: { ctx }
-			}
-		});
-
-	const label1 = new Label({
-			props: {
-				color: "secondary",
-				typography: "label-normal-small",
-				$$slots: { default: [create_default_slot_1] },
-				$$scope: { ctx }
-			}
-		});
-
-	const label2 = new Label({
-			props: {
-				color: "secondary",
-				typography: "label-normal-small",
-				$$slots: { default: [create_default_slot] },
-				$$scope: { ctx }
-			}
-		});
-
-	return {
-		c() {
-			div = element("div");
-			create_component(thumbnail.$$.fragment);
-			t0 = space();
-			create_component(label0.$$.fragment);
-			t1 = space();
-			create_component(label1.$$.fragment);
-			t2 = space();
-			create_component(label2.$$.fragment);
-			attr(div, "class", "media svelte-1uqtl3v");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			mount_component(thumbnail, div, null);
-			append(div, t0);
-			mount_component(label0, div, null);
-			append(div, t1);
-			mount_component(label1, div, null);
-			append(div, t2);
-			mount_component(label2, div, null);
-			current = true;
-		},
-		p(ctx, dirty) {
-			const thumbnail_changes = {};
-			if (dirty & /*item*/ 1) thumbnail_changes.src = /*item*/ ctx[0].path;
-			thumbnail.$set(thumbnail_changes);
-			const label0_changes = {};
-
-			if (dirty & /*$$scope, item*/ 513) {
-				label0_changes.$$scope = { dirty, ctx };
-			}
-
-			label0.$set(label0_changes);
-			const label1_changes = {};
-
-			if (dirty & /*$$scope, item*/ 513) {
-				label1_changes.$$scope = { dirty, ctx };
-			}
-
-			label1.$set(label1_changes);
-			const label2_changes = {};
-
-			if (dirty & /*$$scope*/ 512) {
-				label2_changes.$$scope = { dirty, ctx };
-			}
-
-			label2.$set(label2_changes);
-		},
-		i(local) {
-			if (current) return;
-			transition_in(thumbnail.$$.fragment, local);
-			transition_in(label0.$$.fragment, local);
-			transition_in(label1.$$.fragment, local);
-			transition_in(label2.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(thumbnail.$$.fragment, local);
-			transition_out(label0.$$.fragment, local);
-			transition_out(label1.$$.fragment, local);
-			transition_out(label2.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-			destroy_component(thumbnail);
-			destroy_component(label0);
-			destroy_component(label1);
-			destroy_component(label2);
-		}
-	};
-}
-
-// (100:31) 
-function create_if_block_1$2(ctx) {
-	let t;
-
-	return {
-		c() {
-			t = text("Doc");
-		},
-		m(target, anchor) {
-			insert(target, t, anchor);
-		},
-		p: noop,
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(t);
-		}
-	};
-}
-
-// (98:2) {#if item.type == 'folder'}
-function create_if_block$4(ctx) {
-	let t;
-
-	return {
-		c() {
-			t = text("Folder");
-		},
-		m(target, anchor) {
-			insert(target, t, anchor);
-		},
-		p: noop,
-		i: noop,
-		o: noop,
-		d(detaching) {
-			if (detaching) detach(t);
-		}
-	};
-}
-
-// (105:6) <Label color={'primary'} typography={'label-normal-small-bold'}>
-function create_default_slot_2(ctx) {
-	let t_value = /*item*/ ctx[0].name + "";
-	let t;
-
-	return {
-		c() {
-			t = text(t_value);
-		},
-		m(target, anchor) {
-			insert(target, t, anchor);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*item*/ 1 && t_value !== (t_value = /*item*/ ctx[0].name + "")) set_data(t, t_value);
-		},
-		d(detaching) {
-			if (detaching) detach(t);
-		}
-	};
-}
-
-// (108:6) <Label color={'secondary'} typography={'label-normal-small'}>
-function create_default_slot_1(ctx) {
-	let t0_value = /*item*/ ctx[0].filetype.substring(1).toUpperCase() + "";
-	let t0;
-	let t1;
-
-	return {
-		c() {
-			t0 = text(t0_value);
-			t1 = text("\n        image - 1.25 MB");
-		},
-		m(target, anchor) {
-			insert(target, t0, anchor);
-			insert(target, t1, anchor);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*item*/ 1 && t0_value !== (t0_value = /*item*/ ctx[0].filetype.substring(1).toUpperCase() + "")) set_data(t0, t0_value);
-		},
-		d(detaching) {
-			if (detaching) detach(t0);
-			if (detaching) detach(t1);
-		}
-	};
-}
-
-// (112:6) <Label color={'secondary'} typography={'label-normal-small'}>
-function create_default_slot(ctx) {
-	let t;
-
-	return {
-		c() {
-			t = text("945 x 1.25");
-		},
-		m(target, anchor) {
-			insert(target, t, anchor);
-		},
-		d(detaching) {
-			if (detaching) detach(t);
-		}
-	};
-}
-
-function create_fragment$a(ctx) {
-	let div;
-	let t0;
-	let t1;
-	let current_block_type_index;
-	let if_block;
-	let current;
-	const separator = new Separator({});
-
-	const header = new Header({
-			props: {
-				title: "Preview",
-				$$slots: { default: [create_default_slot_3] },
-				$$scope: { ctx }
-			}
-		});
-
-	const if_block_creators = [create_if_block$4, create_if_block_1$2, create_if_block_2];
-	const if_blocks = [];
-
-	function select_block_type(ctx, dirty) {
-		if (/*item*/ ctx[0].type == "folder") return 0;
-		if (/*item*/ ctx[0].type == "doc") return 1;
-		if (/*item*/ ctx[0].type == "media") return 2;
-		return -1;
-	}
-
-	if (~(current_block_type_index = select_block_type(ctx))) {
-		if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
-	}
-
-	return {
-		c() {
-			div = element("div");
-			create_component(separator.$$.fragment);
-			t0 = space();
-			create_component(header.$$.fragment);
-			t1 = space();
-			if (if_block) if_block.c();
-			attr(div, "id", "preview");
-			attr(div, "class", "svelte-1uqtl3v");
-			toggle_class(div, "isOpen", /*isOpen*/ ctx[1]);
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			mount_component(separator, div, null);
-			append(div, t0);
-			mount_component(header, div, null);
-			append(div, t1);
-
-			if (~current_block_type_index) {
-				if_blocks[current_block_type_index].m(div, null);
-			}
-
-			current = true;
-		},
-		p(ctx, [dirty]) {
-			const header_changes = {};
-
-			if (dirty & /*$$scope*/ 512) {
-				header_changes.$$scope = { dirty, ctx };
-			}
-
-			header.$set(header_changes);
-			let previous_block_index = current_block_type_index;
-			current_block_type_index = select_block_type(ctx);
-
-			if (current_block_type_index === previous_block_index) {
-				if (~current_block_type_index) {
-					if_blocks[current_block_type_index].p(ctx, dirty);
-				}
-			} else {
-				if (if_block) {
-					group_outros();
-
-					transition_out(if_blocks[previous_block_index], 1, 1, () => {
-						if_blocks[previous_block_index] = null;
-					});
-
-					check_outros();
-				}
-
-				if (~current_block_type_index) {
-					if_block = if_blocks[current_block_type_index];
-
-					if (!if_block) {
-						if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
-						if_block.c();
-					}
-
-					transition_in(if_block, 1);
-					if_block.m(div, null);
-				} else {
-					if_block = null;
-				}
-			}
-
-			if (dirty & /*isOpen*/ 2) {
-				toggle_class(div, "isOpen", /*isOpen*/ ctx[1]);
-			}
-		},
-		i(local) {
-			if (current) return;
-			transition_in(separator.$$.fragment, local);
-			transition_in(header.$$.fragment, local);
-			transition_in(if_block);
-			current = true;
-		},
-		o(local) {
-			transition_out(separator.$$.fragment, local);
-			transition_out(header.$$.fragment, local);
-			transition_out(if_block);
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-			destroy_component(separator);
-			destroy_component(header);
-
-			if (~current_block_type_index) {
-				if_blocks[current_block_type_index].d();
-			}
-		}
-	};
-}
-
-function toggleOpenClose() {
-	window.api.send("dispatch", { type: "TOGGLE_SIDEBAR_PREVIEW" });
-}
-
-function instance$a($$self, $$props, $$invalidate) {
-	let { state } = $$props;
-	let firstRun = true;
-	let activeTab = {};
-	let quantitySelected = 0;
-	let item = {};
-	let isOpen = true;
-
-	// -------- STATE -------- //
-	function onStateChange(state) {
-		if (state.changed.includes("sideBar.activeTab") || firstRun) {
-			activeTab = getActiveTab();
-			quantitySelected = activeTab.selectedItems.length;
-			$$invalidate(0, item = getLastSelectedItem());
-		}
-
-		if (state.changed.includes("sideBar.preview") || firstRun) {
-			$$invalidate(1, isOpen = state.sideBar2.preview.isOpen);
-		}
-
-		firstRun = false;
-	}
-
-	// -------- HELPERS -------- //
-	function getActiveTab() {
-		return state.sideBar2.tabs.find(t => t.name == state.sideBar2.activeTab.name);
-	}
-
-	function getLastSelectedItem() {
-		const type = activeTab.lastSelectedItem.type;
-		const id = activeTab.lastSelectedItem.id;
-		let arrayToLookIn;
-
-		switch (type) {
-			case "folder":
-				arrayToLookIn = state.folders;
-				break;
-			case "doc":
-				arrayToLookIn = state.documents;
-				break;
-			case "media":
-				arrayToLookIn = state.media;
-				break;
-		}
-
-		return arrayToLookIn.find(i => i.id == id);
-	}
-
-	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(2, state = $$props.state);
-	};
-
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*state*/ 4) {
-			 onStateChange(state);
-		}
-	};
-
-	return [item, isOpen, state];
-}
-
-class Preview extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-1uqtl3v-style")) add_css$8();
-		init(this, options, instance$a, create_fragment$a, safe_not_equal, { state: 2 });
+		if (!document.getElementById("svelte-blyvv3-style")) add_css$2();
+		init(this, options, instance$2, create_fragment$2, safe_not_equal, { title: 0 });
 	}
 }
 
@@ -2284,10 +1827,11 @@ var lib = {
   createFlatHierarchy: createHierarchy$1(createFlatHierarchy$1)
 };
 var lib_1 = lib.createTreeHierarchy;
+var lib_2 = lib.createFlatHierarchy;
 
 /* src/js/renderer/component/UI/SearchField.svelte generated by Svelte v3.22.3 */
 
-function add_css$9() {
+function add_css$3() {
 	var style = element("style");
 	style.id = "svelte-jww59a-style";
 	style.textContent = ".searchfield.svelte-jww59a{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);margin:10px 10px 0;position:relative;background-color:rgba(0, 0, 0, 0.04);border-radius:4px;min-height:20px;display:flex;flex-direction:row;align-items:center}.searchfield.svelte-jww59a:focus-within{animation-fill-mode:forwards;animation-name:svelte-jww59a-selectField;animation-duration:0.3s}@keyframes svelte-jww59a-selectField{from{box-shadow:0 0 0 10px transparent}to{box-shadow:0 0 0 3.5px rgba(59, 153, 252, 0.5)}}.magnifying-glass.svelte-jww59a{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;position:absolute;top:50%;transform:translate(0, -50%);background-color:var(--controlTextColor);-webkit-mask-image:var(--img-magnifyingglass);position:absolute;width:13px;height:13px;left:5px;opacity:0.5}.placeholder.svelte-jww59a{position:absolute;top:50%;transform:translate(0, -50%);color:var(--placeholderTextColor);left:24px;pointer-events:none}input.svelte-jww59a{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);margin:1px 0 0 24px;width:100%;background:transparent;outline:none;border:none}";
@@ -2295,7 +1839,7 @@ function add_css$9() {
 }
 
 // (88:2) {#if !query}
-function create_if_block$5(ctx) {
+function create_if_block(ctx) {
 	let span;
 	let t;
 
@@ -2318,14 +1862,14 @@ function create_if_block$5(ctx) {
 	};
 }
 
-function create_fragment$b(ctx) {
+function create_fragment$3(ctx) {
 	let div1;
 	let div0;
 	let t0;
 	let t1;
 	let input_1;
 	let dispose;
-	let if_block = !/*query*/ ctx[0] && create_if_block$5(ctx);
+	let if_block = !/*query*/ ctx[0] && create_if_block(ctx);
 
 	return {
 		c() {
@@ -2362,7 +1906,7 @@ function create_fragment$b(ctx) {
 				if (if_block) {
 					if_block.p(ctx, dirty);
 				} else {
-					if_block = create_if_block$5(ctx);
+					if_block = create_if_block(ctx);
 					if_block.c();
 					if_block.m(div1, t1);
 				}
@@ -2386,7 +1930,7 @@ function create_fragment$b(ctx) {
 	};
 }
 
-function instance$b($$self, $$props, $$invalidate) {
+function instance$3($$self, $$props, $$invalidate) {
 	let { placeholder = "Search" } = $$props;
 	let { query = "" } = $$props;
 	let { focused = false } = $$props;
@@ -2434,491 +1978,8 @@ function instance$b($$self, $$props, $$invalidate) {
 class SearchField extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-jww59a-style")) add_css$9();
-		init(this, options, instance$b, create_fragment$b, safe_not_equal, { placeholder: 1, query: 0, focused: 4 });
-	}
-}
-
-/* src/js/renderer/component/SideBar/TreeListItem2.svelte generated by Svelte v3.22.3 */
-
-function add_css$a() {
-	var style = element("style");
-	style.id = "svelte-1vpnxlv-style";
-	style.textContent = ".wrapper.svelte-1vpnxlv.svelte-1vpnxlv{--indexInLocalVisibleItems:0;--itemWidth:230px;--itemHeight:28px;--sidesPadding:10px;--transitionSpeed:600ms;position:absolute;transform:translate(0, calc(var(--indexInLocalVisibleItems) * var(--itemHeight)));left:0;transition:transform var(--transitionSpeed)}.item.folder.svelte-1vpnxlv .icon.svelte-1vpnxlv{-webkit-mask-image:var(--img-folder)}.item.doc.svelte-1vpnxlv .icon.svelte-1vpnxlv{-webkit-mask-image:var(--img-doc-text)}.item.image.svelte-1vpnxlv .icon.svelte-1vpnxlv{-webkit-mask-image:var(--img-photo)}.item.av.svelte-1vpnxlv .icon.svelte-1vpnxlv{-webkit-mask-image:var(--img-play-rectangle)}.item.isSelected.svelte-1vpnxlv.svelte-1vpnxlv{border-radius:4px}.item.isSelected.listHasFocus.svelte-1vpnxlv.svelte-1vpnxlv{background-color:var(--selectedContentBackgroundColor)}.item.isSelected.listHasFocus.svelte-1vpnxlv .disclosure [role='button'].svelte-1vpnxlv,.item.isSelected.listHasFocus.svelte-1vpnxlv .icon.svelte-1vpnxlv{background-color:var(--controlColor)}.item.isSelected.listHasFocus.svelte-1vpnxlv .label.svelte-1vpnxlv{color:var(--selectedMenuItemTextColor)}.item.isSelected.listHasFocus.svelte-1vpnxlv .counter.svelte-1vpnxlv{color:var(--controlColor);opacity:0.4}.item.isSelected.svelte-1vpnxlv.svelte-1vpnxlv:not(.listHasFocus){background-color:var(--disabledControlTextColor)}.item.svelte-1vpnxlv.svelte-1vpnxlv{--nestOffset:0px;position:absolute;user-select:none;margin-bottom:1px;width:230px;height:var(--itemHeight)}.item.svelte-1vpnxlv .disclosure.svelte-1vpnxlv{position:absolute;top:50%;transform:translate(0, -50%);left:calc(var(--nestOffset) + 5px);width:10px;height:10px}.item.svelte-1vpnxlv .disclosure [role='button'].svelte-1vpnxlv{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;-webkit-mask-image:var(--img-chevron-right);background-color:var(--controlTextColor);position:absolute;display:inline-block;top:50%;left:50%;width:8px;height:8px;transform:translate(-50%, -50%) rotateZ(0deg)}.item.svelte-1vpnxlv .disclosure.isExpanded [role='button'].svelte-1vpnxlv{transform:translate(-50%, -50%) rotateZ(90deg)}.item.svelte-1vpnxlv .icon.svelte-1vpnxlv{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;position:absolute;top:50%;transform:translate(0, -50%);background-color:var(--controlAccentColor);left:calc(var(--nestOffset) + 20px);width:14px;height:14px}.item.svelte-1vpnxlv .label.svelte-1vpnxlv{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);position:absolute;top:50%;transform:translate(0, -50%);color:var(--labelColor);left:calc(var(--nestOffset) + 42px);white-space:nowrap}.item.svelte-1vpnxlv .counter.svelte-1vpnxlv{position:absolute;top:50%;transform:translate(0, -50%);font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);color:var(--tertiaryLabelColor);position:absolute;right:7px}.children.svelte-1vpnxlv.svelte-1vpnxlv{--numberOfVisibleChildren:0;position:absolute;transform:translate(0, var(--itemHeight));width:var(--itemWidth);height:calc(var(--numberOfVisibleChildren) * var(--itemHeight));background:rgba(117, 233, 169, 0.2);overflow:hidden;transition:height var(--transitionSpeed)}.children.svelte-1vpnxlv.svelte-1vpnxlv:not(.isExpanded){height:0;transition:height var(--transitionSpeed)}";
-	append(document.head, style);
-}
-
-function get_each_context(ctx, list, i) {
-	const child_ctx = ctx.slice();
-	child_ctx[15] = list[i];
-	return child_ctx;
-}
-
-// (188:4) {#if isExpandable}
-function create_if_block_2$1(ctx) {
-	let div1;
-	let div0;
-	let dispose;
-
-	return {
-		c() {
-			div1 = element("div");
-			div0 = element("div");
-			attr(div0, "role", "button");
-			attr(div0, "alt", "Toggle Expanded");
-			attr(div0, "class", "svelte-1vpnxlv");
-			attr(div1, "class", "disclosure svelte-1vpnxlv");
-			toggle_class(div1, "isExpanded", /*isExpanded*/ ctx[7]);
-		},
-		m(target, anchor, remount) {
-			insert(target, div1, anchor);
-			append(div1, div0);
-			if (remount) dispose();
-			dispose = listen(div0, "mousedown", stop_propagation(/*mousedown_handler_1*/ ctx[11]));
-		},
-		p(ctx, dirty) {
-			if (dirty & /*isExpanded*/ 128) {
-				toggle_class(div1, "isExpanded", /*isExpanded*/ ctx[7]);
-			}
-		},
-		d(detaching) {
-			if (detaching) detach(div1);
-			dispose();
-		}
-	};
-}
-
-// (201:4) {#if isExpandable}
-function create_if_block_1$3(ctx) {
-	let div;
-	let t_value = /*item*/ ctx[0].children.length + "";
-	let t;
-
-	return {
-		c() {
-			div = element("div");
-			t = text(t_value);
-			attr(div, "class", "counter svelte-1vpnxlv");
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			append(div, t);
-		},
-		p(ctx, dirty) {
-			if (dirty & /*item*/ 1 && t_value !== (t_value = /*item*/ ctx[0].children.length + "")) set_data(t, t_value);
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-		}
-	};
-}
-
-// (207:2) {#if isExpandable}
-function create_if_block$6(ctx) {
-	let div;
-	let div_style_value;
-	let current;
-	let each_value = /*item*/ ctx[0].children;
-	let each_blocks = [];
-
-	for (let i = 0; i < each_value.length; i += 1) {
-		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
-	}
-
-	const out = i => transition_out(each_blocks[i], 1, 1, () => {
-		each_blocks[i] = null;
-	});
-
-	return {
-		c() {
-			div = element("div");
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				each_blocks[i].c();
-			}
-
-			attr(div, "class", "children svelte-1vpnxlv");
-			attr(div, "style", div_style_value = `--numberOfVisibleChildren: ${/*numberOfVisibleChildren*/ ctx[8]};`);
-			toggle_class(div, "isExpanded", /*isExpanded*/ ctx[7]);
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				each_blocks[i].m(div, null);
-			}
-
-			current = true;
-		},
-		p(ctx, dirty) {
-			if (dirty & /*item*/ 1) {
-				each_value = /*item*/ ctx[0].children;
-				let i;
-
-				for (i = 0; i < each_value.length; i += 1) {
-					const child_ctx = get_each_context(ctx, each_value, i);
-
-					if (each_blocks[i]) {
-						each_blocks[i].p(child_ctx, dirty);
-						transition_in(each_blocks[i], 1);
-					} else {
-						each_blocks[i] = create_each_block(child_ctx);
-						each_blocks[i].c();
-						transition_in(each_blocks[i], 1);
-						each_blocks[i].m(div, null);
-					}
-				}
-
-				group_outros();
-
-				for (i = each_value.length; i < each_blocks.length; i += 1) {
-					out(i);
-				}
-
-				check_outros();
-			}
-
-			if (!current || dirty & /*numberOfVisibleChildren*/ 256 && div_style_value !== (div_style_value = `--numberOfVisibleChildren: ${/*numberOfVisibleChildren*/ ctx[8]};`)) {
-				attr(div, "style", div_style_value);
-			}
-
-			if (dirty & /*isExpanded*/ 128) {
-				toggle_class(div, "isExpanded", /*isExpanded*/ ctx[7]);
-			}
-		},
-		i(local) {
-			if (current) return;
-
-			for (let i = 0; i < each_value.length; i += 1) {
-				transition_in(each_blocks[i]);
-			}
-
-			current = true;
-		},
-		o(local) {
-			each_blocks = each_blocks.filter(Boolean);
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				transition_out(each_blocks[i]);
-			}
-
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-			destroy_each(each_blocks, detaching);
-		}
-	};
-}
-
-// (212:6) {#each item.children as child}
-function create_each_block(ctx) {
-	let current;
-
-	const treelistitem2 = new TreeListItem2({
-			props: {
-				item: /*child*/ ctx[15],
-				listHasFocus: true,
-				isQueryEmpty: true
-			}
-		});
-
-	treelistitem2.$on("mousedown", /*mousedown_handler*/ ctx[13]);
-	treelistitem2.$on("toggleExpanded", /*toggleExpanded_handler*/ ctx[14]);
-
-	return {
-		c() {
-			create_component(treelistitem2.$$.fragment);
-		},
-		m(target, anchor) {
-			mount_component(treelistitem2, target, anchor);
-			current = true;
-		},
-		p(ctx, dirty) {
-			const treelistitem2_changes = {};
-			if (dirty & /*item*/ 1) treelistitem2_changes.item = /*child*/ ctx[15];
-			treelistitem2.$set(treelistitem2_changes);
-		},
-		i(local) {
-			if (current) return;
-			transition_in(treelistitem2.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(treelistitem2.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			destroy_component(treelistitem2, detaching);
-		}
-	};
-}
-
-function create_fragment$c(ctx) {
-	let div3;
-	let div2;
-	let t0;
-	let div0;
-	let t1;
-	let div1;
-	let t2_value = /*item*/ ctx[0].name + "";
-	let t2;
-	let t3;
-	let div2_style_value;
-	let div2_class_value;
-	let t4;
-	let div3_style_value;
-	let current;
-	let dispose;
-	let if_block0 = /*isExpandable*/ ctx[6] && create_if_block_2$1(ctx);
-	let if_block1 = /*isExpandable*/ ctx[6] && create_if_block_1$3(ctx);
-	let if_block2 = /*isExpandable*/ ctx[6] && create_if_block$6(ctx);
-
-	return {
-		c() {
-			div3 = element("div");
-			div2 = element("div");
-			if (if_block0) if_block0.c();
-			t0 = space();
-			div0 = element("div");
-			t1 = space();
-			div1 = element("div");
-			t2 = text(t2_value);
-			t3 = space();
-			if (if_block1) if_block1.c();
-			t4 = space();
-			if (if_block2) if_block2.c();
-			attr(div0, "class", "icon svelte-1vpnxlv");
-			attr(div1, "class", "label svelte-1vpnxlv");
-			attr(div2, "style", div2_style_value = `--nestOffset: ${(/*nestDepth*/ ctx[5] - 1) * 15}px`);
-			attr(div2, "class", div2_class_value = "item " + /*type*/ ctx[2] + " svelte-1vpnxlv");
-			toggle_class(div2, "listHasFocus", /*listHasFocus*/ ctx[1]);
-			toggle_class(div2, "isSelected", /*isSelected*/ ctx[3]);
-			toggle_class(div2, "isExpandable", /*isExpandable*/ ctx[6]);
-			attr(div3, "class", "wrapper svelte-1vpnxlv");
-			attr(div3, "style", div3_style_value = `--indexInLocalVisibleItems: ${/*indexInLocalVisibleItems*/ ctx[4]}`);
-		},
-		m(target, anchor, remount) {
-			insert(target, div3, anchor);
-			append(div3, div2);
-			if (if_block0) if_block0.m(div2, null);
-			append(div2, t0);
-			append(div2, div0);
-			append(div2, t1);
-			append(div2, div1);
-			append(div1, t2);
-			append(div2, t3);
-			if (if_block1) if_block1.m(div2, null);
-			append(div3, t4);
-			if (if_block2) if_block2.m(div3, null);
-			current = true;
-			if (remount) dispose();
-			dispose = listen(div2, "mousedown", /*mousedown_handler_2*/ ctx[12]);
-		},
-		p(ctx, [dirty]) {
-			if (/*isExpandable*/ ctx[6]) {
-				if (if_block0) {
-					if_block0.p(ctx, dirty);
-				} else {
-					if_block0 = create_if_block_2$1(ctx);
-					if_block0.c();
-					if_block0.m(div2, t0);
-				}
-			} else if (if_block0) {
-				if_block0.d(1);
-				if_block0 = null;
-			}
-
-			if ((!current || dirty & /*item*/ 1) && t2_value !== (t2_value = /*item*/ ctx[0].name + "")) set_data(t2, t2_value);
-
-			if (/*isExpandable*/ ctx[6]) {
-				if (if_block1) {
-					if_block1.p(ctx, dirty);
-				} else {
-					if_block1 = create_if_block_1$3(ctx);
-					if_block1.c();
-					if_block1.m(div2, null);
-				}
-			} else if (if_block1) {
-				if_block1.d(1);
-				if_block1 = null;
-			}
-
-			if (!current || dirty & /*nestDepth*/ 32 && div2_style_value !== (div2_style_value = `--nestOffset: ${(/*nestDepth*/ ctx[5] - 1) * 15}px`)) {
-				attr(div2, "style", div2_style_value);
-			}
-
-			if (!current || dirty & /*type*/ 4 && div2_class_value !== (div2_class_value = "item " + /*type*/ ctx[2] + " svelte-1vpnxlv")) {
-				attr(div2, "class", div2_class_value);
-			}
-
-			if (dirty & /*type, listHasFocus*/ 6) {
-				toggle_class(div2, "listHasFocus", /*listHasFocus*/ ctx[1]);
-			}
-
-			if (dirty & /*type, isSelected*/ 12) {
-				toggle_class(div2, "isSelected", /*isSelected*/ ctx[3]);
-			}
-
-			if (dirty & /*type, isExpandable*/ 68) {
-				toggle_class(div2, "isExpandable", /*isExpandable*/ ctx[6]);
-			}
-
-			if (/*isExpandable*/ ctx[6]) {
-				if (if_block2) {
-					if_block2.p(ctx, dirty);
-
-					if (dirty & /*isExpandable*/ 64) {
-						transition_in(if_block2, 1);
-					}
-				} else {
-					if_block2 = create_if_block$6(ctx);
-					if_block2.c();
-					transition_in(if_block2, 1);
-					if_block2.m(div3, null);
-				}
-			} else if (if_block2) {
-				group_outros();
-
-				transition_out(if_block2, 1, 1, () => {
-					if_block2 = null;
-				});
-
-				check_outros();
-			}
-
-			if (!current || dirty & /*indexInLocalVisibleItems*/ 16 && div3_style_value !== (div3_style_value = `--indexInLocalVisibleItems: ${/*indexInLocalVisibleItems*/ ctx[4]}`)) {
-				attr(div3, "style", div3_style_value);
-			}
-		},
-		i(local) {
-			if (current) return;
-			transition_in(if_block2);
-			current = true;
-		},
-		o(local) {
-			transition_out(if_block2);
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(div3);
-			if (if_block0) if_block0.d();
-			if (if_block1) if_block1.d();
-			if (if_block2) if_block2.d();
-			dispose();
-		}
-	};
-}
-
-function instance$c($$self, $$props, $$invalidate) {
-	const dispatch = createEventDispatcher();
-	let { item = {} } = $$props;
-	let { listHasFocus = false } = $$props;
-	let { isQueryEmpty = true } = $$props;
-	let type = null;
-	const mousedown_handler_1 = () => dispatch("toggleExpanded", { item, isExpanded });
-	const mousedown_handler_2 = domEvent => dispatch("mousedown", { item, isSelected, domEvent });
-
-	function mousedown_handler(event) {
-		bubble($$self, event);
-	}
-
-	function toggleExpanded_handler(event) {
-		bubble($$self, event);
-	}
-
-	$$self.$set = $$props => {
-		if ("item" in $$props) $$invalidate(0, item = $$props.item);
-		if ("listHasFocus" in $$props) $$invalidate(1, listHasFocus = $$props.listHasFocus);
-		if ("isQueryEmpty" in $$props) $$invalidate(10, isQueryEmpty = $$props.isQueryEmpty);
-	};
-
-	let isSelected;
-	let indexInLocalVisibleItems;
-	let nestDepth;
-	let isExpandable;
-	let isExpanded;
-	let numberOfVisibleChildren;
-
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*item*/ 1) {
-			 $$invalidate(3, isSelected = item.isSelected);
-		}
-
-		if ($$self.$$.dirty & /*item*/ 1) {
-			 $$invalidate(4, indexInLocalVisibleItems = item.indexInLocalVisibleItems);
-		}
-
-		if ($$self.$$.dirty & /*item*/ 1) {
-			 $$invalidate(5, nestDepth = item.nestDepth);
-		}
-
-		if ($$self.$$.dirty & /*item*/ 1) {
-			 $$invalidate(6, isExpandable = item.type == "folder" && item.children && item.children.length > 0);
-		}
-
-		if ($$self.$$.dirty & /*isExpandable, item*/ 65) {
-			 $$invalidate(7, isExpanded = isExpandable && item.isExpanded);
-		}
-
-		if ($$self.$$.dirty & /*item*/ 1) {
-			 $$invalidate(8, numberOfVisibleChildren = item.numberOfVisibleChildren);
-		}
-
-		if ($$self.$$.dirty & /*item*/ 1) {
-			// Set `type`
-			 {
-				switch (item.type) {
-					case "folder":
-					case "doc":
-						$$invalidate(2, type = item.type);
-						break;
-					case "media":
-						switch (item.filetype) {
-							case ".png":
-							case ".jpg":
-							case ".gif":
-								$$invalidate(2, type = "image");
-								break;
-							default:
-								$$invalidate(2, type = "av");
-								break;
-						}
-						break;
-				}
-			}
-		}
-	};
-
-	return [
-		item,
-		listHasFocus,
-		type,
-		isSelected,
-		indexInLocalVisibleItems,
-		nestDepth,
-		isExpandable,
-		isExpanded,
-		numberOfVisibleChildren,
-		dispatch,
-		isQueryEmpty,
-		mousedown_handler_1,
-		mousedown_handler_2,
-		mousedown_handler,
-		toggleExpanded_handler
-	];
-}
-
-class TreeListItem2 extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-1vpnxlv-style")) add_css$a();
-
-		init(this, options, instance$c, create_fragment$c, safe_not_equal, {
-			item: 0,
-			listHasFocus: 1,
-			isQueryEmpty: 10
-		});
+		if (!document.getElementById("svelte-jww59a-style")) add_css$3();
+		init(this, options, instance$3, create_fragment$3, safe_not_equal, { placeholder: 1, query: 0, focused: 4 });
 	}
 }
 
@@ -2926,191 +1987,85 @@ class TreeListItem2 extends SvelteComponent {
 
 const { window: window_1 } = globals;
 
-function add_css$b() {
+function add_css$4() {
 	var style = element("style");
 	style.id = "svelte-w11jrf-style";
-	style.textContent = "#project.svelte-w11jrf{display:flex;flex-direction:column;overflow:hidden;flex-grow:1}.wrapper.svelte-w11jrf:not(.active){display:none}#results.svelte-w11jrf{margin:10px 10px 0;min-height:100%;overflow-y:scroll;position:relative}";
+	style.textContent = "#project.svelte-w11jrf{display:flex;flex-direction:column;overflow:hidden;flex-grow:1}.wrapper.svelte-w11jrf:not(.active){display:none}";
 	append(document.head, style);
 }
 
-function get_each_context$1(ctx, list, i) {
-	const child_ctx = ctx.slice();
-	child_ctx[27] = list[i];
-	return child_ctx;
-}
-
-// (445:4) {#each results2Tree as item}
-function create_each_block$1(ctx) {
-	let current;
-
-	const treelistitem2 = new TreeListItem2({
-			props: {
-				item: /*item*/ ctx[27],
-				listHasFocus: /*focused*/ ctx[0],
-				isQueryEmpty: /*query*/ ctx[3] == ""
-			}
-		});
-
-	treelistitem2.$on("mousedown", /*handleMouseDown*/ ctx[6]);
-	treelistitem2.$on("toggleExpanded", /*toggleExpanded_handler*/ ctx[26]);
-
-	return {
-		c() {
-			create_component(treelistitem2.$$.fragment);
-		},
-		m(target, anchor) {
-			mount_component(treelistitem2, target, anchor);
-			current = true;
-		},
-		p(ctx, dirty) {
-			const treelistitem2_changes = {};
-			if (dirty & /*results2Tree*/ 16) treelistitem2_changes.item = /*item*/ ctx[27];
-			if (dirty & /*focused*/ 1) treelistitem2_changes.listHasFocus = /*focused*/ ctx[0];
-			if (dirty & /*query*/ 8) treelistitem2_changes.isQueryEmpty = /*query*/ ctx[3] == "";
-			treelistitem2.$set(treelistitem2_changes);
-		},
-		i(local) {
-			if (current) return;
-			transition_in(treelistitem2.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(treelistitem2.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			destroy_component(treelistitem2, detaching);
-		}
-	};
-}
-
-function create_fragment$d(ctx) {
-	let div1;
+function create_fragment$4(ctx) {
+	let div;
 	let t0;
 	let t1;
 	let updating_query;
-	let t2;
-	let div0;
 	let current;
 	let dispose;
-	const header = new Header({ props: { title: /*tab*/ ctx[1].title } });
+	const header = new Header({ props: { title: /*tab*/ ctx[2].title } });
 	const separator = new Separator({ props: { marginSides: 10 } });
 
 	function searchfield_query_binding(value) {
-		/*searchfield_query_binding*/ ctx[25].call(null, value);
+		/*searchfield_query_binding*/ ctx[23].call(null, value);
 	}
 
 	let searchfield_props = { focused: true, placeholder: "Name" };
 
-	if (/*query*/ ctx[3] !== void 0) {
-		searchfield_props.query = /*query*/ ctx[3];
+	if (/*query*/ ctx[0] !== void 0) {
+		searchfield_props.query = /*query*/ ctx[0];
 	}
 
 	const searchfield = new SearchField({ props: searchfield_props });
 	binding_callbacks.push(() => bind(searchfield, "query", searchfield_query_binding));
-	let each_value = /*results2Tree*/ ctx[4];
-	let each_blocks = [];
-
-	for (let i = 0; i < each_value.length; i += 1) {
-		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
-	}
-
-	const out = i => transition_out(each_blocks[i], 1, 1, () => {
-		each_blocks[i] = null;
-	});
 
 	return {
 		c() {
-			div1 = element("div");
+			div = element("div");
 			create_component(header.$$.fragment);
 			t0 = space();
 			create_component(separator.$$.fragment);
 			t1 = space();
 			create_component(searchfield.$$.fragment);
-			t2 = space();
-			div0 = element("div");
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				each_blocks[i].c();
-			}
-
-			attr(div0, "id", "results");
-			attr(div0, "class", "svelte-w11jrf");
-			attr(div1, "id", "project");
-			attr(div1, "class", "wrapper svelte-w11jrf");
-			toggle_class(div1, "focused", /*focused*/ ctx[0]);
-			toggle_class(div1, "active", /*active*/ ctx[2]);
+			attr(div, "id", "project");
+			attr(div, "class", "wrapper svelte-w11jrf");
+			toggle_class(div, "focused", /*focused*/ ctx[1]);
+			toggle_class(div, "active", /*tab*/ ctx[2].active);
 		},
 		m(target, anchor, remount) {
-			insert(target, div1, anchor);
-			mount_component(header, div1, null);
-			append(div1, t0);
-			mount_component(separator, div1, null);
-			append(div1, t1);
-			mount_component(searchfield, div1, null);
-			append(div1, t2);
-			append(div1, div0);
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				each_blocks[i].m(div0, null);
-			}
-
+			insert(target, div, anchor);
+			mount_component(header, div, null);
+			append(div, t0);
+			mount_component(separator, div, null);
+			append(div, t1);
+			mount_component(searchfield, div, null);
 			current = true;
 			if (remount) dispose();
-			dispose = listen(window_1, "keydown", /*handleKeydown*/ ctx[5]);
+			dispose = listen(window_1, "keydown", /*handleKeydown*/ ctx[3]);
 		},
 		p(ctx, [dirty]) {
 			const header_changes = {};
-			if (dirty & /*tab*/ 2) header_changes.title = /*tab*/ ctx[1].title;
+			if (dirty & /*tab*/ 4) header_changes.title = /*tab*/ ctx[2].title;
 
-			if (dirty & /*$$scope*/ 1073741824) {
+			if (dirty & /*$$scope*/ 16777216) {
 				header_changes.$$scope = { dirty, ctx };
 			}
 
 			header.$set(header_changes);
 			const searchfield_changes = {};
 
-			if (!updating_query && dirty & /*query*/ 8) {
+			if (!updating_query && dirty & /*query*/ 1) {
 				updating_query = true;
-				searchfield_changes.query = /*query*/ ctx[3];
+				searchfield_changes.query = /*query*/ ctx[0];
 				add_flush_callback(() => updating_query = false);
 			}
 
 			searchfield.$set(searchfield_changes);
 
-			if (dirty & /*results2Tree, focused, query, handleMouseDown, toggleExpanded*/ 217) {
-				each_value = /*results2Tree*/ ctx[4];
-				let i;
-
-				for (i = 0; i < each_value.length; i += 1) {
-					const child_ctx = get_each_context$1(ctx, each_value, i);
-
-					if (each_blocks[i]) {
-						each_blocks[i].p(child_ctx, dirty);
-						transition_in(each_blocks[i], 1);
-					} else {
-						each_blocks[i] = create_each_block$1(child_ctx);
-						each_blocks[i].c();
-						transition_in(each_blocks[i], 1);
-						each_blocks[i].m(div0, null);
-					}
-				}
-
-				group_outros();
-
-				for (i = each_value.length; i < each_blocks.length; i += 1) {
-					out(i);
-				}
-
-				check_outros();
+			if (dirty & /*focused*/ 2) {
+				toggle_class(div, "focused", /*focused*/ ctx[1]);
 			}
 
-			if (dirty & /*focused*/ 1) {
-				toggle_class(div1, "focused", /*focused*/ ctx[0]);
-			}
-
-			if (dirty & /*active*/ 4) {
-				toggle_class(div1, "active", /*active*/ ctx[2]);
+			if (dirty & /*tab*/ 4) {
+				toggle_class(div, "active", /*tab*/ ctx[2].active);
 			}
 		},
 		i(local) {
@@ -3118,83 +2073,45 @@ function create_fragment$d(ctx) {
 			transition_in(header.$$.fragment, local);
 			transition_in(separator.$$.fragment, local);
 			transition_in(searchfield.$$.fragment, local);
-
-			for (let i = 0; i < each_value.length; i += 1) {
-				transition_in(each_blocks[i]);
-			}
-
 			current = true;
 		},
 		o(local) {
 			transition_out(header.$$.fragment, local);
 			transition_out(separator.$$.fragment, local);
 			transition_out(searchfield.$$.fragment, local);
-			each_blocks = each_blocks.filter(Boolean);
-
-			for (let i = 0; i < each_blocks.length; i += 1) {
-				transition_out(each_blocks[i]);
-			}
-
 			current = false;
 		},
 		d(detaching) {
-			if (detaching) detach(div1);
+			if (detaching) detach(div);
 			destroy_component(header);
 			destroy_component(separator);
 			destroy_component(searchfield);
-			destroy_each(each_blocks, detaching);
 			dispose();
 		}
 	};
 }
 
-function instance$d($$self, $$props, $$invalidate) {
-	let { state = {} } = $$props;
-	let { focused } = $$props;
+function sortChildren(children) {
+	// Sort
+	children.sort((a, b) => a.name.localeCompare(b.name));
 
-	// State
-	let tab = {};
+	// Recursively sort children
+	children.forEach(c => {
+		if (c.type == "folder" && c.children.length > 0) {
+			sortChildren(c.children);
+		}
+	});
+}
 
-	let folders = [];
-	let files = [];
-
-	// Local
-	let firstRun = true;
-
-	let active = false;
-	let query = "";
+function instance$4($$self, $$props, $$invalidate) {
+	let $project;
+	let $sidebar;
+	component_subscribe($$self, project, $$value => $$invalidate(8, $project = $$value));
+	component_subscribe($$self, sidebar, $$value => $$invalidate(9, $sidebar = $$value));
+	let query = ""; // Bound to search field
 	let resultsTree = [];
 	let resultsFlat = [];
 	let resultsVisible = [];
-
-	// State changes
-	function onStateChange(state) {
-		let shouldUpdateResults = false;
-
-		if (state.changed.includes("sideBar.tabs.project") || firstRun) {
-			$$invalidate(1, tab = state.sideBar2.tabs.find(t => t.name == "project"));
-			shouldUpdateResults = true;
-		}
-
-		if (state.changed.includes("sideBar.activeTab") || firstRun) {
-			$$invalidate(2, active = state.sideBar2.activeTab.name == "project");
-			shouldUpdateResults = true;
-		}
-
-		if (state.changed.includes("folders") || state.changed.includes("documents") || state.changed.includes("media") || firstRun) {
-			folders = state.folders;
-			files = [].concat(...[state.documents, state.media]);
-			shouldUpdateResults = true;
-		}
-
-		if (state.changed.includes("openDoc") || firstRun) {
-			// console.log('openDoc changed')
-			shouldUpdateResults = true;
-		}
-
-		if (shouldUpdateResults) updateResults();
-		firstRun = false;
-	}
 
 	/*
 Each item needs to know it's index among visible items. But only it's local index.
@@ -3216,18 +2133,20 @@ Each item needs to know it's index among visible items. But only it's local inde
 
 		if (query == "") {
 			const foldersAndFiles = [].concat(...[folders, files]);
-			$$invalidate(4, results2Tree = lib_1(foldersAndFiles)[0].children);
-			sortChildren(results2Tree, true, 0);
-		} // console.log(results2Tree)
-		// results2Flat = createFlatHierarchy(results2Tree, {
-	} //   saveExtractedChildren: true,
-	// })
+			results2Tree = lib_1(foldersAndFiles)[0].children;
+			sortChildren(results2Tree);
+			orderChildren(results2Tree, true);
 
-	// results2Flat.forEach((r) => {
-	//   if (r.type == 'folder' && r.children && r.children.length) {
-	//     r.children = r.children.map((c) => c.id)
-	//   }
-	// })
+			// console.log(results2Tree)
+			// results2Tree[0].children.forEach((c) => console.log(c.name, c.indexAmongSiblings))
+			results2Flat = lib_2(results2Tree);
+
+			results2Flat.forEach((r, index) => {
+				const color = r.type == "folder" ? "black" : "green";
+			}); // console.log(`%c${r.indexAmongSiblings} ${'—'.repeat(r.nestDepth)} ${r.name}`, `color:${color}`)
+		}
+	}
+
 	// function updateSelected(children) {
 	//   children.forEach((r) => {
 	//     r.isSelected = tab.selectedItems.some((id) => id = r.id)
@@ -3421,34 +2340,24 @@ Each item needs to know it's index among visible items. But only it's local inde
 		});
 	}
 
-	// -------- HELPERS -------- //
-	/**
- * Sort array of child items by sorting criteria
- * // TODO: Criteria is currently hard coded to alphabetical and A-Z.
- */
-	function sortChildren(children, parentHierarchyIsExpanded, parentOffset) {
+	function orderChildren(children, parentHierarchyIsExpanded, parentOffset) {
 		let indexAmongSiblings = 0;
-
-		// Sort
-		children.sort((a, b) => a.name.localeCompare(b.name));
 
 		// For each child, set properties (e.g. indexes)
 		children.forEach(c => {
 			// Set index within all items
-			c.indexInAllItems = index++;
-
+			// c.indexInAllItems = index++
 			// Set index within all visible items
 			if (parentHierarchyIsExpanded) {
 				c.indexInAllVisibleItems = indexInAllVisibleItems++;
 			}
 
 			// Set index within local visible items. We use this to set vertical position of element, within siblings.
-			if (c.nestDepth > 1) {
-				c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset - 1;
-			} else {
-				c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset;
-			}
-
+			// if (c.nestDepth > 1) {
+			//   c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset - 1
+			// } else {
+			//   c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset
+			// }
 			// Set index within siblings. Depends on if siblings are expanded or not.
 			c.indexAmongSiblings = indexAmongSiblings++;
 
@@ -3463,10 +2372,12 @@ Each item needs to know it's index among visible items. But only it's local inde
 				// Set expanded
 				c.isExpanded = tab.expandedItems.some(id => id == c.id);
 
+				if (c.isExpanded) indexAmongSiblings += c.children.length;
+
 				// Recursively sort children
 				if (c.children.length > 0) {
 					const isParentExpanded = parentHierarchyIsExpanded && c.isExpanded;
-					sortChildren(c.children, isParentExpanded, c.indexInLocalVisibleItems);
+					orderChildren(c.children, isParentExpanded);
 				}
 			}
 		});
@@ -3487,9 +2398,9 @@ Each item needs to know it's index among visible items. But only it's local inde
 				} // console.log("NE: ", c.name)
 				// c.numberOfVisibleChildren = 0
 			}
-
-			console.log(c.name, c.indexAmongSiblings);
 		});
+
+		return indexAmongSiblings;
 	}
 
 	function toggleExpanded(item, isExpanded) {
@@ -3528,206 +2439,104 @@ Each item needs to know it's index among visible items. But only it's local inde
 
 	function searchfield_query_binding(value) {
 		query = value;
-		$$invalidate(3, query);
+		$$invalidate(0, query);
 	}
 
-	const toggleExpanded_handler = evt => {
-		toggleExpanded(evt.detail.item, evt.detail.isExpanded);
-	};
-
-	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(8, state = $$props.state);
-		if ("focused" in $$props) $$invalidate(0, focused = $$props.focused);
-	};
-
+	let focused;
+	let tab;
+	let folders;
+	let files;
 	let transitionTime;
 
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*query*/ 8) {
-			// -------- STATE -------- //
-			 transitionTime = query == "" ? 300 : 0;
+		if ($$self.$$.dirty & /*$project*/ 256) {
+			 $$invalidate(1, focused = $project.focusedLayoutSection == "sidebar");
 		}
 
-		if ($$self.$$.dirty & /*state*/ 256) {
-			 onStateChange(state);
+		if ($$self.$$.dirty & /*$sidebar*/ 512) {
+			 $$invalidate(2, tab = $sidebar.tabs.find(t => t.name == "project"));
+		}
+
+		if ($$self.$$.dirty & /*query*/ 1) {
+			 transitionTime = query == "" ? 300 : 0;
 		}
 	};
 
+	 folders = []; // TODO
+	 files = []; // TODO
+
 	return [
+		query,
 		focused,
 		tab,
-		active,
-		query,
-		results2Tree,
 		handleKeydown,
-		handleMouseDown,
-		toggleExpanded,
-		state,
-		folders,
-		files,
-		firstRun,
 		index,
 		indexInAllVisibleItems,
+		results2Tree,
+		results2Flat,
+		$project,
+		$sidebar,
+		folders,
+		files,
 		transitionTime,
 		resultsTree,
 		resultsFlat,
 		resultsVisible,
-		onStateChange,
-		results2Flat,
 		updateResults,
 		handleArrowLeftRight,
 		handleArrowUpDown,
-		sortChildren,
+		handleMouseDown,
+		orderChildren,
+		toggleExpanded,
 		selectParentFolder,
-		searchfield_query_binding,
-		toggleExpanded_handler
+		searchfield_query_binding
 	];
 }
 
 class Project extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-w11jrf-style")) add_css$b();
-		init(this, options, instance$d, create_fragment$d, safe_not_equal, { state: 8, focused: 0 });
+		if (!document.getElementById("svelte-w11jrf-style")) add_css$4();
+		init(this, options, instance$4, create_fragment$4, safe_not_equal, {});
 	}
 }
 
-/* src/js/renderer/component/SideBar/AllDocuments.svelte generated by Svelte v3.22.3 */
+/* src/js/renderer/component/SideBar/Tab.svelte generated by Svelte v3.22.3 */
 
-function add_css$c() {
+function add_css$5() {
 	var style = element("style");
-	style.id = "svelte-667fxh-style";
-	style.textContent = ".wrapper.svelte-667fxh:not(.active){display:none}";
+	style.id = "svelte-1n5xjyn-style";
+	style.textContent = "li.svelte-1n5xjyn{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;background-color:var(--controlTextColor);list-style-type:none;margin:0 12px 0 0;padding:0;width:14px;height:14px;opacity:70%}li.active.svelte-1n5xjyn{background-color:var(--controlAccentColor);opacity:100%}li.svelte-1n5xjyn:last-of-type{margin:0}.project.svelte-1n5xjyn{-webkit-mask-image:var(--img-folder)}.project.active.svelte-1n5xjyn{-webkit-mask-image:var(--img-folder-fill)}.all-documents.svelte-1n5xjyn{-webkit-mask-image:var(--img-doc-on-doc)}.all-documents.active.svelte-1n5xjyn{-webkit-mask-image:var(--img-doc-on-doc-fill)}.most-recent.svelte-1n5xjyn{-webkit-mask-image:var(--img-clock)}.most-recent.active.svelte-1n5xjyn{-webkit-mask-image:var(--img-clock-fill)}.tags.svelte-1n5xjyn{-webkit-mask-image:var(--img-tag)}.tags.active.svelte-1n5xjyn{-webkit-mask-image:var(--img-tag-fill)}.media.svelte-1n5xjyn{-webkit-mask-image:var(--img-photo)}.media.active.svelte-1n5xjyn{-webkit-mask-image:var(--img-photo-fill)}.citations.svelte-1n5xjyn{-webkit-mask-image:var(--img-quote-bubble)}.citations.active.svelte-1n5xjyn{-webkit-mask-image:var(--img-quote-bubble-fill)}.search.svelte-1n5xjyn{-webkit-mask-image:var(--img-magnifyingglass)}.search.active.svelte-1n5xjyn{-webkit-mask-image:var(--img-magnifyingglass)}";
 	append(document.head, style);
 }
 
-function create_fragment$e(ctx) {
-	let div;
-	let header;
-	let t1;
-	let current;
-	const separator = new Separator({});
-
-	return {
-		c() {
-			div = element("div");
-			header = element("header");
-			header.innerHTML = `<h1>All Documents</h1>`;
-			t1 = space();
-			create_component(separator.$$.fragment);
-			attr(div, "id", "all-documents");
-			attr(div, "class", "wrapper svelte-667fxh");
-			toggle_class(div, "focused", /*focused*/ ctx[0]);
-			toggle_class(div, "active", /*active*/ ctx[1]);
-		},
-		m(target, anchor) {
-			insert(target, div, anchor);
-			append(div, header);
-			append(div, t1);
-			mount_component(separator, div, null);
-			current = true;
-		},
-		p(ctx, [dirty]) {
-			if (dirty & /*focused*/ 1) {
-				toggle_class(div, "focused", /*focused*/ ctx[0]);
-			}
-
-			if (dirty & /*active*/ 2) {
-				toggle_class(div, "active", /*active*/ ctx[1]);
-			}
-		},
-		i(local) {
-			if (current) return;
-			transition_in(separator.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(separator.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			if (detaching) detach(div);
-			destroy_component(separator);
-		}
-	};
-}
-
-function instance$e($$self, $$props, $$invalidate) {
-	let { state = {} } = $$props;
-	let { focused = false } = $$props;
-
-	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(2, state = $$props.state);
-		if ("focused" in $$props) $$invalidate(0, focused = $$props.focused);
-	};
-
-	let active;
-
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*state*/ 4) {
-			 $$invalidate(1, active = state.sideBar2.activeTab.name == "all-documents");
-		}
-	};
-
-	return [focused, active, state];
-}
-
-class AllDocuments extends SvelteComponent {
-	constructor(options) {
-		super();
-		if (!document.getElementById("svelte-667fxh-style")) add_css$c();
-		init(this, options, instance$e, create_fragment$e, safe_not_equal, { state: 2, focused: 0 });
-	}
-}
-
-/* src/js/renderer/component/SideBar/SideBar.svelte generated by Svelte v3.22.3 */
-
-function add_css$d() {
-	var style = element("style");
-	style.id = "svelte-1mcq9jl-style";
-	style.textContent = "#sidebar2.svelte-1mcq9jl.svelte-1mcq9jl{width:100%;height:100%;position:relative;margin:0;padding:40px 0 0 0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--separatorColor)}#sidebar2.svelte-1mcq9jl>div.svelte-1mcq9jl{max-height:100%}#tabs.svelte-1mcq9jl.svelte-1mcq9jl{min-height:30px;display:flex;justify-content:center}#tabs.svelte-1mcq9jl ul.svelte-1mcq9jl{padding:0;margin:0;list-style-type:none;display:flex;flex-direction:row;align-items:center}#tabs.svelte-1mcq9jl ul li.svelte-1mcq9jl{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;background-color:var(--controlTextColor);list-style-type:none;margin:0 12px 0 0;padding:0;width:14px;height:14px;opacity:70%}#tabs.svelte-1mcq9jl ul li.active.svelte-1mcq9jl{background-color:var(--controlAccentColor);opacity:100%}#tabs.svelte-1mcq9jl ul li.svelte-1mcq9jl:last-of-type{margin:0}.project.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-folder)}.project.active.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-folder-fill)}.all-documents.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-doc-on-doc)}.all-documents.active.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-doc-on-doc-fill)}.most-recent.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-clock)}.most-recent.active.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-clock-fill)}.tags.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-tag)}.tags.active.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-tag-fill)}.media.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-photo)}.media.active.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-photo-fill)}.citations.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-quote-bubble)}.citations.active.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-quote-bubble-fill)}.search.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-magnifyingglass)}.search.active.svelte-1mcq9jl.svelte-1mcq9jl{-webkit-mask-image:var(--img-magnifyingglass)}";
-	append(document.head, style);
-}
-
-function get_each_context$2(ctx, list, i) {
-	const child_ctx = ctx.slice();
-	child_ctx[4] = list[i];
-	child_ctx[6] = i;
-	return child_ctx;
-}
-
-// (116:6) {#each tabs as tab, index}
-function create_each_block$2(ctx) {
+function create_fragment$5(ctx) {
 	let li;
 	let li_class_value;
 	let dispose;
 
-	function click_handler(...args) {
-		return /*click_handler*/ ctx[3](/*index*/ ctx[6], ...args);
-	}
-
 	return {
 		c() {
 			li = element("li");
-			attr(li, "class", li_class_value = "" + (null_to_empty(/*tab*/ ctx[4].name) + " svelte-1mcq9jl"));
-			toggle_class(li, "active", /*index*/ ctx[6] == /*state*/ ctx[0].sideBar2.activeTab.index);
+			attr(li, "class", li_class_value = "" + (null_to_empty(/*tab*/ ctx[0].name) + " svelte-1n5xjyn"));
+			toggle_class(li, "active", /*tab*/ ctx[0].active);
 		},
 		m(target, anchor, remount) {
 			insert(target, li, anchor);
 			if (remount) dispose();
-			dispose = listen(li, "click", click_handler);
+			dispose = listen(li, "click", /*click_handler*/ ctx[1]);
 		},
-		p(new_ctx, dirty) {
-			ctx = new_ctx;
-
-			if (dirty & /*tabs*/ 4 && li_class_value !== (li_class_value = "" + (null_to_empty(/*tab*/ ctx[4].name) + " svelte-1mcq9jl"))) {
+		p(ctx, [dirty]) {
+			if (dirty & /*tab*/ 1 && li_class_value !== (li_class_value = "" + (null_to_empty(/*tab*/ ctx[0].name) + " svelte-1n5xjyn"))) {
 				attr(li, "class", li_class_value);
 			}
 
-			if (dirty & /*tabs, state*/ 5) {
-				toggle_class(li, "active", /*index*/ ctx[6] == /*state*/ ctx[0].sideBar2.activeTab.index);
+			if (dirty & /*tab, tab*/ 1) {
+				toggle_class(li, "active", /*tab*/ ctx[0].active);
 			}
 		},
+		i: noop,
+		o: noop,
 		d(detaching) {
 			if (detaching) detach(li);
 			dispose();
@@ -3735,39 +2544,101 @@ function create_each_block$2(ctx) {
 	};
 }
 
-function create_fragment$f(ctx) {
+function instance$5($$self, $$props, $$invalidate) {
+	let { tab } = $$props;
+
+	const click_handler = () => window.api.send("dispatch", {
+		type: "SELECT_SIDEBAR_TAB_BY_NAME",
+		name: tab.name
+	});
+
+	$$self.$set = $$props => {
+		if ("tab" in $$props) $$invalidate(0, tab = $$props.tab);
+	};
+
+	return [tab, click_handler];
+}
+
+class Tab extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-1n5xjyn-style")) add_css$5();
+		init(this, options, instance$5, create_fragment$5, not_equal, { tab: 0 });
+	}
+}
+
+/* src/js/renderer/component/SideBar/SideBar.svelte generated by Svelte v3.22.3 */
+
+function add_css$6() {
+	var style = element("style");
+	style.id = "svelte-1vavrd1-style";
+	style.textContent = "#sidebar.svelte-1vavrd1.svelte-1vavrd1{--state-sideBarWidth:100px;background-color:var(--windowBackgroundColor);width:var(--state-sideBarWidth);height:100%;position:fixed;margin:0;padding:40px 0 0 0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--separatorColor)}#sidebar.svelte-1vavrd1>div.svelte-1vavrd1{max-height:100%}#tabs.svelte-1vavrd1.svelte-1vavrd1{min-height:30px;display:flex;justify-content:center}#tabs.svelte-1vavrd1 ul.svelte-1vavrd1{padding:0;margin:0;list-style-type:none;display:flex;flex-direction:row;align-items:center}";
+	append(document.head, style);
+}
+
+function get_each_context(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[3] = list[i];
+	return child_ctx;
+}
+
+// (52:6) {#each $sidebar.tabs as tab}
+function create_each_block(ctx) {
+	let t;
+	let current;
+	const tab = new Tab({ props: { tab: /*tab*/ ctx[3] } });
+
+	return {
+		c() {
+			create_component(tab.$$.fragment);
+			t = space();
+		},
+		m(target, anchor) {
+			mount_component(tab, target, anchor);
+			insert(target, t, anchor);
+			current = true;
+		},
+		p(ctx, dirty) {
+			const tab_changes = {};
+			if (dirty & /*$sidebar*/ 2) tab_changes.tab = /*tab*/ ctx[3];
+			tab.$set(tab_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(tab.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(tab.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			destroy_component(tab, detaching);
+			if (detaching) detach(t);
+		}
+	};
+}
+
+function create_fragment$6(ctx) {
 	let div1;
 	let div0;
 	let ul;
 	let t0;
 	let t1;
-	let t2;
-	let t3;
 	let current;
-	let each_value = /*tabs*/ ctx[2];
+	let each_value = /*$sidebar*/ ctx[1].tabs;
 	let each_blocks = [];
 
 	for (let i = 0; i < each_value.length; i += 1) {
-		each_blocks[i] = create_each_block$2(get_each_context$2(ctx, each_value, i));
+		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
 	}
 
+	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+		each_blocks[i] = null;
+	});
+
 	const separator = new Separator({});
-
-	const project = new Project({
-			props: {
-				state: /*state*/ ctx[0],
-				focused: /*focused*/ ctx[1]
-			}
-		});
-
-	const alldocuments = new AllDocuments({
-			props: {
-				state: /*state*/ ctx[0],
-				focused: /*focused*/ ctx[1]
-			}
-		});
-
-	const preview = new Preview({ props: { state: /*state*/ ctx[0] } });
+	const project_1 = new Project({});
 
 	return {
 		c() {
@@ -3782,17 +2653,14 @@ function create_fragment$f(ctx) {
 			t0 = space();
 			create_component(separator.$$.fragment);
 			t1 = space();
-			create_component(project.$$.fragment);
-			t2 = space();
-			create_component(alldocuments.$$.fragment);
-			t3 = space();
-			create_component(preview.$$.fragment);
-			attr(ul, "class", "svelte-1mcq9jl");
+			create_component(project_1.$$.fragment);
+			attr(ul, "class", "svelte-1vavrd1");
 			attr(div0, "id", "tabs");
-			attr(div0, "class", "svelte-1mcq9jl");
-			attr(div1, "id", "sidebar2");
-			attr(div1, "class", "svelte-1mcq9jl");
-			toggle_class(div1, "focused", /*focused*/ ctx[1]);
+			attr(div0, "class", "svelte-1vavrd1");
+			attr(div1, "id", "sidebar");
+			set_style(div1, "--state-sideBarWidth", "250px");
+			attr(div1, "class", "svelte-1vavrd1");
+			toggle_class(div1, "focused", /*focused*/ ctx[0]);
 		},
 		m(target, anchor) {
 			insert(target, div1, anchor);
@@ -3806,207 +2674,733 @@ function create_fragment$f(ctx) {
 			append(div1, t0);
 			mount_component(separator, div1, null);
 			append(div1, t1);
-			mount_component(project, div1, null);
-			append(div1, t2);
-			mount_component(alldocuments, div1, null);
-			append(div1, t3);
-			mount_component(preview, div1, null);
+			mount_component(project_1, div1, null);
 			current = true;
 		},
 		p(ctx, [dirty]) {
-			if (dirty & /*tabs, state, clickTab*/ 5) {
-				each_value = /*tabs*/ ctx[2];
+			if (dirty & /*$sidebar*/ 2) {
+				each_value = /*$sidebar*/ ctx[1].tabs;
 				let i;
 
 				for (i = 0; i < each_value.length; i += 1) {
-					const child_ctx = get_each_context$2(ctx, each_value, i);
+					const child_ctx = get_each_context(ctx, each_value, i);
 
 					if (each_blocks[i]) {
 						each_blocks[i].p(child_ctx, dirty);
+						transition_in(each_blocks[i], 1);
 					} else {
-						each_blocks[i] = create_each_block$2(child_ctx);
+						each_blocks[i] = create_each_block(child_ctx);
 						each_blocks[i].c();
+						transition_in(each_blocks[i], 1);
 						each_blocks[i].m(ul, null);
 					}
 				}
 
-				for (; i < each_blocks.length; i += 1) {
-					each_blocks[i].d(1);
+				group_outros();
+
+				for (i = each_value.length; i < each_blocks.length; i += 1) {
+					out(i);
 				}
 
-				each_blocks.length = each_value.length;
+				check_outros();
 			}
 
-			const project_changes = {};
-			if (dirty & /*state*/ 1) project_changes.state = /*state*/ ctx[0];
-			if (dirty & /*focused*/ 2) project_changes.focused = /*focused*/ ctx[1];
-			project.$set(project_changes);
-			const alldocuments_changes = {};
-			if (dirty & /*state*/ 1) alldocuments_changes.state = /*state*/ ctx[0];
-			if (dirty & /*focused*/ 2) alldocuments_changes.focused = /*focused*/ ctx[1];
-			alldocuments.$set(alldocuments_changes);
-			const preview_changes = {};
-			if (dirty & /*state*/ 1) preview_changes.state = /*state*/ ctx[0];
-			preview.$set(preview_changes);
-
-			if (dirty & /*focused*/ 2) {
-				toggle_class(div1, "focused", /*focused*/ ctx[1]);
+			if (dirty & /*focused*/ 1) {
+				toggle_class(div1, "focused", /*focused*/ ctx[0]);
 			}
 		},
 		i(local) {
 			if (current) return;
+
+			for (let i = 0; i < each_value.length; i += 1) {
+				transition_in(each_blocks[i]);
+			}
+
 			transition_in(separator.$$.fragment, local);
-			transition_in(project.$$.fragment, local);
-			transition_in(alldocuments.$$.fragment, local);
-			transition_in(preview.$$.fragment, local);
+			transition_in(project_1.$$.fragment, local);
 			current = true;
 		},
 		o(local) {
+			each_blocks = each_blocks.filter(Boolean);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				transition_out(each_blocks[i]);
+			}
+
 			transition_out(separator.$$.fragment, local);
-			transition_out(project.$$.fragment, local);
-			transition_out(alldocuments.$$.fragment, local);
-			transition_out(preview.$$.fragment, local);
+			transition_out(project_1.$$.fragment, local);
 			current = false;
 		},
 		d(detaching) {
 			if (detaching) detach(div1);
 			destroy_each(each_blocks, detaching);
 			destroy_component(separator);
-			destroy_component(project);
-			destroy_component(alldocuments);
-			destroy_component(preview);
+			destroy_component(project_1);
 		}
 	};
 }
 
-function clickTab(evt, index) {
-	window.api.send("dispatch", {
-		type: "SELECT_SIDEBAR_TAB_BY_INDEX",
-		index
-	});
-}
-
-function instance$f($$self, $$props, $$invalidate) {
-	let { state = {} } = $$props;
-	let { focused } = $$props;
-	const click_handler = (index, evt) => clickTab(evt, index);
-
-	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(0, state = $$props.state);
-		if ("focused" in $$props) $$invalidate(1, focused = $$props.focused);
-	};
-
-	let tabs;
+function instance$6($$self, $$props, $$invalidate) {
+	let $project;
+	let $sidebar;
+	component_subscribe($$self, project, $$value => $$invalidate(2, $project = $$value));
+	component_subscribe($$self, sidebar, $$value => $$invalidate(1, $sidebar = $$value));
+	let focused;
 
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*state*/ 1) {
-			 $$invalidate(2, tabs = state.sideBar2.tabs);
+		if ($$self.$$.dirty & /*$project*/ 4) {
+			 $$invalidate(0, focused = $project.focusedLayoutSection == "sidebar");
 		}
 	};
 
-	return [state, focused, tabs, click_handler];
+	return [focused, $sidebar];
 }
 
 class SideBar extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-1mcq9jl-style")) add_css$d();
-		init(this, options, instance$f, create_fragment$f, safe_not_equal, { state: 0, focused: 1 });
+		if (!document.getElementById("svelte-1vavrd1-style")) add_css$6();
+		init(this, options, instance$6, create_fragment$6, safe_not_equal, {});
+	}
+}
+
+/* src/js/renderer/component/StateDisplay.svelte generated by Svelte v3.22.3 */
+
+function add_css$7() {
+	var style = element("style");
+	style.id = "svelte-wdxnb3-style";
+	style.textContent = "#stateDisplay.svelte-wdxnb3.svelte-wdxnb3{padding:0rem 1rem;background-color:var(--windowBackgroundColor);overflow:scroll}h1.svelte-wdxnb3.svelte-wdxnb3{font-family:'SF Pro Display';font-weight:bold;font-size:20px;line-height:24px;letter-spacing:-0.12px;color:var(--labelColor)}.stateTable.svelte-wdxnb3.svelte-wdxnb3{border:1px solid gray;border-radius:4px;padding:0.4em 0.4em;margin-bottom:2em}.property.svelte-wdxnb3.svelte-wdxnb3{display:flex;direction:column;padding:0.2em 0;border-bottom:1px solid rgba(0, 0, 0, 0.1)}.property.svelte-wdxnb3 div.svelte-wdxnb3{display:inline-block;white-space:pre-wrap;overflow:scroll}.property.svelte-wdxnb3 .key.svelte-wdxnb3{font:caption;font-weight:normal;font-size:11px;line-height:13px;letter-spacing:0.07px;text-align:right;color:var(--labelColor);padding-right:0.6em}.property.svelte-wdxnb3 .val.svelte-wdxnb3{font:caption;font-weight:normal;font-size:11px;line-height:13px;letter-spacing:0.07px;flex:1 1 auto;color:var(--secondaryLabelColor)}";
+	append(document.head, style);
+}
+
+function create_fragment$7(ctx) {
+	let div8;
+	let h1;
+	let t1;
+	let div3;
+	let div2;
+	let div0;
+	let t3;
+	let div1;
+	let t4_value = stringify(/*$files*/ ctx[0]) + "";
+	let t4;
+	let t5;
+	let div7;
+	let div6;
+	let div4;
+	let t7;
+	let div5;
+	let t8_value = stringify(/*$state*/ ctx[1]) + "";
+	let t8;
+
+	return {
+		c() {
+			div8 = element("div");
+			h1 = element("h1");
+			h1.textContent = "State";
+			t1 = space();
+			div3 = element("div");
+			div2 = element("div");
+			div0 = element("div");
+			div0.textContent = "files";
+			t3 = space();
+			div1 = element("div");
+			t4 = text(t4_value);
+			t5 = space();
+			div7 = element("div");
+			div6 = element("div");
+			div4 = element("div");
+			div4.textContent = "state";
+			t7 = space();
+			div5 = element("div");
+			t8 = text(t8_value);
+			attr(h1, "class", "svelte-wdxnb3");
+			attr(div0, "class", "key svelte-wdxnb3");
+			attr(div1, "class", "val svelte-wdxnb3");
+			attr(div2, "class", "property svelte-wdxnb3");
+			attr(div3, "class", "stateTable svelte-wdxnb3");
+			attr(div4, "class", "key svelte-wdxnb3");
+			attr(div5, "class", "val svelte-wdxnb3");
+			attr(div6, "class", "property svelte-wdxnb3");
+			attr(div7, "class", "stateTable svelte-wdxnb3");
+			attr(div8, "id", "stateDisplay");
+			attr(div8, "class", "svelte-wdxnb3");
+		},
+		m(target, anchor) {
+			insert(target, div8, anchor);
+			append(div8, h1);
+			append(div8, t1);
+			append(div8, div3);
+			append(div3, div2);
+			append(div2, div0);
+			append(div2, t3);
+			append(div2, div1);
+			append(div1, t4);
+			append(div8, t5);
+			append(div8, div7);
+			append(div7, div6);
+			append(div6, div4);
+			append(div6, t7);
+			append(div6, div5);
+			append(div5, t8);
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*$files*/ 1 && t4_value !== (t4_value = stringify(/*$files*/ ctx[0]) + "")) set_data(t4, t4_value);
+			if (dirty & /*$state*/ 2 && t8_value !== (t8_value = stringify(/*$state*/ ctx[1]) + "")) set_data(t8, t8_value);
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(div8);
+		}
+	};
+}
+
+function instance$7($$self, $$props, $$invalidate) {
+	let $files;
+	let $state;
+	component_subscribe($$self, files, $$value => $$invalidate(0, $files = $$value));
+	component_subscribe($$self, state, $$value => $$invalidate(1, $state = $$value));
+	return [$files, $state];
+}
+
+class StateDisplay extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-wdxnb3-style")) add_css$7();
+		init(this, options, instance$7, create_fragment$7, safe_not_equal, {});
+	}
+}
+
+/* src/js/renderer/component/UI/ToolbarButton.svelte generated by Svelte v3.22.3 */
+
+function add_css$8() {
+	var style = element("style");
+	style.id = "svelte-141xp47-style";
+	style.textContent = ".button.svelte-141xp47{position:relative}.button.svelte-141xp47:hover{background-color:var(--disabledControlTextColor)}.icon.svelte-141xp47{position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;width:18px;height:18px}";
+	append(document.head, style);
+}
+
+// (48:2) {#if label}
+function create_if_block_1(ctx) {
+	let div;
+	let t;
+
+	return {
+		c() {
+			div = element("div");
+			t = text(/*label*/ ctx[0]);
+			attr(div, "class", "label");
+		},
+		m(target, anchor) {
+			insert(target, div, anchor);
+			append(div, t);
+		},
+		p(ctx, dirty) {
+			if (dirty & /*label*/ 1) set_data(t, /*label*/ ctx[0]);
+		},
+		d(detaching) {
+			if (detaching) detach(div);
+		}
+	};
+}
+
+// (51:2) {#if tooltip}
+function create_if_block$1(ctx) {
+	let div;
+	let t;
+
+	return {
+		c() {
+			div = element("div");
+			t = text(/*tooltip*/ ctx[1]);
+			attr(div, "class", "tooltip");
+		},
+		m(target, anchor) {
+			insert(target, div, anchor);
+			append(div, t);
+		},
+		p(ctx, dirty) {
+			if (dirty & /*tooltip*/ 2) set_data(t, /*tooltip*/ ctx[1]);
+		},
+		d(detaching) {
+			if (detaching) detach(div);
+		}
+	};
+}
+
+function create_fragment$8(ctx) {
+	let div1;
+	let div0;
+	let t0;
+	let t1;
+	let if_block0 = /*label*/ ctx[0] && create_if_block_1(ctx);
+	let if_block1 = /*tooltip*/ ctx[1] && create_if_block$1(ctx);
+
+	return {
+		c() {
+			div1 = element("div");
+			div0 = element("div");
+			t0 = space();
+			if (if_block0) if_block0.c();
+			t1 = space();
+			if (if_block1) if_block1.c();
+			attr(div0, "class", "icon svelte-141xp47");
+			attr(div0, "style", /*iconStyles*/ ctx[3]);
+			attr(div1, "class", "button svelte-141xp47");
+			attr(div1, "role", "button");
+			attr(div1, "style", /*buttonStyles*/ ctx[2]);
+		},
+		m(target, anchor) {
+			insert(target, div1, anchor);
+			append(div1, div0);
+			append(div1, t0);
+			if (if_block0) if_block0.m(div1, null);
+			append(div1, t1);
+			if (if_block1) if_block1.m(div1, null);
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*iconStyles*/ 8) {
+				attr(div0, "style", /*iconStyles*/ ctx[3]);
+			}
+
+			if (/*label*/ ctx[0]) {
+				if (if_block0) {
+					if_block0.p(ctx, dirty);
+				} else {
+					if_block0 = create_if_block_1(ctx);
+					if_block0.c();
+					if_block0.m(div1, t1);
+				}
+			} else if (if_block0) {
+				if_block0.d(1);
+				if_block0 = null;
+			}
+
+			if (/*tooltip*/ ctx[1]) {
+				if (if_block1) {
+					if_block1.p(ctx, dirty);
+				} else {
+					if_block1 = create_if_block$1(ctx);
+					if_block1.c();
+					if_block1.m(div1, null);
+				}
+			} else if (if_block1) {
+				if_block1.d(1);
+				if_block1 = null;
+			}
+
+			if (dirty & /*buttonStyles*/ 4) {
+				attr(div1, "style", /*buttonStyles*/ ctx[2]);
+			}
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(div1);
+			if (if_block0) if_block0.d();
+			if (if_block1) if_block1.d();
+		}
+	};
+}
+
+function instance$8($$self, $$props, $$invalidate) {
+	let { width = 34 } = $$props;
+	let { height = 28 } = $$props;
+	let { borderRadius = 6 } = $$props;
+	let { iconImage = null } = $$props;
+	let { iconColor = "--controlTextColor" } = $$props;
+	let { label = null } = $$props;
+	let { tooltip = null } = $$props;
+	let buttonStyles = "";
+	let iconStyles = "";
+
+	$$self.$set = $$props => {
+		if ("width" in $$props) $$invalidate(4, width = $$props.width);
+		if ("height" in $$props) $$invalidate(5, height = $$props.height);
+		if ("borderRadius" in $$props) $$invalidate(6, borderRadius = $$props.borderRadius);
+		if ("iconImage" in $$props) $$invalidate(7, iconImage = $$props.iconImage);
+		if ("iconColor" in $$props) $$invalidate(8, iconColor = $$props.iconColor);
+		if ("label" in $$props) $$invalidate(0, label = $$props.label);
+		if ("tooltip" in $$props) $$invalidate(1, tooltip = $$props.tooltip);
+	};
+
+	$$self.$$.update = () => {
+		if ($$self.$$.dirty & /*width, height, borderRadius*/ 112) {
+			// Button styles
+			 {
+				$$invalidate(2, buttonStyles = `width: ${width}px; height: ${height}px; border-radius: ${borderRadius}px;`);
+			}
+		}
+
+		if ($$self.$$.dirty & /*iconImage, iconColor*/ 384) {
+			// Icon styles
+			 {
+				if (iconImage) {
+					$$invalidate(3, iconStyles = `-webkit-mask-image: var(${iconImage}); background-color: var(${iconColor});`);
+				}
+			}
+		}
+	};
+
+	return [
+		label,
+		tooltip,
+		buttonStyles,
+		iconStyles,
+		width,
+		height,
+		borderRadius,
+		iconImage,
+		iconColor
+	];
+}
+
+class ToolbarButton extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-141xp47-style")) add_css$8();
+
+		init(this, options, instance$8, create_fragment$8, safe_not_equal, {
+			width: 4,
+			height: 5,
+			borderRadius: 6,
+			iconImage: 7,
+			iconColor: 8,
+			label: 0,
+			tooltip: 1
+		});
+	}
+}
+
+/* src/js/renderer/component/AddressBar.svelte generated by Svelte v3.22.3 */
+
+function add_css$9() {
+	var style = element("style");
+	style.id = "svelte-1qn5t4o-style";
+	style.textContent = "#addressbar.svelte-1qn5t4o{margin:0 auto}.searchfield.svelte-1qn5t4o{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);position:relative;background-color:rgba(0, 0, 0, 0.04);border-radius:4px;min-height:20px;min-width:20rem;max-width:40rem;display:flex;flex-direction:row;align-items:center}.searchfield.svelte-1qn5t4o:focus-within{animation-fill-mode:forwards;animation-name:svelte-1qn5t4o-selectField;animation-duration:0.3s}@keyframes svelte-1qn5t4o-selectField{from{box-shadow:0 0 0 10px transparent}to{box-shadow:0 0 0 3.5px rgba(59, 153, 252, 0.5)}}.magnifying-glass.svelte-1qn5t4o{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;position:absolute;top:50%;transform:translate(0, -50%);background-color:var(--controlTextColor);-webkit-mask-image:var(--img-magnifyingglass);position:absolute;width:13px;height:13px;left:5px;opacity:0.5}.placeholder.svelte-1qn5t4o{position:absolute;top:50%;transform:translate(0, -50%);color:var(--placeholderTextColor);left:24px;pointer-events:none}input.svelte-1qn5t4o{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);margin:1px 0 0 24px;width:100%;background:transparent;outline:none;border:none}";
+	append(document.head, style);
+}
+
+// (96:4) {#if !query}
+function create_if_block$2(ctx) {
+	let span;
+	let t;
+
+	return {
+		c() {
+			span = element("span");
+			t = text(/*placeholder*/ ctx[1]);
+			attr(span, "class", "placeholder svelte-1qn5t4o");
+		},
+		m(target, anchor) {
+			insert(target, span, anchor);
+			append(span, t);
+		},
+		p(ctx, dirty) {
+			if (dirty & /*placeholder*/ 2) set_data(t, /*placeholder*/ ctx[1]);
+		},
+		d(detaching) {
+			if (detaching) detach(span);
+		}
+	};
+}
+
+function create_fragment$9(ctx) {
+	let div2;
+	let div1;
+	let div0;
+	let t0;
+	let t1;
+	let input_1;
+	let dispose;
+	let if_block = !/*query*/ ctx[0] && create_if_block$2(ctx);
+
+	return {
+		c() {
+			div2 = element("div");
+			div1 = element("div");
+			div0 = element("div");
+			t0 = space();
+			if (if_block) if_block.c();
+			t1 = space();
+			input_1 = element("input");
+			attr(div0, "class", "magnifying-glass svelte-1qn5t4o");
+			attr(input_1, "type", "text");
+			attr(input_1, "class", "svelte-1qn5t4o");
+			attr(div1, "class", "searchfield svelte-1qn5t4o");
+			attr(div2, "id", "addressbar");
+			attr(div2, "class", "svelte-1qn5t4o");
+		},
+		m(target, anchor, remount) {
+			insert(target, div2, anchor);
+			append(div2, div1);
+			append(div1, div0);
+			append(div1, t0);
+			if (if_block) if_block.m(div1, null);
+			append(div1, t1);
+			append(div1, input_1);
+			/*input_1_binding*/ ctx[7](input_1);
+			set_input_value(input_1, /*query*/ ctx[0]);
+			if (remount) run_all(dispose);
+
+			dispose = [
+				listen(window, "keydown", /*handleKeydown*/ ctx[3]),
+				listen(div0, "mousedown", prevent_default(/*mousedown_handler*/ ctx[6])),
+				listen(input_1, "input", /*input_1_input_handler*/ ctx[8])
+			];
+		},
+		p(ctx, [dirty]) {
+			if (!/*query*/ ctx[0]) {
+				if (if_block) {
+					if_block.p(ctx, dirty);
+				} else {
+					if_block = create_if_block$2(ctx);
+					if_block.c();
+					if_block.m(div1, t1);
+				}
+			} else if (if_block) {
+				if_block.d(1);
+				if_block = null;
+			}
+
+			if (dirty & /*query*/ 1 && input_1.value !== /*query*/ ctx[0]) {
+				set_input_value(input_1, /*query*/ ctx[0]);
+			}
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) detach(div2);
+			if (if_block) if_block.d();
+			/*input_1_binding*/ ctx[7](null);
+			run_all(dispose);
+		}
+	};
+}
+
+function instance$9($$self, $$props, $$invalidate) {
+	let { state = {} } = $$props;
+	let { placeholder = "Search" } = $$props;
+	let { query = "" } = $$props;
+	let { focused = false } = $$props;
+	let input = null;
+
+	// $: console.log(state.openDoc)
+	function handleKeydown(evt) {
+		if (!focused) return;
+
+		if (evt.key == "f" && evt.metaKey) {
+			input.select();
+		}
+	}
+
+	const mousedown_handler = () => input.select();
+
+	function input_1_binding($$value) {
+		binding_callbacks[$$value ? "unshift" : "push"](() => {
+			$$invalidate(2, input = $$value);
+		});
+	}
+
+	function input_1_input_handler() {
+		query = this.value;
+		$$invalidate(0, query);
+	}
+
+	$$self.$set = $$props => {
+		if ("state" in $$props) $$invalidate(4, state = $$props.state);
+		if ("placeholder" in $$props) $$invalidate(1, placeholder = $$props.placeholder);
+		if ("query" in $$props) $$invalidate(0, query = $$props.query);
+		if ("focused" in $$props) $$invalidate(5, focused = $$props.focused);
+	};
+
+	return [
+		query,
+		placeholder,
+		input,
+		handleKeydown,
+		state,
+		focused,
+		mousedown_handler,
+		input_1_binding,
+		input_1_input_handler
+	];
+}
+
+class AddressBar extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-1qn5t4o-style")) add_css$9();
+
+		init(this, options, instance$9, create_fragment$9, safe_not_equal, {
+			state: 4,
+			placeholder: 1,
+			query: 0,
+			focused: 5
+		});
+	}
+}
+
+/* src/js/renderer/component/Toolbar.svelte generated by Svelte v3.22.3 */
+
+function add_css$a() {
+	var style = element("style");
+	style.id = "svelte-1dygpkf-style";
+	style.textContent = "#address-bar.svelte-1dygpkf{width:100%;height:40px;display:flex;flex-direction:row;align-items:center;padding:0 5px}";
+	append(document.head, style);
+}
+
+function create_fragment$a(ctx) {
+	let div;
+	let t0;
+	let t1;
+	let current;
+
+	const toolbarbutton0 = new ToolbarButton({
+			props: {
+				class: "sidebarBtn",
+				iconImage: "--img-sidebar-left"
+			}
+		});
+
+	const addressbar = new AddressBar({ props: { state: /*state*/ ctx[0] } });
+
+	const toolbarbutton1 = new ToolbarButton({
+			props: {
+				class: "gridBtn",
+				iconImage: "--img-rectangle-grid-2x2"
+			}
+		});
+
+	return {
+		c() {
+			div = element("div");
+			create_component(toolbarbutton0.$$.fragment);
+			t0 = space();
+			create_component(addressbar.$$.fragment);
+			t1 = space();
+			create_component(toolbarbutton1.$$.fragment);
+			attr(div, "id", "address-bar");
+			attr(div, "class", "svelte-1dygpkf");
+		},
+		m(target, anchor) {
+			insert(target, div, anchor);
+			mount_component(toolbarbutton0, div, null);
+			append(div, t0);
+			mount_component(addressbar, div, null);
+			append(div, t1);
+			mount_component(toolbarbutton1, div, null);
+			current = true;
+		},
+		p(ctx, [dirty]) {
+			const addressbar_changes = {};
+			if (dirty & /*state*/ 1) addressbar_changes.state = /*state*/ ctx[0];
+			addressbar.$set(addressbar_changes);
+		},
+		i(local) {
+			if (current) return;
+			transition_in(toolbarbutton0.$$.fragment, local);
+			transition_in(addressbar.$$.fragment, local);
+			transition_in(toolbarbutton1.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(toolbarbutton0.$$.fragment, local);
+			transition_out(addressbar.$$.fragment, local);
+			transition_out(toolbarbutton1.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) detach(div);
+			destroy_component(toolbarbutton0);
+			destroy_component(addressbar);
+			destroy_component(toolbarbutton1);
+		}
+	};
+}
+
+function instance$a($$self, $$props, $$invalidate) {
+	let { state = {} } = $$props;
+
+	$$self.$set = $$props => {
+		if ("state" in $$props) $$invalidate(0, state = $$props.state);
+	};
+
+	return [state];
+}
+
+class Toolbar extends SvelteComponent {
+	constructor(options) {
+		super();
+		if (!document.getElementById("svelte-1dygpkf-style")) add_css$a();
+		init(this, options, instance$a, create_fragment$a, safe_not_equal, { state: 0 });
 	}
 }
 
 /* src/js/renderer/component/Layout.svelte generated by Svelte v3.22.3 */
 
-function add_css$e() {
+function add_css$b() {
 	var style = element("style");
-	style.id = "svelte-223fs4-style";
-	style.textContent = "#body.svelte-223fs4{background-color:var(--windowBackgroundColor)}";
+	style.id = "svelte-xj1g5h-style";
+	style.textContent = "#main.svelte-xj1g5h{background-color:var(--windowBackgroundColor);width:calc(100vw - 250px);transform:translate(250px, 0);position:absolute;top:0;left:0}";
 	append(document.head, style);
 }
 
-// (37:0) {:else}
-function create_else_block$1(ctx) {
-	let div1;
+// (26:0) {:else}
+function create_else_block(ctx) {
+	let div;
 	let t0;
-	let div0;
 	let t1;
 	let current;
-
-	const flexpanel = new FlexPanel({
-			props: {
-				visible: /*state*/ ctx[0].sideBar.show,
-				min: 250,
-				max: 300,
-				start: 250,
-				$$slots: { default: [create_default_slot$1] },
-				$$scope: { ctx }
-			}
-		});
-
-	flexpanel.$on("click", /*click_handler*/ ctx[5]);
-	const toolbar = new ToolBar({ props: { state: /*state*/ ctx[0] } });
+	const toolbar = new Toolbar({});
 	const separator = new Separator({});
+	const statedisplay = new StateDisplay({});
 
 	return {
 		c() {
-			div1 = element("div");
-			create_component(flexpanel.$$.fragment);
-			t0 = space();
-			div0 = element("div");
+			div = element("div");
 			create_component(toolbar.$$.fragment);
-			t1 = space();
+			t0 = space();
 			create_component(separator.$$.fragment);
-			attr(div0, "class", "flexContainerColumn svelte-223fs4");
-			attr(div0, "id", "body");
-			attr(div1, "class", "flexContainerRow");
+			t1 = space();
+			create_component(statedisplay.$$.fragment);
+			attr(div, "id", "main");
+			attr(div, "class", "flexContainerColumn svelte-xj1g5h");
 		},
 		m(target, anchor) {
-			insert(target, div1, anchor);
-			mount_component(flexpanel, div1, null);
-			append(div1, t0);
-			append(div1, div0);
-			mount_component(toolbar, div0, null);
-			append(div0, t1);
-			mount_component(separator, div0, null);
+			insert(target, div, anchor);
+			mount_component(toolbar, div, null);
+			append(div, t0);
+			mount_component(separator, div, null);
+			append(div, t1);
+			mount_component(statedisplay, div, null);
 			current = true;
-		},
-		p(ctx, dirty) {
-			const flexpanel_changes = {};
-			if (dirty & /*state*/ 1) flexpanel_changes.visible = /*state*/ ctx[0].sideBar.show;
-
-			if (dirty & /*$$scope, state*/ 65) {
-				flexpanel_changes.$$scope = { dirty, ctx };
-			}
-
-			flexpanel.$set(flexpanel_changes);
-			const toolbar_changes = {};
-			if (dirty & /*state*/ 1) toolbar_changes.state = /*state*/ ctx[0];
-			toolbar.$set(toolbar_changes);
 		},
 		i(local) {
 			if (current) return;
-			transition_in(flexpanel.$$.fragment, local);
 			transition_in(toolbar.$$.fragment, local);
 			transition_in(separator.$$.fragment, local);
+			transition_in(statedisplay.$$.fragment, local);
 			current = true;
 		},
 		o(local) {
-			transition_out(flexpanel.$$.fragment, local);
 			transition_out(toolbar.$$.fragment, local);
 			transition_out(separator.$$.fragment, local);
+			transition_out(statedisplay.$$.fragment, local);
 			current = false;
 		},
 		d(detaching) {
-			if (detaching) detach(div1);
-			destroy_component(flexpanel);
+			if (detaching) detach(div);
 			destroy_component(toolbar);
 			destroy_component(separator);
+			destroy_component(statedisplay);
 		}
 	};
 }
 
-// (35:0) {#if state.projectPath == ''}
-function create_if_block$7(ctx) {
+// (24:0) {#if $project.directory == ''}
+function create_if_block$3(ctx) {
 	let current;
 	const firstrun = new FirstRun({});
 
@@ -4018,7 +3412,6 @@ function create_if_block$7(ctx) {
 			mount_component(firstrun, target, anchor);
 			current = true;
 		},
-		p: noop,
 		i(local) {
 			if (current) return;
 			transition_in(firstrun.$$.fragment, local);
@@ -4034,56 +3427,18 @@ function create_if_block$7(ctx) {
 	};
 }
 
-// (39:4) <FlexPanel       visible={state.sideBar.show}       min={250}       max={300}       start={250}       on:click={() => setLayoutFocus('navigation')}>
-function create_default_slot$1(ctx) {
-	let current;
-
-	const sidebar = new SideBar({
-			props: {
-				state: /*state*/ ctx[0],
-				focused: /*state*/ ctx[0].focusedLayoutSection == "navigation"
-			}
-		});
-
-	return {
-		c() {
-			create_component(sidebar.$$.fragment);
-		},
-		m(target, anchor) {
-			mount_component(sidebar, target, anchor);
-			current = true;
-		},
-		p(ctx, dirty) {
-			const sidebar_changes = {};
-			if (dirty & /*state*/ 1) sidebar_changes.state = /*state*/ ctx[0];
-			if (dirty & /*state*/ 1) sidebar_changes.focused = /*state*/ ctx[0].focusedLayoutSection == "navigation";
-			sidebar.$set(sidebar_changes);
-		},
-		i(local) {
-			if (current) return;
-			transition_in(sidebar.$$.fragment, local);
-			current = true;
-		},
-		o(local) {
-			transition_out(sidebar.$$.fragment, local);
-			current = false;
-		},
-		d(detaching) {
-			destroy_component(sidebar, detaching);
-		}
-	};
-}
-
-function create_fragment$g(ctx) {
+function create_fragment$b(ctx) {
+	let t;
 	let current_block_type_index;
 	let if_block;
 	let if_block_anchor;
 	let current;
-	const if_block_creators = [create_if_block$7, create_else_block$1];
+	const sidebar = new SideBar({});
+	const if_block_creators = [create_if_block$3, create_else_block];
 	const if_blocks = [];
 
 	function select_block_type(ctx, dirty) {
-		if (/*state*/ ctx[0].projectPath == "") return 0;
+		if (/*$project*/ ctx[0].directory == "") return 0;
 		return 1;
 	}
 
@@ -4092,10 +3447,14 @@ function create_fragment$g(ctx) {
 
 	return {
 		c() {
+			create_component(sidebar.$$.fragment);
+			t = space();
 			if_block.c();
 			if_block_anchor = empty();
 		},
 		m(target, anchor) {
+			mount_component(sidebar, target, anchor);
+			insert(target, t, anchor);
 			if_blocks[current_block_type_index].m(target, anchor);
 			insert(target, if_block_anchor, anchor);
 			current = true;
@@ -4104,9 +3463,7 @@ function create_fragment$g(ctx) {
 			let previous_block_index = current_block_type_index;
 			current_block_type_index = select_block_type(ctx);
 
-			if (current_block_type_index === previous_block_index) {
-				if_blocks[current_block_type_index].p(ctx, dirty);
-			} else {
+			if (current_block_type_index !== previous_block_index) {
 				group_outros();
 
 				transition_out(if_blocks[previous_block_index], 1, 1, () => {
@@ -4127,153 +3484,72 @@ function create_fragment$g(ctx) {
 		},
 		i(local) {
 			if (current) return;
+			transition_in(sidebar.$$.fragment, local);
 			transition_in(if_block);
 			current = true;
 		},
 		o(local) {
+			transition_out(sidebar.$$.fragment, local);
 			transition_out(if_block);
 			current = false;
 		},
 		d(detaching) {
+			destroy_component(sidebar, detaching);
+			if (detaching) detach(t);
 			if_blocks[current_block_type_index].d(detaching);
 			if (detaching) detach(if_block_anchor);
 		}
 	};
 }
 
-function instance$g($$self, $$props, $$invalidate) {
-	let { state = {} } = $$props;
-	let { oldState = {} } = $$props;
-	let focusedSection;
-
-	function setLayoutFocus(section) {
-		if (state.focusedLayoutSection == section) return;
-		window.api.send("dispatch", { type: "SET_LAYOUT_FOCUS", section });
-	}
-
-	const click_handler = () => setLayoutFocus("navigation");
-
-	$$self.$set = $$props => {
-		if ("state" in $$props) $$invalidate(0, state = $$props.state);
-		if ("oldState" in $$props) $$invalidate(2, oldState = $$props.oldState);
-	};
-
-	let isEditorVisible;
-
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*state*/ 1) {
-			 isEditorVisible = state.openDoc.id;
-		}
-	};
-
-	return [
-		state,
-		setLayoutFocus,
-		oldState,
-		isEditorVisible,
-		focusedSection,
-		click_handler
-	];
+function instance$b($$self, $$props, $$invalidate) {
+	let $project;
+	component_subscribe($$self, project, $$value => $$invalidate(0, $project = $$value));
+	return [$project];
 }
 
 class Layout extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-223fs4-style")) add_css$e();
-		init(this, options, instance$g, create_fragment$g, safe_not_equal, { state: 0, oldState: 2 });
-	}
-
-	get state() {
-		return this.$$.ctx[0];
-	}
-
-	set state(state) {
-		this.$set({ state });
-		flush();
-	}
-
-	get oldState() {
-		return this.$$.ctx[2];
-	}
-
-	set oldState(oldState) {
-		this.$set({ oldState });
-		flush();
+		if (!document.getElementById("svelte-xj1g5h-style")) add_css$b();
+		init(this, options, instance$b, create_fragment$b, safe_not_equal, {});
 	}
 }
 
-// import { mountReplace } from './utils'
-// import Fuse from './third-party/fuse/fuse.esm.js'
+window.api.receive("stateChanged", (state, oldState) => {
 
+  // Close window: On close window, complete necessary actions (e.g. save changes to edited docs), then tell state that window is safe to close. This triggers the window actually closing.
+  const mainWantsToCloseWindow = hasChangedTo('window.status', 'wantsToClose', window.project, window.oldProject);
+
+  if (mainWantsToCloseWindow) {
+    // DO STUFF...
+    window.api.send('dispatch', {
+      type: 'CAN_SAFELY_CLOSE_WINDOW',
+    });
+  }
+});
+
+
+// Setup renderer
 async function setup() {
 
+  // Get initial state and files
   const initialState = await window.api.invoke('getState');
+  const initialFiles = await window.api.invoke('getFiles');
 
-  // Apply `Layout` svelte component
+  // Create managers
+  const stateManager = new StateManager(initialState, initialFiles);
+  const themeManager = new ThemeManager(initialState);
+
+  // Create layout
   const layout = new Layout({
-    target: document.querySelector('#layout'),
-    props: {
-      state: initialState,
-      oldState: initialState,
-    }
+    target: document.querySelector('#layout')
   });
 
-  window.api.receive("stateChanged", (newState, oldState) => {
-
-    // Update Layout component `state` assignments. This then ripples throughout the rest of the app, as each component passes the update state on to it's children, successively.
-    layout.state = newState;
-    layout.oldState = oldState;
-
-    // Update appearance
-    if (newState.changed.includes("appearance")) {
-      setTheme(newState.appearance.theme);
-      setSystemColors();
-    }
-  });
-
-  // Set theme on initial load
-  setTheme(initialState.appearance.theme);
-
-
-  // Set system colors. 
-  // NOTE: This is turned off for now because of problems with Electron: returned values do not match what we expect from macOS, based on developer documentation and tests with Xcode apps. In part (although not entirely) because Electron returns values without alphas.
-  // setSystemColors()
-
-  // Show the window once setup is done.
+  // Finish setup by showing window
   window.api.send('showWindow');
-
 }
 
-function setTheme(themeName) {
-  // console.log('setTheme!', themeName);
-  const stylesheet = document.getElementById('theme-stylesheet');
-  const href = `./styles/themes/${themeName}/${themeName}.css`;
-  // console.log(stylesheet)
-  // console.log(href)
-  stylesheet.setAttribute('href', href);
-  // console.log(stylesheet)
-}
-
-/**
- * Get system colors from main, and write them to html element.
- */
-async function setSystemColors() {
-
-  const systemColors = await window.api.invoke('getSystemColors');
-  systemColors.forEach((c) => {
-    const property = `--${c.name}`;
-    const value = `${c.color}`;
-    // console.log(property, value)
-    // const rgb = hexToRgb(value)
-    // root.style.setProperty(property, value)
-  });
-}
 
 window.addEventListener('DOMContentLoaded', setup);
-
-// function reloading() {
-//   window.api.send('hideWindow')
-// }
-
-// window.addEventListener('beforeunload', reloading)
 //# sourceMappingURL=renderer.js.map

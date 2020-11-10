@@ -6,907 +6,153 @@ var electron = require('electron');
 var path = _interopDefault(require('path'));
 var fsExtra = require('fs-extra');
 var ElectronStore = _interopDefault(require('electron-store'));
-require('deep-diff');
-var moment = _interopDefault(require('moment'));
+var immer = require('immer');
 require('colors');
-var deepEql = _interopDefault(require('deep-eql'));
+require('deep-eql');
+require('deep-object-diff');
 var chokidar = _interopDefault(require('chokidar'));
-require('util');
 var matter = _interopDefault(require('gray-matter'));
 var removeMd = _interopDefault(require('remove-markdown'));
+require('deep-diff');
+require('child_process');
+require('url');
 
-function makeSideBarItem(type, label, id, parentId, icon, showFilesList, filter, sort) {
-  
-  const item = {
-    type: type ? type : '',
-    label: label ? label : '',
-    id: id ? id : '',
-    parentId: parentId ? parentId : '',
-    icon: icon ? icon : 'images/sidebar-default-icon.svg',
-    showFilesList: showFilesList ? showFilesList : false,
-    filter: filter ? filter : {
-      lookInFolderId: '*',
-      includeChildren: true,
-      filetypes: ['*'],
-      tags: [],
-      dateModified: { use: false, from: '', to: '' },
-      dateCreated: { use: false, from: '', to: '' },
-    },
-    sort: sort ? sort : { by: 'title', order: 'ascending' },
-    files: [],    
-    lastScrollPosition: 0,
-    expanded: true,
-    children: [],
-  };
+immer.enablePatches();
 
-  return item
-}
+const update = (state, action, windowId) =>
+  immer.produceWithPatches(state, (draft) => {
 
-const storeDefault = {
+    // Set a few useful, commonly-used variables
+    const win = windowId !== undefined ? electron.BrowserWindow.fromId(windowId) : undefined;
+    const project = windowId !== undefined ? draft.projects.find((p) => p.window.id == windowId) : undefined;
 
-  // ----------- APP ----------- //
+    switch (action.type) {
 
-  // App theme. See Readme.
-  appearance: {
-    userPref: 'match-system',
-    theme: 'gambier-light'
-  },
+      // -------- APP -------- //
 
-
-  // ----------- WINDOW ----------- //
-
-  // User specified path to folder containing their project files
-  projectPath: '',
-
-  // User specified path to CSL-JSON file containing their citatons
-  projectCitations: '',
-
-
-  focusedLayoutSection: 'navigation',
-
-  // A copy of the object of the document currently visible in the editor.
-  openDoc: {},
-
-  // A copy of the object of the selected `sideBar` item. We use a copy for the sake of convenience. It saves us having to continually find the original `sideBar` item, which would be tricky, as `sideBar` items don't have unique IDs (we instead use a heuristic based on id names).
-  selectedSideBarItem: {},
-
-  showFilesList: true,
-
-  // SideBar
-  sideBar2: {
-    show: true,
-    activeTab: {
-      index: 0,
-      name: "project"
-    },
-    preview: {
-      isOpen: true,
-    },
-    tabs: [
-      {
-        title: 'Project', name: 'project',
-        lastSelectedItem: {}, // id and type
-        selectedItems: [], // Array of ids
-        expandedItems: [], // Array of folder ids
-      },
-      {
-        title: 'All Documents', name: 'all-documents',
-        lastSelectedItem: {},
-        selectedItems: [],
-      },
-      {
-        title: 'Most Recent', name: 'most-recent',
-        lastSelectedItem: {},
-        selectedItems: [],
-      },
-      {
-        title: 'Tags', name: 'tags',
-        lastSelectedItem: {},
-        selectedItems: [],
-      },
-      {
-        title: 'Media', name: 'media',
-        lastSelectedItem: {},
-        selectedItems: [],
-      },
-      {
-        title: 'Citations', name: 'citations',
-        lastSelectedItem: {},
-        selectedItems: [],
-      },
-      {
-        title: 'Search', name: 'search',
-        lastSelectedItem: {},
-        selectedItems: [],
+      case 'START_COLD_START': {
+        // Update appStatus
+        draft.appStatus = 'coldStarting';
+        // Create new project, if there are none existing
+        const noExistingProjects = state.projects.length == 0;
+        if (noExistingProjects) {
+          createNewProject(draft);
+        } else {
+          // Check if directory still exists. Perhaps they've been deleted since the app was last opened. If it does not exist, or is empty '', remove the project.
+          state.projects.forEach((p, index) => {
+            const directoryExists = fsExtra.existsSync(p.directory);
+            if (!directoryExists) {
+              draft.projects.splice(index, 1);
+            }
+          });
+        }
+        break
       }
-    ],
-  },
 
-  // Contents
-  folders: [],
-  documents: [],
-  media: [],
-
-
-  // ----------- PANEL / TAB ----------- //
-
-  panels: [],
-
-  panel1: {
-    tabs: []
-  },
-
-  sourceMode: false,
-
-
-
-
-  // ----------- OLD ----------- //
-
-  // SideBar
-  sideBar: {
-    show: true,
-    folders: [],
-    documents: [
-      makeSideBarItem('filter', 'All', 'docs-all', '', 'images/sidebar-default-icon.svg', true,
-        {
-          lookInFolderId: '*',
-          includeChildren: true,
-          filetypes: ['.md', '.markdown'],
-          tags: [],
-          dateModified: { use: false, from: '', to: '' },
-          dateCreated: { use: false, from: '', to: '' },
-        },
-        { by: 'title', order: 'ascending' }),
-      makeSideBarItem('filter', 'Favorites', 'docs-favs', '', 'images/sidebar-default-icon.svg', true,
-        {
-          lookInFolderId: '*',
-          includeChildren: true,
-          filetypes: ['.md', '.markdown'],
-          tags: ['favorite'],
-          dateModified: { use: false, from: '', to: '' },
-          dateCreated: { use: false, from: '', to: '' },
-        },
-        { by: 'title', order: 'ascending' }),
-      makeSideBarItem('filter', 'Most Recent', 'docs-mostRecent', '', 'images/sidebar-default-icon.svg', true,
-        {
-          lookInFolderId: '*',
-          includeChildren: true,
-          filetypes: ['.md', '.markdown'],
-          tags: [],
-          dateModified: { use: true, from: 'NOW', to: '7-DAYS-AGO' },
-          dateCreated: { use: false, from: '', to: '' },
-        },
-        { by: 'date-modified', order: 'ascending' })
-    ],
-    media: [
-      makeSideBarItem('filter', 'All', 'media-all', '', 'images/sidebar-default-icon.svg', true)
-    ],
-    citations: [],
-  }
-
-};
-
-/**
- * For each folder in the project, create a corresponding SideBar item.
- * This is run each time 
- */
-function mapFolders(sideBar, newState) {
-
-  // Save existing folders, then clear
-  const oldFolders = sideBar.folders;
-  sideBar.folders = [];
-  
-  // Make new array of existing folders.
-  newState.folders.forEach((f) => {
-    
-    // Get old version (if it exists)
-    const oldFolder = oldFolders.find((oldF) => oldF.id == f.id);
-
-    // Determine icon
-    const icon = f.directChildCount > 0 ? 'images/folder.svg' : 'images/folder-outline.svg';
-
-    // Make new version
-    const newFolder = makeSideBarItem(
-      'folder', 
-      f.name, 
-      f.id, 
-      f.parentId, 
-      icon, 
-      true, 
-      {
-        lookInFolderId: f.id,
-        includeChildren: false,
-        filetypes: ['*'],
-        tags: [],
-        dateModified: { use: false, from: '', to: '' },
-        dateCreated: { use: false, from: '', to: '' },
+      case 'FINISH_COLD_START': {
+        draft.appStatus = 'open';
+        break
       }
-    );
-    
-    // Copy values from old version (if one existed)
-    if (oldFolder) {
-      newFolder.sort = oldFolder.sort,
-      newFolder.files = oldFolder.files,
-      newFolder.lastScrollPosition = oldFolder.lastScrollPosition,
-      newFolder.expanded = oldFolder.expanded,
-      newFolder.children = [];
+
+      case 'START_TO_QUIT': {
+        draft.appStatus = 'wantsToQuit';
+        break
+      }
+
+      case 'CAN_SAFELY_QUIT': {
+        draft.appStatus = 'safeToQuit';
+        break
+      }
+
+
+      // -------- PROJECT/WINDOW: CREATE AND CLOSE -------- //
+
+      case 'CREATE_NEW_PROJECT': {
+        createNewProject(draft);
+        break
+      }
+
+      case 'SET_PROJECT_DIRECTORY': {
+        project.directory = action.directory;
+        break
+      }
+
+      case 'OPENED_WINDOW': {
+        // Update window status
+        const project = draft.projects[action.projectIndex];
+        project.window.status = 'open';
+        project.window.id = windowId;
+        break
+      }
+
+      case 'START_TO_CLOSE_WINDOW': {
+        project.window.status = 'wantsToClose';
+        break
+      }
+
+      case 'CAN_SAFELY_CLOSE_WINDOW': {
+        project.window.status = 'safeToClose';
+        break
+      }
+
+      case 'REMOVE_PROJECT': {
+        const projects = draft.projects.slice(0);
+        const indexOfProjectToRemove = projects.findIndex((p) => p.window.id == windowId);
+        projects.splice(indexOfProjectToRemove, 1);
+        draft.projects = { ...projects };
+        break
+      }
+
+
+      // -------- PROJECT -------- //
+
+
+      // Directory
+
+      case 'SET_PROJECTPATH_SUCCESS': {
+        project.directory = action.path;
+        break
+      }
+
+      case 'SET_PROJECTPATH_FAIL': {
+        // DO NOTHING
+        break
+      }
+
+      // UI
+
+      case 'SET_LAYOUT_FOCUS': {
+        project.focusedLayoutSection = action.section;
+        break
+      }
+
+      case 'SELECT_SIDEBAR_TAB_BY_NAME': {
+        project.sidebar.tabs.forEach((t) => t.active = t.name == action.name);
+        break
+      }
+
     }
-
-    // Sort alphabetically by label
-    sideBar.folders.sort((a, b) => a.label.localeCompare(b.label));
-
-    sideBar.folders.push(newFolder);
   });
 
-  return sideBar
-}
-
-
 
 /**
- * Return `sideBar` with updated `folders`
- * TODO: Also update `documents`, `media`, and `citations` here?
- */
-function mapSideBarItems(newState) {
-
-  // Copy the sideBar object (so we don't effect the original)
-  let sideBar = Object.assign({}, newState.sideBar);
-
-  // Get root folder from `folders`. It's the one without a parentId
-  // const rootFolder = newState.folders.find((f) => f.parentId == '')
-
-  // Update `sideBar.folders`
-  sideBar = mapFolders(sideBar, newState);
-
-  return sideBar
+* Each project needs to store the ID of the window it's associated with. The BrowserWindow hasn't been created yet for this project (that's handled by WindowManager), but we know what ID the window will be: BrowserWindow ids start at 1 and go up. And removed BrowserWindows do not release their IDs back into the available set. So the next BrowserWindow id is always +1 of the highest existing.
+*/
+function getNextWindowId() {
+  const existingWindowIds = electron.BrowserWindow.getAllWindows()
+    .map((win) => win.id);
+  const nextWindowId = Math.max(existingWindowIds) + 1;
+  return nextWindowId
 }
 
 /**
- * Get a SideBar item object, based on id. 
- * NOTE: This is a copy of the same function in renderer/utils. If one changes, the other should also.
+ * Insert a new blank project into state.projects array
  */
-function getSideBarItemById(state, id) {
-  if (id.includes('folder')) {
-    return state.sideBar.folders.find((f) => f.id == id)
-  } else if (id.includes('docs')) {
-    return state.sideBar.documents.find((d) => d.id == id)
-  } else if (id.includes('media')) {
-    return state.sideBar.media.find((m) => m.id == id)
-  }
+function createNewProject(draft) {
+  const project = { ...newProject$1 };
+  project.window.id = getNextWindowId();
+  draft.projects.push(project);
 }
-
-
-async function isWorkingPath(path) {
-
-  if (path == '') {
-    return false
-  } else {
-    if (await fsExtra.pathExists(path)) {
-      return true
-    } else {
-      return false
-    }
-  }
-}
-
-/**
- * Update top-level `state.openDoc`. It is a copy of the selected doc's object from `state.documents`. We only "open" a doc if _one_ doc is selected. If multiple are selected, we display nothing in the editor. 
- * @param {*} newState 
- * @param {*} id - Selected file `id`
- */
-function updateOpenDoc(newState, selectedSideBarItem) {
-
-  const selectedFiles = selectedSideBarItem.files.filter((file) => file.selected);
-
-  if (selectedFiles.length == 1) {
-    const docToOpen = newState.documents.find((c) => c.id == selectedFiles[0].id);
-    if (docToOpen !== undefined) {
-      newState.openDoc = Object.assign({}, docToOpen);
-    } else {
-      newState.openDoc = {};
-    }
-  } else {
-    newState.openDoc = {};
-  }
-}
-
-/** 
- * Just a convenience function to keep things DRY, since we do these steps any time the prpject files change.
- */
-function updateSideBarAndFiles(newState) {
-  // Update SideBar
-  newState.sideBar = mapSideBarItems(newState);
-  newState.changed.push('sideBar');
-
-  // Update the `files` of the selected SideBar item
-  const sideBarItem = getSideBarItemById(newState, newState.selectedSideBarItem.id);
-  sideBarItem.files = getFiles(newState, sideBarItem);
-}
-
-
-/**
- * Return a list of displayed files for the selected SideBar item. 
- * These are files that match the SideBar item's `filter` criteria (e.g. folder, tags, etc).
- * @param {*} newState 
- */
-function getFiles(newState, item) {
-
-  let filter = item.filter;
-
-  // Determine folder to look in from `lookInFolderId`. If value is '*', that means "search all folders", so we get the root folder (the one without a parentId). Else, we use the folder value specified.
-  const folder = filter.lookInFolderId == '*' ?
-    newState.folders.find((f) => f.parentId == '') :
-    newState.folders.find((f) => f.id == filter.lookInFolderId);
-
-  // Copy selected files (objects, with path, title, etc) into a new `files` array.
-  let files = newState.documents.filter((d) => d.parentId == folder.id);
-
-  // If `includeChildren`, also get files for all descendant folders
-  if (filter.includeChildren) {
-    // Get ids of child folders
-    let childFolderIds = getChildFolderIds(folder);
-
-    // Add files in child folders
-    newState.documents.forEach((c) => {
-      if (childFolderIds.includes(c.parentId)) {
-        files.push(c);
-      }
-    });
-  }
-
-  /**
-   * Get all the child folder ids of specified folder, recursively.
-   * @param {*} parentFolder 
-   */
-  function getChildFolderIds(parentFolder) {
-
-    let ids = [];
-
-    newState.folders.forEach((f) => {
-      if (f.parentId == parentFolder.id) {
-        // Push id of child folder
-        ids.push(f.id);
-
-        // Find and add ids of the child's children (recursive)
-        ids.concat(getChildFolderIds(f));
-      }
-    });
-    return ids;
-  }
-
-  // Filter by tags
-  if (filter.tags.length > 0) {
-    files = files.filter((f) => {
-      return filter.tags.some((t) => {
-        if (f.tags.includes(t)) {
-          return true;
-        }
-      });
-    });
-  }
-
-  // If we should use dateModified, we need to validate the dates.
-  // E.g. `from` must be before `to`. 
-  // If the dates are not valid, we do not apply the filter.
-  if (filter.dateModified.use) {
-
-    // Start by copying the input from and to values
-    let from = filter.dateModified.from;
-    let to = filter.dateModified.to;
-
-    // Convert `from` value to date
-    if (from == 'NOW' || from == '') {
-      from = moment().format();
-    } else if (filter.dateModified.from.includes('DAYS-AGO')) {
-      let numberOf = from.substring(0, from.indexOf('-'));
-      from = moment().subtract(numberOf, 'days');
-    } else {
-      from = moment(from).format();
-    }
-
-    // Convert `to` value to date
-    if (filter.dateModified.to.includes('DAYS-AGO')) {
-      let numberOf = to.substring(0, to.indexOf('-'));
-      to = moment().subtract(numberOf, 'days').format();
-    } else {
-      to = moment(to).format();
-    }
-
-    // console.log(from)
-    // console.log(to)
-
-    if (from > to) {
-      files = files.filter((f) => {
-        const modified = moment(f.modified).format();
-        if (modified < from && modified > to) {
-          return f
-        }
-      });
-    }
-  }
-
-  // Sort the files
-  files = sortFiles(files, item.sort);
-
-  //  Set files' `selected` property
-  // files = restoreFileSelections(files, item.files)
-
-  // Make a new array with just the essentials for each file (`id`, `selected`).
-  // This is what we'll return.
-  let filesObjects = [];
-  files.forEach((f, index) => filesObjects.push({ id: f.id, selected: false }));
-
-  // Select files:
-
-  let oldFiles = item.files;
-  const atLeastOneFilesWasPreviouslySelected = oldFiles.some((file) => file.selected);
-
-  // If there was a previous selection, try to restore it
-  if (atLeastOneFilesWasPreviouslySelected) {
-
-    // If the same file in the new `files` existed in old `files`, and it was selected, select it again.
-    filesObjects.forEach((f) => {
-      f.selected = oldFiles.some((file) => file.id == f.id && file.selected);
-    });
-
-    // If nothing is selected after doing the above (e.g. the selected files do NOT exist any more, probably due to a selected file being deleted), then try to select the "next" file. This will be the file at the same index number as the previously selected doc, or——if the previously-selected doc was last in the list——the new last doc.
-    const atLeastOneFileIsSelected = filesObjects.some((f) => f.selected);
-    if (!atLeastOneFileIsSelected) {
-
-      // Get index of previous selection
-      let indexOfPreviousSelection = 0;
-      oldFiles.forEach((file, index) => {
-        if (file.selected) { indexOfPreviousSelection = index; }
-      });
-
-      // 
-      if (indexOfPreviousSelection <= filesObjects.length - 1) {
-        filesObjects[indexOfPreviousSelection].selected = true;
-      } else {
-        // Select last file
-        filesObjects[filesObjects.length - 1].selected = true;
-      }
-    }
-
-  } else {
-
-    // If nothing is selected after the above, default to selecting the first file.
-    filesObjects[0].selected = true;
-  }
-
-  return filesObjects
-}
-
-
-/**
- * Sort the displayed files in the current SideBar item, according the sort criteria.
- */
-function sortFiles(filesBefore, sort) {
-  let docs = filesBefore;
-
-  switch (sort.by) {
-    case "title":
-      docs.sort((a, b) => a.title.localeCompare(b.title));
-      break;
-    case "date-modified":
-      docs.sort((a, b) => new Date(b.modified) - new Date(a.modified));
-      break;
-    case "date-created":
-      docs.sort((a, b) => new Date(b.created) - new Date(a.created));
-      break;
-  }
-
-  if (sort.order == "descending") docs.reverse();
-
-  return docs;
-}
-
-
-
-
-
-
-
-
-
-
-/**
- * `state = {}` gives us a default, for possible first run empty '' value.
- */
-async function reducers(state = {}, action) {
-
-  const newState = Object.assign({}, state);
-
-  newState.changed = []; // Reset on every action 
-
-  switch (action.type) {
-
-
-    // -------- PROJECT PATH -------- //
-
-    case 'SET_PROJECTPATH_SUCCESS': {
-      newState.projectPath = action.path;
-      newState.changed.push('projectPath');
-      break
-    }
-
-    case 'SET_PROJECTPATH_FAIL': {
-      // DO NOTHING
-      break
-    }
-
-
-    // -------- UI -------- //
-
-    case 'SET_LAYOUT_FOCUS': {
-      newState.focusedLayoutSection = action.section;
-      newState.changed.push('focusedLayoutSection');
-      break
-    }
-
-    case 'SET_APPEARANCE': {
-      if (action.userPref) newState.appearance.userPref = action.userPref;
-      if (action.theme) newState.appearance.theme = action.theme;
-      newState.changed.push('appearance');
-      break
-    }
-
-
-    // -------- EDITOR -------- //
-
-    // case 'LOAD_PATH_IN_EDITOR': {
-    //   newState.editingFileId = action.id
-    //   newState.changed.push('editingFileId')
-    //   break
-    // }
-
-    case 'SET_SOURCE_MODE': {
-      newState.sourceMode = action.active;
-      newState.changed.push('sourceMode');
-      break
-    }
-
-
-    // -------- CONTENTS -------- //
-
-    case 'MAP_PROJECT_CONTENTS': {
-
-      // Update `folders`, `documents`, `media`
-      newState.folders = action.folders;
-      newState.documents = action.documents;
-      newState.media = action.media;
-      newState.changed.push('folders', 'documents', 'media');
-
-      // Update `sideBar`. `mapSideBarItems` returns a `sideBar` object with child objects for each project folder, filter, etc.
-      newState.sideBar = mapSideBarItems(newState);
-      newState.changed.push('sideBar');
-
-      // Check if selectedSideBarItem still exists. If no, select first sideBar item. This covers the scenario where a folder sideBar item was selected, then deleted from the disk.
-
-      const allSideBarItems = newState.sideBar.folders.concat(newState.sideBar.documents, newState.sideBar.media);
-
-      const selectedStillExists = allSideBarItems.some((sbi) => sbi.id == newState.selectedSideBarItem.id);
-
-      if (!selectedStillExists) {
-        newState.selectedSideBarItem.id = newState.sideBar.folders[0].id;
-        newState.changed.push('selectedSideBarItem');
-      }
-
-      // Update `files` for the selected SideBar item
-      const sideBarItem = getSideBarItemById(newState, newState.selectedSideBarItem.id);
-      sideBarItem.files = getFiles(newState, sideBarItem);
-
-      break
-    }
-
-    case 'ADD_DOCUMENTS': {
-      newState.documents = newState.documents.concat(action.documents);
-      newState.changed.push('documents');
-
-      // Increment parent folders `directChildCount`
-      action.documents.forEach((d) => {
-        newState.folders.find((f) => f.path == path.dirname(d.path)).directChildCount++;
-      });
-
-      // When we create a new document in-app (e.g. via File > New Document), we want to select it.
-      // First, we use a heuristic to check the new documents found by watcher.js (action.documents.
-      // Heuristic: only one file was added, and file name includes "Untitled".
-      let isNewDoc = action.documents.length == 1 && action.documents[0].title.includes('Untitled');
-
-      // If there's a single new doc...
-      if (isNewDoc) {
-
-        const newDoc = action.documents[0];
-
-        // If the new doc is currently visible inside the selected SideBar item...
-        // * Select it (and deselect other files)
-        // * Else, switch to the 'All' Document filter, and select it.
-
-        let sideBarItem = getSideBarItemById(newState, newState.selectedSideBarItem.id);
-        sideBarItem.files = getFiles(newState, sideBarItem);
-        const isNewDocDisplayed = sideBarItem.files.some((f) => f.id == newDoc.id);
-
-        if (isNewDocDisplayed) {
-
-          // Select the doc
-          sideBarItem.files.forEach((f) => f.selected = f.id == newDoc.id);
-
-        } else {
-
-          // Switch to `All` Document filter
-          newState.selectedSideBarItem.id = 'docs-all';
-
-          // Update SideBar item and Files
-          sideBarItem = getSideBarItemById(newState, newState.selectedSideBarItem.id);
-          sideBarItem.files = getFiles(newState, sideBarItem);
-        }
-
-        newState.changed.push('newDoc');
-
-        // Update `openDoc`
-        updateOpenDoc(newState, sideBarItem);
-        newState.changed.push('openDoc');
-  
-        // Focus the editor and place the cursor, so we're ready to start typing
-        newState.focusedLayoutSection = 'editor';
-        newState.changed.push('focusedLayoutSection');
-      }
-
-      // Update SideBar. This catches scenario where files are added to a previously empty folder.
-      newState.sideBar = mapSideBarItems(newState);
-
-      break
-    }
-
-    case 'ADD_MEDIA': {
-      newState.media = newState.media.concat(action.media);
-      newState.changed.push('media');
-
-      // Increment parent folder `directChildCount`
-      action.media.forEach((m) => {
-        newState.folders.find((f) => f.path == path.dirname(m.path)).directChildCount++;
-      });
-
-      updateSideBarAndFiles(newState);
-
-      break
-    }
-
-    case 'UPDATE_DOCUMENTS': {
-      for (let updatedVersion of action.documents) {
-        // Get index of old version in `documents`
-        const index = newState.documents.findIndex((oldVersion) => oldVersion.id == updatedVersion.id);
-        // Confirm old version exists (index is not -1)
-        // And replace it with new version
-        if (index !== -1) {
-          newState.documents[index] = updatedVersion;
-        }
-      }
-      newState.changed.push('documents');
-
-      updateSideBarAndFiles(newState);
-
-      break
-    }
-
-    case 'UPDATE_MEDIA': {
-      for (let updatedVersion of action.media) {
-        // Get index of old version in `media`
-        const index = newState.media.findIndex((oldVersion) => oldVersion.id == updatedVersion.id);
-        // Confirm old version exists (index is not -1)
-        // And replace it with new version
-        if (index !== -1) {
-          newState.media[index] = updatedVersion;
-        }
-      }
-      newState.changed.push('media');
-
-      updateSideBarAndFiles(newState);
-
-
-      break
-    }
-
-    // Remove `action.documentPaths` from `documents`
-    case 'REMOVE_DOCUMENTS': {
-      for (let p of action.documentPaths) {
-        const index = newState.documents.findIndex((d) => d.path == p);
-        if (index !== -1) {
-          newState.documents.splice(index, 1);
-        }
-        // Decrement parent folder `directChildCount`
-        newState.folders.find((f) => f.path == path.dirname(p)).directChildCount--;
-      }
-      newState.changed.push('documents', 'folders');
-
-      updateSideBarAndFiles(newState);
-
-      // Update `openDoc`
-      const sideBarItem = getSideBarItemById(newState, newState.selectedSideBarItem.id);
-      updateOpenDoc(newState, sideBarItem);
-      newState.changed.push('openDoc');
-
-      break
-    }
-
-    case 'REMOVE_MEDIA': {
-      for (let p of action.mediaPaths) {
-        const index = newState.media.findIndex((d) => d.path == p);
-        if (index !== -1) {
-          newState.media.splice(index, 1);
-        }
-        // Decrement parent folder `directChildCount`
-        newState.folders.find((f) => f.path == path.dirname(p)).directChildCount--;
-      }
-      newState.changed.push('media', 'folders');
-
-      updateSideBarAndFiles(newState);
-
-      break
-    }
-
-
-    // -------- SIDEBAR 2 -------- //
-
-    case 'EXPAND_SIDEBAR_ITEMS': {
-      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
-      tab.expandedItems = action.expandedItems;
-      newState.changed.push(`sideBar.tabs.${action.tabName}`);
-      break
-    }
-
-    case 'SELECT_SIDEBAR_ITEMS': {
-      console.log(action);
-      const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName);
-      tab.lastSelectedItem = action.lastSelectedItem;
-      tab.selectedItems = action.selectedItems;
-      newState.changed.push(`sideBar.tabs.${action.tabName}`);
-      newState.changed.push(`sideBar.activeTab`);
-      break
-    }
-
-    case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
-      newState.sideBar2.activeTab.index = action.index;
-      newState.sideBar2.activeTab.name = newState.sideBar2.tabs[action.index].name;
-      newState.changed.push('sideBar.activeTab');
-      break
-    }
-    case 'TOGGLE_SIDEBAR_PREVIEW': {
-      newState.sideBar2.preview.isOpen = !newState.sideBar2.preview.isOpen;
-      newState.changed.push(`sideBar.preview`);
-      break
-    }
-
-
-    // -------- SIDEBAR -------- //
-
-
-    case 'SELECT_SIDEBAR_ITEM': {
-
-      if (newState.selectedSideBarItem.id == action.item.id) break
-
-      // Get reference to item inside the `newState.sideBar` array.
-      // This is the object we need to update.
-      const item = getSideBarItemById(newState, action.item.id);
-
-      // Update the displayed files for the selected item
-      // item.displayedFiles = getDisplayedFiles(newState, item)
-      // newState.changed.push('displayedFiles')
-
-      // Update `files` for the selected SideBar item
-      item.files = getFiles(newState, item);
-
-      // Update `selectedSideBarItem`
-      newState.selectedSideBarItem.id = action.item.id;
-      newState.changed.push('selectedSideBarItem');
-
-      // Update DocList visibility
-      if (newState.showFilesList !== item.showFilesList) {
-        newState.showFilesList = item.showFilesList;
-        newState.changed.push('showFilesList');
-      }
-
-      // Update `openDoc`
-      updateOpenDoc(newState, item);
-      newState.changed.push('openDoc');
-
-      break
-    }
-
-    // This is called when the user selects files from DocList
-    // * `sideBarItem`: should be `state.selectedSideBarItem`
-    // * `selectedFiles`: an array of selected files as objects, with index and id: `{ index: 0, id: doc-50780411}`. `index` is their position in the DocList.
-    case 'SELECT_FILES': {
-      const item = getSideBarItemById(newState, action.sideBarItem.id);
-      if (!item) break
-
-      // Update `lastSelection`
-      // item.lastSelection = action.selectedFiles
-      // newState.changed.push('lastSelection')
-
-      // Update `files`
-      item.files.forEach((f) => f.selected = action.selectedFiles.some((sf) => sf.id == f.id));
-
-      // Update `openDoc`
-      updateOpenDoc(newState, item);
-      newState.changed.push('openDoc');
-      break
-    }
-
-    // This is set on the _outgoing_ item, when the user is switching SideBar items.
-    case 'SAVE_SIDEBAR_SCROLL_POSITION': {
-      const item = getSideBarItemById(newState, action.item.id);
-      if (!item) break
-      item.lastScrollPosition = action.lastScrollPosition;
-      newState.changed.push('lastScrollPosition');
-      break
-    }
-
-    case 'TOGGLE_SIDEBAR_ITEM_EXPANDED': {
-      const item = getSideBarItemById(newState, action.item.id);
-      if (!item) break
-      item.expanded = !item.expanded;
-      newState.changed.push('item expanded');
-      break
-    }
-
-    case 'SET_SORT': {
-      const item = getSideBarItemById(newState, action.item.id);
-      item.sort = action.sort;
-
-      // Update `files` for the selected SideBar item
-      item.files = getFiles(newState, item);
-
-      newState.changed.push('sort');
-      break
-    }
-
-    // -------- FILE ACTIONS -------- //
-
-    case 'NEW_FILE_SUCCESS': {
-      console.log(`Reducers: NEW_FILE_SUCCESS: ${action.filePath}`.green);
-      break
-    }
-
-    // case 'SAVE_FILE_SUCCESS': {
-    //   console.log(`Reducers: SAVE_FILE_SUCCESS: ${action.path}`.green)
-    //   break
-    // }
-
-    // case 'SAVE_FILE_FAIL': {
-    //   console.log(`Reducers: SAVE_FILE_FAIL: ${action.path}`.red)
-    //   break
-    // }
-
-    // // Delete
-
-    // case 'DELETE_FILE_SUCCESS': {
-    //   console.log(`Reducers: DELETE_FILE_SUCCESS: ${action.path}`.green)
-    //   break
-    // }
-
-    // case 'DELETE_FILE_FAIL': {
-    //   console.log(`Reducers: DELETE_FILE_FAIL: ${action.err}`.red)
-    //   break
-    // }
-
-    // case 'DELETE_FILES_SUCCESS': {
-    //   console.log(`Reducers: DELETE_FILES_SUCCESS: ${action.paths}`.green)
-    //   break
-    // }
-
-    // case 'DELETE_FILES_FAIL': {
-    //   console.log(`Reducers: DELETE_FILES_FAIL: ${action.err}`.red)
-    //   break
-    // }
-
-  }
-
-  return newState
-}
-
-// import { updatedDiff, detailedDiff } from 'deep-object-diff'
 
 class Store extends ElectronStore {
   constructor() {
@@ -920,761 +166,261 @@ class Store extends ElectronStore {
     });
   }
 
-  getCurrentState() {
-    return this.store
-  }
+  async dispatch(action, windowId = undefined) {
 
-  async dispatch(action) {
-
-    // Optional: Log the changes (useful for debug)
-    this.logTheAction(action);
+    if (!electron.app.isPackaged) this.logTheAction(action);
 
     // Get next state
-    const nextState = await reducers(this.getCurrentState(), action);
+    // const nextState = await reducers(action, windowId)
 
-    // Optional: Log the diff (useful for debug)
-    this.logTheDiff(this.getCurrentState(), nextState);
+    const [nextState, patches, inversePatches] = update(store.store, action, windowId);
 
-    // Set the next state
+    // if (!app.isPackaged) this.logTheDiff(global.state(), nextState)
+
+    // Apply nextState to Store
     this.set(nextState);
+
+    // Send patches to render proces
+    const windows = electron.BrowserWindow.getAllWindows();
+    if (windows.length) {
+      windows.forEach((win) => win.webContents.send('statePatchesFromMain', patches));
+    }
   }
 
   logTheAction(action) {
     console.log(
-      `Action:`.bgBrightGreen.black,
+      // `Action:`.bgBrightGreen.black,
       `${action.type}`.bgBrightGreen.black.bold,
-      `(Store.js)`.green
+      // `(Store.js)`.green
     );
   }
 
-  logTheDiff(currentState, nextState) {
-    const hasChanged = !deepEql(currentState, nextState);
-    if (hasChanged) {
-      // const diff = detailedDiff(currentState, nextState)
-      // console.log(diff)
-      console.log(`Changed: ${nextState.changed}`.yellow);
-    } else {
-      console.log('No changes'.yellow);
-    }
-  }
-}
-
-async function deleteFile(path) {
-  try {
-		await fsExtra.remove(path);
-		return { type: 'DELETE_FILE_SUCCESS', path: path }
-	} catch(err) {
-		return { type: 'DELETE_FILE_FAIL', err: err }
-	}
-}
-
-async function deleteFiles(paths) {
-  try {
-    let deletedPaths = await Promise.all(
-      paths.map(async (path) => {
-        await fsExtra.remove(path);
-      })
-    );
-		return { type: 'DELETE_FILES_SUCCESS', paths: deletedPaths }
-	} catch(err) {
-		return { type: 'DELETE_FILES_FAIL', err: err }
-	}
-}
-
-async function newFile (state) {
-
-  let id, folder;
-
-  let sideBarItem = getSideBarItemById(state, state.selectedSideBarItem.id);
-
-  if(sideBarItem.type == 'folder') {
-    id = sideBarItem.id;
-    folder = state.folders.find((i) => i.id == id);
-  }
-
-  // The file name of our new file 
-  let fileName = 'Untitled-';
-  let fileNameIncrement = 1;
-
-  // Get all documents in the selected folder with `fileName` in their name
-  // E.g. 'Untitled-1', 'Untitled-222', 'Untitled-3', etc.
-  let docs = state.documents.filter((d) => d.parentId == folder.id && d.title.includes(fileName));
-
-  // Does `docs` already contain a file with the exact same file name?
-  function fileAlreadyExists() {
-    // We use `path.parse(d.path).base` to get the file name from the file path
-    // Docs: https://nodejs.org/api/path.html#path_path_parse_path 
-    return docs.some((d) => path.parse(d.path).base == `${fileName}${fileNameIncrement}.md`)
-  }
-
-  // While the file already exists, increment `fileNameIncrement` until it doesn't. 
-  while (fileAlreadyExists()) {
-    fileNameIncrement++;
-  }
-
-  let filePath = `${folder.path}/${fileName}${fileNameIncrement}.md`;
-
-  // console.log(state)
-  // return
-
-  try {
-  	await fsExtra.writeFile(filePath, 'Testing', 'utf8');
-  	return {
-  		type: ' NEW_FILE_SUCCESS',
-  		filePath: filePath,
-  	}
-  } catch (err) {
-  	return {
-  		type: 'NEW_FILE_FAIL',
-  		err: err
-  	}
-  }
-}
-
-async function saveFile (path, data) {
-	try {
-		await fsExtra.writeFile(path, data, 'utf8');
-		return {
-			type: 'SAVE_FILE_SUCCESS',
-			path: path,
-		}
-	} catch (err) {
-		return {
-			type: 'SAVE_FILE_FAIL',
-			err: err
-		}
-	}
-}
-
-async function setProjectPath () {
-
-  // console.log(BrowserWindow.getFocusedWindow())
-
-  const win = electron.BrowserWindow.getFocusedWindow();
-
-  const selection = await electron.dialog.showOpenDialog(win, {
-    title: 'Select Project Folder',
-    properties: ['openDirectory', 'createDirectory']
-  });
-
-  if (!selection.canceled) {
-    return { type: 'SET_PROJECTPATH_SUCCESS', path: selection.filePaths[0] }
-  } else {
-    return { type: 'SET_PROJECTPATH_FAIL' }
-  }
-}
-
-let store = {};
-let state = {};
-let menuItems = {};
-
-const isMac = process.platform === 'darwin';
-const separator = new electron.MenuItem({ type: 'separator' });
-
-function makeMenuItems() {
-
-  const mI = { topLevel: [] }; // reset
-
-
-  // -------- File (Mac-only) -------- //
-  if (isMac) {
-
-    mI.saveNewFile = new electron.MenuItem({
-      label: 'New Document',
-      accelerator: 'CmdOrCtrl+N',
-      async click(item, focusedWindow) {
-        store.dispatch(await newFile(state));
-      }
-    });
-
-    mI.save = new electron.MenuItem({
-      label: 'Save',
-      accelerator: 'CmdOrCtrl+S',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('mainRequestsSaveFile');
-      }
-    });
-
-    mI.moveToTrash = new electron.MenuItem({
-      label: 'Move to Trash',
-      accelerator: 'CmdOrCtrl+Backspace',
-      enabled: state.focusedLayoutSection == 'navigation',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('mainRequestsDeleteFile');
-      }
-    });
-
-    mI.topLevel.push(new electron.MenuItem({
-      label: 'File',
-      submenu: [
-        mI.saveNewFile,
-        mI.save,
-        mI.moveToTrash
-      ]
-    }));
-  }
-
-
-  // -------- Edit -------- //
-
-  mI.undo = new electron.MenuItem({ label: 'Undo', role: 'undo' });
-  mI.redo = new electron.MenuItem({ label: 'Redo', role: 'redo' });
-  mI.cut = new electron.MenuItem({ role: 'cut' });
-  mI.copy = new electron.MenuItem({ role: 'copy' });
-  mI.paste = new electron.MenuItem({ role: 'paste' });
-  mI.deleteItem = new electron.MenuItem({ role: 'delete' });
-  mI.selectall = new electron.MenuItem({ role: 'selectall' });
-  mI.startspeaking = new electron.MenuItem({ role: 'startspeaking' });
-  mI.stopspeaking = new electron.MenuItem({ role: 'stopspeaking' });
-  mI.findInFiles = new electron.MenuItem({
-    label: 'Find in Files',
-    type: 'normal',
-    accelerator: 'CmdOrCtrl+Shift+F',
-    click(item, focusedWindow) {
-      if (focusedWindow) {
-        focusedWindow.webContents.send('findInFiles');
-      }
-    }
-  });
-
-  mI.topLevel.push(new electron.MenuItem(
-    {
-      label: 'Edit',
-      submenu: [
-        mI.undo,
-        mI.redo,
-        separator,
-        mI.cut,
-        mI.copy,
-        mI.paste,
-        mI.deleteItem,
-        mI.selectall,
-        separator,
-        mI.findInFiles,
-        // If macOS, add speech options to Edit menu
-        ...isMac ? [
-          separator,
-          {
-            label: 'Speech',
-            submenu: [
-              mI.startspeaking,
-              mI.stopspeaking
-            ]
-          }
-        ] : []
-      ]
-    }
-  ));
-
-  // -------- View -------- //
-
-  mI.source_mode = new electron.MenuItem({
-    label: 'Source mode',
-    type: 'checkbox',
-    checked: state.sourceMode,
-    accelerator: 'CmdOrCtrl+/',
-    click(item, focusedWindow) {
-      if (focusedWindow) {
-        store.dispatch({
-          type: 'SET_SOURCE_MODE',
-          active: !state.sourceMode,
-        });
-      }
-    }
-  });
-
-  mI.appearance_system = new electron.MenuItem({
-    label: 'Match System',
-    type: 'checkbox',
-    checked: state.appearance.userPref == 'match-system',
-    click(item, focusedWindow) {
-      store.dispatch({
-        type: 'SET_APPEARANCE',
-        userPref: 'match-system',
-        theme: electron.nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
-      });
-    }
-  });
-
-  mI.appearance_light = new electron.MenuItem({
-    label: 'Light',
-    type: 'checkbox',
-    checked: state.appearance.userPref == 'light',
-    click() {
-      store.dispatch({
-        type: 'SET_APPEARANCE',
-        userPref: 'light',
-        theme: 'gambier-light'
-      });
-    }
-  });
-
-  mI.appearance_dark = new electron.MenuItem({
-    label: 'Dark',
-    type: 'checkbox',
-    checked: state.appearance.userPref == 'dark',
-    click(item, focusedWindow) {
-      store.dispatch({
-        type: 'SET_APPEARANCE',
-        userPref: 'dark',
-        theme: 'gambier-dark'
-      });
-    }
-  });
-
-  mI.appearance = new electron.MenuItem({
-    label: 'Appearance',
-    submenu: [
-      mI.appearance_system,
-      separator,
-      mI.appearance_light,
-      mI.appearance_dark
-    ]
-  });
-
-  mI.toggle_dev_tools = new electron.MenuItem({
-    label: 'Toggle Developer Tools',
-    accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-    role: 'toggleDevTools'
-    // click(item, focusedWindow) {
-    //   if (focusedWindow) focusedWindow.webContents.toggleDevTools()
-    // }
-  });
-
-  mI.reload = new electron.MenuItem({
-    label: 'Reload',
-    accelerator: 'CmdOrCtrl+R',
-    role: 'reload'
-    // click(item, focusedWindow) {
-    //   if (focusedWindow) focusedWindow.reload()
-    // }
-  });
-
-  mI.togglePreview = new electron.MenuItem({
-    label: state.sideBar2.preview.isOpen ? 'Hide Preview' : 'Show Preview',
-    accelerator: 'Alt+CmdOrCtrl+P',
-    click(item, focusedWindow) {
-      if (focusedWindow) {
-        store.dispatch({ type: 'TOGGLE_SIDEBAR_PREVIEW' });
-      }
-    }
-  });
-
-  mI.sideBarTabs = state.sideBar2.tabs.map((t, index) => {
-    return new electron.MenuItem({
-      index: index,
-      label: t.title,
-      type: 'checkbox',
-      accelerator: `Cmd+${index + 1}`,
-      checked: state.sideBar2.activeTab.index == index,
-      click(item, focusedWindow) {
-        store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_INDEX',
-          index: index
-        });
-      }
-    })
-  });
-
-  mI.topLevel.push(new electron.MenuItem({
-    label: 'View',
-    submenu: [
-      mI.source_mode,
-      mI.appearance,
-      ...electron.app.isPackaged ? [] : [separator, mI.toggle_dev_tools, mI.reload],
-      separator,
-      mI.togglePreview,
-      separator,
-      ...mI.sideBarTabs
-    ]
-  }));
-
-  return mI
-}
-
-function makeMenu() {
-
-  const menu = new electron.Menu();
-  menuItems = makeMenuItems();
-  // console.log(menuItems)
-  // for (const item in menuItems) {
-  //   console.log(`menuItems.${item} = ${menuItems[item]}`);
-  // }
-  // menuItems.topLevel.forEach((item) => console.log(item))
-  menuItems.topLevel.forEach((item) => menu.append(item));
-  return menu
-}
-
-/**
- * Note: App and File menus are macOS only. 
- */
-function setup(gambierStore) {
-
-  store = gambierStore;
-  state = gambierStore.store;
-  electron.Menu.setApplicationMenu(makeMenu());
-
-  // -------- Setup change listeners -------- //
-
-  // store.onDidAnyChange((newState, oldState) => {
-  //   state = newState
-  // })
-
-  // store.onDidChange('sourceMode', () => {
-  //   source_mode.checked = state.sourceMode
-  // })
-
-  // store.onDidChange('focusedLayoutSection', () => {
-  //   moveToTrash.enabled = state.focusedLayoutSection == 'navigation'
-  // })
-
-  // store.onDidChange('appearance', () => {
-  //   appearance_system.checked = state.appearance.userPref == 'match-system'
-  //   appearance_light.checked = state.appearance.userPref == 'light'
-  //   appearance_dark.checked = state.appearance.userPref == 'dark'
-  // })
-
-  // store.onDidChange('sideBar2', () => {
-  //   sideBarTabs.forEach((t, index) => {
-  //     t.checked = state.sideBar2.activeTab.index == index
-  //   });
-  // })
-
-}
-
-/**
- * For specified folder path, map the folder and it's child  
- * documents, media, and citations, and return `contents` object
- * with four arrays (one for each type).
- * @param {*} folderPath - Path to map
- * @param {*} stats - Optional. Can pass in stats, or if undefined, will get them in function.
- * @param {*} parentId - Optional. If undefined, we regard the folder as `root`
- * @param {*} recursive - Optional. If true, map descendant directories also.
- */
-async function mapFolder (folderPath, stats = undefined, parentId = '', recursive = false, nestDepth = 0) {
-
-  // Stub out return object
-  let contents = {
-    folders: [],
-    documents: [],
-    media: [],
-  };
-
-  // -------- Folder -------- //
-
-  const folder = Object.assign({}, Folder);
-
-  if (stats == undefined) {
-    stats = await fsExtra.stat(folderPath);
-  }
-
-  folder.name = folderPath.substring(folderPath.lastIndexOf('/') + 1);
-  folder.path = folderPath;
-  folder.id = `folder-${stats.ino}`;
-  folder.parentId = parentId;
-  folder.modified = stats.mtime.toISOString();
-  folder.children = [];
-  folder.nestDepth = nestDepth;
-
-  contents.folders.push(folder);
-
-  // -------- Contents -------- //
-
-  // Get everything in directory with `readdir`.
-  // Returns array of `fs.Dirent` objects.
-  // https://nodejs.org/api/fs.html#fs_class_fs_dirent
-  const everything = await fsExtra.readdir(folderPath, { withFileTypes: true });
-  // if (!everything.length > 0) return contents
-  // console.log(folder.name, "---")
-
-  // everything.forEach(async (e) => {
-
-  //   if (e.isFile()) {
-
-  //     const ePath = path.join(folder.path, e.name)
-  //     const ext = path.extname(e.name)
-  //     const stats = await stat(ePath)
-
-  //     if (ext == '.md' || ext == '.markdown') {
-  //       folder.children.push(`doc-${stats.ino}`)
-  //     }
+  // logTheDiff(currentState, nextState) {
+  //   const hasChanged = !deepEql(currentState, nextState)
+  //   if (hasChanged) {
+  //     // const diff = detailedDiff(currentState, nextState)
+  //     // console.log(`Changed: ${JSON.stringify(diff, null, 2)}`.yellow)
+  //     console.log(`Changed: ${nextState.changed}`.bgBrightGreen.black.bold)
+  //   } else {
+  //     console.log('No changes'.bgBrightGreen.black.bold)
   //   }
-  // })
-
-  await Promise.all(
-    everything.map(async (e) => {
-
-      // Get path by combining folderPath with file name.
-      const ePath = path.join(folderPath, e.name);
-      const ext = path.extname(e.name);
-      const stats = await fsExtra.stat(ePath);
-
-      if (e.isDirectory() && recursive) {
-        const { folders, documents, media } = await mapFolder(ePath, stats, folder.id, true, nestDepth + 1);
-        // Concat findings into respective `contents` arrays
-        contents.folders = contents.folders.concat(folders);
-        contents.documents = contents.documents.concat(documents);
-        contents.media = contents.media.concat(media);
-
-        folder.directChildCount++;
-        folder.recursiveChildCount++;
-       
-        folders.forEach((f) => {
-          folder.recursiveChildCount += f.directChildCount;
-        });
-    
-      } else if (ext == '.md' || ext == '.markdown') {
-        const doc = await mapDocument(ePath, stats, folder.id, nestDepth + 1);
-        contents.documents.push(doc);
-        // folder.children.push(doc.id)
-        folder.directChildCount++;
-        folder.recursiveChildCount++;
-
-      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-        const media = await mapMedia(ePath, stats, folder.id, ext, nestDepth + 1);
-        contents.media.push(media);
-        // folder.children.push(media.id)
-        folder.directChildCount++;
-        folder.recursiveChildCount++;
-      }
-    })
-  );
-
-  return contents
+  // }
 }
 
-// import diff from 'deep-diff'
+const storeDefault = {
 
+  // ----------- APP ----------- //
 
-let store$1 = undefined;
-let state$1 = {};
-let watcher = undefined;
-let changeTimer = undefined;
-let changes = [];
+  appStatus: 'open',
 
-/**
- * Chokidar config
- * Docs: https://www.npmjs.com/package/chokidar
- */
-const config = {
-  ignored: /(^|[\/\\])\../, // Ignore dotfiles
-  ignoreInitial: true,
-  persistent: true,
-  awaitWriteFinish: {
-    stabilityThreshold: 400,
-    pollInterval: 200
+  // App theme. See Readme.
+  appearance: {
+    userPref: 'match-system',
+    theme: 'gambier-light'
+  },
+
+  // ----------- PROJECTS ----------- //
+
+  projects: []
+
+};
+
+const newProject$1 = {
+
+  window: {
+    // Used to associate windows with projects
+    id: 0,
+    // Used when closing window (to check if it's safe to do so or not)
+    status: 'open'
+  },
+
+  // User specified directory to folder containing their project files
+  directory: '',
+
+  // User specified path to CSL-JSON file containing their citatons
+  citations: '',
+
+  focusedLayoutSection: 'sidebar',
+
+  // A copy of the object of the document currently visible in the editor.
+  openDoc: {},
+
+  // SideBar
+  sidebar: {
+    isOpen: true,
+    previewIsOpen: true,
+    width: 250,
+    tabs: [
+      {
+        title: 'Project', name: 'project',
+        active: true,
+        lastSelectedItem: {}, // id and type
+        selectedItems: [], // Array of ids
+        expandedItems: [], // Array of folder ids
+      },
+      {
+        title: 'All Documents', name: 'all-documents',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Most Recent', name: 'most-recent',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Tags', name: 'tags',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Media', name: 'media',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Citations', name: 'citations',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      },
+      {
+        title: 'Search', name: 'search',
+        active: false,
+        lastSelectedItem: {},
+        selectedItems: [],
+      }
+    ],
   }
 };
 
+class AppearanceManager {
+  constructor() {
 
-/**
- * Setup watcher module
- * @param {*} projectPath - Path to watch
- */
-async function setup$1(storeRef) {
+  }
+}
 
-  // Check if undefined
-  if (storeRef == undefined) console.error("Store not defined");
+// // -------- Theme -------- //
 
-  // Set `store` and `state`
-  store$1 = storeRef;
-  state$1 = store$1.store;
+// /**
+//  * When OS appearance changes, update app theme to match (dark or light):
+//  * NOTE: Is also called on startup.
+//  * Listen for changes to nativeTheme. These are triggered when the OS appearance changes (e.g. when the user modifies "Appearance" in System Preferences > General, on Mac). If the user has selected the "Match System" appearance option in the app, we need to match the new OS appearance. Check the `nativeTheme.shouldUseDarkColors` value, and set the theme accordingly (dark or light).
+//  * nativeTheme.on('updated'): "Emitted when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
+//  */
+// nativeTheme.on('updated', () => {
 
-  // Listen for state changes. When `projectPath` changes, watch it.
-  store$1.onDidAnyChange(async (newState, oldState) => {
+//   // console.log("nativeTheme updated:")
+//   // console.log(nativeTheme.themeSource)
+//   // console.log(nativeTheme.shouldUseDarkColors)
+//   // console.log(nativeTheme.shouldUseHighContrastColors)
+//   // console.log(nativeTheme.shouldUseInvertedColorScheme)
+//   // console.log('selected-text-background = ', systemPreferences.getColor('selected-text-background'))
 
-    state$1 = newState;
+//   const userPref = store.store.appearance.userPref
+//   console.log("main.js: nativeTheme updated")
+//   if (userPref == 'match-system') {
+//     store.dispatch({
+//       type: 'SET_APPEARANCE',
+//       theme: nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
+//     })
+//   }
+// })
 
-    if (newState.changed.includes('projectPath')) {
+// /**
+//  * When user modifies "Appearance" setting (e.g in `View` menu), update `nativeTheme`
+//  */
+// store.onDidChange('appearance', () => {
+//   setNativeTheme()
+// })
 
-      // If watcher was already active on another directory, close it.
-      if (watcher !== undefined) {
-        await watcher.close();
+// /**
+//  * Update `nativeTheme` electron property
+//  * Setting `nativeTheme.themeSource` has several effects. E.g. it tells Chrome how to UI elements such as menus, window frames, etc; it sets `prefers-color-scheme` css query; it sets `nativeTheme.shouldUseDarkColors` value.
+//  * Per: https://www.electronjs.org/docs/api/native-theme
+//  */
+// export function setNativeTheme() {
+//   const userPref = store.store.appearance.userPref
+//   switch (userPref) {
+//     case 'match-system':
+//       nativeTheme.themeSource = 'system'
+//       break
+//     case 'light':
+//       nativeTheme.themeSource = 'light'
+//       break
+//     case 'dark':
+//       nativeTheme.themeSource = 'dark'
+//       break
+//   }
+
+//   // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
+//   // console.log('setNativeTheme(). userPref = ', userPref)
+//   // console.log('setNativeTheme(). systemPreferences.getAccent   Color() = ', systemPreferences.getAccentColor())
+//   // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
+//   // 
+
+//   // Reload (close then open) DevTools to force it to load the new theme. Unfortunately DevTools does not respond to `nativeTheme.themeSource` changes automatically. In Electron, or in Chrome.
+//   if (!app.isPackaged && win && win.webContents && win.webContents.isDevToolsOpened()) {
+//     win.webContents.closeDevTools()
+//     win.webContents.openDevTools()
+//   }
+// }
+
+// console.log("Hi ------ ")
+// console.log(systemPreferences.isDarkMode())
+// console.log(systemPreferences.getUserDefault('AppleInterfaceStyle', 'string'))
+// console.log(systemPreferences.getUserDefault('AppleAquaColorVariant', 'integer'))
+// console.log(systemPreferences.getUserDefault('AppleHighlightColor', 'string'))
+// console.log(systemPreferences.getUserDefault('AppleShowScrollBars', 'string'))
+// console.log(systemPreferences.getAccentColor())
+// console.log(systemPreferences.getSystemColor('blue'))
+// console.log(systemPreferences.effectiveAppearance)
+
+function extractKeysFromString(keyAsString) {
+	// Convert propAddress string to array of keys
+  // Before: "projects[5].window"
+  // After: ["projects", 5, "window"]
+  const regex = /[^\.\[\]]+?(?=\.|\[|\]|$)/g;
+  const keys = keyAsString.match(regex);
+  if (keys && keys.length) {
+    keys.forEach((p, index, thisArray) => {
+      // Find strings that are just integers, and convert to integers
+      if (/\d/.test(p)) {
+        thisArray[index] = parseInt(p, 10);
       }
-
-      // Watch new path
-      startWatcher(newState.projectPath);
-    }
-  });
-
-  // Start initial watcher
-  startWatcher(state$1.projectPath);
+    });
+  }
+  return keys
 }
 
+const getNestedObject = (nestedObj, pathArr) => {
+	return pathArr.reduce((obj, key) =>
+		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+};
 
-/**
- * Start watcher
- */
-async function startWatcher(projectPath) {
-
-  // If new projectPath is not valid, return
-  if (!await fsExtra.pathExists(projectPath)) return
-
-  // Start watcher
-  watcher = chokidar.watch(projectPath, config);
-
-  // On any event, track changes. Some events include `stats`.
-  watcher
-    .on('change', (filePath) => trackChanges('change', filePath))
-    .on('add', (filePath) => trackChanges('add', filePath))
-    .on('unlink', (filePath) => trackChanges('unlink', filePath))
-    .on('addDir', (filePath) => trackChanges('addDir', filePath))
-    .on('unlinkDir', (filePath) => trackChanges('unlinkDir', filePath));
-}
-
-
-/**
- * Create a tally of changes as they occur, and once things settle down, evaluate them.We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
- */
-function trackChanges(event, filePath, stats) {
-  const change = { event: event, path: filePath };
-
-  if (stats) change.stats = stats;
-  // console.log(event)
-
-  // Make the timer longer if `addDir` event comes through. 
-  // If it's too quick, subsequent `add` events are not caught by the timer.
-  const timerDuration = event == 'addDir' ? 500 : 100;
-
-  // Either start a new timer, or if one is already active, refresh it.
-  if (
-    changeTimer == undefined ||
-    !changeTimer.hasRef()
-  ) {
-    changes = [change];
-    changeTimer = setTimeout(onChangesFinished, timerDuration, changes);
+function hasChangedTo(keysAsString, value, objTo, objFrom) {
+  if (!keysAsString || !value ) {
+    // If either required arguments are missing or empty, return undefined
+    return undefined
   } else {
-    changes.push(change);
-    changeTimer.refresh();
-  }
-}
-
-/**
- * When changes are finished, discern what happened, and dispatch the appropriate actions.
- * @param {*} changes - Array of objects: `{ event: 'add', path: './Notes/mynote.md' }`
- */
-async function onChangesFinished(changes) {
-
-  // If change events include directories added or removed, remap everything.
-  // Else, sort changes by event (changed, added, removed), and call appro
-  if (
-    changes.some((c) => c.event == 'addDir') ||
-    changes.some((c) => c.event == 'unlinkDir')
-  ) {
-    // A directory was added or removed
-    mapProject(state$1.projectPath, store$1);
-  } else {
-    // Files were changed (saved or over-written, added, or removed)
-    // Most commonly, this will be a single file saved.
-    // But in other cases, it may be a mix of events.
-    // Sort the events into arrays then pass them to right handlers.
-    let filesChanged = [];
-    let filesAdded = [];
-    let filesUnlinked = [];
-    for (var c of changes) {
-      switch (c.event) {
-        case 'change':
-          filesChanged.push(c);
-          break
-        case 'add':
-          filesAdded.push(c);
-          break
-        case 'unlink':
-          filesUnlinked.push(c);
-          break
-      }
+    const keys = extractKeysFromString(keysAsString);
+    const objToVal = getNestedObject(objTo, keys);
+    const objFromVal = getNestedObject(objFrom, keys);
+    if (typeof objToVal == 'object' || typeof objFromVal == 'object') {
+      // If either value is an object, return undefined.
+      // For now, we don't allow checking against objects.
+      return undefined
+    } else if (objToVal === objFromVal) {
+      // If no change, return false
+      return false
+    } else {
+      // Else, check if objTo equals value
+      return objToVal === value
     }
-    if (filesChanged.length > 0) onFilesChanged(filesChanged);
-    if (filesAdded.length > 0) onFilesAdded(filesAdded);
-    if (filesUnlinked.length > 0) onFilesUnlinked(filesUnlinked);
-  }
-}
-
-async function onFilesChanged(filesChanged) {
-
-  let documents = [];
-  let media = [];
-
-  await Promise.all(
-    filesChanged.map(async (f) => {
-
-      const ext = path.extname(f.path);
-      const parentPath = path.dirname(f.path);
-      const parentId = state$1.folders.find((folder) => folder.path == parentPath).id;
-
-      if (ext == '.md' || ext == '.markdown') {
-        documents.push(await mapDocument(f.path, f.stats, parentId));
-      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-        media.push(await mapMedia(f.path, f.stats, parentId, ext));
-      }
-    })
-  );
-
-  // Dispatch results to store
-  if (documents.length > 0) {
-    store$1.dispatch({ type: 'UPDATE_DOCUMENTS', documents: documents });
-  }
-
-  if (media.length > 0) {
-    store$1.dispatch({ type: 'UPDATE_MEDIA', media: media });
-  }
-}
-
-async function onFilesAdded(filesAdded) {
-
-  let documents = [];
-  let media = [];
-
-  await Promise.all(
-    filesAdded.map(async (f) => {
-
-      const ext = path.extname(f.path);
-      const parentPath = path.dirname(f.path);
-      const parentId = state$1.folders.find((folder) => folder.path == parentPath).id;
-
-      if (ext == '.md' || ext == '.markdown') {
-        documents.push(await mapDocument(f.path, f.stats, parentId));
-      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-        media.push(await mapMedia(f.path, f.stats, parentId, ext));
-      }
-
-    })
-  );
-
-  // Dispatch results to store
-  if (documents.length > 0) {
-    store$1.dispatch({ type: 'ADD_DOCUMENTS', documents: documents });
-  }
-
-  if (media.length > 0) {
-    store$1.dispatch({ type: 'ADD_MEDIA', media: media });
-  }
-}
-
-async function onFilesUnlinked(filesUnlinked) {
-  let documentPaths = [];
-  let mediaPaths = [];
-
-  await Promise.all(
-    filesUnlinked.map(async (f) => {
-
-      const ext = path.extname(f.path);
-
-      if (ext == '.md' || ext == '.markdown') {
-        documentPaths.push(f.path);
-      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-        mediaPaths.push(f.path);
-      }
-    })
-  );
-
-  // Dispatch results to store
-  if (documentPaths.length > 0) {
-    store$1.dispatch({ type: 'REMOVE_DOCUMENTS', documentPaths: documentPaths });
-  }
-
-  if (mediaPaths.length > 0) {
-    store$1.dispatch({ type: 'REMOVE_MEDIA', mediaPaths: mediaPaths });
   }
 }
 
@@ -1696,11 +442,11 @@ const Folder = {
   type: 'folder',
   name: '',
   path: '',
-  id: '',
+  // id: '',
   parentId: '',
   modified: '',
-  directChildCount: 0,
-  recursiveChildCount: 0,
+  // directChildCount: 0,
+  // recursiveChildCount: 0,
   nestDepth: 0
 };
 
@@ -1716,6 +462,14 @@ const Media = {
   created: '',
   nestDepth: 0,
 };
+
+const imageFormats = [
+  '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
+];
+
+const avFormats = [
+  '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
+];
 
 /**
  * For specified path, return document details
@@ -1816,18 +570,125 @@ function getExcerpt(content) {
 }
 
 /**
+ * For specified folder path, map the folder and it's child  
+ * documents, media, and citations, and return `contents` object
+ * with four arrays (one for each type).
+ * @param {*} folderPath - Path to map
+ * @param {*} stats - Optional. Can pass in stats, or if undefined, will get them in function.
+ * @param {*} parentId - Optional. If undefined, we regard the folder as `root`
+ * @param {*} recursive - Optional. If true, map descendant directories also.
+ */
+async function mapFolder (files, folderPath, stats = undefined, parentId = '', recursive = false, nestDepth = 0) {
+
+  // -------- New Folder -------- //
+
+  if (!stats) stats = await fsExtra.stat(folderPath);
+
+  const folder = { ...Folder };
+  // folder.id = `folder-${stats.ino}`
+  folder.name = folderPath.substring(folderPath.lastIndexOf('/') + 1);
+  folder.path = folderPath;
+  folder.parentId = parentId;
+  folder.modified = stats.mtime.toISOString();
+  folder.children = [];
+  folder.nestDepth = nestDepth;
+
+  const id = `folder-${stats.ino}`;
+  files.folders.byId[id] = folder;
+  files.folders.allIds.push(id);
+
+
+  // -------- Contents -------- //
+
+  // Get everything in directory with `readdir`.
+  // Returns array of `fs.Dirent` objects.
+  // https://nodejs.org/api/fs.html#fs_class_fs_dirent
+  const everything = await fsExtra.readdir(folderPath, { withFileTypes: true });
+
+  // if (!everything.length > 0) return contents
+  // console.log(folder.name, "---")
+
+  // everything.forEach(async (e) => {
+
+  //   if (e.isFile()) {
+
+  //     const ePath = path.join(folder.path, e.name)
+  //     const ext = path.extname(e.name)
+  //     const stats = await stat(ePath)
+
+  //     if (ext == '.md' || ext == '.markdown') {
+  //       folder.children.push(`doc-${stats.ino}`)
+  //     }
+  //   }
+  // })
+
+  await Promise.all(
+    everything.map(async (e) => {
+
+      // Get path by combining folderPath with file name.
+      const ePath = path.join(folderPath, e.name);
+
+      // Get extension
+      const ext = path.extname(e.name);
+
+      // Get stats
+      const stats = await fsExtra.stat(ePath);
+
+      if (e.isDirectory() && recursive) {
+
+        const { folders, docs, media } = await mapFolder(files, ePath, stats, id, true, nestDepth + 1);
+
+        // folder.directChildCount++
+        // folder.recursiveChildCount++
+
+        // for (const fldr in folders.byId) {
+        //   folder.recursiveChildCount += folders.byId[fldr].directChildCount
+        // }
+
+        // folders.byId.forEach((f) => {
+        //   folder.recursiveChildCount += f.directChildCount
+        // })
+
+      } else if (ext == '.md' || ext == '.markdown') {
+        const doc = await mapDocument(ePath, stats, folder.id, nestDepth + 1);
+        files.docs.byId[doc.id] = folder;
+        files.docs.allIds.push(doc.id);
+        // folder.directChildCount++
+        // folder.recursiveChildCount++
+
+        // OLDER
+        // contents.documents.push(doc)
+        // folder.children.push(doc.id)
+
+      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
+
+        const media = await mapMedia(ePath, stats, folder.id, ext, nestDepth + 1);
+        files.media.byId[media.id] = folder;
+        files.media.allIds.push(media.id);
+        // folder.directChildCount++
+        // folder.recursiveChildCount++
+
+        // OLDER
+        // contents.media.push(media)
+        // folder.children.push(media.id)
+      }
+    })
+  );
+
+  return files
+}
+
+/**
  * For specified path, return document details
  */
 async function mapMedia (filePath, stats = undefined, parentId = '', extension = undefined, nestDepth) {
 
-	const media = Object.assign({}, Media);
+	const media = { ...Media };
 
-	if (stats == undefined) {
-		stats = await fsExtra.stat(filePath);
-	}
+	if (stats == undefined) stats = await fsExtra.stat(filePath);	
 
 	media.name = path.basename(filePath);
-  media.filetype = extension == undefined ? path.extname(filePath) : extension;
+	media.filetype = extension == undefined ? path.extname(filePath) : extension;
 	media.path = filePath;
 	media.id = `media-${stats.ino}`;
 	media.parentId = parentId;
@@ -1842,56 +703,843 @@ async function mapMedia (filePath, stats = undefined, parentId = '', extension =
  * Map project path recursively and dispatch results to store
  * @param {*} projectPath 
  */
-async function mapProject(projectPath, store) {
+async function mapProject(projectPath) {
 
-  if (projectPath == undefined || store == undefined) {
-    console.error('projectPath or store is undefined');
-  }
-
-  await isWorkingPath(projectPath);
-  if (!isWorkingPath) {
-    console.error('projectPath is not valid');
-  }
+  // await isWorkingPath(directory)
+  // if (!isWorkingPath) {
+  //   console.error('directory is not valid')
+  // }
   
   try {
 
+    const files = {
+      folders: {
+        byId: {},
+        allIds: []
+      },
+      docs: {
+        byId: {},
+        allIds: []
+      },
+      media: {
+        byId: {},
+        allIds: []
+      }
+    };
+
     // Map project path, recursively
-    const { tree, folders, documents, media } = await mapFolder(projectPath, undefined, '', true, 0);
+    return await mapFolder(files, projectPath, undefined, '', true, 0)
+    // console.log(JSON.stringify(files, null, 2))
     
     // Dispatch results to store
-    store.dispatch({
-      type: 'MAP_PROJECT_CONTENTS',
-      folders: folders,
-      documents: documents,
-      media: media,
-    });
+    // store.dispatch({
+    //   type: 'MAP_PROJECT_CONTENTS',
+    //   folders: folders,
+    //   documents: documents,
+    //   media: media,
+    // })
 
   } catch (err) {
     console.log(err);
   }
 }
 
-const imageFormats = [
-  '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
-];
+immer.enablePatches();
 
-const avFormats = [
-  '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
-];
+class Watcher {
+  constructor(project) {
+    this.id = project.window.id;
+    this.directory = project.directory;
+    this.files = { ...newFiles };
+
+    // If directory is not empty (e.g. when restarting the app with a project already set up), start the watcher. 
+    // Else, start listening for directory value changes. Once user selects a project directory (e.g. in the first run experience), catch it 
+
+    const directoryIsDefined = this.directory !== '';
+    if (directoryIsDefined) {
+      this.start();
+    } else {
+      // Create listener for directory changes
+      global.store.onDidAnyChange((state, oldState) => {
+        const directory = state.projects.find((p) => p.window.id == this.id).directory;
+        const directoryIsDefined = directory !== '';
+        if (directoryIsDefined) {
+          this.directory = directory;
+          this.start();
+        }
+      });
+    }
+  }
+
+  chokidarInstance = undefined
+  changes = []
+  changeTimer = undefined
+  directory = ''
+  files = {}
+  id = 0
+
+  async start() {
+    // TODO: This is a potential dead end. The watcher will not start, because the directory is invalid (e.g. perhaps it was deleted since last cold start)
+    const directoryExists = await fsExtra.pathExists(this.directory);
+    if (!directoryExists) return
+
+    this.files = await mapProject(this.directory);
+    // console.log(this.files)
+
+    // Start watcher
+    this.chokidarInstance = chokidar.watch(this.directory, chokidarConfig);
+
+    // On any event, track changes. Some events include `stats`.
+    this.chokidarInstance
+      .on('change', (filePath) => this.trackChanges('change', filePath))
+      .on('add', (filePath) => this.trackChanges('add', filePath))
+      .on('unlink', (filePath) => this.trackChanges('unlink', filePath))
+      .on('addDir', (filePath) => this.trackChanges('addDir', filePath))
+      .on('unlinkDir', (filePath) => this.trackChanges('unlinkDir', filePath));
+  }
+
+  applyUpdates() {
+    const [nextFiles, patches, inversePatches] = immer.produceWithPatches(files, draftFiles => {
+      const newProj = { ...newProject, windowId: project.window.id };
+      draftFiles.push(newProj);
+    });
+  }
+
+  sendPatchesToRenderProcess(patches) {
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length) {
+      windows.forEach((win) => win.webContents.send('statePatchesFromMain', patches));
+    }
+  }
+
+  stop() {
+    // await watcher.close()
+
+  }
+
+  /**
+   * Create a tally of changes as they occur, and once things settle down, evaluate them.We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
+   */
+  trackChanges(event, filePath, stats) {
+    const change = { event: event, path: filePath };
+
+    if (stats) change.stats = stats;
+    // console.log(event)
+
+    // Make the timer longer if `addDir` event comes through. 
+    // If it's too quick, subsequent `add` events are not caught by the timer.
+    const timerDuration = event == 'addDir' ? 500 : 100;
+
+    // Start a new timer if one is not already active.
+    // Or refresh a timer already in progress.
+    if (this.changeTimer == undefined || !this.changeTimer.hasRef()) {
+      this.changes = [change];
+      this.changeTimer = setTimeout(() => this.applyChanges(this.changes), timerDuration);
+    } else {
+      this.changes.push(change);
+      this.changeTimer.refresh();
+    }
+  }
+
+  async applyChanges(changes) {
+
+    console.log(
+      this.files.folders.allIds.length,
+      this.files.docs.allIds.length,
+      this.files.media.allIds.length
+    );
+
+    const directoryWasAddedOrRemoved = changes.some((c) => c.event == 'addDir' || c.event == 'unlinkDir');
+
+    if (directoryWasAddedOrRemoved) {
+      this.files = await mapProject(this.directory);
+    } else {
+
+      const [nextFiles, patches, inversePatches] = immer.produceWithPatches(this.files, draft => {
+        changes.forEach(async (c) => {
+
+          const ext = path.extname(c.path);
+          const type = getFileType(ext);
+          const parentPath = path.dirname(c.path);
+          const parentFolder = getFileByPath(this.files.folders, parentPath);
+
+          // TODO: Fix use of `await` inside `produceWithPatches`... Is throwing error in `add` and `change`.
+
+          switch (c.event) {
+            case 'add':
+              if (type == 'doc') {
+                const doc = await mapDocument(c.path, c.stats, parentFolder.id);
+                draft.docs.byId[doc.id] = doc;
+                draft.docs.allIds.push(doc.id);
+              } else if (type == 'media') {
+                const media = await mapMedia(c.path, c.stats, parentFolder.id, ext);
+                draft.media.byId[media.id] = media;
+                draft.media.allIds.push(media.id);
+              }
+              break
+            case 'change':
+              if (type == 'doc') {
+                const doc = await mapDocument(c.path, c.stats, parentFolder.id);
+                draft.docs.byId[doc.id] = doc;
+              } else if (type == 'media') {
+                const media = await mapMedia(c.path, c.stats, parentFolder.id, ext);
+                draft.media.byId[media.id] = media;
+              }
+              break
+            case 'unlink':
+              if (type == 'doc') {
+                const doc = getFileByPath(this.files.docs, c.path);
+                delete draft.docs.byId[doc.id];
+                draft.docs.allIds.splice(doc.index, 1);
+              } else if (type == 'media') {
+                const media = getFileByPath(this.files.media, c.path);
+                delete draft.media.byId[media.id];
+                draft.media.allIds.splice(media.index, 1);
+              }
+              break
+          }
+        });
+      });
+
+      this.files = nextFiles;
+      console.log(
+        this.files.folders.allIds.length,
+        this.files.docs.allIds.length,
+        this.files.media.allIds.length
+      );
+    }
+  }
+}
+
+/** Utility function for determining file type. */
+function getFileType(ext) {
+  if (ext == '.md' || ext == '.markdown') {
+    return 'doc'
+  } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
+    return 'media'
+  } else {
+    return 'unknown'
+  }
+}
+
+/**
+ * Utility function for getting objects (folders, docs, or media), from `files` by path.
+ * @param {*} lookIn - `files.folders`, `files.docs`, or `files.media`
+ * @param {*} path 
+ */
+function getFileByPath(lookIn, path) {
+  let file = {};
+  lookIn.allIds.find((id, index) => {
+    if (lookIn.byId[id].path == path) {
+      file = {
+        id: id,
+        file: lookIn.byId[id],
+        index: index,
+      };
+      return true
+    }
+  });
+  return file
+}
+
+// Do initial project map, if projectPath has been set)
+// if (store.store.projectPath !== '') {
+//   mapProject(store.store.projectPath, store)
+// }
+
+const newFiles = {
+  folders: {
+    byId: [],
+    allIds: []
+  },
+  docs: {
+    byId: [],
+    allIds: []
+  },
+  media: {
+    byId: [],
+    allIds: []
+  }
+};
+
+/**
+ * Chokida rdocs: https://www.npmjs.com/package/chokidar
+ */
+const chokidarConfig = {
+  ignored: /(^|[\/\\])\../, // Ignore dotfiles
+  ignoreInitial: true,
+  persistent: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 400,
+    pollInterval: 200
+  }
+};
+
+// -------- DISK MANAGER -------- //
+
+class DiskManager {
+	constructor() {
+
+		// Listen for state changes
+		global.store.onDidAnyChange((state, oldState) => {
+
+			const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState);
+			const projectAdded = state.projects.length > oldState.projects.length;
+			const projectRemoved = state.projects.length < oldState.projects.length;
+
+			if (isStartingUp) {
+				state.projects.forEach((p, index) => {
+					// Create Watcher and add to `watchers` array
+					const watcher = new Watcher(p);
+					this.watchers.push(watcher);
+				});
+			} else if (projectAdded) {
+				// Get new project. Then create Watcher and add to `watchers` array
+				const project = state.projects[state.projects.length - 1];
+				const watcher = new Watcher(project);
+				this.watchers.push(watcher);
+			}
+		});
+	}
+
+	// Array of Watcher instances.
+	watchers = []
+}
+
+async function deleteFile(path) {
+  try {
+		await fsExtra.remove(path);
+		return { type: 'DELETE_FILE_SUCCESS', path: path }
+	} catch(err) {
+		return { type: 'DELETE_FILE_FAIL', err: err }
+	}
+}
+
+async function deleteFiles(paths) {
+  try {
+    let deletedPaths = await Promise.all(
+      paths.map(async (path) => {
+        await fsExtra.remove(path);
+      })
+    );
+		return { type: 'DELETE_FILES_SUCCESS', paths: deletedPaths }
+	} catch(err) {
+		return { type: 'DELETE_FILES_FAIL', err: err }
+	}
+}
+
+async function saveFile (path, data) {
+	try {
+		await fsExtra.writeFile(path, data, 'utf8');
+		return {
+			type: 'SAVE_FILE_SUCCESS',
+			path: path,
+		}
+	} catch (err) {
+		return {
+			type: 'SAVE_FILE_FAIL',
+			err: err
+		}
+	}
+}
+
+async function setProjectPath () {
+
+  const win = electron.BrowserWindow.getFocusedWindow();
+
+  const selection = await electron.dialog.showOpenDialog(win, {
+    title: 'Select Project Folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
+
+  if (!selection.canceled) {
+    return { type: 'SET_PROJECT_DIRECTORY', directory: selection.filePaths[0] }
+  }
+}
+
+class IpcManager {
+  constructor() {
+
+    // -------- IPC: Renderer "receives" from Main -------- //
+
+    // On change, send updated state to renderer (each BrowserWindow)
+    // global.store.onDidAnyChange(async (state, oldState) => {
+    //   const windows = BrowserWindow.getAllWindows()
+    //   if (windows.length) {
+    //     windows.forEach((win) => win.webContents.send(' ', state, oldState))
+    //   }
+    // })
+
+    // -------- IPC: Renderer "sends" to Main -------- //
+
+    electron.ipcMain.on('showWindow', (evt) => {
+      const win = electron.BrowserWindow.fromWebContents(evt.sender);
+      win.show();
+    });
+
+    electron.ipcMain.on('safelyCloseWindow', async (evt) => {
+      const win = electron.BrowserWindow.fromWebContents(evt.sender);
+      if (!global.state().areQuiting) {
+        await global.store.dispatch({
+          type: 'REMOVE_PROJECT'
+        }, win.id);
+      }
+      win.destroy();
+    });
+
+    electron.ipcMain.on('dispatch', async (evt, action) => {
+      const win = electron.BrowserWindow.fromWebContents(evt.sender);
+      switch (action.type) {
+        case ('SELECT_PROJECT_DIRECTORY'):
+          store.dispatch(await setProjectPath(), win.id);
+          break
+        case ('SAVE_FILE'):
+          store.dispatch(await saveFile(action.path, action.data), win.id);
+          break
+        case ('DELETE_FILE'):
+          store.dispatch(await deleteFile(action.path), win.id);
+          break
+        case ('DELETE_FILES'):
+          store.dispatch(await deleteFiles(action.paths), win.id);
+          break
+        default:
+          store.dispatch(action, win.id);
+          break
+      }
+    });
+
+    // -------- IPC: Invoke -------- //
+
+    electron.ipcMain.handle('getState', (evt) => {
+      return global.state()
+    });
+
+    electron.ipcMain.handle('getFiles', (evt) => {
+      const win = electron.BrowserWindow.fromWebContents(evt.sender);
+      const watcher = global.watchers.find((watcher) => watcher.id == win.id);
+      return watcher.files
+    });
+
+  }
+}
+
+
+
+// -------- IPC: Renderer "sends" to Main -------- //
+
+
+// // ipcMain.on('saveProjectStateToDisk', (evt, state) => {
+// //   const win = BrowserWindow.fromWebContents(evt.sender)
+// //   const projects = store.store.projects.slice(0)
+// //   const indexOfProjectToUpdate = projects.findIndex((p) => p.windowId == state.windowId)
+// //   projects[indexOfProjectToUpdate] = state
+// //   store.set('projects', projects)
+// // })
+
+// // ipcMain.on('saveFileThenCloseWindow', async (event, path, data) => {
+// //   await writeFile(path, data, 'utf8')
+// //   canCloseWindowSafely = true
+// //   win.close()
+// // })
+
+// // ipcMain.on('saveFileThenQuitApp', async (event, path, data) => {
+// //   await writeFile(path, data, 'utf8')
+// //   canQuitAppSafely = true
+// //   app.quit()
+// // })
+
+// // ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
+// //   shell.openExternal(url)
+// // })
+
+
+
+// // // -------- IPC: Invoke -------- //
+
+// // ipcMain.handle('getSystemColors', () => {
+
+// //   // Get accent color, chop off last two characters (always `ff`, for 100% alpha), and prepend `#`.
+// //   // `0a5fffff` --> `#0a5fff`
+// //   let controlAccentColor = `#${systemPreferences.getAccentColor().slice(0, -2)}`
+
+// //   const systemColors = [
+
+// //     // -------------- System Colors -------------- //
+// //     // Note: Indigo and Teal exist in NSColor, but do not seem to be supported by Electron.
+
+// //     { name: 'systemBlue', color: systemPreferences.getSystemColor('blue') },
+// //     { name: 'systemBrown', color: systemPreferences.getSystemColor('brown') },
+// //     { name: 'systemGray', color: systemPreferences.getSystemColor('gray') },
+// //     { name: 'systemGreen', color: systemPreferences.getSystemColor('green') },
+// //     // { name: 'systemIndigo', color: systemPreferences.getSystemColor('systemIndigo')},
+// //     { name: 'systemOrange', color: systemPreferences.getSystemColor('orange') },
+// //     { name: 'systemPink', color: systemPreferences.getSystemColor('pink') },
+// //     { name: 'systemPurple', color: systemPreferences.getSystemColor('purple') },
+// //     { name: 'systemRed', color: systemPreferences.getSystemColor('red') },
+// //     // { name: 'systemTeal', color: systemPreferences.getSystemColor('teal')},
+// //     { name: 'systemYellow', color: systemPreferences.getSystemColor('yellow') },
+
+// //     // -------------- Label Colors -------------- //
+
+// //     { name: 'labelColor', color: systemPreferences.getColor('label') },
+// //     { name: 'secondaryLabelColor', color: systemPreferences.getColor('secondary-label') },
+// //     { name: 'tertiaryLabelColor', color: systemPreferences.getColor('tertiary-label') },
+// //     { name: 'quaternaryLabelColor', color: systemPreferences.getColor('quaternary-label') },
+
+// //     // -------------- Text Colors -------------- //
+
+// //     { name: 'textColor', color: systemPreferences.getColor('text') },
+// //     { name: 'placeholderTextColor', color: systemPreferences.getColor('placeholder-text') },
+// //     { name: 'selectedTextColor', color: systemPreferences.getColor('selected-text') },
+// //     { name: 'textBackgroundColor', color: systemPreferences.getColor('text-background') },
+// //     { name: 'selectedTextBackgroundColor', color: systemPreferences.getColor('selected-text-background') },
+// //     { name: 'keyboardFocusIndicatorColor', color: systemPreferences.getColor('keyboard-focus-indicator') },
+// //     { name: 'unemphasizedSelectedTextColor', color: systemPreferences.getColor('unemphasized-selected-text') },
+// //     { name: 'unemphasizedSelectedTextBackgroundColor', color: systemPreferences.getColor('unemphasized-selected-text-background') },
+
+// //     // -------------- Content Colors -------------- //
+
+// //     { name: 'linkColor', color: systemPreferences.getColor('link') },
+// //     { name: 'separatorColor', color: systemPreferences.getColor('separator') },
+// //     { name: 'selectedContentBackgroundColor', color: systemPreferences.getColor('selected-content-background') },
+// //     { name: 'unemphasizedSelectedContentBackgroundColor', color: systemPreferences.getColor('unemphasized-selected-content-background') },
+
+// //     // -------------- Menu Colors -------------- //
+
+// //     { name: 'selectedMenuItemTextColor', color: systemPreferences.getColor('selected-menu-item-text') },
+
+// //     // -------------- Table Colors -------------- //
+
+// //     { name: 'gridColor', color: systemPreferences.getColor('grid') },
+// //     { name: 'headerTextColor', color: systemPreferences.getColor('header-text') },
+
+// //     // -------------- Control Colors -------------- //
+
+// //     { name: 'controlAccentColor', color: controlAccentColor },
+// //     { name: 'controlColor', color: systemPreferences.getColor('control') },
+// //     { name: 'controlBackgroundColor', color: systemPreferences.getColor('control-background') },
+// //     { name: 'controlTextColor', color: systemPreferences.getColor('control-text') },
+// //     { name: 'disabledControlTextColor', color: systemPreferences.getColor('disabled-control-text') },
+// //     { name: 'selectedControlColor', color: systemPreferences.getColor('selected-control') },
+// //     { name: 'selectedControlTextColor', color: systemPreferences.getColor('selected-control-text') },
+// //     { name: 'alternateSelectedControlTextColor', color: systemPreferences.getColor('alternate-selected-control-text') },
+
+// //     // -------------- Window Colors -------------- //
+
+// //     { name: 'windowBackgroundColor', color: systemPreferences.getColor('window-background') },
+// //     { name: 'windowFrameTextColor', color: systemPreferences.getColor('window-frame-text') },
+
+// //     // -------------- Highlight & Shadow Colors -------------- //
+
+// //     { name: 'findHighlightColor', color: systemPreferences.getColor('find-highlight') },
+// //     { name: 'highlightColor', color: systemPreferences.getColor('highlight') },
+// //     { name: 'shadowColor', color: systemPreferences.getColor('shadow') },
+// //   ]
+
+// //   return systemColors
+// // })
+
+
+// // ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
+// //   // return path.resolve(basePath, filepath)
+
+// //   /*
+// //   Element: Image, link, backlink, link reference definition
+// //   File type: directory, html, png|jpg|gif, md|mmd|markdown
+// //   */
+
+// //   // console.log('- - - - - -')
+// //   // console.log(pathToCheck.match(/.{0,2}\//))
+// //   const directory = path.parse(docPath).dir
+// //   const resolvedPath = path.resolve(directory, pathToCheck)
+
+// //   const docPathExists = await pathExists(docPath)
+// //   const pathToCheckExists = await pathExists(pathToCheck)
+// //   const resolvedPathExists = await pathExists(resolvedPath)
+
+// //   // console.log('docPath: ', docPath)
+// //   // console.log('pathToCheck: ', pathToCheck)
+// //   // console.log('resolvedPath: ', resolvedPath)
+// //   // console.log(docPathExists, pathToCheckExists, resolvedPathExists)
+
+// //   // if (pathToCheck.match(/.{0,2}\//)) {
+// //   //   console.log()
+// //   // }
+// // })
+
+// // ipcMain.handle('getResolvedPath', async (event, basePath, filepath) => {
+// //   return path.resolve(basePath, filepath)
+// // })
+
+// // ipcMain.handle('getParsedPath', async (event, filepath) => {
+// //   return path.parse(filepath)
+// // })
+
+// // ipcMain.handle('ifPathExists', async (event, filepath) => {
+// //   const exists = await pathExists(filepath)
+// //   return { path: filepath, exists: exists }
+// // })
+
+
+
+// // ipcMain.handle('getState', async (event) => {
+// //   return store.store
+// // })
+
+// // ipcMain.handle('getCitations', (event) => {
+// //   return projectCitations.getCitations()
+// // })
+
+// // ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
+
+// //   // Load file and return
+// //   let file = await readFile(filePath, encoding)
+// //   return file
+// // })
+
+// // ipcMain.handle('getFileById', async (event, id, encoding) => {
+
+// //   // Get path of file with matching id
+// //   const filePath = store.store.contents.find((f) => f.id == id).path
+
+// //   // Load file and return
+// //   let file = await readFile(filePath, encoding)
+// //   return file
+// // })
+
+// // ipcMain.handle('pathJoin', async (event, path1, path2) => {
+// //   return path.join(path1, path2)
+// // })
+
+// // ipcMain.handle('getHTMLFromClipboard', (event) => {
+// //   return clipboard.readHTML()
+// // })
+
+// // ipcMain.handle('getFormatOfClipboard', (event) => {
+// //   return clipboard.availableFormats()
+// // })
+
+class MenuBarManager {
+  constructor() {
+
+    this.isMac = process.platform === 'darwin';
+    this.menuItems = {};
+
+    // Listen for state changes
+    global.store.onDidAnyChange((state, oldState) => {
+      // if (state.changed.includes('')) {
+
+      // }
+    });
+
+    // Set initial menu bar
+    this.setMenuBar();
+  }
+
+  setMenuBar() {
+    electron.Menu.setApplicationMenu(this.getMenu());
+  }
+
+  update() {
+    // TODO
+  }
+
+  getMenu() {
+    const menu = new electron.Menu();
+    this.menuItems = this.getMenuItems();
+    this.menuItems.topLevel.forEach((item) => menu.append(item));
+    return menu
+  }
+
+  getMenuItems() {
+    const items = { topLevel: [] }; // reset
+    const _______________ = new electron.MenuItem({ type: 'separator' });
+
+    // -------- App (Mac-only) -------- //
+
+    if (this.isMac) {
+      items.topLevel.push(new electron.MenuItem({
+        label: electron.app.name,
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'services', submenu: [] },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideothers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      }));
+    }
+
+    // -------- File (Mac-only) -------- //
+
+    if (this.isMac) {
+
+      items.newDocument = new electron.MenuItem({
+        label: 'New Document',
+        accelerator: 'CmdOrCtrl+N',
+        async click(item, focusedWindow) {
+          // global.store.dispatch(await newFile(state))
+        }
+      });
+
+      items.newWindow = new electron.MenuItem({
+        label: 'New Window',
+        accelerator: 'CmdOrCtrl+Shift+N',
+        async click(item, focusedWindow) {
+          global.store.dispatch({ type: 'CREATE_NEW_PROJECT' });
+        }
+      });
+
+      items.save = new electron.MenuItem({
+        label: 'Save',
+        accelerator: 'CmdOrCtrl+S',
+        click(item, focusedWindow) {
+          // focusedWindow.webContents.send('mainRequestsSaveFile')
+        }
+      });
+
+      items.moveToTrash = new electron.MenuItem({
+        label: 'Move to Trash',
+        accelerator: 'CmdOrCtrl+Backspace',
+        enabled: state.focusedLayoutSection == 'navigation',
+        click(item, focusedWindow) {  
+          // focusedWindow.webContents.send('mainRequestsDeleteFile')
+        }
+      });
+
+      items.topLevel.push(new electron.MenuItem({
+        label: 'File',
+        submenu: [
+          items.newDocument,
+          items.newWindow,
+          _______________,
+          items.save,
+          items.moveToTrash
+        ]
+      }));
+    }
+
+    return items
+  }
+}
+
+class WindowManager {
+
+  constructor() {
+
+    // Listen for state changes
+    global.store.onDidAnyChange((state, oldState) => {
+      const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState);
+      if (isStartingUp) {
+        state.projects.forEach(async (p, index) => {
+          this.createWindow(index);
+        });
+      } else if (state.projects.length > oldState.projects.length) {
+        this.createWindow(state.projects.length - 1);
+      }
+    });
+  }
+
+  createWindow(projectIndex) {
+
+    const win = new electron.BrowserWindow(browserWindowConfig);
+
+    // Load index.html
+    win.loadFile(path.join(__dirname, 'index.html'), {
+      query: {
+        id: win.id
+      },
+    });
+
+    // Have to manually set this to 1.0. That should be the default, but somewhere it's being set to 0.91, resulting in the UI being slightly too-small.
+    win.webContents.zoomFactor = 1.0;
+
+    // Listen for close action. Is triggered by pressing close button on window, or close menu item, or app quit. Prevent default, and update state.
+    win.on('close', async (evt) => {
+      const state = global.state();
+      const project = state.projects.find((p) => p.window.id == win.id);
+
+      switch (project.window.status) {
+        case 'open':
+          evt.preventDefault();
+          await global.store.dispatch({ type: 'START_TO_CLOSE_WINDOW' }, win.id);
+          break
+        case 'safeToClose':
+          // Remove project from `state.projects` if window closing was NOT triggered by app quiting. When quiting, the user expects the project to still be there when the app is re-opened. 
+          const shouldRemoveProject = state.appStatus !== 'wantsToQuit';
+          if (shouldRemoveProject) {
+            global.store.dispatch({ type: 'REMOVE_PROJECT' }, win.id);
+          }
+          break
+      }
+    });
+
+    // Listen for app quiting, and start to close window
+    global.store.onDidAnyChange(async (state, oldState) => {
+      const appWantsToQuit = hasChangedTo('appStatus', 'wantsToQuit', state, oldState);
+      if (appWantsToQuit) {
+        await global.store.dispatch({ type: 'START_TO_CLOSE_WINDOW' }, win.id);
+      } else {
+        const project = state.projects.find((p) => p.window.id == win.id);
+        const oldProject = oldState.projects.find((p) => p.window.id == win.id);
+        const isSafeToCloseThisWindow = hasChangedTo('window.status', 'safeToClose', project, oldProject);
+        if (isSafeToCloseThisWindow) {
+          win.close();
+        }
+      }
+    });
+
+    // Open DevTools
+    if (!electron.app.isPackaged) win.webContents.openDevTools();
+
+    global.store.dispatch({
+      type: 'OPENED_WINDOW',
+      projectIndex: projectIndex,
+    }, win.id);
+
+    return win
+  }
+}
+
+
+const browserWindowConfig = {
+  show: false,
+  width: 1600,
+  height: 900,
+  zoomFactor: 1.0,
+  vibrancy: 'sidebar',
+  transparent: true,
+  titleBarStyle: 'hiddenInset',
+  webPreferences: {
+    scrollBounce: false,
+    // Security:
+    allowRunningInsecureContent: false,
+    contextIsolation: true,
+    enableRemoteModule: false,
+    nativeWindowOpen: false,
+    nodeIntegration: false,
+    nodeIntegrationInWorker: false,
+    nodeIntegrationInSubFrames: false,
+    safeDialogs: true,
+    sandbox: true,
+    webSecurity: true,
+    webviewTag: false,
+    // Preload
+    preload: path.join(__dirname, 'js/preload.js')
+  }
+};
 
 // External dependencies
 
-// -------- Variables -------- //
-
-// Keep a global reference of the window object, if you don't, the window will be closed automatically when the JavaScript object is garbage collected.
-let win = null;
-let store$2 = null;
-let canQuitAppSafely = false;
-let canCloseWindowSafely = false;
 
 // -------- Process variables -------- //
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
+
 
 // -------- Reload (Development-only) -------- //
 
@@ -1921,436 +1569,67 @@ if (!electron.app.isPackaged) {
     // argv: ['--inspect=5858'],
   });
 
-  console.log('- - - - - - - - - - - - - - -');
-  console.log(`Setup`, `(Main.js)`);
+  console.log('// - - - - - - - - - - - - - - -');
+  console.log(`Gambier. Electron ${process.versions.electron}. Chrome ${process.versions['chrome']}`);
 }
 
 
+// -------- SETUP -------- //
+
+// Create store (and global variables for store and state)
+global.store = new Store();
+global.state = () => global.store.store;
+
+// Create managers
+const appearanceManager = new AppearanceManager();
+const diskManager = new DiskManager();
+const ipcManager = new IpcManager();
+const menuBarManager = new MenuBarManager();
+const windowManager = new WindowManager();
+
+// One more global variable
+global.watchers = diskManager.watchers;
+
+// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
+electron.app.allowRendererProcessReuse = true;
+
+// Start app
+electron.app.whenReady()
+  .then(appearanceManager.setNativeTheme)
+  .then(async () => {
+    await global.store.dispatch({ type: 'START_COLD_START' });
+    await global.store.dispatch({ type: 'FINISH_COLD_START' });
+  });
 
 
-// -------- Setup -------- //
+// -------- LISTENERS -------- //
 
-console.log(process.versions['chrome']);
+// Quit app: Start by setting appStatus to 'safeToQuit', if it is not yet so. This triggers windows to close. Once all of them have closed, update appStatus to 'safeToQuit', and then trigger `app.quit` again. This time it will go through.
 
-// Create store
-store$2 = new Store();
-
-// Setup store change listeners
-store$2.onDidAnyChange((newState, oldState) => {
-  if (win !== undefined && electron.BrowserWindow.getAllWindows().length) {
-    win.webContents.send('stateChanged', newState, oldState);
+electron.app.on('before-quit', async (evt) => {
+  if (global.state().appStatus !== 'safeToQuit') {
+    evt.preventDefault();
+    await global.store.dispatch({
+      type: 'START_TO_QUIT'
+    });
   }
 });
 
-// TODO: Temporarily setting projectPath here, manually, in code.
-store$2.set('projectPath', '/Users/josh/Desktop/Test notes');
-
-// Do initial project map, if projectPath has been set)
-if (store$2.store.projectPath !== '') {
-  mapProject(store$2.store.projectPath, store$2);
-}
-
-// Setup watcher
-setup$1(store$2);
-
-// Send `appQuit` to renderer on quit
-electron.app.on('before-quit', (evt) => {
-  // If `canQuitAppSafely` is false, prevent window closing and prompt renderer to save file.
-  if (!canQuitAppSafely && win !== undefined) {
-    evt.preventDefault();
-    win.webContents.send('mainWantsToQuitApp');
-  } else {
-    // Reset and close
-    canQuitAppSafely = false;
+global.store.onDidAnyChange(async (state) => {
+  if (state.appStatus == 'wantsToQuit') {
+    const isAllWindowsSafelyClosed = state.projects.every((p) => p.window.status == 'safeToClose');
+    if (isAllWindowsSafelyClosed) {
+      await global.store.dispatch({ type: 'CAN_SAFELY_QUIT' });
+      electron.app.quit();
+    }
   }
 });
 
 // All windows closed
 electron.app.on('window-all-closed', () => {
-  console.log('window-all-closed');
   // "On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q" — https://www.geeksforgeeks.org/save-files-in-electronjs/
   if (process.platform !== 'darwin') {
     electron.app.quit();
   }
-});
-
-// Mac-only: "Emitted when the application is activated. Various actions can trigger this event, such as launching the application for the first time, attempting to re-launch the application when it's already running, or clicking on the application's dock or taskbar icon." — https://github.com/electron/electron/blob/master/docs/api/app.md#event-activate-macos
-electron.app.on('activate', (evt, hasVisibleWindows) => {
-
-  // "On macOS it's common to re-create a window in the app when the dock icon is clicked and there are no other windows open." — https://www.geeksforgeeks.org/save-files-in-electronjs/
-  if (!hasVisibleWindows) {
-    createWindow();
-  }
-  // if (BrowserWindow.getAllWindows().length === 0) {
-  //   createWindow()
-  // }
-});
-
-
-// -------- Set theme -------- //
-
-/**
- * When OS appearance changes, update app theme to match (dark or light):
- * Listen for changes to nativeTheme. These are triggered when the OS appearance changes (e.g. when the user modifies "Appearance" in System Preferences > General, on Mac). If the user has selected the "Match System" appearance option in the app, we need to match the new OS appearance. Check the `nativeTheme.shouldUseDarkColors` value, and set the theme accordingly (dark or light).
- * nativeTheme.on('updated'): "Emitted when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
- */
-electron.nativeTheme.on('updated', () => {
-
-  // console.log("nativeTheme updated:")
-  // console.log(nativeTheme.themeSource)
-  // console.log(nativeTheme.shouldUseDarkColors)
-  // console.log(nativeTheme.shouldUseHighContrastColors)
-  // console.log(nativeTheme.shouldUseInvertedColorScheme)
-  // console.log('selected-text-background = ', systemPreferences.getColor('selected-text-background'))
-
-  const userPref = store$2.store.appearance.userPref;
-  if (userPref == 'match-system') {
-    store$2.dispatch({
-      type: 'SET_APPEARANCE',
-      theme: electron.nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
-    });
-  }
-});
-
-/**
- * When user modifies "Appearance" setting (e.g in `View` menu), update `nativeTheme`
- */
-store$2.onDidChange('appearance', () => {
-  setNativeTheme();
-});
-
-/**
- * Update `nativeTheme` electron property
- * Setting `nativeTheme.themeSource` has several effects. E.g. it tells Chrome how to UI elements such as menus, window frames, etc; it sets `prefers-color-scheme` css query; it sets `nativeTheme.shouldUseDarkColors` value.
- * Per: https://www.electronjs.org/docs/api/native-theme
- */
-function setNativeTheme() {
-  const userPref = store$2.store.appearance.userPref;
-  switch (userPref) {
-    case 'match-system':
-      electron.nativeTheme.themeSource = 'system';
-      break
-    case 'light':
-      electron.nativeTheme.themeSource = 'light';
-      break
-    case 'dark':
-      electron.nativeTheme.themeSource = 'dark';
-      break
-  }
-
-  // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
-  // console.log('setNativeTheme(). userPref = ', userPref)
-  // console.log('setNativeTheme(). systemPreferences.getAccent   Color() = ', systemPreferences.getAccentColor())
-  // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
-  // 
-
-  // Reload (close then open) DevTools to force it to load the new theme. Unfortunately DevTools does not respond to `nativeTheme.themeSource` changes automatically. In Electron, or in Chrome.
-  if (!electron.app.isPackaged && win && win.webContents && win.webContents.isDevToolsOpened()) {
-    win.webContents.closeDevTools();
-    win.webContents.openDevTools();
-  }
-}
-
-
-// -------- Create window -------- //
-
-function createWindow() {
-
-  win = new electron.BrowserWindow({
-    show: false,
-    width: 1600,
-    height: 900,
-    zoomFactor: 1.0,
-    vibrancy: 'sidebar',
-    transparent: true,
-    titleBarStyle: 'hiddenInset',
-    webPreferences: {
-      scrollBounce: false,
-      // Security:
-      allowRunningInsecureContent: false,
-      contextIsolation: true,
-      enableRemoteModule: false,
-      nativeWindowOpen: false,
-      nodeIntegration: false,
-      nodeIntegrationInWorker: false,
-      nodeIntegrationInSubFrames: false,
-      safeDialogs: true,
-      sandbox: true,
-      webSecurity: true,
-      webviewTag: false,
-      // Preload
-      preload: path.join(__dirname, 'js/preload.js')
-    }
-  });
-
-  win.on('close', (evt) => {
-    // If `canCloseWindowSafely` is false, 
-    if (!canCloseWindowSafely) {
-      evt.preventDefault();
-      win.webContents.send('mainWantsToCloseWindow');
-    } else {
-      // Reset and close
-      canCloseWindowSafely = false;
-    }
-  });
-
-  // Open DevTools
-  // if (!app.isPackaged) win.webContents.openDevTools();
-
-  // Load index.html
-  win.loadFile(path.join(__dirname, 'index.html'));
-
-  // Setup menu bar
-  setup(store$2);
-
-  // NOTE: We're not using this. Instead, we're calling `win.show()` from renderer, via IPC call.
-  // Send state to render process once dom is ready
-  // win.once('ready-to-show', () => {
-  //   win.show()
-  // })
-
-  // console.log("Hi ------ ")
-  // console.log(systemPreferences.isDarkMode())
-  // console.log(systemPreferences.getUserDefault('AppleInterfaceStyle', 'string'))
-  // console.log(systemPreferences.getUserDefault('AppleAquaColorVariant', 'integer'))
-  // console.log(systemPreferences.getUserDefault('AppleHighlightColor', 'string'))
-  // console.log(systemPreferences.getUserDefault('AppleShowScrollBars', 'string'))
-  // console.log(systemPreferences.getAccentColor())
-  // console.log(systemPreferences.getSystemColor('blue'))
-  // console.log(systemPreferences.effectiveAppearance)
-}
-
-
-
-// -------- Kickoff -------- //
-
-// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
-electron.app.allowRendererProcessReuse = true;
-
-electron.app.whenReady()
-  .then(setNativeTheme)
-  .then(createWindow);
-
-
-// -------- IPC: Renderer "sends" to Main -------- //
-
-electron.ipcMain.on('saveFileThenCloseWindow', async (event, path, data) => {
-  await fsExtra.writeFile(path, data, 'utf8');
-  canCloseWindowSafely = true;
-  win.close();
-});
-
-electron.ipcMain.on('saveFileThenQuitApp', async (event, path, data) => {
-  await fsExtra.writeFile(path, data, 'utf8');
-  canQuitAppSafely = true;
-  electron.app.quit();
-});
-
-electron.ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
-  electron.shell.openExternal(url);
-});
-
-electron.ipcMain.on('showWindow', (event) => {
-  win.show();
-
-  // Have to manually set this to 1.0. That should be the default, but somewhere it's being set to 0.91, resulting in the UI being slightly too-small.
-  win.webContents.zoomFactor = 1.0;
-
-});
-
-electron.ipcMain.on('dispatch', async (event, action) => {
-  switch (action.type) {
-    case ('SET_PROJECT_PATH'):
-      store$2.dispatch(await setProjectPath());
-      break
-    case ('SAVE_FILE'):
-      store$2.dispatch(await saveFile(action.path, action.data));
-      break
-    case ('DELETE_FILE'):
-      store$2.dispatch(await deleteFile(action.path));
-      break
-    case ('DELETE_FILES'):
-      store$2.dispatch(await deleteFiles(action.paths));
-      break
-    case ('SET_SORT'):
-    case ('LOAD_PATH_IN_EDITOR'):
-    // SideBar 2
-    case ('EXPAND_SIDEBAR_ITEMS'):
-    case ('SELECT_SIDEBAR_ITEMS'):
-    case ('SELECT_SIDEBAR_TAB_BY_INDEX'):
-    case ('TOGGLE_SIDEBAR_PREVIEW'):
-    // SideBar (old)
-    case ('SELECT_SIDEBAR_ITEM'):
-    case ('TOGGLE_SIDEBAR_ITEM_EXPANDED'):
-    case ('SET_LAYOUT_FOCUS'):
-    case ('SELECT_FILES'):
-    case ('SAVE_SIDEBAR_SCROLL_POSITION'):
-      store$2.dispatch(action);
-      break
-  }
-});
-
-
-// -------- IPC: Invoke -------- //
-
-electron.ipcMain.handle('getSystemColors', () => {
-
-  // Get accent color, chop off last two characters (always `ff`, for 100% alpha), and prepend `#`.
-  // `0a5fffff` --> `#0a5fff`
-  let controlAccentColor = `#${electron.systemPreferences.getAccentColor().slice(0, -2)}`;
-
-  const systemColors = [
-
-    // -------------- System Colors -------------- //
-    // Note: Indigo and Teal exist in NSColor, but do not seem to be supported by Electron.
-
-    { name: 'systemBlue', color: electron.systemPreferences.getSystemColor('blue') },
-    { name: 'systemBrown', color: electron.systemPreferences.getSystemColor('brown') },
-    { name: 'systemGray', color: electron.systemPreferences.getSystemColor('gray') },
-    { name: 'systemGreen', color: electron.systemPreferences.getSystemColor('green') },
-    // { name: 'systemIndigo', color: systemPreferences.getSystemColor('systemIndigo')},
-    { name: 'systemOrange', color: electron.systemPreferences.getSystemColor('orange') },
-    { name: 'systemPink', color: electron.systemPreferences.getSystemColor('pink') },
-    { name: 'systemPurple', color: electron.systemPreferences.getSystemColor('purple') },
-    { name: 'systemRed', color: electron.systemPreferences.getSystemColor('red') },
-    // { name: 'systemTeal', color: systemPreferences.getSystemColor('teal')},
-    { name: 'systemYellow', color: electron.systemPreferences.getSystemColor('yellow') },
-
-    // -------------- Label Colors -------------- //
-
-    { name: 'labelColor', color: electron.systemPreferences.getColor('label') },
-    { name: 'secondaryLabelColor', color: electron.systemPreferences.getColor('secondary-label') },
-    { name: 'tertiaryLabelColor', color: electron.systemPreferences.getColor('tertiary-label') },
-    { name: 'quaternaryLabelColor', color: electron.systemPreferences.getColor('quaternary-label') },
-
-    // -------------- Text Colors -------------- //
-
-    { name: 'textColor', color: electron.systemPreferences.getColor('text') },
-    { name: 'placeholderTextColor', color: electron.systemPreferences.getColor('placeholder-text') },
-    { name: 'selectedTextColor', color: electron.systemPreferences.getColor('selected-text') },
-    { name: 'textBackgroundColor', color: electron.systemPreferences.getColor('text-background') },
-    { name: 'selectedTextBackgroundColor', color: electron.systemPreferences.getColor('selected-text-background') },
-    { name: 'keyboardFocusIndicatorColor', color: electron.systemPreferences.getColor('keyboard-focus-indicator') },
-    { name: 'unemphasizedSelectedTextColor', color: electron.systemPreferences.getColor('unemphasized-selected-text') },
-    { name: 'unemphasizedSelectedTextBackgroundColor', color: electron.systemPreferences.getColor('unemphasized-selected-text-background') },
-
-    // -------------- Content Colors -------------- //
-
-    { name: 'linkColor', color: electron.systemPreferences.getColor('link') },
-    { name: 'separatorColor', color: electron.systemPreferences.getColor('separator') },
-    { name: 'selectedContentBackgroundColor', color: electron.systemPreferences.getColor('selected-content-background') },
-    { name: 'unemphasizedSelectedContentBackgroundColor', color: electron.systemPreferences.getColor('unemphasized-selected-content-background') },
-
-    // -------------- Menu Colors -------------- //
-
-    { name: 'selectedMenuItemTextColor', color: electron.systemPreferences.getColor('selected-menu-item-text') },
-
-    // -------------- Table Colors -------------- //
-
-    { name: 'gridColor', color: electron.systemPreferences.getColor('grid') },
-    { name: 'headerTextColor', color: electron.systemPreferences.getColor('header-text') },
-
-    // -------------- Control Colors -------------- //
-
-    { name: 'controlAccentColor', color: controlAccentColor },
-    { name: 'controlColor', color: electron.systemPreferences.getColor('control') },
-    { name: 'controlBackgroundColor', color: electron.systemPreferences.getColor('control-background') },
-    { name: 'controlTextColor', color: electron.systemPreferences.getColor('control-text') },
-    { name: 'disabledControlTextColor', color: electron.systemPreferences.getColor('disabled-control-text') },
-    { name: 'selectedControlColor', color: electron.systemPreferences.getColor('selected-control') },
-    { name: 'selectedControlTextColor', color: electron.systemPreferences.getColor('selected-control-text') },
-    { name: 'alternateSelectedControlTextColor', color: electron.systemPreferences.getColor('alternate-selected-control-text') },
-
-    // -------------- Window Colors -------------- //
-
-    { name: 'windowBackgroundColor', color: electron.systemPreferences.getColor('window-background') },
-    { name: 'windowFrameTextColor', color: electron.systemPreferences.getColor('window-frame-text') },
-
-    // -------------- Highlight & Shadow Colors -------------- //
-
-    { name: 'findHighlightColor', color: electron.systemPreferences.getColor('find-highlight') },
-    { name: 'highlightColor', color: electron.systemPreferences.getColor('highlight') },
-    { name: 'shadowColor', color: electron.systemPreferences.getColor('shadow') },
-  ];
-
-  return systemColors
-});
-
-
-electron.ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
-  // return path.resolve(basePath, filepath)
-
-  /*
-  Element: Image, link, backlink, link reference definition
-  File type: directory, html, png|jpg|gif, md|mmd|markdown
-  */
-
-  // console.log('- - - - - -')
-  // console.log(pathToCheck.match(/.{0,2}\//))
-  const directory = path.parse(docPath).dir;
-  const resolvedPath = path.resolve(directory, pathToCheck);
-
-  const docPathExists = await fsExtra.pathExists(docPath);
-  const pathToCheckExists = await fsExtra.pathExists(pathToCheck);
-  const resolvedPathExists = await fsExtra.pathExists(resolvedPath);
-
-  // console.log('docPath: ', docPath)
-  // console.log('pathToCheck: ', pathToCheck)
-  // console.log('resolvedPath: ', resolvedPath)
-  // console.log(docPathExists, pathToCheckExists, resolvedPathExists)
-
-  // if (pathToCheck.match(/.{0,2}\//)) {
-  //   console.log()
-  // }
-});
-
-electron.ipcMain.handle('getResolvedPath', async (event, basePath, filepath) => {
-  return path.resolve(basePath, filepath)
-});
-
-electron.ipcMain.handle('getParsedPath', async (event, filepath) => {
-  return path.parse(filepath)
-});
-
-electron.ipcMain.handle('ifPathExists', async (event, filepath) => {
-  const exists = await fsExtra.pathExists(filepath);
-  return { path: filepath, exists: exists }
-});
-
-electron.ipcMain.handle('getState', async (event) => {
-  return store$2.store
-});
-
-electron.ipcMain.handle('getCitations', (event) => {
-  return projectCitations.getCitations()
-});
-
-electron.ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
-
-  // Load file and return
-  let file = await fsExtra.readFile(filePath, encoding);
-  return file
-});
-
-electron.ipcMain.handle('getFileById', async (event, id, encoding) => {
-
-  // Get path of file with matching id
-  const filePath = store$2.store.contents.find((f) => f.id == id).path;
-
-  // Load file and return
-  let file = await fsExtra.readFile(filePath, encoding);
-  return file
-});
-
-electron.ipcMain.handle('pathJoin', async (event, path1, path2) => {
-  return path.join(path1, path2)
-});
-
-electron.ipcMain.handle('getHTMLFromClipboard', (event) => {
-  return electron.clipboard.readHTML()
-});
-
-electron.ipcMain.handle('getFormatOfClipboard', (event) => {
-  return electron.clipboard.availableFormats()
 });
 //# sourceMappingURL=main.js.map
