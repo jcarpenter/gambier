@@ -8,30 +8,26 @@
   import { state, files, sidebar } from '../../../StateManager.js'
   import { flip } from 'svelte/animate';
   import { standardEase } from '../../UI/easing'
+  import { slideUp } from '../../UI/transition'
 
 	export let tree
 	export let isRoot = false
-  export let expandedHeight = 0
-  export let top = 0
-  export let isExpanded = true
 
-	$: height = isExpanded ? expandedHeight : 0
+	$: duration = $state.timing.treeListFolder
 	
+	// When the number of children changes, the height changes. This happens instantly, and can clip the child elements as they animate to their new positions. We could animate the height at the same duration and easing as the other transitions, but that's a big performance no-no. So instead we use `step` transitions to wait until the standard transition duration is complete, and then set the new value. OR we set it at the beginning. It depends on whether the folder has grown or shrunk. We determine -that- by comparing the new and old `numVisibleDescendants`.
 
-  function scale(node, { duration = 100 }) {
-    return {
-      duration,
-      easing: standardEase,
-      css: (t, u) => `transform: scale(1, ${t})`,
-    }
-  }
-
-  function counterScale(node, { duration = 100 }) {
-    return {
-      duration,
-      easing: standardEase,
-      css: (t, u) => `transform: scale(1, ${1 / t})`,
-    }
+	let oldNumVisibleDescendants = 0
+	let folderHeight = 0
+	let folderEasing = 0
+	
+	$: {
+		if (tree.numVisibleDescendants !== oldNumVisibleDescendants) {
+			const hasGrown = tree.numVisibleDescendants > oldNumVisibleDescendants
+			folderEasing = hasGrown ? 'step-start' : 'step-end'
+			folderHeight = tree.numVisibleDescendants * 29
+			oldNumVisibleDescendants = tree.numVisibleDescendants
+		}
 	}
 
 	function isExpandedFolder(id) {
@@ -48,26 +44,26 @@
   @import '../../../../../styles/_mixins.scss';
 
   .folder {
-    --duration: 0;
-
+		--folderHeight: 0;
+		--folderEasing: 0;
+		--duration: 0;
+		
+    // contain: strict;
     position: absolute;
 		width: 100%;
-    // contain: strict;
-    // border: 2px solid rgba(255, 0, 0, 0.3);
-    // height: calc(var(--height) * 1px);
-    // overflow: hidden;
-    // top: calc(var(--top) * 1px);
-		// transition: height calc(var(--duration) * 1ms) step-end;
+    overflow: hidden;
+		height: calc(var(--folderHeight) * 1px);
+		transition: height calc(var(--duration) * 1ms) var(--folderEasing);
 		
 		&.isRoot {
 			// We set `position: relative` on root folder, 
 			// so `width: 100%` fits the parent div correctly.
 			position: relative;
 		}
-  }
+	}
 
   .folder,
-  .ul {
+  ul {
     // contain: strict;
     // position: absolute;
     transform-origin: left top;
@@ -96,10 +92,14 @@
 
 <svelte:options immutable={true} />
 
-<div class="folder" class:isRoot>
-	<ul class="rows">
+<div 
+	use:css={{folderHeight, folderEasing, duration}}
+	class="folder" 
+	class:isRoot 
+	>
+	<ul class="rows" transition:slideUp|local={{ duration: duration }}>
 		{#each tree.children as row (row.id)}
-			<li animate:flip={{duration: 100}} class:empty={row.id.includes('empty')}>
+			<li animate:flip={{duration: duration, easing: standardEase}} class:empty={row.id.includes('empty')}>
 				{#if !row.id.includes('empty')}
 					<File on:selectFile on:toggleExpanded id={row.id} />
 					{#if isExpandedFolder(row.id)}

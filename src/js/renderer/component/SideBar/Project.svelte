@@ -16,12 +16,15 @@
   $: tab = $sidebar.tabsById.project
   $: isQueryEmpty = query == ''
   $: transitionTime = isQueryEmpty ? 300 : 0
+  $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
   let flat
   let query = '' // Bound to search field
   let resultsTree = []
   let resultsFlat = []
   let resultsVisible = []
+
+  // $: console.log(tree)
 
   /* ---- How file updating works ----
    * User makes changes to project directory (e.g. adds a file).
@@ -59,7 +62,7 @@
       // }
     )
 
-    // console.log(tree)
+    console.log(tree)
 
     // flat = createFlatHierarchy(tree)
     // console.log(flat)
@@ -207,6 +210,8 @@
   }
 
   function handleArrowLeftRight(key) {
+    console.log('handleArrowLeftRight: ', key)
+    return
     const item = resultsFlat.find((r) => r.id == tab.lastSelected)
 
     const isFolder = item.type == 'folder'

@@ -1367,6 +1367,20 @@ function update($$) {
         $$.after_update.forEach(add_render_callback);
     }
 }
+
+let promise;
+function wait() {
+    if (!promise) {
+        promise = Promise.resolve();
+        promise.then(() => {
+            promise = null;
+        });
+    }
+    return promise;
+}
+function dispatch(node, direction, kind) {
+    node.dispatchEvent(custom_event(`${direction ? 'intro' : 'outro'}${kind}`));
+}
 const outroing = new Set();
 let outros;
 function group_outros() {
@@ -1403,6 +1417,112 @@ function transition_out(block, local, detach, callback) {
         });
         block.o(local);
     }
+}
+const null_transition = { duration: 0 };
+function create_bidirectional_transition(node, fn, params, intro) {
+    let config = fn(node, params);
+    let t = intro ? 0 : 1;
+    let running_program = null;
+    let pending_program = null;
+    let animation_name = null;
+    function clear_animation() {
+        if (animation_name)
+            delete_rule(node, animation_name);
+    }
+    function init(program, duration) {
+        const d = program.b - t;
+        duration *= Math.abs(d);
+        return {
+            a: t,
+            b: program.b,
+            d,
+            duration,
+            start: program.start,
+            end: program.start + duration,
+            group: program.group
+        };
+    }
+    function go(b) {
+        const { delay = 0, duration = 300, easing = identity, tick = noop, css } = config || null_transition;
+        const program = {
+            start: now() + delay,
+            b
+        };
+        if (!b) {
+            // @ts-ignore todo: improve typings
+            program.group = outros;
+            outros.r += 1;
+        }
+        if (running_program || pending_program) {
+            pending_program = program;
+        }
+        else {
+            // if this is an intro, and there's a delay, we need to do
+            // an initial tick and/or apply CSS animation immediately
+            if (css) {
+                clear_animation();
+                animation_name = create_rule(node, t, b, duration, delay, easing, css);
+            }
+            if (b)
+                tick(0, 1);
+            running_program = init(program, duration);
+            add_render_callback(() => dispatch(node, b, 'start'));
+            loop(now => {
+                if (pending_program && now > pending_program.start) {
+                    running_program = init(pending_program, duration);
+                    pending_program = null;
+                    dispatch(node, running_program.b, 'start');
+                    if (css) {
+                        clear_animation();
+                        animation_name = create_rule(node, t, running_program.b, running_program.duration, 0, easing, config.css);
+                    }
+                }
+                if (running_program) {
+                    if (now >= running_program.end) {
+                        tick(t = running_program.b, 1 - t);
+                        dispatch(node, running_program.b, 'end');
+                        if (!pending_program) {
+                            // we're done
+                            if (running_program.b) {
+                                // intro — we can tidy up immediately
+                                clear_animation();
+                            }
+                            else {
+                                // outro — needs to be coordinated
+                                if (!--running_program.group.r)
+                                    run_all(running_program.group.c);
+                            }
+                        }
+                        running_program = null;
+                    }
+                    else if (now >= running_program.start) {
+                        const p = now - running_program.start;
+                        t = running_program.a + running_program.d * easing(p / running_program.duration);
+                        tick(t, 1 - t);
+                    }
+                }
+                return !!(running_program || pending_program);
+            });
+        }
+    }
+    return {
+        run(b) {
+            if (is_function(config)) {
+                wait().then(() => {
+                    // @ts-ignore
+                    config = config();
+                    go(b);
+                });
+            }
+            else {
+                go(b);
+            }
+        },
+        end() {
+            clear_animation();
+            running_program = pending_program = null;
+        }
+    };
 }
 
 const globals = (typeof window !== 'undefined'
@@ -3185,19 +3305,25 @@ var src = function bezier (mX1, mY1, mX2, mY2) {
   };
 };
 
+// We use 'bezier-easing' package to convert CSS cubic bezier easing curves to easing functions (which Svelte transitions require).
+
 const standard = src(0.4, 0, 0.2, 1);
 const decelerate = src(0, 0, 0.2, 1);
+
+function standardEase(t) {
+  return standard(t)
+}
 
 /* src/js/renderer/component/SideBar/treelist/File.svelte generated by Svelte v3.29.7 */
 
 function add_css$8() {
 	var style = element("style");
-	style.id = "svelte-ws5i88-style";
-	style.textContent = ".file.svelte-ws5i88.svelte-ws5i88{--leftOffset:0;contain:strict;border-radius:4px;user-select:none;margin-bottom:1px;width:100%;height:28px;background-color:rgba(219, 186, 186, 0.566)}.file.svelte-ws5i88 .icon.svelte-ws5i88{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;position:absolute;top:50%;transform:translate(0, -50%);background-color:var(--controlAccentColor);left:calc(calc(var(--leftOffset) * 1px) + 20px);width:14px;height:14px}.file.svelte-ws5i88 .label.svelte-ws5i88{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);position:absolute;top:50%;transform:translate(0, -50%);color:var(--labelColor);left:calc(calc(var(--leftOffset) * 1px) + 42px);white-space:nowrap}.file.svelte-ws5i88 .counter.svelte-ws5i88{position:absolute;top:50%;transform:translate(0, -50%);font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);color:var(--tertiaryLabelColor);position:absolute;right:7px}.file.folder.svelte-ws5i88 .icon.svelte-ws5i88{-webkit-mask-image:var(--img-folder)}.file.doc.svelte-ws5i88 .icon.svelte-ws5i88{-webkit-mask-image:var(--img-doc-text)}.file.img.svelte-ws5i88 .icon.svelte-ws5i88{-webkit-mask-image:var(--img-photo)}.file.av.svelte-ws5i88 .icon.svelte-ws5i88{-webkit-mask-image:var(--img-play-rectangle)}.file.isSelected.isSidebarFocused.svelte-ws5i88.svelte-ws5i88{background-color:var(--selectedContentBackgroundColor)}.file.isSelected.isSidebarFocused.svelte-ws5i88 .icon.svelte-ws5i88{background-color:var(--controlColor)}.file.isSelected.isSidebarFocused.svelte-ws5i88 .label.svelte-ws5i88{color:var(--selectedMenuItemTextColor)}.file.isSelected.isSidebarFocused.svelte-ws5i88 .counter.svelte-ws5i88{color:var(--controlColor);opacity:0.4}.file.isSelected.svelte-ws5i88.svelte-ws5i88:not(.isSidebarFocused){background-color:var(--disabledControlTextColor)}";
+	style.id = "svelte-la4kid-style";
+	style.textContent = ".file.svelte-la4kid.svelte-la4kid{--leftOffset:0;contain:strict;border-radius:4px;user-select:none;margin-bottom:1px;width:100%;height:28px}.file.svelte-la4kid .icon.svelte-la4kid{-webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;position:absolute;top:50%;transform:translate(0, -50%);background-color:var(--controlAccentColor);left:calc(calc(var(--leftOffset) * 1px) + 20px);width:14px;height:14px}.file.svelte-la4kid .label.svelte-la4kid{font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);position:absolute;top:50%;transform:translate(0, -50%);color:var(--labelColor);left:calc(calc(var(--leftOffset) * 1px) + 42px);white-space:nowrap}.file.svelte-la4kid .counter.svelte-la4kid{position:absolute;top:50%;transform:translate(0, -50%);font:caption;font-weight:normal;font-size:13px;line-height:15px;letter-spacing:-0.08px;color:var(--labelColor);color:var(--tertiaryLabelColor);position:absolute;right:7px}.file.folder.svelte-la4kid .icon.svelte-la4kid{-webkit-mask-image:var(--img-folder)}.file.doc.svelte-la4kid .icon.svelte-la4kid{-webkit-mask-image:var(--img-doc-text)}.file.img.svelte-la4kid .icon.svelte-la4kid{-webkit-mask-image:var(--img-photo)}.file.av.svelte-la4kid .icon.svelte-la4kid{-webkit-mask-image:var(--img-play-rectangle)}.file.isSelected.isSidebarFocused.svelte-la4kid.svelte-la4kid{background-color:var(--selectedContentBackgroundColor)}.file.isSelected.isSidebarFocused.svelte-la4kid .icon.svelte-la4kid{background-color:var(--controlColor)}.file.isSelected.isSidebarFocused.svelte-la4kid .label.svelte-la4kid{color:var(--selectedMenuItemTextColor)}.file.isSelected.isSidebarFocused.svelte-la4kid .counter.svelte-la4kid{color:var(--controlColor);opacity:0.4}.file.isSelected.svelte-la4kid.svelte-la4kid:not(.isSidebarFocused){background-color:var(--disabledControlTextColor)}";
 	append(document.head, style);
 }
 
-// (127:2) {#if isExpandable}
+// (126:2) {#if isExpandable}
 function create_if_block_1$2(ctx) {
 	let disclosurebutton;
 	let current;
@@ -3252,7 +3378,7 @@ function create_if_block_1$2(ctx) {
 	};
 }
 
-// (153:2) {#if isExpandable}
+// (152:2) {#if isExpandable}
 function create_if_block$4(ctx) {
 	let div;
 	let t_value = /*file*/ ctx[3].numDescendants + "";
@@ -3262,7 +3388,7 @@ function create_if_block$4(ctx) {
 		c() {
 			div = element("div");
 			t = text(t_value);
-			attr(div, "class", "counter svelte-ws5i88");
+			attr(div, "class", "counter svelte-la4kid");
 		},
 		m(target, anchor) {
 			insert(target, div, anchor);
@@ -3305,9 +3431,9 @@ function create_fragment$8(ctx) {
 			t2 = text(t2_value);
 			t3 = space();
 			if (if_block1) if_block1.c();
-			attr(div0, "class", "icon svelte-ws5i88");
-			attr(div1, "class", "label svelte-ws5i88");
-			attr(div2, "class", div2_class_value = "file " + /*file*/ ctx[3].type + " svelte-ws5i88");
+			attr(div0, "class", "icon svelte-la4kid");
+			attr(div1, "class", "label svelte-la4kid");
+			attr(div2, "class", div2_class_value = "file " + /*file*/ ctx[3].type + " svelte-la4kid");
 			toggle_class(div2, "isSidebarFocused", /*isSidebarFocused*/ ctx[2]);
 			toggle_class(div2, "isSelected", /*isSelected*/ ctx[1]);
 			toggle_class(div2, "isExpanded", /*isExpanded*/ ctx[4]);
@@ -3372,7 +3498,7 @@ function create_fragment$8(ctx) {
 				if_block1 = null;
 			}
 
-			if (!current || dirty & /*file*/ 8 && div2_class_value !== (div2_class_value = "file " + /*file*/ ctx[3].type + " svelte-ws5i88")) {
+			if (!current || dirty & /*file*/ 8 && div2_class_value !== (div2_class_value = "file " + /*file*/ ctx[3].type + " svelte-la4kid")) {
 				attr(div2, "class", div2_class_value);
 			}
 
@@ -3481,7 +3607,7 @@ function instance$8($$self, $$props, $$invalidate) {
 class File extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-ws5i88-style")) add_css$8();
+		if (!document.getElementById("svelte-la4kid-style")) add_css$8();
 
 		init(this, options, instance$8, create_fragment$8, not_equal, {
 			id: 7,
@@ -3510,29 +3636,42 @@ function flip(node, animation, params) {
     };
 }
 
+/**
+ * Set parent to overflow:hidden to make it look like the sliding element is being masked.
+ * @param {*} node 
+ * @param {*} param1 
+ */
+function slideUp(node, { duration = 100, easing = standardEase }) {
+  return {
+    duration,
+    easing,
+    css: (t, u) => `transform: translate(0, ${u * -100}%)`,
+  }
+}
+
 /* src/js/renderer/component/SideBar/treelist/Folder.svelte generated by Svelte v3.29.7 */
 
 function add_css$9() {
 	var style = element("style");
-	style.id = "svelte-dbxtua-style";
-	style.textContent = ".folder.svelte-dbxtua{--duration:0;position:absolute;width:100%}.folder.isRoot.svelte-dbxtua{position:relative}.folder.svelte-dbxtua{transform-origin:left top;will-change:transform}ul.svelte-dbxtua,li.svelte-dbxtua{margin:0;padding:0;text-indent:0;list-style-type:none}li.svelte-dbxtua{position:relative;display:block}li.empty.svelte-dbxtua{height:28px;pointer-events:none;visibility:hidden;margin-bottom:1px}";
+	style.id = "svelte-2t6zz2-style";
+	style.textContent = ".folder.svelte-2t6zz2{--folderHeight:0;--folderEasing:0;--duration:0;position:absolute;width:100%;overflow:hidden;height:calc(var(--folderHeight) * 1px);transition:height calc(var(--duration) * 1ms) var(--folderEasing)}.folder.isRoot.svelte-2t6zz2{position:relative}.folder.svelte-2t6zz2,ul.svelte-2t6zz2{transform-origin:left top;will-change:transform}ul.svelte-2t6zz2,li.svelte-2t6zz2{margin:0;padding:0;text-indent:0;list-style-type:none}li.svelte-2t6zz2{position:relative;display:block}li.empty.svelte-2t6zz2{height:28px;pointer-events:none;visibility:hidden;margin-bottom:1px}";
 	append(document.head, style);
 }
 
 function get_each_context(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[15] = list[i];
+	child_ctx[14] = list[i];
 	return child_ctx;
 }
 
-// (89:4) {#if !row.id.includes('empty')}
+// (94:4) {#if !row.id.includes('empty')}
 function create_if_block$5(ctx) {
 	let file;
 	let t;
-	let show_if = /*isExpandedFolder*/ ctx[2](/*row*/ ctx[15].id);
+	let show_if = /*isExpandedFolder*/ ctx[5](/*row*/ ctx[14].id);
 	let if_block_anchor;
 	let current;
-	file = new File({ props: { id: /*row*/ ctx[15].id } });
+	file = new File({ props: { id: /*row*/ ctx[14].id } });
 	file.$on("selectFile", /*selectFile_handler*/ ctx[6]);
 	file.$on("toggleExpanded", /*toggleExpanded_handler*/ ctx[7]);
 	let if_block = show_if && create_if_block_1$3(ctx);
@@ -3553,9 +3692,9 @@ function create_if_block$5(ctx) {
 		},
 		p(ctx, dirty) {
 			const file_changes = {};
-			if (dirty & /*tree*/ 1) file_changes.id = /*row*/ ctx[15].id;
+			if (dirty & /*tree*/ 1) file_changes.id = /*row*/ ctx[14].id;
 			file.$set(file_changes);
-			if (dirty & /*tree*/ 1) show_if = /*isExpandedFolder*/ ctx[2](/*row*/ ctx[15].id);
+			if (dirty & /*tree*/ 1) show_if = /*isExpandedFolder*/ ctx[5](/*row*/ ctx[14].id);
 
 			if (show_if) {
 				if (if_block) {
@@ -3600,11 +3739,11 @@ function create_if_block$5(ctx) {
 	};
 }
 
-// (91:5) {#if isExpandedFolder(row.id)}
+// (96:5) {#if isExpandedFolder(row.id)}
 function create_if_block_1$3(ctx) {
 	let folder;
 	let current;
-	folder = new Folder({ props: { tree: /*row*/ ctx[15] } });
+	folder = new Folder({ props: { tree: /*row*/ ctx[14] } });
 	folder.$on("selectFile", /*selectFile_handler_1*/ ctx[8]);
 	folder.$on("toggleExpanded", /*toggleExpanded_handler_1*/ ctx[9]);
 
@@ -3618,7 +3757,7 @@ function create_if_block_1$3(ctx) {
 		},
 		p(ctx, dirty) {
 			const folder_changes = {};
-			if (dirty & /*tree*/ 1) folder_changes.tree = /*row*/ ctx[15];
+			if (dirty & /*tree*/ 1) folder_changes.tree = /*row*/ ctx[14];
 			folder.$set(folder_changes);
 		},
 		i(local) {
@@ -3636,10 +3775,10 @@ function create_if_block_1$3(ctx) {
 	};
 }
 
-// (87:2) {#each tree.children as row (row.id)}
+// (92:2) {#each tree.children as row (row.id)}
 function create_each_block(key_1, ctx) {
 	let li;
-	let show_if = !/*row*/ ctx[15].id.includes("empty");
+	let show_if = !/*row*/ ctx[14].id.includes("empty");
 	let t;
 	let rect;
 	let stop_animation = noop;
@@ -3653,8 +3792,8 @@ function create_each_block(key_1, ctx) {
 			li = element("li");
 			if (if_block) if_block.c();
 			t = space();
-			attr(li, "class", "svelte-dbxtua");
-			toggle_class(li, "empty", /*row*/ ctx[15].id.includes("empty"));
+			attr(li, "class", "svelte-2t6zz2");
+			toggle_class(li, "empty", /*row*/ ctx[14].id.includes("empty"));
 			this.first = li;
 		},
 		m(target, anchor) {
@@ -3664,7 +3803,7 @@ function create_each_block(key_1, ctx) {
 			current = true;
 		},
 		p(ctx, dirty) {
-			if (dirty & /*tree*/ 1) show_if = !/*row*/ ctx[15].id.includes("empty");
+			if (dirty & /*tree*/ 1) show_if = !/*row*/ ctx[14].id.includes("empty");
 
 			if (show_if) {
 				if (if_block) {
@@ -3690,7 +3829,7 @@ function create_each_block(key_1, ctx) {
 			}
 
 			if (dirty & /*tree*/ 1) {
-				toggle_class(li, "empty", /*row*/ ctx[15].id.includes("empty"));
+				toggle_class(li, "empty", /*row*/ ctx[14].id.includes("empty"));
 			}
 		},
 		r() {
@@ -3702,7 +3841,11 @@ function create_each_block(key_1, ctx) {
 		},
 		a() {
 			stop_animation();
-			stop_animation = create_animation(li, rect, flip, { duration: 100 });
+
+			stop_animation = create_animation(li, rect, flip, {
+				duration: /*duration*/ ctx[4],
+				easing: standardEase
+			});
 		},
 		i(local) {
 			if (current) return;
@@ -3725,9 +3868,13 @@ function create_fragment$9(ctx) {
 	let ul;
 	let each_blocks = [];
 	let each_1_lookup = new Map();
+	let ul_transition;
+	let css_action;
 	let current;
+	let mounted;
+	let dispose;
 	let each_value = /*tree*/ ctx[0].children;
-	const get_key = ctx => /*row*/ ctx[15].id;
+	const get_key = ctx => /*row*/ ctx[14].id;
 
 	for (let i = 0; i < each_value.length; i += 1) {
 		let child_ctx = get_each_context(ctx, each_value, i);
@@ -3744,8 +3891,8 @@ function create_fragment$9(ctx) {
 				each_blocks[i].c();
 			}
 
-			attr(ul, "class", "rows svelte-dbxtua");
-			attr(div, "class", "folder svelte-dbxtua");
+			attr(ul, "class", "rows svelte-2t6zz2");
+			attr(div, "class", "folder svelte-2t6zz2");
 			toggle_class(div, "isRoot", /*isRoot*/ ctx[1]);
 		},
 		m(target, anchor) {
@@ -3757,9 +3904,21 @@ function create_fragment$9(ctx) {
 			}
 
 			current = true;
+
+			if (!mounted) {
+				dispose = action_destroyer(css_action = css.call(null, div, {
+					folderHeight: /*folderHeight*/ ctx[2],
+					folderEasing: /*folderEasing*/ ctx[3],
+					duration: /*duration*/ ctx[4]
+				}));
+
+				mounted = true;
+			}
 		},
-		p(ctx, [dirty]) {
-			if (dirty & /*tree, isExpandedFolder*/ 5) {
+		p(new_ctx, [dirty]) {
+			ctx = new_ctx;
+
+			if (dirty & /*tree, isExpandedFolder*/ 33) {
 				const each_value = /*tree*/ ctx[0].children;
 				group_outros();
 				for (let i = 0; i < each_blocks.length; i += 1) each_blocks[i].r();
@@ -3767,6 +3926,12 @@ function create_fragment$9(ctx) {
 				for (let i = 0; i < each_blocks.length; i += 1) each_blocks[i].a();
 				check_outros();
 			}
+
+			if (css_action && is_function(css_action.update) && dirty & /*folderHeight, folderEasing, duration*/ 28) css_action.update.call(null, {
+				folderHeight: /*folderHeight*/ ctx[2],
+				folderEasing: /*folderEasing*/ ctx[3],
+				duration: /*duration*/ ctx[4]
+			});
 
 			if (dirty & /*isRoot*/ 2) {
 				toggle_class(div, "isRoot", /*isRoot*/ ctx[1]);
@@ -3779,11 +3944,23 @@ function create_fragment$9(ctx) {
 				transition_in(each_blocks[i]);
 			}
 
+			if (local) {
+				add_render_callback(() => {
+					if (!ul_transition) ul_transition = create_bidirectional_transition(ul, slideUp, { duration: /*duration*/ ctx[4] }, true);
+					ul_transition.run(1);
+				});
+			}
+
 			current = true;
 		},
 		o(local) {
 			for (let i = 0; i < each_blocks.length; i += 1) {
 				transition_out(each_blocks[i]);
+			}
+
+			if (local) {
+				if (!ul_transition) ul_transition = create_bidirectional_transition(ul, slideUp, { duration: /*duration*/ ctx[4] }, false);
+				ul_transition.run(0);
 			}
 
 			current = false;
@@ -3794,20 +3971,29 @@ function create_fragment$9(ctx) {
 			for (let i = 0; i < each_blocks.length; i += 1) {
 				each_blocks[i].d();
 			}
+
+			if (detaching && ul_transition) ul_transition.end();
+			mounted = false;
+			dispose();
 		}
 	};
 }
 
 function instance$9($$self, $$props, $$invalidate) {
+	let $state;
 	let $files;
 	let $sidebar;
-	component_subscribe($$self, files, $$value => $$invalidate(11, $files = $$value));
-	component_subscribe($$self, sidebar, $$value => $$invalidate(12, $sidebar = $$value));
+	component_subscribe($$self, state, $$value => $$invalidate(11, $state = $$value));
+	component_subscribe($$self, files, $$value => $$invalidate(12, $files = $$value));
+	component_subscribe($$self, sidebar, $$value => $$invalidate(13, $sidebar = $$value));
 	let { tree } = $$props;
 	let { isRoot = false } = $$props;
-	let { expandedHeight = 0 } = $$props;
-	let { top = 0 } = $$props;
-	let { isExpanded = true } = $$props;
+
+	// When the number of children changes, the height changes. This happens instantly, and can clip the child elements as they animate to their new positions. We could animate the height at the same duration and easing as the other transitions, but that's a big performance no-no. So instead we use `step` transitions to wait until the standard transition duration is complete, and then set the new value. OR we set it at the beginning. It depends on whether the folder has grown or shrunk. We determine -that- by comparing the new and old `numVisibleDescendants`.
+	let oldNumVisibleDescendants = 0;
+
+	let folderHeight = 0;
+	let folderEasing = 0;
 
 	function isExpandedFolder(id) {
 		const file = $files.byId[id];
@@ -3836,22 +4022,34 @@ function instance$9($$self, $$props, $$invalidate) {
 	$$self.$$set = $$props => {
 		if ("tree" in $$props) $$invalidate(0, tree = $$props.tree);
 		if ("isRoot" in $$props) $$invalidate(1, isRoot = $$props.isRoot);
-		if ("expandedHeight" in $$props) $$invalidate(3, expandedHeight = $$props.expandedHeight);
-		if ("top" in $$props) $$invalidate(4, top = $$props.top);
-		if ("isExpanded" in $$props) $$invalidate(5, isExpanded = $$props.isExpanded);
 	};
 
+	let duration;
+
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*isExpanded, expandedHeight*/ 40) ;
+		if ($$self.$$.dirty & /*$state*/ 2048) {
+			 $$invalidate(4, duration = $state.timing.treeListFolder);
+		}
+
+		if ($$self.$$.dirty & /*tree, oldNumVisibleDescendants*/ 1025) {
+			 {
+				if (tree.numVisibleDescendants !== oldNumVisibleDescendants) {
+					const hasGrown = tree.numVisibleDescendants > oldNumVisibleDescendants;
+					$$invalidate(3, folderEasing = hasGrown ? "step-start" : "step-end");
+					$$invalidate(2, folderHeight = tree.numVisibleDescendants * 29);
+					$$invalidate(10, oldNumVisibleDescendants = tree.numVisibleDescendants);
+				}
+			}
+		}
 	};
 
 	return [
 		tree,
 		isRoot,
+		folderHeight,
+		folderEasing,
+		duration,
 		isExpandedFolder,
-		expandedHeight,
-		top,
-		isExpanded,
 		selectFile_handler,
 		toggleExpanded_handler,
 		selectFile_handler_1,
@@ -3862,15 +4060,8 @@ function instance$9($$self, $$props, $$invalidate) {
 class Folder extends SvelteComponent {
 	constructor(options) {
 		super();
-		if (!document.getElementById("svelte-dbxtua-style")) add_css$9();
-
-		init(this, options, instance$9, create_fragment$9, not_equal, {
-			tree: 0,
-			isRoot: 1,
-			expandedHeight: 3,
-			top: 4,
-			isExpanded: 5
-		});
+		if (!document.getElementById("svelte-2t6zz2-style")) add_css$9();
+		init(this, options, instance$9, create_fragment$9, not_equal, { tree: 0, isRoot: 1 });
 	}
 }
 
@@ -3960,7 +4151,7 @@ function create_fragment$a(ctx) {
 			const header_changes = {};
 			if (dirty & /*tab*/ 4) header_changes.title = /*tab*/ ctx[2].title;
 
-			if (dirty & /*$$scope*/ 2097152) {
+			if (dirty & /*$$scope*/ 8388608) {
 				header_changes.$$scope = { dirty, ctx };
 			}
 
@@ -4009,27 +4200,18 @@ function create_fragment$a(ctx) {
 	};
 }
 
-function selectParentFolder(item) {
-	const parentFolder = folders.find(f => f.id == item.parentId);
-
-	window.api.send("dispatch", {
-		type: "SELECT_SIDEBAR_ITEMS",
-		tabName: "project",
-		lastSelected: id,
-		selected: [parentFolder.id]
-	});
-}
-
 function instance$a($$self, $$props, $$invalidate) {
 	let $sidebar;
+	let $project;
 	let $files;
 	component_subscribe($$self, sidebar, $$value => $$invalidate(7, $sidebar = $$value));
-	component_subscribe($$self, files, $$value => $$invalidate(10, $files = $$value));
+	component_subscribe($$self, project, $$value => $$invalidate(11, $project = $$value));
+	component_subscribe($$self, files, $$value => $$invalidate(12, $files = $$value));
 	F();
 	let query = ""; // Bound to search field
-	let resultsFlat = [];
 	let resultsVisible = [];
 
+	// $: console.log(tree)
 	/* ---- How file updating works ----
  * User makes changes to project directory (e.g. adds a file).
  * Watcher chokidar instance catches. (main)
@@ -4057,10 +4239,11 @@ function instance$a($$self, $$props, $$invalidate) {
 		})); // (patches, inversePatches) => {
 		//   console.log(patches)
 		// }
-	} // console.log(tree)
-	// flat = createFlatHierarchy(tree)
 
+		console.log(tree);
+	} // flat = createFlatHierarchy(tree)
 	// console.log(flat)
+
 	// flat.forEach((r, index) => {
 	//   // Skip top-level folder. Most of it's properties are not set.
 	//   const isTopFolder = r.parentId == ''
@@ -4194,23 +4377,8 @@ function instance$a($$self, $$props, $$invalidate) {
 	}
 
 	function handleArrowLeftRight(key) {
-		const item = resultsFlat.find(r => r.id == tab.lastSelected);
-		const isFolder = item.type == "folder";
-		const isExpanded = isFolder && tab.expanded.some(id => id == item.id);
-
-		if (isFolder) {
-			// Toggle expanded
-			if (!isExpanded && key == "ArrowRight") {
-				toggleExpanded(item);
-			} else if (isExpanded && key == "ArrowLeft") {
-				toggleExpanded(item);
-			}
-		} else if (!isFolder && key == "ArrowLeft") {
-			// Jump selection to parent folder
-			console.log("Jump selection to parent folder");
-
-			selectParentFolder(item);
-		}
+		console.log("handleArrowLeftRight: ", key);
+		return;
 	}
 
 	function handleArrowUpDown(key, shiftPressed, altPressed) {
@@ -4355,6 +4523,7 @@ function instance$a($$self, $$props, $$invalidate) {
 
 	let tab;
 	let isQueryEmpty;
+	let isSidebarFocused;
 
 	$$self.$$.update = () => {
 		if ($$self.$$.dirty & /*$sidebar*/ 128) {
@@ -4367,7 +4536,11 @@ function instance$a($$self, $$props, $$invalidate) {
 
 		if ($$self.$$.dirty & /*isQueryEmpty*/ 256) ;
 
-		if ($$self.$$.dirty & /*$files, tab*/ 1028) {
+		if ($$self.$$.dirty & /*$project*/ 2048) {
+			 isSidebarFocused = $project.focusedLayoutSection == "sidebar";
+		}
+
+		if ($$self.$$.dirty & /*$files, tab*/ 4100) {
 			 (tab.expanded, makeTree());
 		}
 	};

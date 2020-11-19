@@ -38,7 +38,6 @@
     margin-bottom: 1px;
     width: 100%;
     height: 28px;
-    background-color: rgba(219, 186, 186, 0.566);
 
     .icon {
       @include centered_mask_image;

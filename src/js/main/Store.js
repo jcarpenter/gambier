@@ -57,7 +57,7 @@ const storeDefault = {
   },
 
   timing: {
-    treeListFolder: 800,
+    treeListFolder: 300,
   },
 
   // ----------- PROJECTS ----------- //
