@@ -1,15 +1,14 @@
 <script>
   import { project, sidebar } from '../../StateManager'
-  import { getSideBarItemById, isEmpty } from '../../utils'
-  import { onMount } from 'svelte'
 
   import AllDocuments from './AllDocuments.svelte'
   import Preview from './Preview.svelte'
+  import Preview2 from './Preview2.svelte'
   import Project from './Project.svelte'
   import Separator from '../UI/Separator.svelte'
   import Tab from './Tab.svelte'
   
-  $: focused = $project.focusedLayoutSection == 'sidebar'
+  // $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
 </script>
 
@@ -51,14 +50,13 @@
   }
 </style>
 
-<div id="sidebar" class:focused style="--state-sideBarWidth: 250px">
+<div id="sidebar" style="--state-sideBarWidth: 250px">
   
   <!-- Tabs -->
   <div id="tabs">
     <ul>
-      {#each $sidebar.tabs as tab}
-        <Tab {tab} />
-        <!-- <Tab {tab} on:click={() => toggle(tab.name)}/> -->
+      {#each $sidebar.tabsAll as id}
+        <Tab {id} isActive={$sidebar.activeTabId == id} />
       {/each}
     </ul>
   </div>
@@ -68,6 +66,8 @@
   <!-- Sections -->
   <Project />
   <!-- <AllDocuments {state} {focused} /> -->
+
+  <Preview2/>
 
   <!-- Preview -->
   <!-- <Preview {state} /> -->

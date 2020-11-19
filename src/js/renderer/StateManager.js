@@ -19,37 +19,53 @@ let filesAsObject = {}
 export class StateManager {
   constructor(initialState, initialFiles) {
 
+    console.log('StateManager: constructor')
+
     // Set `window.id`
     const queryString = window.location.search
     const urlParams = new URLSearchParams(queryString);
     window.id = urlParams.get('id')
 
-    // Update state when patches arrive from main...
-    window.api.receive("statePatchesFromMain", (patches) => {
-      stateAsObject = applyPatches(stateAsObject, patches)
-      updateStores()
-    })
+    // Set initial files. 
+    // When we start the app, we try to fetch `files` from main. In case files aren't ready yet (e.g. on project first run the directory is initially undefined), we also create a listener for main process to send the initial files. 
+    // During full app reload (main and render process), 
+    if (initialFiles) {
+      filesAsObject = initialFiles
+      updateFilesStore()
+    }
+
+    // Main sends initial `files` when the project's Watcher instance has does its first `mapProject`.
+    window.api.receive('initialFilesFromMain', (files) => {
+      filesAsObject = files
+      updateFilesStore()
+    })  
 
     // Update files when patches arrive from main...
     window.api.receive("filesPatchesFromMain", (patches) => {
+      console.log('StateManager: filesPatchesFromMain: ', patches)
       filesAsObject = applyPatches(filesAsObject, patches)
-      updateFiles()
+      updateFilesStore()
     })
 
-    // Set initial value
+    // Update state when patches arrive from main...
+    window.api.receive("statePatchesFromMain", (patches) => {
+      stateAsObject = applyPatches(stateAsObject, patches)
+      updateStateStores()
+    })
+
+    // Set initial state value
     stateAsObject = initialState
-    filesAsObject = initialFiles
-    updateStores()
+    updateStateStores()
   }
 }
 
-function updateStores() {
-
+function updateStateStores() {
   state.set(stateAsObject)
   const proj = stateAsObject.projects.find((p) => p.window.id == window.id)
   project.set(proj)
   sidebar.set(proj.sidebar)
-
-  files.set(filesAsObject)
 }
 
+function updateFilesStore() {
+  files.set(filesAsObject)
+}

@@ -5,7 +5,6 @@
 
 <style type="text/scss">
   .thumbnail {
-    flex-grow: 1;
     overflow: hidden;
     width: 100%;
     // background-color: white;
@@ -15,11 +14,9 @@
   }
 
   img {
-    // flex-grow: 1;
     /* Scale the image so it covers whole area, thus will likely crop */
-    width: 100%;
+    width: 100%; 
     height: 100%;
-    // padding: 3px;
     object-fit: contain;
     object-position: center;
   }

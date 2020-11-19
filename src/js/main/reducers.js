@@ -1,12 +1,13 @@
 import { BrowserWindow } from 'electron'
-import { produceWithPatches, enablePatches } from 'immer'
+import produce, { enablePatches } from 'immer'
 import { newProject } from './Store.js'
-import { existsSync, pathExists } from 'fs-extra'
+import { existsSync, pathExistsSync, accessSync } from 'fs-extra'
+import fs from 'fs'
 
 enablePatches()
 
 export const update = (state, action, windowId) =>
-  produceWithPatches(state, (draft) => {
+  produce(state, (draft) => {
 
     // Set a few useful, commonly-used variables
     const win = windowId !== undefined ? BrowserWindow.fromId(windowId) : undefined
@@ -17,21 +18,28 @@ export const update = (state, action, windowId) =>
       // -------- APP -------- //
 
       case 'START_COLD_START': {
+
         // Update appStatus
         draft.appStatus = 'coldStarting'
-        // Create new project, if there are none existing
-        const noExistingProjects = state.projects.length == 0
-        if (noExistingProjects) {
-          createNewProject(draft)
-        } else {
-          // Check if directory still exists. Perhaps they've been deleted since the app was last opened. If it does not exist, or is empty '', remove the project.
-          state.projects.forEach((p, index) => {
-            const directoryExists = existsSync(p.directory)
-            if (!directoryExists) {
-              draft.projects.splice(index, 1)
+
+        // If there are existing projects, check their directories. Prune any that 1) are missing a directory (blank value, or path doesn't exist), or 2) that we don't have write permissions for.
+        if (draft.projects.length) {
+          draft.projects = draft.projects.filter((project) => {
+            if (!project.directory) return false
+            try {
+              accessSync(project.directory, fs.constants.W_OK)
+              return true
+            } catch(err) {
+              return false
             }
           })
         }
+
+        // If there are no projects, create a new empty one.
+        if (!draft.projects.length) {
+          draft.projects.push(createNewProject())
+        }
+
         break
       }
 
@@ -59,6 +67,7 @@ export const update = (state, action, windowId) =>
       }
 
       case 'SET_PROJECT_DIRECTORY': {
+
         project.directory = action.directory
         break
       }
@@ -96,7 +105,15 @@ export const update = (state, action, windowId) =>
       // Directory
 
       case 'SET_PROJECTPATH_SUCCESS': {
-        project.directory = action.path
+        try {
+          // Is path valid, and can we write to it?
+          // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
+          accessSync(action.path, fs.constants.W_OK)
+          // If yes, proceed.
+          project.directory = action.path
+        } catch (err) {
+          // Else, do nothing.
+        }
         break
       }
 
@@ -112,13 +129,51 @@ export const update = (state, action, windowId) =>
         break
       }
 
-      case 'SELECT_SIDEBAR_TAB_BY_NAME': {
-        project.sidebar.tabs.forEach((t) => t.active = t.name == action.name)
+      // Window
+
+      // Save window bounds to state, so we can restore later
+      case 'SAVE_WINDOW_BOUNDS': {
+        project.window.bounds = action.windowBounds
+        break
+      }
+
+
+
+      // -------- SIDEBAR 2 -------- //
+
+      case 'SELECT_SIDEBAR_TAB_BY_ID': {
+        project.sidebar.activeTabId = action.id
+        break
+      }
+
+      case 'EXPAND_SIDEBAR_ITEMS': {
+        const tab = project.sidebar.tabsById[action.tabId]
+        tab.expanded = action.expanded
+        break
+      }
+
+      case 'SELECT_SIDEBAR_ITEMS': {
+        const tab = project.sidebar.tabsById[action.tabId]
+        tab.lastSelected = action.lastSelected
+        tab.selected = action.selected
+        break
+      }
+
+      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
+        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index]
+        break
+      }
+      case 'TOGGLE_SIDEBAR_PREVIEW': {
+        project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen
         break
       }
 
     }
+  }, (patches) => {
+    // Update `global.patches`
+    global.patches = patches
   })
+
 
 
 /**
@@ -134,8 +189,8 @@ function getNextWindowId() {
 /**
  * Insert a new blank project into state.projects array
  */
-function createNewProject(draft) {
+function createNewProject() {
   const project = { ...newProject }
   project.window.id = getNextWindowId()
-  draft.projects.push(project)
+  return project
 }

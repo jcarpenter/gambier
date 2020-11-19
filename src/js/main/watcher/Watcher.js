@@ -1,10 +1,12 @@
+import { BrowserWindow } from 'electron'
 import chokidar from 'chokidar'
 import path from 'path'
 import { pathExists } from 'fs-extra'
-import { produceWithPatches, enablePatches } from 'immer'
-import { mapProject, mapDocument, mapMedia } from './index.js'
-import { imageFormats, avFormats } from './formats'
-import { execFile } from 'child_process'
+import produce, { enablePatches } from 'immer'
+import { mapProject } from './mapProject'
+import { mapDocument } from './mapDocument'
+import { mapMedia } from './mapMedia'
+import { findInTree, getFileType, isDoc, isMedia } from '../../shared/utils.js'
 
 enablePatches()
 
@@ -12,24 +14,30 @@ export class Watcher {
   constructor(project) {
     this.id = project.window.id
     this.directory = project.directory
-    this.files = { ...newFiles }
+    this.files = {}
 
-    // If directory is not empty (e.g. when restarting the app with a project already set up), start the watcher. 
-    // Else, start listening for directory value changes. Once user selects a project directory (e.g. in the first run experience), catch it 
+    // Start listening for directory value changes. Once user selects a project directory (e.g. in the first run experience), catch it 
 
-    const directoryIsDefined = this.directory !== ''
-    if (directoryIsDefined) {
-      this.start()
-    } else {
-      // Create listener for directory changes
-      global.store.onDidAnyChange((state, oldState) => {
-        const directory = state.projects.find((p) => p.window.id == this.id).directory
-        const directoryIsDefined = directory !== ''
-        if (directoryIsDefined) {
+    // Create listener for directory changes
+    global.store.onDidAnyChange((state, oldState) => {
+      
+      const directory = state.projects.find((p) => p.window.id == this.id).directory
+      const directoryIsDefined = directory !== ''
+      const directoryWasEmpty = this.directory == ''
+      const directoryHasChanged = directory !== this.directory
+
+      if (directoryIsDefined) {
+        if (directoryWasEmpty) {
           this.directory = directory
           this.start()
+        } else if (directoryHasChanged) {
+          this.update()
         }
-      })
+      }
+    })
+
+    if (this.directory) {
+      this.start()
     }
   }
 
@@ -41,37 +49,23 @@ export class Watcher {
   id = 0
 
   async start() {
-    // TODO: This is a potential dead end. The watcher will not start, because the directory is invalid (e.g. perhaps it was deleted since last cold start)
-    const directoryExists = await pathExists(this.directory)
-    if (!directoryExists) return
 
     this.files = await mapProject(this.directory)
-    // console.log(this.files)
-
+    // console.log(JSON.stringify(this.files.tree, null, 2))
     // Start watcher
     this.chokidarInstance = chokidar.watch(this.directory, chokidarConfig)
 
     // On any event, track changes. Some events include `stats`.
     this.chokidarInstance
-      .on('change', (filePath) => this.trackChanges('change', filePath))
-      .on('add', (filePath) => this.trackChanges('add', filePath))
-      .on('unlink', (filePath) => this.trackChanges('unlink', filePath))
-      .on('addDir', (filePath) => this.trackChanges('addDir', filePath))
-      .on('unlinkDir', (filePath) => this.trackChanges('unlinkDir', filePath))
-  }
+      .on('change', (filePath) => this.batchChanges('change', filePath))
+      .on('add', (filePath) => this.batchChanges('add', filePath))
+      .on('unlink', (filePath) => this.batchChanges('unlink', filePath))
+      .on('addDir', (filePath) => this.batchChanges('addDir', filePath))
+      .on('unlinkDir', (filePath) => this.batchChanges('unlinkDir', filePath))
 
-  applyUpdates() {
-    const [nextFiles, patches, inversePatches] = produceWithPatches(files, draftFiles => {
-      const newProj = { ...newProject, windowId: project.window.id }
-      draftFiles.push(newProj)
-    })
-  }
-
-  sendPatchesToRenderProcess(patches) {
-    const windows = BrowserWindow.getAllWindows()
-    if (windows.length) {
-      windows.forEach((win) => win.webContents.send('statePatchesFromMain', patches))
-    }
+    // Send initial files to browser window
+    const win = BrowserWindow.fromId(this.id)
+    win.webContents.send('initialFilesFromMain', this.files)
   }
 
   stop() {
@@ -80,9 +74,9 @@ export class Watcher {
   }
 
   /**
-   * Create a tally of changes as they occur, and once things settle down, evaluate them.We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
+   * Create a tally of changes as they occur, and once things settle down, evaluate them. We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
    */
-  trackChanges(event, filePath, stats) {
+  batchChanges(event, filePath, stats) {
     const change = { event: event, path: filePath }
 
     if (stats) change.stats = stats
@@ -103,84 +97,66 @@ export class Watcher {
     }
   }
 
+  /**
+   * Take batched changes and update `files`, then send patches to associated BrowserWindow.
+   * @param {*} changes 
+   */
   async applyChanges(changes) {
-
-    console.log(
-      this.files.folders.allIds.length,
-      this.files.docs.allIds.length,
-      this.files.media.allIds.length
-    )
 
     const directoryWasAddedOrRemoved = changes.some((c) => c.event == 'addDir' || c.event == 'unlinkDir')
 
     if (directoryWasAddedOrRemoved) {
       this.files = await mapProject(this.directory)
     } else {
-
-      const [nextFiles, patches, inversePatches] = produceWithPatches(this.files, draft => {
-        changes.forEach(async (c) => {
-
+      this.files = await produce(this.files, async (draft) => {
+        for (const c of changes) {
           const ext = path.extname(c.path)
-          const type = getFileType(ext)
           const parentPath = path.dirname(c.path)
-          const parentFolder = getFileByPath(this.files.folders, parentPath)
+          const parentFolder = getFileByPath(draft, parentPath)
+          const parentTreeItem = findInTree(draft.tree, parentFolder.id, 'id')
 
-          // TODO: Fix use of `await` inside `produceWithPatches`... Is throwing error in `add` and `change`.
+          if (isDoc(ext) || isMedia(ext)) {
 
-          switch (c.event) {
-            case 'add':
-              if (type == 'doc') {
-                const doc = await mapDocument(c.path, c.stats, parentFolder.id)
-                draft.docs.byId[doc.id] = doc
-                draft.docs.allIds.push(doc.id)
-              } else if (type == 'media') {
-                const media = await mapMedia(c.path, c.stats, parentFolder.id, ext)
-                draft.media.byId[media.id] = media
-                draft.media.allIds.push(media.id)
+            switch (c.event) {
+              case 'add': {
+                const file = isDoc(ext) ?
+                  await mapDocument(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats) :
+                  await mapMedia(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats)
+                // Add to `byId`, `allIds`, and parent's children.
+                draft.byId[file.id] = file
+                draft.allIds.push(file.id)
+                parentTreeItem.children.push({
+                  id: file.id,
+                  parentId: file.parentId,
+                  type: file.type
+                })
+                break
               }
-              break
-            case 'change':
-              if (type == 'doc') {
-                const doc = await mapDocument(c.path, c.stats, parentFolder.id)
-                draft.docs.byId[doc.id] = doc
-              } else if (type == 'media') {
-                const media = await mapMedia(c.path, c.stats, parentFolder.id, ext)
-                draft.media.byId[media.id] = media
+              case 'change': {
+                const file = isDoc(ext) ?
+                  await mapDocument(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats) :
+                  await mapMedia(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats)
+                draft.byId[file.id] = file
+                break
               }
-              break
-            case 'unlink':
-              if (type == 'doc') {
-                const doc = getFileByPath(this.files.docs, c.path)
-                delete draft.docs.byId[doc.id]
-                draft.docs.allIds.splice(doc.index, 1)
-              } else if (type == 'media') {
-                const media = getFileByPath(this.files.media, c.path)
-                delete draft.media.byId[media.id]
-                draft.media.allIds.splice(media.index, 1)
+              case 'unlink': {
+                const file = getFileByPath(draft, c.path)
+                // Remove from `byId`, `allIds`, and parent's children.
+                delete draft.byId[file.id]
+                draft.allIds.splice(file.index, 1)
+                const indexInChildren = parentTreeItem.children.findIndex((child) => child.id == file.id)
+                parentTreeItem.children.splice(indexInChildren, 1)
+                break
               }
-              break
+            }
           }
-        })
+        }
+      }, (patches, inversePatches) => {
+        const win = BrowserWindow.fromId(this.id)
+        console.log(patches)
+        win.webContents.send('filesPatchesFromMain', patches)
       })
-
-      this.files = nextFiles
-      console.log(
-        this.files.folders.allIds.length,
-        this.files.docs.allIds.length,
-        this.files.media.allIds.length
-      )
     }
-  }
-}
-
-/** Utility function for determining file type. */
-function getFileType(ext) {
-  if (ext == '.md' || ext == '.markdown') {
-    return 'doc'
-  } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-    return 'media'
-  } else {
-    return 'unknown'
   }
 }
 
@@ -195,7 +171,7 @@ function getFileByPath(lookIn, path) {
     if (lookIn.byId[id].path == path) {
       file = {
         id: id,
-        file: lookIn.byId[id],
+        nestDepth: lookIn.byId[id].nestDepth,
         index: index,
       }
       return true
@@ -204,28 +180,8 @@ function getFileByPath(lookIn, path) {
   return file
 }
 
-// Do initial project map, if projectPath has been set)
-// if (store.store.projectPath !== '') {
-//   mapProject(store.store.projectPath, store)
-// }
-
-const newFiles = {
-  folders: {
-    byId: [],
-    allIds: []
-  },
-  docs: {
-    byId: [],
-    allIds: []
-  },
-  media: {
-    byId: [],
-    allIds: []
-  }
-}
-
 /**
- * Chokida rdocs: https://www.npmjs.com/package/chokidar
+ * Chokidar docs: https://www.npmjs.com/package/chokidar
  */
 const chokidarConfig = {
   ignored: /(^|[\/\\])\../, // Ignore dotfiles

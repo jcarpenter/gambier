@@ -20,12 +20,6 @@
   let mounted = false
   let expandable
 
-  // Expandable action
-  // outerEl: Scales and masks
-  // innerEl: Counter-scales
-  // height: Of outerEl
-  // Height animation depends on whether new height is more or less.
-  // Trigger expand collapse animation from outside.
 
   $: nestDepth = item.details.nestDepth
   
@@ -115,114 +109,6 @@
     );
     transition: transform var(--duration) ease-out;
   }
-
-  // Icons
-  .item {
-    &.folder .icon {
-      -webkit-mask-image: var(--img-folder);
-    }
-
-    &.doc .icon {
-      -webkit-mask-image: var(--img-doc-text);
-    }
-
-    &.image .icon {
-      -webkit-mask-image: var(--img-photo);
-    }
-
-    &.av .icon {
-      -webkit-mask-image: var(--img-play-rectangle);
-    }
-  }
-  
-  // Selection
-  .item.isSelected {
-
-    // Selected, and parent list IS focused
-    &.listHasFocus {
-      background-color: var(--selectedContentBackgroundColor);
-      .disclosure [role='button'],
-      .icon {
-        background-color: var(--controlColor);
-      }
-      .label {
-        color: var(--selectedMenuItemTextColor);
-      }
-      .counter {
-        color: var(--controlColor);
-        opacity: 0.4;
-      }
-    }
-
-    // Selected, and parent list NOT focused
-    &:not(.listHasFocus) {
-      background-color: var(--disabledControlTextColor);
-    }
-  }
-  
-  // Shared
-  .item {
-    border-radius: 4px;
-    --nestOffset: 0px;
-    position: absolute;
-    // min-height: 28px;
-    user-select: none;
-    margin-bottom: 1px;
-    width: 230px;
-    height: var(--itemHeight);
-
-    .disclosure {
-      @include absolute-vertical-center;
-      left: calc(var(--nestOffset) + 5px);
-      width: 10px;
-      height: 10px;
-
-      [role='button'] {
-        @include centered_mask_image;
-        -webkit-mask-image: var(--img-chevron-right);
-        background-color: var(--controlTextColor);
-        position: absolute;
-        display: inline-block;
-        top: 50%;
-        left: 50%;
-        width: 8px;
-        height: 8px;
-        transform: translate(-50%, -50%) rotateZ(0deg);
-      }
-    }
-
-    &.isExpanded .disclosure [role='button'] {
-      transform: translate(-50%, -50%) rotateZ(90deg);
-    }
-
-    .icon {
-      @include centered_mask_image;
-      @include absolute-vertical-center;
-      background-color: var(--controlAccentColor);
-      left: calc(var(--nestOffset) + 20px);
-      width: 14px;
-      height: 14px;
-    }
-
-    .label {
-      @include label-normal;
-      @include absolute-vertical-center;
-      color: var(--labelColor);
-      left: calc(var(--nestOffset) + 42px);
-      white-space: nowrap;
-    }
-
-    .counter {
-      @include absolute-vertical-center;
-      @include label-normal;
-      color: var(--tertiaryLabelColor);
-      position: absolute;
-      right: 7px;
-    }
-  }
-
-
-
 </style>
 
 <svelte:options immutable={true} />
@@ -230,39 +116,7 @@
   class="wrapper"
   class:isExpanded
   use:css={{indexInVisibleSiblings, itemHeight, duration}}>
-  <!-- <div
-    style={`--nestOffset: ${(nestDepth - 1) * 15}px`}
-    class="item {type}"
-    on:click|stopPropagation={() => {
-      console.log(item)
-    }}
-    on:mousedown={(domEvent) => dispatch('mousedown', {
-        item: item,
-        isSelected: isSelected,
-        domEvent: domEvent,
-      })}
-    class:listHasFocus
-    class:isSelected
-    class:isExpandable
-    class:isExpanded
-    >
-    {#if isExpandable}
-      <div class="disclosure">
-        <div
-          role="button"
-          alt="Toggle Expanded"
-          on:mousedown|stopPropagation={() => dispatch('toggleExpanded', {
-              item: item,
-              isExpanded: isExpanded,
-            })} />
-      </div>
-    {/if}
-    <div class="icon" />
-    <div class="label">{item.details.name}</div>
-    {#if isExpandable}
-      <div class="counter">{indexInVisibleSiblings}</div>
-    {/if}
-  </div> -->
+  
 
   <!-- {#if isQueryEmpty} -->
   {#if isExpandable}

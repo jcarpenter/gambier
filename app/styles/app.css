@@ -1,5 +1,7 @@
 :root {
-  /* -------------- Images -------------- */
+  /* -------------- Easing -------------- */
+  --standardEase: cubic-bezier(0.4, 0, 0.2, 1);
+  --decelerateEase: cubic-bezier(0, 0, 0.2, 1);
   /* -------------- Layouts (CSS grid) -------------- */
   --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]
         minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];
@@ -138,7 +140,7 @@ body {
 }
 
 #firstrun h1 {
-  font-family: 'SF Pro Display';
+  font-family: "SF Pro Display";
   font-weight: bold;
   font-size: 20px;
   line-height: 24px;

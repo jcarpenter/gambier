@@ -20,38 +20,38 @@ export const sidebar = writable({
     {
       title: 'Project', name: 'project',
       lastSelectedItem: {}, // id and type
-      selectedItems: [], // Array of ids
-      expandedItems: [], // Array of folder ids
+      selected: [], // Array of ids
+      expanded: [], // Array of folder ids
     },
     {
       title: 'All Documents', name: 'all-documents',
       lastSelectedItem: {},
-      selectedItems: [],
+      selected: [],
     },
     {
       title: 'Most Recent', name: 'most-recent',
       lastSelectedItem: {},
-      selectedItems: [],
+      selected: [],
     },
     {
       title: 'Tags', name: 'tags',
       lastSelectedItem: {},
-      selectedItems: [],
+      selected: [],
     },
     {
       title: 'Media', name: 'media',
       lastSelectedItem: {},
-      selectedItems: [],
+      selected: [],
     },
     {
       title: 'Citations', name: 'citations',
       lastSelectedItem: {},
-      selectedItems: [],
+      selected: [],
     },
     {
       title: 'Search', name: 'search',
       lastSelectedItem: {},
-      selectedItems: [],
+      selected: [],
     }
   ]
 })

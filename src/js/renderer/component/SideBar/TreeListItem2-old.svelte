@@ -11,10 +11,10 @@
 
   let type = null
 
-  $: isSelected = parent.selectedItems.find((id) => id == item.id)
+  $: isSelected = parent.selected.find((id) => id == item.id)
   $: isExpandable = item.type == 'folder' && item.children.length > 0
   $: isExpanded =
-    isExpandable && parent.expandedItems.some((id) => id == item.id)
+    isExpandable && parent.expanded.some((id) => id == item.id)
 
   // Set `type`
   $: {

@@ -64,7 +64,6 @@ export class IpcManager {
       const watcher = global.watchers.find((watcher) => watcher.id == win.id)
       return watcher.files
     })
-
   }
 }
 

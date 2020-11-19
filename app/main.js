@@ -1,26 +1,36 @@
 'use strict';
 
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
 var electron = require('electron');
-var path = _interopDefault(require('path'));
+var path = require('path');
 var fsExtra = require('fs-extra');
-var ElectronStore = _interopDefault(require('electron-store'));
-var immer = require('immer');
+var ElectronStore = require('electron-store');
+var produce = require('immer');
+var fs = require('fs');
 require('colors');
 require('deep-eql');
-require('deep-object-diff');
-var chokidar = _interopDefault(require('chokidar'));
-var matter = _interopDefault(require('gray-matter'));
-var removeMd = _interopDefault(require('remove-markdown'));
+var chokidar = require('chokidar');
+var matter = require('gray-matter');
+var removeMd = require('remove-markdown');
+var sizeOf = require('image-size');
 require('deep-diff');
-require('child_process');
+var debounce = require('debounce');
 require('url');
 
-immer.enablePatches();
+function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
+
+var path__default = /*#__PURE__*/_interopDefaultLegacy(path);
+var ElectronStore__default = /*#__PURE__*/_interopDefaultLegacy(ElectronStore);
+var produce__default = /*#__PURE__*/_interopDefaultLegacy(produce);
+var fs__default = /*#__PURE__*/_interopDefaultLegacy(fs);
+var chokidar__default = /*#__PURE__*/_interopDefaultLegacy(chokidar);
+var matter__default = /*#__PURE__*/_interopDefaultLegacy(matter);
+var removeMd__default = /*#__PURE__*/_interopDefaultLegacy(removeMd);
+var sizeOf__default = /*#__PURE__*/_interopDefaultLegacy(sizeOf);
+
+produce.enablePatches();
 
 const update = (state, action, windowId) =>
-  immer.produceWithPatches(state, (draft) => {
+  produce__default['default'](state, (draft) => {
 
     // Set a few useful, commonly-used variables
     const win = windowId !== undefined ? electron.BrowserWindow.fromId(windowId) : undefined;
@@ -31,21 +41,28 @@ const update = (state, action, windowId) =>
       // -------- APP -------- //
 
       case 'START_COLD_START': {
+
         // Update appStatus
         draft.appStatus = 'coldStarting';
-        // Create new project, if there are none existing
-        const noExistingProjects = state.projects.length == 0;
-        if (noExistingProjects) {
-          createNewProject(draft);
-        } else {
-          // Check if directory still exists. Perhaps they've been deleted since the app was last opened. If it does not exist, or is empty '', remove the project.
-          state.projects.forEach((p, index) => {
-            const directoryExists = fsExtra.existsSync(p.directory);
-            if (!directoryExists) {
-              draft.projects.splice(index, 1);
+
+        // If there are existing projects, check their directories. Prune any that 1) are missing a directory (blank value, or path doesn't exist), or 2) that we don't have write permissions for.
+        if (draft.projects.length) {
+          draft.projects = draft.projects.filter((project) => {
+            if (!project.directory) return false
+            try {
+              fsExtra.accessSync(project.directory, fs__default['default'].constants.W_OK);
+              return true
+            } catch(err) {
+              return false
             }
           });
         }
+
+        // If there are no projects, create a new empty one.
+        if (!draft.projects.length) {
+          draft.projects.push(createNewProject());
+        }
+
         break
       }
 
@@ -68,11 +85,12 @@ const update = (state, action, windowId) =>
       // -------- PROJECT/WINDOW: CREATE AND CLOSE -------- //
 
       case 'CREATE_NEW_PROJECT': {
-        createNewProject(draft);
+        createNewProject();
         break
       }
 
       case 'SET_PROJECT_DIRECTORY': {
+
         project.directory = action.directory;
         break
       }
@@ -110,7 +128,15 @@ const update = (state, action, windowId) =>
       // Directory
 
       case 'SET_PROJECTPATH_SUCCESS': {
-        project.directory = action.path;
+        try {
+          // Is path valid, and can we write to it?
+          // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
+          fsExtra.accessSync(action.path, fs__default['default'].constants.W_OK);
+          // If yes, proceed.
+          project.directory = action.path;
+        } catch (err) {
+          // Else, do nothing.
+        }
         break
       }
 
@@ -126,13 +152,51 @@ const update = (state, action, windowId) =>
         break
       }
 
-      case 'SELECT_SIDEBAR_TAB_BY_NAME': {
-        project.sidebar.tabs.forEach((t) => t.active = t.name == action.name);
+      // Window
+
+      // Save window bounds to state, so we can restore later
+      case 'SAVE_WINDOW_BOUNDS': {
+        project.window.bounds = action.windowBounds;
+        break
+      }
+
+
+
+      // -------- SIDEBAR 2 -------- //
+
+      case 'SELECT_SIDEBAR_TAB_BY_ID': {
+        project.sidebar.activeTabId = action.id;
+        break
+      }
+
+      case 'EXPAND_SIDEBAR_ITEMS': {
+        const tab = project.sidebar.tabsById[action.tabId];
+        tab.expanded = action.expanded;
+        break
+      }
+
+      case 'SELECT_SIDEBAR_ITEMS': {
+        const tab = project.sidebar.tabsById[action.tabId];
+        tab.lastSelected = action.lastSelected;
+        tab.selected = action.selected;
+        break
+      }
+
+      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
+        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index];
+        break
+      }
+      case 'TOGGLE_SIDEBAR_PREVIEW': {
+        project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen;
         break
       }
 
     }
+  }, (patches) => {
+    // Update `global.patches`
+    global.patches = patches;
   });
+
 
 
 /**
@@ -148,13 +212,13 @@ function getNextWindowId() {
 /**
  * Insert a new blank project into state.projects array
  */
-function createNewProject(draft) {
-  const project = { ...newProject$1 };
+function createNewProject() {
+  const project = { ...newProject };
   project.window.id = getNextWindowId();
-  draft.projects.push(project);
+  return project
 }
 
-class Store extends ElectronStore {
+class Store extends ElectronStore__default['default'] {
   constructor() {
     // Note: `super` lets us access and call functions on object's parent (MDN)
     // We pass in our config options for electron-store
@@ -168,43 +232,29 @@ class Store extends ElectronStore {
 
   async dispatch(action, windowId = undefined) {
 
-    if (!electron.app.isPackaged) this.logTheAction(action);
+    if (!electron.app.isPackaged) logTheAction(action);
 
-    // Get next state
-    // const nextState = await reducers(action, windowId)
+    // Get next state. 
+    // `update` function also updates `global.patches`.
+    const nextState = update(store.store, action, windowId);
 
-    const [nextState, patches, inversePatches] = update(store.store, action, windowId);
-
-    // if (!app.isPackaged) this.logTheDiff(global.state(), nextState)
-
-    // Apply nextState to Store
+    // Apply next state to Store
     this.set(nextState);
 
     // Send patches to render proces
     const windows = electron.BrowserWindow.getAllWindows();
     if (windows.length) {
-      windows.forEach((win) => win.webContents.send('statePatchesFromMain', patches));
+      windows.forEach((win) => win.webContents.send('statePatchesFromMain', global.patches));
     }
   }
+}
 
-  logTheAction(action) {
-    console.log(
-      // `Action:`.bgBrightGreen.black,
-      `${action.type}`.bgBrightGreen.black.bold,
-      // `(Store.js)`.green
-    );
-  }
-
-  // logTheDiff(currentState, nextState) {
-  //   const hasChanged = !deepEql(currentState, nextState)
-  //   if (hasChanged) {
-  //     // const diff = detailedDiff(currentState, nextState)
-  //     // console.log(`Changed: ${JSON.stringify(diff, null, 2)}`.yellow)
-  //     console.log(`Changed: ${nextState.changed}`.bgBrightGreen.black.bold)
-  //   } else {
-  //     console.log('No changes'.bgBrightGreen.black.bold)
-  //   }
-  // }
+function logTheAction(action) {
+  console.log(
+    // `Action:`.bgBrightGreen.black,
+    `${action.type}`.bgBrightGreen.black.bold,
+    // `(Store.js)`.green
+  );
 }
 
 const storeDefault = {
@@ -216,7 +266,11 @@ const storeDefault = {
   // App theme. See Readme.
   appearance: {
     userPref: 'match-system',
-    theme: 'gambier-light'
+    theme: 'gambier-light',
+  },
+
+  timing: {
+    treeListFolder: 800,
   },
 
   // ----------- PROJECTS ----------- //
@@ -225,13 +279,14 @@ const storeDefault = {
 
 };
 
-const newProject$1 = {
+const newProject = {
 
   window: {
     // Used to associate windows with projects
     id: 0,
     // Used when closing window (to check if it's safe to do so or not)
-    status: 'open'
+    status: 'open',
+    bounds: { x: 0, y: 0, width: 1600, height: 1200 }
   },
 
   // User specified directory to folder containing their project files
@@ -248,137 +303,92 @@ const newProject$1 = {
   // SideBar
   sidebar: {
     isOpen: true,
-    previewIsOpen: true,
+    isPreviewOpen: true,
+    activeTabId: 'project',
     width: 250,
-    tabs: [
-      {
-        title: 'Project', name: 'project',
-        active: true,
-        lastSelectedItem: {}, // id and type
-        selectedItems: [], // Array of ids
-        expandedItems: [], // Array of folder ids
+    tabsById: {
+      project: {
+        title: 'Project',
+        lastSelected: {}, // id
+        selected: [], // Array of ids
+        expanded: [], // Array of folder ids
       },
-      {
-        title: 'All Documents', name: 'all-documents',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      allDocs: {
+        title: 'All Documents',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Most Recent', name: 'most-recent',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      mostRecent: {
+        title: 'Most Recent',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Tags', name: 'tags',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      tags: {
+        title: 'Tags',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Media', name: 'media',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      media: {
+        title: 'Media',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Citations', name: 'citations',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      citations: {
+        title: 'Citations',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Search', name: 'search',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      search: {
+        title: 'Search',
+        lastSelected: {},
+        selected: [],
       }
-    ],
+    },
+    tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
   }
 };
 
-class AppearanceManager {
-  constructor() {
+const formats = {
+  document: ['.md', '.markdown'],
+  image: [
+    '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
+  ],
+  av: [
+    '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
+  ]
+};
 
+function isDoc(fileExtension) {
+  return formats.document.includes(fileExtension)
+}
+
+function isMedia(fileExtension) {
+  const isImage = formats.image.includes(fileExtension);
+  const isAV = formats.av.includes(fileExtension);
+  return isImage || isAV
+}
+
+function getMediaType(fileExtension) {
+  const isImage = formats.image.includes(fileExtension);
+  const isAV = formats.av.includes(fileExtension);
+  if (isImage) {
+    return 'img'
+  } else if (isAV) {
+    return 'av'
+  } else {
+    console.error('File extension does not match supported media types');
   }
 }
 
-// // -------- Theme -------- //
-
-// /**
-//  * When OS appearance changes, update app theme to match (dark or light):
-//  * NOTE: Is also called on startup.
-//  * Listen for changes to nativeTheme. These are triggered when the OS appearance changes (e.g. when the user modifies "Appearance" in System Preferences > General, on Mac). If the user has selected the "Match System" appearance option in the app, we need to match the new OS appearance. Check the `nativeTheme.shouldUseDarkColors` value, and set the theme accordingly (dark or light).
-//  * nativeTheme.on('updated'): "Emitted when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
-//  */
-// nativeTheme.on('updated', () => {
-
-//   // console.log("nativeTheme updated:")
-//   // console.log(nativeTheme.themeSource)
-//   // console.log(nativeTheme.shouldUseDarkColors)
-//   // console.log(nativeTheme.shouldUseHighContrastColors)
-//   // console.log(nativeTheme.shouldUseInvertedColorScheme)
-//   // console.log('selected-text-background = ', systemPreferences.getColor('selected-text-background'))
-
-//   const userPref = store.store.appearance.userPref
-//   console.log("main.js: nativeTheme updated")
-//   if (userPref == 'match-system') {
-//     store.dispatch({
-//       type: 'SET_APPEARANCE',
-//       theme: nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
-//     })
-//   }
-// })
-
-// /**
-//  * When user modifies "Appearance" setting (e.g in `View` menu), update `nativeTheme`
-//  */
-// store.onDidChange('appearance', () => {
-//   setNativeTheme()
-// })
-
-// /**
-//  * Update `nativeTheme` electron property
-//  * Setting `nativeTheme.themeSource` has several effects. E.g. it tells Chrome how to UI elements such as menus, window frames, etc; it sets `prefers-color-scheme` css query; it sets `nativeTheme.shouldUseDarkColors` value.
-//  * Per: https://www.electronjs.org/docs/api/native-theme
-//  */
-// export function setNativeTheme() {
-//   const userPref = store.store.appearance.userPref
-//   switch (userPref) {
-//     case 'match-system':
-//       nativeTheme.themeSource = 'system'
-//       break
-//     case 'light':
-//       nativeTheme.themeSource = 'light'
-//       break
-//     case 'dark':
-//       nativeTheme.themeSource = 'dark'
-//       break
-//   }
-
-//   // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
-//   // console.log('setNativeTheme(). userPref = ', userPref)
-//   // console.log('setNativeTheme(). systemPreferences.getAccent   Color() = ', systemPreferences.getAccentColor())
-//   // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
-//   // 
-
-//   // Reload (close then open) DevTools to force it to load the new theme. Unfortunately DevTools does not respond to `nativeTheme.themeSource` changes automatically. In Electron, or in Chrome.
-//   if (!app.isPackaged && win && win.webContents && win.webContents.isDevToolsOpened()) {
-//     win.webContents.closeDevTools()
-//     win.webContents.openDevTools()
-//   }
-// }
-
-// console.log("Hi ------ ")
-// console.log(systemPreferences.isDarkMode())
-// console.log(systemPreferences.getUserDefault('AppleInterfaceStyle', 'string'))
-// console.log(systemPreferences.getUserDefault('AppleAquaColorVariant', 'integer'))
-// console.log(systemPreferences.getUserDefault('AppleHighlightColor', 'string'))
-// console.log(systemPreferences.getUserDefault('AppleShowScrollBars', 'string'))
-// console.log(systemPreferences.getAccentColor())
-// console.log(systemPreferences.getSystemColor('blue'))
-// console.log(systemPreferences.effectiveAppearance)
+function findInTree (tree, value, key = 'id', reverse = false) {
+  const stack = [ tree[0] ];
+  while (stack.length) {
+    const node = stack[reverse ? 'pop' : 'shift']();
+    if (node[key] === value) return node
+    node.children && stack.push(...node.children);
+  }
+  return null
+}
 
 function extractKeysFromString(keyAsString) {
 	// Convert propAddress string to array of keys
@@ -396,6 +406,35 @@ function extractKeysFromString(keyAsString) {
   }
   return keys
 }
+
+/**
+ * Check if a state property has changed, and (optional) if it equals a specified value. Determine by checking latest state patches (returned by Immer). For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
+ * @param {*} props - Either a string, or an array (for more precision)/
+ * @param {*} [toValue] - Optional value to check prop against
+ */
+function propHasChanged(props, toValue = '') {
+	return global.patches.some((patch) => {
+
+  	const pathAsString = patch.path.toString();
+		const checkMultipleProps = Array.isArray(props);
+
+		const hasChanged = checkMultipleProps ?
+    	props.every((key) => pathAsString.includes(key)) :
+      pathAsString.includes(props);
+    
+    // If optional 'toValue' argument is specified, check it.
+    // Else, only check `hasChanged`
+    if (toValue) {
+      const equalsValue = patch.value == toValue;
+      return hasChanged && equalsValue
+    } else {
+      return hasChanged
+    }
+  })
+}
+
+
+
 
 const getNestedObject = (nestedObj, pathArr) => {
 	return pathArr.reduce((obj, key) =>
@@ -424,73 +463,30 @@ function hasChangedTo(keysAsString, value, objTo, objFrom) {
   }
 }
 
-const Document = {
-  type: 'doc',
-  title: '',
-  name: '',
-  path: '',
-  id: '',
-  parentId: '',
-  modified: '',
-  created: '',
-  excerpt: '',
-  tags: [],
-  nestDepth: 0,
-};
-
-const Folder = {
-  type: 'folder',
-  name: '',
-  path: '',
-  // id: '',
-  parentId: '',
-  modified: '',
-  // directChildCount: 0,
-  // recursiveChildCount: 0,
-  nestDepth: 0
-};
-
-const Media = {
-  type: 'media',
-  name: '',
-  filetype: '',
-  disksize: '',
-  path: '',
-  id: '',
-  parentId: '',
-  modified: '',
-  created: '',
-  nestDepth: 0,
-};
-
-const imageFormats = [
-  '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
-];
-
-const avFormats = [
-  '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
-];
-
 /**
  * For specified path, return document details
  */
-async function mapDocument (filePath, stats = undefined, parentId = '', nestDepth) {
+async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
 
-	const doc = Object.assign({}, Document);
+	if (stats == undefined) stats = await fsExtra.stat(filepath);
 
-	if (stats == undefined) {
-		stats = await fsExtra.stat(filePath);
-	}
-
-	doc.path = filePath;
-	doc.id = `doc-${stats.ino}`;
-	doc.parentId = parentId;
-	doc.modified = stats.mtime.toISOString();
-	doc.created = stats.birthtime.toISOString();
-	doc.nestDepth = nestDepth;
+	const doc = {
+		type: 'doc',
+		name: '',
+		path: filepath,
+		id: `doc-${stats.ino}`,
+		parentId: parentId,
+		created: stats.birthtime.toISOString(),
+		modified: stats.mtime.toISOString(),
+		nestDepth: nestDepth,
+		// --- Doc-specific --- //
+		title: '',
+		excerpt: '',
+		tags: [],
+	};	
 
 	// Get front matter
-	const gm = matter.read(filePath);
+	const gm = matter__default['default'].read(filepath);
 
 	// Set excerpt
 	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
@@ -505,7 +501,7 @@ async function mapDocument (filePath, stats = undefined, parentId = '', nestDept
 	}
 
 	// Set title. E.g. "Sea Level Rise"
-	doc.title = getTitle(gm, path.basename(filePath));
+	doc.title = getTitle(gm, path__default['default'].basename(filepath));
 	doc.name = doc.title;
 
 	return doc
@@ -556,7 +552,7 @@ function getExcerpt(content) {
 	// Remove markdown formatting. Start with remove-markdown rules.
 	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
 	// Then add whatever additional changes I want (e.g. new lines).
-	excerpt = removeMd(excerpt)
+	excerpt = removeMd__default['default'](excerpt)
 		.replace(/^> /gm, '')         // Block quotes
 		.replace(/^\n/gm, '')         // New lines at start of line (usually doc)
 		.replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
@@ -570,32 +566,77 @@ function getExcerpt(content) {
 }
 
 /**
+ * For specified path, return document details
+ */
+async function mapMedia (filepath, parentId, nestDepth, stats = undefined) {
+
+	if (stats == undefined) stats = await fsExtra.stat(filepath);
+	const extension = path__default['default'].extname(filepath);
+	const type = getMediaType(extension);
+	const { width, height, type: format } = sizeOf__default['default'](filepath);
+
+	return {
+		type: type,
+		name: path__default['default'].basename(filepath),
+		path: filepath,
+		id: `${type}-${stats.ino}`,
+		parentId: parentId,
+		created: stats.birthtime.toISOString(),
+		modified: stats.mtime.toISOString(),
+		nestDepth: nestDepth,
+		// --- Media-specific --- //
+		format: format,
+		sizeInBytes: stats.size,
+		dimensions: { width: width, height: height },
+	}
+}
+
+// import colors from 'colors'
+
+
+/**
  * For specified folder path, map the folder and it's child  
  * documents, media, and citations, and return `contents` object
  * with four arrays (one for each type).
+ * @param {*} files - Reference to shared object we write changes to, and then return
+ * @param {*} parentTreeItem - Tree item to add self to
  * @param {*} folderPath - Path to map
  * @param {*} stats - Optional. Can pass in stats, or if undefined, will get them in function.
  * @param {*} parentId - Optional. If undefined, we regard the folder as `root`
- * @param {*} recursive - Optional. If true, map descendant directories also.
+ * @param {*} nestDepth - Optional.
  */
-async function mapFolder (files, folderPath, stats = undefined, parentId = '', recursive = false, nestDepth = 0) {
+async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, parentId = '', nestDepth = 0) {
 
   // -------- New Folder -------- //
 
   if (!stats) stats = await fsExtra.stat(folderPath);
 
-  const folder = { ...Folder };
-  // folder.id = `folder-${stats.ino}`
-  folder.name = folderPath.substring(folderPath.lastIndexOf('/') + 1);
-  folder.path = folderPath;
-  folder.parentId = parentId;
-  folder.modified = stats.mtime.toISOString();
-  folder.children = [];
-  folder.nestDepth = nestDepth;
+  // Create and populate new folder
+  const folder = {
+    type: 'folder',
+    name: folderPath.substring(folderPath.lastIndexOf('/') + 1),
+    path: folderPath,
+    id: `folder-${stats.ino}`,
+    parentId: parentId,
+    created: stats.birthtime.toISOString(),
+    modified: stats.mtime.toISOString(),
+    nestDepth: nestDepth,
+    // --- Folder-specific --- //
+    numChildren: 0,
+    numDescendants: 0,
+  };
 
-  const id = `folder-${stats.ino}`;
-  files.folders.byId[id] = folder;
-  files.folders.allIds.push(id);
+  // Add to `files`
+  files.byId[folder.id] = folder;
+  files.allIds.push(folder.id);
+
+  // Populate tree details
+  const treeItem = {
+    id: folder.id,
+    parentId: parentId,
+    children: []
+  };
+  parentTreeItem.push(treeItem);
 
 
   // -------- Contents -------- //
@@ -603,171 +644,112 @@ async function mapFolder (files, folderPath, stats = undefined, parentId = '', r
   // Get everything in directory with `readdir`.
   // Returns array of `fs.Dirent` objects.
   // https://nodejs.org/api/fs.html#fs_class_fs_dirent
-  const everything = await fsExtra.readdir(folderPath, { withFileTypes: true });
-
-  // if (!everything.length > 0) return contents
-  // console.log(folder.name, "---")
-
-  // everything.forEach(async (e) => {
-
-  //   if (e.isFile()) {
-
-  //     const ePath = path.join(folder.path, e.name)
-  //     const ext = path.extname(e.name)
-  //     const stats = await stat(ePath)
-
-  //     if (ext == '.md' || ext == '.markdown') {
-  //       folder.children.push(`doc-${stats.ino}`)
-  //     }
-  //   }
-  // })
+  const directoryContents = await fsExtra.readdir(folderPath, { withFileTypes: true });
 
   await Promise.all(
-    everything.map(async (e) => {
+    directoryContents.map(async (f) => {
 
       // Get path by combining folderPath with file name.
-      const ePath = path.join(folderPath, e.name);
+      const filepath = path__default['default'].join(folderPath, f.name);
 
       // Get extension
-      const ext = path.extname(e.name);
+      const ext = path__default['default'].extname(f.name);
 
-      // Get stats
-      const stats = await fsExtra.stat(ePath);
+      if (f.isDirectory()) {
 
-      if (e.isDirectory() && recursive) {
+        const { numDescendants } = await mapFolder(files, treeItem.children, filepath, undefined, folder.id, nestDepth + 1);
 
-        const { folders, docs, media } = await mapFolder(files, ePath, stats, id, true, nestDepth + 1);
+        // Increment child counters
+        folder.numChildren++;
+        folder.numDescendants += numDescendants;
 
-        // folder.directChildCount++
-        // folder.recursiveChildCount++
+      } else if (isDoc(ext) || isMedia(ext)) {
 
-        // for (const fldr in folders.byId) {
-        //   folder.recursiveChildCount += folders.byId[fldr].directChildCount
-        // }
+        const file = isDoc(ext) ? 
+          await mapDocument(filepath, folder.id, nestDepth + 1) : 
+          await mapMedia(filepath, folder.id, nestDepth + 1);
 
-        // folders.byId.forEach((f) => {
-        //   folder.recursiveChildCount += f.directChildCount
-        // })
+        files.byId[file.id] = file;
+        files.allIds.push(file.id);
+        treeItem.children.push({
+          id: file.id,
+          parentId: folder.id,
+        });
 
-      } else if (ext == '.md' || ext == '.markdown') {
-        const doc = await mapDocument(ePath, stats, folder.id, nestDepth + 1);
-        files.docs.byId[doc.id] = folder;
-        files.docs.allIds.push(doc.id);
-        // folder.directChildCount++
-        // folder.recursiveChildCount++
-
-        // OLDER
-        // contents.documents.push(doc)
-        // folder.children.push(doc.id)
-
-      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-
-        const media = await mapMedia(ePath, stats, folder.id, ext, nestDepth + 1);
-        files.media.byId[media.id] = folder;
-        files.media.allIds.push(media.id);
-        // folder.directChildCount++
-        // folder.recursiveChildCount++
-
-        // OLDER
-        // contents.media.push(media)
-        // folder.children.push(media.id)
+        // Increment child counters
+        folder.numChildren++;
       }
     })
   );
 
-  return files
-}
+  folder.numDescendants += folder.numChildren;
 
-/**
- * For specified path, return document details
- */
-async function mapMedia (filePath, stats = undefined, parentId = '', extension = undefined, nestDepth) {
-
-	const media = { ...Media };
-
-	if (stats == undefined) stats = await fsExtra.stat(filePath);	
-
-	media.name = path.basename(filePath);
-	media.filetype = extension == undefined ? path.extname(filePath) : extension;
-	media.path = filePath;
-	media.id = `media-${stats.ino}`;
-	media.parentId = parentId;
-	media.modified = stats.mtime.toISOString();
-	media.created = stats.birthtime.toISOString();
-	media.nestDepth = nestDepth;
-
-	return media
+  return {
+    numDescendants: folder.numDescendants
+  }
 }
 
 /**
  * Map project path recursively and dispatch results to store
  * @param {*} projectPath 
  */
-async function mapProject(projectPath) {
+async function mapProject (projectPath) {
 
   // await isWorkingPath(directory)
   // if (!isWorkingPath) {
   //   console.error('directory is not valid')
   // }
-  
+
   try {
 
     const files = {
-      folders: {
-        byId: {},
-        allIds: []
-      },
-      docs: {
-        byId: {},
-        allIds: []
-      },
-      media: {
-        byId: {},
-        allIds: []
-      }
+      tree: [],
+      byId: {},
+      allIds: []
     };
 
     // Map project path, recursively
-    return await mapFolder(files, projectPath, undefined, '', true, 0)
-    // console.log(JSON.stringify(files, null, 2))
+    await mapFolder(files, files.tree, projectPath);
     
-    // Dispatch results to store
-    // store.dispatch({
-    //   type: 'MAP_PROJECT_CONTENTS',
-    //   folders: folders,
-    //   documents: documents,
-    //   media: media,
-    // })
+    return files
+    
+    // console.log(JSON.stringify(files, null, 2))
 
   } catch (err) {
     console.log(err);
   }
 }
 
-immer.enablePatches();
+produce.enablePatches();
 
 class Watcher {
   constructor(project) {
     this.id = project.window.id;
     this.directory = project.directory;
-    this.files = { ...newFiles };
+    this.files = {};
 
-    // If directory is not empty (e.g. when restarting the app with a project already set up), start the watcher. 
-    // Else, start listening for directory value changes. Once user selects a project directory (e.g. in the first run experience), catch it 
+    // Start listening for directory value changes. Once user selects a project directory (e.g. in the first run experience), catch it 
 
-    const directoryIsDefined = this.directory !== '';
-    if (directoryIsDefined) {
-      this.start();
-    } else {
-      // Create listener for directory changes
-      global.store.onDidAnyChange((state, oldState) => {
-        const directory = state.projects.find((p) => p.window.id == this.id).directory;
-        const directoryIsDefined = directory !== '';
-        if (directoryIsDefined) {
+    // Create listener for directory changes
+    global.store.onDidAnyChange((state, oldState) => {
+      
+      const directory = state.projects.find((p) => p.window.id == this.id).directory;
+      const directoryIsDefined = directory !== '';
+      const directoryWasEmpty = this.directory == '';
+      const directoryHasChanged = directory !== this.directory;
+
+      if (directoryIsDefined) {
+        if (directoryWasEmpty) {
           this.directory = directory;
           this.start();
+        } else if (directoryHasChanged) {
+          this.update();
         }
-      });
+      }
+    });
+
+    if (this.directory) {
+      this.start();
     }
   }
 
@@ -779,37 +761,23 @@ class Watcher {
   id = 0
 
   async start() {
-    // TODO: This is a potential dead end. The watcher will not start, because the directory is invalid (e.g. perhaps it was deleted since last cold start)
-    const directoryExists = await fsExtra.pathExists(this.directory);
-    if (!directoryExists) return
 
     this.files = await mapProject(this.directory);
-    // console.log(this.files)
-
+    // console.log(JSON.stringify(this.files.tree, null, 2))
     // Start watcher
-    this.chokidarInstance = chokidar.watch(this.directory, chokidarConfig);
+    this.chokidarInstance = chokidar__default['default'].watch(this.directory, chokidarConfig);
 
     // On any event, track changes. Some events include `stats`.
     this.chokidarInstance
-      .on('change', (filePath) => this.trackChanges('change', filePath))
-      .on('add', (filePath) => this.trackChanges('add', filePath))
-      .on('unlink', (filePath) => this.trackChanges('unlink', filePath))
-      .on('addDir', (filePath) => this.trackChanges('addDir', filePath))
-      .on('unlinkDir', (filePath) => this.trackChanges('unlinkDir', filePath));
-  }
+      .on('change', (filePath) => this.batchChanges('change', filePath))
+      .on('add', (filePath) => this.batchChanges('add', filePath))
+      .on('unlink', (filePath) => this.batchChanges('unlink', filePath))
+      .on('addDir', (filePath) => this.batchChanges('addDir', filePath))
+      .on('unlinkDir', (filePath) => this.batchChanges('unlinkDir', filePath));
 
-  applyUpdates() {
-    const [nextFiles, patches, inversePatches] = immer.produceWithPatches(files, draftFiles => {
-      const newProj = { ...newProject, windowId: project.window.id };
-      draftFiles.push(newProj);
-    });
-  }
-
-  sendPatchesToRenderProcess(patches) {
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length) {
-      windows.forEach((win) => win.webContents.send('statePatchesFromMain', patches));
-    }
+    // Send initial files to browser window
+    const win = electron.BrowserWindow.fromId(this.id);
+    win.webContents.send('initialFilesFromMain', this.files);
   }
 
   stop() {
@@ -818,9 +786,9 @@ class Watcher {
   }
 
   /**
-   * Create a tally of changes as they occur, and once things settle down, evaluate them.We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
+   * Create a tally of changes as they occur, and once things settle down, evaluate them. We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
    */
-  trackChanges(event, filePath, stats) {
+  batchChanges(event, filePath, stats) {
     const change = { event: event, path: filePath };
 
     if (stats) change.stats = stats;
@@ -841,84 +809,66 @@ class Watcher {
     }
   }
 
+  /**
+   * Take batched changes and update `files`, then send patches to associated BrowserWindow.
+   * @param {*} changes 
+   */
   async applyChanges(changes) {
-
-    console.log(
-      this.files.folders.allIds.length,
-      this.files.docs.allIds.length,
-      this.files.media.allIds.length
-    );
 
     const directoryWasAddedOrRemoved = changes.some((c) => c.event == 'addDir' || c.event == 'unlinkDir');
 
     if (directoryWasAddedOrRemoved) {
       this.files = await mapProject(this.directory);
     } else {
+      this.files = await produce__default['default'](this.files, async (draft) => {
+        for (const c of changes) {
+          const ext = path__default['default'].extname(c.path);
+          const parentPath = path__default['default'].dirname(c.path);
+          const parentFolder = getFileByPath(draft, parentPath);
+          const parentTreeItem = findInTree(draft.tree, parentFolder.id, 'id');
 
-      const [nextFiles, patches, inversePatches] = immer.produceWithPatches(this.files, draft => {
-        changes.forEach(async (c) => {
+          if (isDoc(ext) || isMedia(ext)) {
 
-          const ext = path.extname(c.path);
-          const type = getFileType(ext);
-          const parentPath = path.dirname(c.path);
-          const parentFolder = getFileByPath(this.files.folders, parentPath);
-
-          // TODO: Fix use of `await` inside `produceWithPatches`... Is throwing error in `add` and `change`.
-
-          switch (c.event) {
-            case 'add':
-              if (type == 'doc') {
-                const doc = await mapDocument(c.path, c.stats, parentFolder.id);
-                draft.docs.byId[doc.id] = doc;
-                draft.docs.allIds.push(doc.id);
-              } else if (type == 'media') {
-                const media = await mapMedia(c.path, c.stats, parentFolder.id, ext);
-                draft.media.byId[media.id] = media;
-                draft.media.allIds.push(media.id);
+            switch (c.event) {
+              case 'add': {
+                const file = isDoc(ext) ?
+                  await mapDocument(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats) :
+                  await mapMedia(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats);
+                // Add to `byId`, `allIds`, and parent's children.
+                draft.byId[file.id] = file;
+                draft.allIds.push(file.id);
+                parentTreeItem.children.push({
+                  id: file.id,
+                  parentId: file.parentId,
+                  type: file.type
+                });
+                break
               }
-              break
-            case 'change':
-              if (type == 'doc') {
-                const doc = await mapDocument(c.path, c.stats, parentFolder.id);
-                draft.docs.byId[doc.id] = doc;
-              } else if (type == 'media') {
-                const media = await mapMedia(c.path, c.stats, parentFolder.id, ext);
-                draft.media.byId[media.id] = media;
+              case 'change': {
+                const file = isDoc(ext) ?
+                  await mapDocument(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats) :
+                  await mapMedia(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats);
+                draft.byId[file.id] = file;
+                break
               }
-              break
-            case 'unlink':
-              if (type == 'doc') {
-                const doc = getFileByPath(this.files.docs, c.path);
-                delete draft.docs.byId[doc.id];
-                draft.docs.allIds.splice(doc.index, 1);
-              } else if (type == 'media') {
-                const media = getFileByPath(this.files.media, c.path);
-                delete draft.media.byId[media.id];
-                draft.media.allIds.splice(media.index, 1);
+              case 'unlink': {
+                const file = getFileByPath(draft, c.path);
+                // Remove from `byId`, `allIds`, and parent's children.
+                delete draft.byId[file.id];
+                draft.allIds.splice(file.index, 1);
+                const indexInChildren = parentTreeItem.children.findIndex((child) => child.id == file.id);
+                parentTreeItem.children.splice(indexInChildren, 1);
+                break
               }
-              break
+            }
           }
-        });
+        }
+      }, (patches, inversePatches) => {
+        const win = electron.BrowserWindow.fromId(this.id);
+        console.log(patches);
+        win.webContents.send('filesPatchesFromMain', patches);
       });
-
-      this.files = nextFiles;
-      console.log(
-        this.files.folders.allIds.length,
-        this.files.docs.allIds.length,
-        this.files.media.allIds.length
-      );
     }
-  }
-}
-
-/** Utility function for determining file type. */
-function getFileType(ext) {
-  if (ext == '.md' || ext == '.markdown') {
-    return 'doc'
-  } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-    return 'media'
-  } else {
-    return 'unknown'
   }
 }
 
@@ -933,7 +883,7 @@ function getFileByPath(lookIn, path) {
     if (lookIn.byId[id].path == path) {
       file = {
         id: id,
-        file: lookIn.byId[id],
+        nestDepth: lookIn.byId[id].nestDepth,
         index: index,
       };
       return true
@@ -942,28 +892,8 @@ function getFileByPath(lookIn, path) {
   return file
 }
 
-// Do initial project map, if projectPath has been set)
-// if (store.store.projectPath !== '') {
-//   mapProject(store.store.projectPath, store)
-// }
-
-const newFiles = {
-  folders: {
-    byId: [],
-    allIds: []
-  },
-  docs: {
-    byId: [],
-    allIds: []
-  },
-  media: {
-    byId: [],
-    allIds: []
-  }
-};
-
 /**
- * Chokida rdocs: https://www.npmjs.com/package/chokidar
+ * Chokidar docs: https://www.npmjs.com/package/chokidar
  */
 const chokidarConfig = {
   ignored: /(^|[\/\\])\../, // Ignore dotfiles
@@ -977,33 +907,99 @@ const chokidarConfig = {
 
 // -------- DISK MANAGER -------- //
 
+
 class DiskManager {
 	constructor() {
 
 		// Listen for state changes
+		/*
+			- Is it cold start?
+				- If yes, try to 
+			- Has a directory changed?
+				- If yes, for that project, does a Watcher already exist?
+					- If yes, update the Watcher.
+						- TODO
+				- If no, is the new directory path valid?
+					- If yes, create Watcher and pass in project
+					- If no, do nothing
+		*/
 		global.store.onDidAnyChange((state, oldState) => {
 
-			const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState);
+			// const isColdStart = hasChangedTo('appStatus', 'coldStarting', state, oldState)
+			// const isColdStart = propHasChanged('appStatus', 'coldStarting')
+			const projectDirectoryChanged = propHasChanged(['projects', 'directory']);
 			const projectAdded = state.projects.length > oldState.projects.length;
 			const projectRemoved = state.projects.length < oldState.projects.length;
 
-			if (isStartingUp) {
-				state.projects.forEach((p, index) => {
-					// Create Watcher and add to `watchers` array
-					const watcher = new Watcher(p);
-					this.watchers.push(watcher);
-				});
-			} else if (projectAdded) {
-				// Get new project. Then create Watcher and add to `watchers` array
-				const project = state.projects[state.projects.length - 1];
-				const watcher = new Watcher(project);
-				this.watchers.push(watcher);
-			}
+			// if (isColdStart) {
+
+			// 	// For each project with a valid directory, create a watcher
+			// 	state.projects.forEach((project) => {
+			// 		if (project.directory) {
+			// 			// Create Watcher and add to `watchers` array
+			// 			const watcher = new Watcher(project)
+			// 			this.watchers.push(watcher)
+			// 		}
+			// 	})
+			// } else 
+			// if (projectDirectoryChanged) {
+
+			// 	// Create array of projects whose directories have changed
+			// 	// First filter patches to those with directory changes
+			// 	// Then get the associated projects from `state.projects`
+			// 	const projectsWithNewDirectories = global.patches.filter((patch) => {
+			// 		const pathAsString = patch.path.toString()
+			// 		const dirHasChanged =
+			// 			pathAsString.includes('projects') &&
+			// 			pathAsString.includes('directory')
+			// 		return dirHasChanged
+			// 	}).map((patch) => {
+			// 		// Format of patch path will be:
+			// 		// `path: [ 'projects', 0, 'directory' ],`
+			// 		// The project index is the integer (always second value).
+			// 		const projectIndex = patch.path[1] //
+			// 		const project = state.projects[projectIndex]
+			// 		return project
+			// 	})
+
+			// 	projectsWithNewDirectories.forEach((project) => {
+			// 		// Does corresponding watcher exist?
+			// 		const watcher = global.watchers.find(({ id }) => id == project.id)
+
+			// 		// If yes, update it. Else, create one.
+			// 		if (watcher) {
+			// 			console.log("TODO: Update watcher!!")
+			// 		} else {
+			// 			const watcher = new Watcher(project)
+			// 			this.watchers.push(watcher)
+			// 		}
+			// 	})
+
+			// } else if (projectAdded) {
+			// 	// Get new project. Then create Watcher and add to `watchers` array
+			// 	const project = state.projects[state.projects.length - 1]
+			// 	const watcher = new Watcher(project)
+			// 	this.watchers.push(watcher)
+			// } else if (projectRemoved) {
+			// 	// Remove the matching watcher. Do so by comparing projects and watchers. Find the watcher who does not have a corresponding project, by comparing IDs, then remove it.
+			// }
 		});
 	}
 
 	// Array of Watcher instances.
 	watchers = []
+
+	/**
+	 * On startup, create a Watcher instance for each project with a valid `directory`. If a project does not have a valid directory, do nothing. We'll catch the change and set one up later (see listeners in Constructor).
+	 */
+	async startup() {
+		for (const project of global.state().projects) {
+
+			// Create Watcher and add to `watchers` array
+			const watcher = new Watcher(project);
+			this.watchers.push(watcher);
+		}
+	}
 }
 
 async function deleteFile(path) {
@@ -1119,7 +1115,6 @@ class IpcManager {
       const watcher = global.watchers.find((watcher) => watcher.id == win.id);
       return watcher.files
     });
-
   }
 }
 
@@ -1433,29 +1428,61 @@ class WindowManager {
 
     // Listen for state changes
     global.store.onDidAnyChange((state, oldState) => {
-      const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState);
-      if (isStartingUp) {
-        state.projects.forEach(async (p, index) => {
-          this.createWindow(index);
-        });
-      } else if (state.projects.length > oldState.projects.length) {
-        this.createWindow(state.projects.length - 1);
+      if (state.projects.length > oldState.projects.length) {
+        const newProjectIndex = state.projects.length - 1;
+        const newProject = state.projects[newProjectIndex];
+        this.createWindow(newProjectIndex, newProject);
       }
+      // const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState)
+      // if (isStartingUp) {
+      //   state.projects.forEach(async (p, index) => {
+      //     this.createWindow(index, p.window.bounds)
+      //   })
+      // } else if (state.projects.length > oldState.projects.length) {
+      //   this.createWindow(state.projects.length - 1)
+      // }
     });
   }
 
-  createWindow(projectIndex) {
+  /**
+   * On startup, create a BrowserWindow for each project.
+   */
+  async startup() {
+    let index = 0;
+    for (const project of global.state().projects) {
+      await this.createWindow(index, project);
+      index++;
+    }
+  }
+
+  async createWindow(projectIndex, project) {
 
     const win = new electron.BrowserWindow(browserWindowConfig);
+    const isFirstRun = project.directory == '';
+
+    // Set size. If project directory is empty, it's first run, and we set window centered, and filling most of the primary screen. Else we restore the previous window size and position (stored in `bounds` property)/
+    // Else, create a new window centered on screen.
+    if (isFirstRun) {
+      const { width, height } = electron.screen.getPrimaryDisplay().workAreaSize;
+      const padding = 80;
+      win.setBounds({
+        x: padding,
+        y: padding,
+        width: width - padding * 2,
+        height: height - padding * 2
+      }, false);
+    } else {
+      win.setBounds(project.window.bounds, false);
+    }
 
     // Load index.html
-    win.loadFile(path.join(__dirname, 'index.html'), {
+    await win.loadFile(path__default['default'].join(__dirname, 'index.html'), {
       query: {
         id: win.id
       },
     });
 
-    // Have to manually set this to 1.0. That should be the default, but somewhere it's being set to 0.91, resulting in the UI being slightly too-small.
+    // Have to manually set this to 1.0. That should be the default, but I've had problem where something was setting it to 0.91, resulting in the UI being slightly too-small.
     win.webContents.zoomFactor = 1.0;
 
     // Listen for close action. Is triggered by pressing close button on window, or close menu item, or app quit. Prevent default, and update state.
@@ -1477,6 +1504,11 @@ class WindowManager {
           break
       }
     });
+
+    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming)
+    // Using `debounce` package: https://www.npmjs.com/package/debounce
+    win.on('resize', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
+    win.on('move', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
 
     // Listen for app quiting, and start to close window
     global.store.onDidAnyChange(async (state, oldState) => {
@@ -1505,11 +1537,16 @@ class WindowManager {
   }
 }
 
+/**
+ * Save window bounds to state, so we can restore after restart.
+ */
+function saveWindowBoundsToState(win) {
+  global.store.dispatch({ type: 'SAVE_WINDOW_BOUNDS', windowBounds: win.getBounds() }, win.id);
+}
+
 
 const browserWindowConfig = {
   show: false,
-  width: 1600,
-  height: 900,
   zoomFactor: 1.0,
   vibrancy: 'sidebar',
   transparent: true,
@@ -1529,7 +1566,7 @@ const browserWindowConfig = {
     webSecurity: true,
     webviewTag: false,
     // Preload
-    preload: path.join(__dirname, 'js/preload.js')
+    preload: path__default['default'].join(__dirname, 'js/preload.js')
   }
 };
 
@@ -1546,10 +1583,10 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
 if (!electron.app.isPackaged) {
 
   const watchAndReload = [
-    path.join(__dirname, '**/*.js'),
-    path.join(__dirname, '**/*.html'),
-    path.join(__dirname, '**/*.css'),
-    path.join(__dirname, '**/*.xml')
+    path__default['default'].join(__dirname, '**/*.js'),
+    path__default['default'].join(__dirname, '**/*.html'),
+    path__default['default'].join(__dirname, '**/*.css'),
+    path__default['default'].join(__dirname, '**/*.xml')
     // 'main.js',
     // '**/*.js',
     // '**/*.html',
@@ -1564,7 +1601,7 @@ if (!electron.app.isPackaged) {
     //   stabilityThreshold: 10,
     //   pollInterval: 50
     // },
-    electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
+    electron: path__default['default'].join(__dirname, '../node_modules', '.bin', 'electron'),
     hardResetMethod: 'exit'
     // argv: ['--inspect=5858'],
   });
@@ -1579,9 +1616,7 @@ if (!electron.app.isPackaged) {
 // Create store (and global variables for store and state)
 global.store = new Store();
 global.state = () => global.store.store;
-
-// Create managers
-const appearanceManager = new AppearanceManager();
+global.patches = []; // Most recent patches from Immer
 const diskManager = new DiskManager();
 const ipcManager = new IpcManager();
 const menuBarManager = new MenuBarManager();
@@ -1595,9 +1630,18 @@ electron.app.allowRendererProcessReuse = true;
 
 // Start app
 electron.app.whenReady()
-  .then(appearanceManager.setNativeTheme)
   .then(async () => {
+    // TODO
+    // appearanceManager.setNativeTheme
+
+    // Kickoff app cold start. Reducers prep state as necessary.
+    // E.g. Prune projects with inaccessible directoris.
     await global.store.dispatch({ type: 'START_COLD_START' });
+    // Create a window for each project
+    await windowManager.startup();
+    // Create a Watcher instance for each project
+    await diskManager.startup();
+    // App startup complete!
     await global.store.dispatch({ type: 'FINISH_COLD_START' });
   });
 

@@ -3,8 +3,6 @@ import ElectronStore from 'electron-store'
 import { update } from './reducers'
 
 import colors from 'colors'
-import deepEql from 'deep-eql'
-import { detailedDiff } from 'deep-object-diff'
 
 
 export class Store extends ElectronStore {
@@ -21,43 +19,29 @@ export class Store extends ElectronStore {
 
   async dispatch(action, windowId = undefined) {
 
-    if (!app.isPackaged) this.logTheAction(action)
+    if (!app.isPackaged) logTheAction(action)
 
-    // Get next state
-    // const nextState = await reducers(action, windowId)
+    // Get next state. 
+    // `update` function also updates `global.patches`.
+    const nextState = update(store.store, action, windowId)
 
-    const [nextState, patches, inversePatches] = update(store.store, action, windowId)
-
-    // if (!app.isPackaged) this.logTheDiff(global.state(), nextState)
-
-    // Apply nextState to Store
+    // Apply next state to Store
     this.set(nextState)
 
     // Send patches to render proces
     const windows = BrowserWindow.getAllWindows()
     if (windows.length) {
-      windows.forEach((win) => win.webContents.send('statePatchesFromMain', patches))
+      windows.forEach((win) => win.webContents.send('statePatchesFromMain', global.patches))
     }
   }
+}
 
-  logTheAction(action) {
-    console.log(
-      // `Action:`.bgBrightGreen.black,
-      `${action.type}`.bgBrightGreen.black.bold,
-      // `(Store.js)`.green
-    )
-  }
-
-  // logTheDiff(currentState, nextState) {
-  //   const hasChanged = !deepEql(currentState, nextState)
-  //   if (hasChanged) {
-  //     // const diff = detailedDiff(currentState, nextState)
-  //     // console.log(`Changed: ${JSON.stringify(diff, null, 2)}`.yellow)
-  //     console.log(`Changed: ${nextState.changed}`.bgBrightGreen.black.bold)
-  //   } else {
-  //     console.log('No changes'.bgBrightGreen.black.bold)
-  //   }
-  // }
+function logTheAction(action) {
+  console.log(
+    // `Action:`.bgBrightGreen.black,
+    `${action.type}`.bgBrightGreen.black.bold,
+    // `(Store.js)`.green
+  )
 }
 
 const storeDefault = {
@@ -69,7 +53,11 @@ const storeDefault = {
   // App theme. See Readme.
   appearance: {
     userPref: 'match-system',
-    theme: 'gambier-light'
+    theme: 'gambier-light',
+  },
+
+  timing: {
+    treeListFolder: 800,
   },
 
   // ----------- PROJECTS ----------- //
@@ -84,7 +72,8 @@ export const newProject = {
     // Used to associate windows with projects
     id: 0,
     // Used when closing window (to check if it's safe to do so or not)
-    status: 'open'
+    status: 'open',
+    bounds: { x: 0, y: 0, width: 1600, height: 1200 }
   },
 
   // User specified directory to folder containing their project files
@@ -101,52 +90,47 @@ export const newProject = {
   // SideBar
   sidebar: {
     isOpen: true,
-    previewIsOpen: true,
+    isPreviewOpen: true,
+    activeTabId: 'project',
     width: 250,
-    tabs: [
-      {
-        title: 'Project', name: 'project',
-        active: true,
-        lastSelectedItem: {}, // id and type
-        selectedItems: [], // Array of ids
-        expandedItems: [], // Array of folder ids
+    tabsById: {
+      project: {
+        title: 'Project',
+        lastSelected: {}, // id
+        selected: [], // Array of ids
+        expanded: [], // Array of folder ids
       },
-      {
-        title: 'All Documents', name: 'all-documents',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      allDocs: {
+        title: 'All Documents',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Most Recent', name: 'most-recent',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      mostRecent: {
+        title: 'Most Recent',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Tags', name: 'tags',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      tags: {
+        title: 'Tags',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Media', name: 'media',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      media: {
+        title: 'Media',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Citations', name: 'citations',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      citations: {
+        title: 'Citations',
+        lastSelected: {},
+        selected: [],
       },
-      {
-        title: 'Search', name: 'search',
-        active: false,
-        lastSelectedItem: {},
-        selectedItems: [],
+      search: {
+        title: 'Search',
+        lastSelected: {},
+        selected: [],
       }
-    ],
+    },
+    tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
   }
 }

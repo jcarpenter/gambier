@@ -8,6 +8,7 @@
   header {
     padding: 0 10px;
     display: flex;
+    position: relative;
     flex-direction: row;
     align-items: center;
     min-height: 30px;
@@ -24,15 +25,9 @@
     }
   }
   
-  .right {
-    //   border: 1px solid red;
-    //   flex-basis: 40px;
-  }
 </style>
 
 <header>
   <h1>{title}</h1>
-  <div class="right">
-      <slot></slot>
-  </div>
+  <slot></slot>
 </header>

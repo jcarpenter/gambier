@@ -1,25 +1,30 @@
 import { stat } from 'fs-extra'
-import { Media } from './formats'
 import path from 'path'
-
+import { getMediaType } from '../../shared/utils'
+import sizeOf from 'image-size'
 
 /**
  * For specified path, return document details
  */
-export default async function (filePath, stats = undefined, parentId = '', extension = undefined, nestDepth) {
+export async function mapMedia (filepath, parentId, nestDepth, stats = undefined) {
 
-	const media = { ...Media }
+	if (stats == undefined) stats = await stat(filepath)
+	const extension = path.extname(filepath)
+	const type = getMediaType(extension)
+	const { width, height, type: format } = sizeOf(filepath)
 
-	if (stats == undefined) stats = await stat(filePath)	
-
-	media.name = path.basename(filePath)
-	media.filetype = extension == undefined ? path.extname(filePath) : extension
-	media.path = filePath
-	media.id = `media-${stats.ino}`
-	media.parentId = parentId
-	media.modified = stats.mtime.toISOString()
-	media.created = stats.birthtime.toISOString()
-	media.nestDepth = nestDepth
-
-	return media
+	return {
+		type: type,
+		name: path.basename(filepath),
+		path: filepath,
+		id: `${type}-${stats.ino}`,
+		parentId: parentId,
+		created: stats.birthtime.toISOString(),
+		modified: stats.mtime.toISOString(),
+		nestDepth: nestDepth,
+		// --- Media-specific --- //
+		format: format,
+		sizeInBytes: stats.size,
+		dimensions: { width: width, height: height },
+	}
 }

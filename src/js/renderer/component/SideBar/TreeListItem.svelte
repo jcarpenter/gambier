@@ -13,7 +13,7 @@
   let isExpandable = false
   let isExpanded = true
 
-//   $: isSelected = state.sideBar2.project.selectedItems.find(
+//   $: isSelected = state.sideBar2.project.selected.find(
 //     (id) => id == item.id
 //   )
   $: isExpandable = item.type == 'folder' && item.children.length > 0
@@ -67,10 +67,10 @@
       if (clickedWhileNotSelected) {
         items.push(item.id)
       } else if (cmdClickedWhileNotSelected) {
-        items = state.sideBar2.tabs.find((t) => t.name == 'project').selectedItems.concat([item.id])
+        items = state.sideBar2.tabs.find((t) => t.name == 'project').selected.concat([item.id])
       } else if (cmdClickedWhileSelected) {
         // Copy array and remove this item from it
-        items = state.sideBar2.tabs.find((t) => t.name == 'project').selectedItems.slice()
+        items = state.sideBar2.tabs.find((t) => t.name == 'project').selected.slice()
         const indexToRemove = items.findIndex((id) => id == item.id)
         items.splice(indexToRemove, 1)
       }
@@ -79,7 +79,7 @@
         type: 'SELECT_SIDEBAR_ITEMS',
         tabName: 'project',
         lastSelectedIndex: item.index,
-        selectedItems: items,
+        selected: items,
       })
     }
   }

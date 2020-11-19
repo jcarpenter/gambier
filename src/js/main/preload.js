@@ -3,7 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 // Whitelist channels
 
 // Renderer "receives" from Main
-let validReceiveChannels = ['mainWantsToCloseWindow', 'mainWantsToQuitApp', 'mainRequestsSaveFile', 'mainRequestsDeleteFile', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain']
+let validReceiveChannels = ['mainWantsToCloseWindow', 'mainWantsToQuitApp', 'mainRequestsSaveFile', 'mainRequestsDeleteFile', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain']
 
 // Renderer "sends" to Main
 let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'saveFileThenCloseWindow', 'saveFileThenQuitApp', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch',]
@@ -17,18 +17,21 @@ contextBridge.exposeInMainWorld(
   {
     receive: (channel, func) => {
       if (validReceiveChannels.includes(channel)) {
+        // console.log(`Main --> ${channel} --> Renderer`)
         // Deliberately strip event as it includes `sender` 
         ipcRenderer.on(channel, (event, ...args) => func(...args))
       }
     },
 
     send: (channel, ...args) => {
+      // console.log(`Renderer --> ${channel} --> Main`)
       if (validSendChannels.includes(channel)) {
         ipcRenderer.send(channel, ...args)
       }
     },
 
     invoke: (channel, ...args) => {
+      // console.log(`Renderer --> ${channel} --> Main --> (Response) --> Renderer`)
       if (validInvokeChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, ...args)
       }

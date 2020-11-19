@@ -1,9 +1,11 @@
 :root {
+    /* -------------- Easing -------------- */
 
-    /* -------------- Images -------------- */
+    // Taken from Material Design
+    // Per: https://material.io/design/motion/speed.html#easing
 
-    // --img-folder-fill: url(img/folder.svg);
-
+    --standardEase: cubic-bezier(0.4, 0, 0.2, 1);
+    --decelerateEase: cubic-bezier(0, 0, 0.2, 1);
 
     /* -------------- Layouts (CSS grid) -------------- */
 

@@ -27,16 +27,11 @@
     transform: translate(-50%, -50%);
 }
 
-@mixin absolute_vertical_centered {
-    position: absolute;
-    top: 50%;
-    transform: translate(0, -50%);
-}
-
-@mixin absolute_horizontal_centered {
-    position: absolute;
-    left: 50%;
-    transform: translate(-50%, 0);
+@mixin reset-list {
+    margin: 0;
+    padding: 0;
+    text-indent: 0;
+    list-style-type: none;
 }
 
 /* -------------- Typography -------------- */
@@ -70,7 +65,7 @@
 
 // Labels - Large
 @mixin label-large-bold {
-    font-family: 'SF Pro Display';
+    font-family: "SF Pro Display";
     font-weight: bold;
     font-size: 20px;
     line-height: 24px;
@@ -85,4 +80,3 @@
     line-height: 16px;
     letter-spacing: -0.07px;
 }
-

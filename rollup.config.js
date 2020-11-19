@@ -4,7 +4,7 @@ import svelte from 'rollup-plugin-svelte'
 import sveltePreprocess from 'svelte-preprocess'
 
 export default [
-  
+
   // Electron | Main
   {
     input: 'src/js/main/main.js',
@@ -13,7 +13,7 @@ export default [
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff', 'xml-js', 'immer'],
+    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff', 'xml-js', 'immer', 'image-size', 'debounce'],
   },
 
   // Electron | Preload
@@ -51,7 +51,7 @@ export default [
         //   css.write('public/build/bundle.css');
         // }
       }),
-      resolve(), 
+      resolve(),
       commonjs()
     ],
     external: [

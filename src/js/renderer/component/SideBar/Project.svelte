@@ -1,64 +1,151 @@
 <script>
-  import { project, sidebar } from '../../StateManager'
+  import { project, sidebar, files } from '../../StateManager'
   import { createTreeHierarchy, createFlatHierarchy } from 'hierarchy-js'
 
   import Header from './Header.svelte'
   import SearchField from '../UI/SearchField.svelte'
   import Separator from '../UI/Separator.svelte'
-  import TreeListItem2 from './TreeListItem2.svelte'
+  import Row from './treelist/Row.svelte'
+  import produce, { enablePatches, produceWithPatches } from 'immer'
+  import File from './treelist/File.svelte'
+  import Folder from './treelist/Folder.svelte';
+  import { iterator } from 'hierarchy-js/lib/services/createCopy'
 
-  $: focused = $project.focusedLayoutSection == 'sidebar'
-  $: tab = $sidebar.tabs.find((t) => t.name == 'project')
-  $: folders = [] // TODO
-  $: files = [] // TODO
-  $: transitionTime = query == '' ? 300 : 0
-  
+  enablePatches()
+
+  $: tab = $sidebar.tabsById.project
+  $: isQueryEmpty = query == ''
+  $: transitionTime = isQueryEmpty ? 300 : 0
+
+  let flat
   let query = '' // Bound to search field
   let resultsTree = []
   let resultsFlat = []
   let resultsVisible = []
 
+  /* ---- How file updating works ----
+   * User makes changes to project directory (e.g. adds a file).
+   * Watcher chokidar instance catches. (main)
+   * Updates its `files`, then sends patches to render process.
+   * StateManager receives patches (render)
+   * Applies them to it's 1:1 copy of files (`filesAsObject`), to keep them in sync.
+   * Updates its files store (`files`). Which is exported.
+   * Svelte components import `files` store.
+   * Creates immutabale copy using immer, in `makeStore`
+   * Updates whenever `$files` store from StateManager updates.
+   * Immutable child components see their dependencies have updated, but only update when their objects are replaced.
+   */
 
-  /*
-  Each item needs to know it's index among visible items. But only it's local index.
-  */
+  let tree
 
-  // -------- RESULTS -------- //
+  $: $files, tab.expanded, makeTree()
+  // $: tab.expanded, updateTree()
 
-  let index = 0
-  let indexInAllVisibleItems = 0
-  let results2Tree = []
-  let results2Flat = []
+  function makeTree() {
 
-  // Update results when following change:
-  // * Folders or files
-  // * Search query change
-  // * Search query change
-  function updateResults() {
-    index = 0
-    indexInAllVisibleItems = 0
+    // if (!$files.tree) return
+    const projectFolder = $files.tree[0]
 
-    if (query == '') {
-      const foldersAndFiles = [].concat(...[folders, files])
-      results2Tree = createTreeHierarchy(foldersAndFiles)[0].children
-      sortChildren(results2Tree)
-      orderChildren(results2Tree, true, 0)
+    // Use immer to apply changes immutably (leaving $files untouched).
+    tree = produce(
+      projectFolder,
+      (draft) => {
+        sortTree(draft)
+        mapVisibleDescendants(draft, true)
+        insertEmptyRows(draft)
+      }
+      // (patches, inversePatches) => {
+      //   console.log(patches)
+      // }
+    )
 
-      // console.log(results2Tree)
-      // results2Tree[0].children.forEach((c) => console.log(c.name, c.indexAmongSiblings))
+    // console.log(tree)
 
-      results2Flat = createFlatHierarchy(results2Tree)
+    // flat = createFlatHierarchy(tree)
+    // console.log(flat)
 
-      results2Flat.forEach((r, index) => {
-        const color = r.type == 'folder' ? 'black' : 'green'
-        // console.log(`%c${r.indexAmongSiblings} ${'—'.repeat(r.nestDepth)} ${r.name}`, `color:${color}`)
-      })
+    // flat.forEach((r, index) => {
+    //   // Skip top-level folder. Most of it's properties are not set.
+    //   const isTopFolder = r.parentId == ''
+    //   if (!isTopFolder) {
+    //     const color = r.isVisible ? 'white' : 'gray'
+    //     console.log(
+    //       `%c${r.indexInAllVisible ? r.indexInAllVisible : '/'} ${r.indexInVisibleSiblings} ${'—'.repeat(
+    //         r.details.nestDepth
+    //       )} ${r.details.name}`,
+    //       `color:${color}`
+    //     )
+    //   }
+    // })
+  }
+
+  function sortTree(folder) {
+    // Sort
+    folder.children.sort((a, b) => {
+      const itemA = $files.byId[a.id]
+      const itemB = $files.byId[b.id]
+      return itemA.name.localeCompare(itemB.name)
+    })
+    folder.children.forEach((c) => {
+      const type = $files.byId[c.id].type
+      // Recursively sort
+      if (type == 'folder' && c.children.length) {
+        sortTree(c)
+      }
+    })
+  }
+
+  function mapVisibleDescendants(folder, isRoot = false) {
+    
+    folder.numVisibleDescendants = 0
+    const isExpanded = tab.expanded.some((id) => id == folder.id)
+
+    if (!isRoot && !isExpanded)  return { numVisibleDescendants: 0 }
+
+    folder.children.forEach((c) => {
+      folder.numVisibleDescendants++
+      const file = $files.byId[c.id]
+      if (file.type == 'folder') {
+        const { numVisibleDescendants } = mapVisibleDescendants(c)
+        folder.numVisibleDescendants += numVisibleDescendants
+      }
+    })
+
+    return {
+      numVisibleDescendants: folder.numVisibleDescendants,
     }
   }
 
+  function insertEmptyRows(folder) {
+
+    // For each expanded folder, insert empty sibling elements equal to the length of folder's visible descendants.
+
+    for (var i = 0; i < folder.children.length; i++) {
+      
+      let c = folder.children[i]
+      if (c.id.includes('empty')) continue
+      const file = $files.byId[c.id]
+      const isExpandedFolder = file.type == 'folder' && tab.expanded.some((id) => id == c.id)
+
+      if (isExpandedFolder) {
+
+        let emptyItems = []
+        for (var x = 0; x < c.numVisibleDescendants; x++) {
+          emptyItems.push({id: `empty-${c.id}-${x}`})
+        }
+
+        folder.children.splice(i + 1, 0, ...emptyItems)
+        insertEmptyRows(c)
+      }
+    }
+  }
+
+
+  // -------- RESULTS -------- //
+
   // function updateSelected(children) {
   //   children.forEach((r) => {
-  //     r.isSelected = tab.selectedItems.some((id) => id = r.id)
+  //     r.isSelected = tab.selected.some((id) => id = r.id)
   //     if (r.children && r.children.length) {
   //       updateSelected(r.children)
   //     }
@@ -92,7 +179,7 @@
   //       const result = resultsFlat[i]
   //       resultsVisible.push(result)
   //       if (result.type == 'folder') {
-  //         const isExpanded = tab.expandedItems.some((id) => id == result.id)
+  //         const isExpanded = tab.expanded.some((id) => id == result.id)
   //         if (!isExpanded) {
   //           i += result.recursiveChildCount
   //         }
@@ -104,7 +191,7 @@
   // -------- KEY DOWN -------- //
 
   function handleKeydown(evt) {
-    if (!focused) return
+    if (!isSidebarFocused) return
     switch (evt.key) {
       case 'ArrowLeft':
       case 'ArrowRight':
@@ -120,10 +207,10 @@
   }
 
   function handleArrowLeftRight(key) {
-    const item = resultsFlat.find((r) => r.id == tab.lastSelectedItem.id)
+    const item = resultsFlat.find((r) => r.id == tab.lastSelected)
 
     const isFolder = item.type == 'folder'
-    const isExpanded = isFolder && tab.expandedItems.some((id) => id == item.id)
+    const isExpanded = isFolder && tab.expanded.some((id) => id == item.id)
 
     if (isFolder) {
       // Toggle expanded
@@ -141,11 +228,11 @@
 
   function handleArrowUpDown(key, shiftPressed, altPressed) {
     let item = {}
-    let selectedItems = []
+    let selected = []
 
     // Checks
     const indexOfLastSelectedItemInResultsVisible = resultsVisible.findIndex(
-      (r) => r.id == tab.lastSelectedItem.id
+      (r) => r.id == tab.lastSelected
     )
     const isStillVisible = indexOfLastSelectedItemInResultsVisible !== -1
     const isAlreadyAtStartOfResultsVisible =
@@ -183,26 +270,26 @@
 
     // Select it, or add it to existing selection, depending on whether shift is pressed
     if (shiftPressed) {
-      selectedItems = tab.selectedItems.slice()
-      selectedItems.push(item.id)
+      selected = tab.selected.slice()
+      selected.push(item.id)
     } else {
-      selectedItems = [item.id]
+      selected = [item.id]
     }
 
     // Update selection
     window.api.send('dispatch', {
       type: 'SELECT_SIDEBAR_ITEMS',
       tabName: 'project',
-      lastSelectedItem: { id: item.id, type: item.type },
-      selectedItems: selectedItems,
+      lastSelected: id,
+      selected: selected,
     })
   }
 
   // -------- MOUSE DOWN -------- //
 
-  function handleMouseDown(evt) {
-    const item = evt.detail.item
-    const isSelected = evt.detail.isSelected
+  function selectFile(evt) {
+    const {file, isSelected} = evt.detail
+
     const domEvent = evt.detail.domEvent
 
     // Shift-click: Select range of items in list
@@ -216,149 +303,67 @@
     const cmdClickedWhileNotSelected = domEvent.metaKey && !isSelected
     const cmdClickedWhileSelected = domEvent.metaKey && isSelected
 
-    let selectedItems = []
+    let selected = []
 
     if (clickedWhileSelected) {
       return
     } else if (shiftClicked) {
-      const clickedIndex = resultsVisible.findIndex((r) => r.id == item.id)
+      const clickedIndex = resultsVisible.findIndex((r) => r.id == file.id)
       const lastSelectedIndex = resultsVisible.findIndex(
-        (r) => r.id == tab.lastSelectedItem.id
+        (r) => r.id == tab.lastSelected.id
       )
       const lastSelectedIsStillVisible = lastSelectedIndex !== -1
 
-      selectedItems = tab.selectedItems.slice()
+      selected = tab.selected.slice()
 
       if (!lastSelectedIsStillVisible) {
-        selectedItems = [item.id]
+        selected = [file.id]
       } else {
         const selectFromIndex = Math.min(clickedIndex, lastSelectedIndex)
         const selectToIndex = Math.max(clickedIndex, lastSelectedIndex)
         resultsVisible.forEach((r, index) => {
           if (index >= selectFromIndex && index <= selectToIndex) {
-            selectedItems.push(r.id)
+            selected.push(r.id)
           }
         })
       }
     } else if (clickedWhileNotSelected) {
-      selectedItems.push(item.id)
+      selected.push(file.id)
     } else if (cmdClickedWhileNotSelected) {
-      selectedItems = tab.selectedItems.concat([item.id])
+      selected = tab.selected.concat([file.id])
     } else if (cmdClickedWhileSelected) {
       // Copy array and remove this item from it
-      selectedItems = tab.selectedItems.slice()
-      const indexToRemove = selectedItems.findIndex((id) => id == item.id)
-      selectedItems.splice(indexToRemove, 1)
+      selected = tab.selected.slice()
+      const indexToRemove = selected.findIndex((id) => id == file.id)
+      selected.splice(indexToRemove, 1)
     }
 
     window.api.send('dispatch', {
       type: 'SELECT_SIDEBAR_ITEMS',
-      tabName: 'project',
-      lastSelectedItem: { id: item.id, type: item.type },
-      selectedItems: selectedItems,
+      tabId: 'project',
+      lastSelected: id,
+      selected: selected,
     })
   }
 
   // -------- HELPERS -------- //
 
-  /**
-   * Sort array of child items by sorting criteria
-   * // TODO: Criteria is currently hard coded to alphabetical and A-Z.
-   */
-  function sortChildren(children) {
-    // Sort
-    children.sort((a, b) => a.name.localeCompare(b.name))
-    // Recursively sort children
-    children.forEach((c) => {
-      if (c.type == 'folder' && c.children.length > 0) {
-        sortChildren(c.children)
-      }
-    })
-  }
-
-  function orderChildren(children, parentHierarchyIsExpanded, parentOffset) {
-    let indexAmongSiblings = 0
-
-    // For each child, set properties (e.g. indexes)
-    children.forEach((c) => {
-      // Set index within all items
-      // c.indexInAllItems = index++
-
-      // Set index within all visible items
-      if (parentHierarchyIsExpanded) {
-        c.indexInAllVisibleItems = indexInAllVisibleItems++
-      }
-
-      // Set index within local visible items. We use this to set vertical position of element, within siblings.
-      // if (c.nestDepth > 1) {
-      //   c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset - 1
-      // } else {
-      //   c.indexInLocalVisibleItems = c.indexInAllVisibleItems - parentOffset
-      // }
-
-      // Set index within siblings. Depends on if siblings are expanded or not.
-      c.indexAmongSiblings = indexAmongSiblings++
-
-      // Set visible
-      c.visible = parentHierarchyIsExpanded
-
-      // Set selected
-      c.isSelected = tab.selectedItems.find((id) => id == c.id)
-
-      // If folder...
-      if (c.type == 'folder') {
-        // Set expanded
-        c.isExpanded = tab.expandedItems.some((id) => id == c.id)
-
-        if (c.isExpanded) indexAmongSiblings += c.children.length
-
-        // Recursively sort children
-        if (c.children.length > 0) {
-          const isParentExpanded = parentHierarchyIsExpanded && c.isExpanded
-          orderChildren(c.children, isParentExpanded, 0)
-        }
-      }
-    })
-
-    // Set number of visible children. Have to wait until other values are set before we can do this.
-    children.forEach((c, index) => {
-      if (c.type == 'folder') {
-        if (c.isExpanded) {
-          // = number of visible items until next sibling
-          const isLastChild = index == children.length - 1
-          if (!isLastChild) {
-            const nextSibling = children[index + 1]
-            // console.log(c.name, nextSibling.name)
-            c.numberOfVisibleChildren =
-              nextSibling.indexInAllVisibleItems - c.indexInAllVisibleItems - 1
-          } else {
-            // c.numberOfVisibleChildren = c.indexInAllVisibleItems +
-          }
-        } else {
-          // console.log("NE: ", c.name)
-          // c.numberOfVisibleChildren = 0
-        }
-      }
-    })
-
-    return indexAmongSiblings
-  }
-
-  function toggleExpanded(item, isExpanded) {
-    let expandedItems = tab.expandedItems.slice()
+  function toggleExpanded(evt) {
+    const {file, isExpanded} = evt.detail
+    let expanded = tab.expanded.slice()
     switch (isExpanded) {
       case true:
-        const indexToRemove = expandedItems.findIndex((id) => id == item.id)
-        expandedItems.splice(indexToRemove, 1)
+        const indexToRemove = expanded.findIndex((id) => id == file.id)
+        expanded.splice(indexToRemove, 1)
         break
       case false:
-        expandedItems.push(item.id)
+        expanded.push(file.id)
         break
     }
     window.api.send('dispatch', {
       type: 'EXPAND_SIDEBAR_ITEMS',
-      tabName: tab.name,
-      expandedItems: expandedItems,
+      tabId: 'project',
+      expanded: expanded,
     })
   }
 
@@ -367,8 +372,8 @@
     window.api.send('dispatch', {
       type: 'SELECT_SIDEBAR_ITEMS',
       tabName: 'project',
-      lastSelectedItem: { id: parentFolder.id, type: parentFolder.type },
-      selectedItems: [parentFolder.id],
+      lastSelected: id,
+      selected: [parentFolder.id],
     })
   }
 </script>
@@ -387,13 +392,10 @@
     display: none;
   }
 
-  .focused {
-    /* border: 1px solid red; */
-  }
-
   #results {
-    margin: 10px 10px 0;
-    min-height: 100%;
+    padding: 10px;
+    flex-grow: 1;
+    // min-height: 100%;
     overflow-y: scroll;
     position: relative;
   }
@@ -401,22 +403,44 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div id="project" class="wrapper" class:focused class:active={tab.active}>
+<div id="project" class="wrapper" class:active={tab.active}>
   <Header title={tab.title}>
     <!-- Sort -->
   </Header>
   <Separator marginSides={10} />
   <SearchField focused bind:query placeholder={'Name'} />
-  <!-- <div id="results">
-    {#each results2Tree as item}
-      <TreeListItem2
+  <div id="results">
+    <Folder {tree} isRoot={true} on:selectFile={selectFile} on:toggleExpanded={toggleExpanded} />
+    <!-- {#each sortedTree.children as item (item.id)}
+      <Row
         {item}
-        listHasFocus={focused}
+        {isQueryEmpty}
+        on:selectFile={selectFile}
+        on:toggleExpanded={toggleExpanded} />
+    {/each} -->
+    <!-- {#each tree as item (item.id)}
+      {#if item.type == 'Empty'}
+        <div class="emptyItem" />
+      {:else}
+        <Row
+          {item}
+          {isSidebarFocused}
+          isQueryEmpty={query == ''}
+          on:mousedown={handleMouseDown}
+          on:toggleExpanded={(evt) => {
+            toggleExpanded(evt.detail.item, evt.detail.isExpanded)
+          }} />
+      {/if}
+    {/each} -->
+    <!-- {#each tree as item (item.id)}
+      <Row
+        {item}
+        {isSidebarFocused}
         isQueryEmpty={query == ''}
         on:mousedown={handleMouseDown}
         on:toggleExpanded={(evt) => {
           toggleExpanded(evt.detail.item, evt.detail.isExpanded)
         }} />
-    {/each}
-  </div> -->
+    {/each} -->
+  </div>
 </div>

@@ -58,7 +58,7 @@
       text-align: right;
     //   flex-basis: 6em;
       color: var(--labelColor);
-      padding-right: 0.6em;
+      padding-right: 1em;
     }
 
     .val {
@@ -73,13 +73,6 @@
   <h1>State</h1>
 
   <div class="stateTable">
-    <div class="property">
-      <div class="key">files</div>
-      <div class="val">{stringify($files)}</div>
-    </div>
-  </div>
-  
-  <div class="stateTable">
     <!-- <header>Stores</header> -->
     <div class="property">
       <div class="key">state</div>
@@ -87,4 +80,11 @@
     </div>
   </div>
 
+  <div class="stateTable">
+    <div class="property">
+      <div class="key">files</div>
+      <div class="val">{stringify($files)}</div>
+    </div>
+  </div>
+  
 </div>

@@ -18,9 +18,15 @@ window.api.receive("stateChanged", (state, oldState) => {
   }
 });
 
+window.api.receive('initialFilesFromMain', (files) => {
+  console.log('renderer.js: receive initialFilesFromMain')
+})
+
 
 // Setup renderer
 async function setup() {
+
+  console.log('renderer.js: setup')
 
   // Get initial state and files
   const initialState = await window.api.invoke('getState')
@@ -34,9 +40,10 @@ async function setup() {
   const layout = new Layout({
     target: document.querySelector('#layout')
   });
-
+  
   // Finish setup by showing window
   window.api.send('showWindow')
+  console.log('renderer.js: showWindow')
 }
 
 

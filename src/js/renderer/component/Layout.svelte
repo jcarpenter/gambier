@@ -1,11 +1,23 @@
 <script>
-  import { state, project } from '../StateManager'
+  import { project, files } from '../StateManager'
   import FirstRun from './FirstRun.svelte'
   import SideBar from './SideBar/SideBar.svelte'
   import StateDisplay from './StateDisplay.svelte'
   import Toolbar from './Toolbar.svelte'
   import Separator from './UI/Separator.svelte'
+
+  $: directoryIsSet = $project.directory
+  $: filesPopulated = $files.tree
+
+  // console.log("--- Layout.svelte ---")
+  // $: console.log(directoryIsSet)
+  // $: console.log(filesPopulated)
+  // $: console.log($project.directory)
+  // $: console.log($files.tree)
+  $: console.log($files)
+
 </script>
+
 
 <style type="text/scss">
   @import '../../../styles/_mixins.scss';
@@ -20,11 +32,11 @@
   }
 </style>
 
-<SideBar />
 
-{#if $project.directory == ''}
+{#if !directoryIsSet || !filesPopulated}
   <FirstRun />
 {:else}
+  <SideBar />
   <div id="main" class="flexContainerColumn">
     <Toolbar />
     <Separator />

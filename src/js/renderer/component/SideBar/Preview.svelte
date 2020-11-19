@@ -18,15 +18,14 @@
   // -------- STATE -------- //
 
   function onStateChange(state) {
-
     if (state.changed.includes('sideBar.activeTab') || firstRun) {
       activeTab = getActiveTab()
-      quantitySelected = activeTab.selectedItems.length
+      quantitySelected = activeTab.selected.length
       item = getLastSelectedItem()
     }
 
     if (state.changed.includes('sideBar.preview') || firstRun) {
-        isOpen = state.sideBar2.preview.isOpen
+      isOpen = state.sideBar2.preview.isOpen
     }
 
     firstRun = false
@@ -41,8 +40,8 @@
   }
 
   function getLastSelectedItem() {
-    const type = activeTab.lastSelectedItem.type
-    const id = activeTab.lastSelectedItem.id
+    const type = activeTab.lastSelected.type
+    const id = activeTab.lastSelected.id
     let arrayToLookIn
     switch (type) {
       case 'folder':
@@ -75,11 +74,11 @@
     transform: translate(0, 100%);
 
     &:not(.isOpen) {
-        bottom: 30px;
+      bottom: 30px;
     }
 
     &.isOpen {
-        bottom: 255px;
+      bottom: 255px;
     }
   }
 
@@ -98,7 +97,7 @@
     <DisclosureButton
       width={16}
       height={16}
-      iconInset={4}
+      padding={4}
       on:toggle={toggleOpenClose} />
   </Header>
   {#if item.type == 'folder'}

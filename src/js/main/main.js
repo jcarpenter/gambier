@@ -56,6 +56,7 @@ if (!app.isPackaged) {
 // Create store (and global variables for store and state)
 global.store = new Store()
 global.state = () => global.store.store
+global.patches = [] // Most recent patches from Immer
 
 // Create managers
 const appearanceManager = new AppearanceManager()
@@ -72,9 +73,18 @@ app.allowRendererProcessReuse = true
 
 // Start app
 app.whenReady()
-  .then(appearanceManager.setNativeTheme)
   .then(async () => {
+    // TODO
+    // appearanceManager.setNativeTheme
+
+    // Kickoff app cold start. Reducers prep state as necessary.
+    // E.g. Prune projects with inaccessible directoris.
     await global.store.dispatch({ type: 'START_COLD_START' })
+    // Create a window for each project
+    await windowManager.startup()
+    // Create a Watcher instance for each project
+    await diskManager.startup()
+    // App startup complete!
     await global.store.dispatch({ type: 'FINISH_COLD_START' })
   })
 

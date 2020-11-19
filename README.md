@@ -92,7 +92,7 @@ I use ES6 module `import/export` syntax (instead of CommonJS) project-wide durin
 
 Third-party NPM packages for use by main process are _copied_ (not bundled) into our build by electron-builder, at build time. See `"postinstall": "electron-builder install-app-deps",` in package.json. NOTE: This script also ensures "...your native dependencies are always matched electron version" ([docs](https://www.electron.build/index.html)).
 
-What is a main-process only dependency? For example, anything that touches the file system (e.g. path, chokidar). 
+What is a main-process only dependency? For example: anything that touches the file system (e.g. path, chokidar). 
 
 To install a new third-party NPM package to be used by main process do the following:
 

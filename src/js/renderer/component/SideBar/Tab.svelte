@@ -1,5 +1,6 @@
 <script>
-  export let tab
+  export let id
+  export let isActive
 </script>
 
 <style type="text/scss">
@@ -14,7 +15,7 @@
     width: 14px;
     height: 14px;
     opacity: 70%;
-    &.active {
+    &.isActive {
       background-color: var(--controlAccentColor);
       opacity: 100%;
     }
@@ -28,43 +29,43 @@
   .project {
     -webkit-mask-image: var(--img-folder);
   }
-  .project.active {
+  .project.isActive {
     -webkit-mask-image: var(--img-folder-fill);
   }
-  .all-documents {
+  .allDocs {
     -webkit-mask-image: var(--img-doc-on-doc);
   }
-  .all-documents.active {
+  .allDocs.isActive {
     -webkit-mask-image: var(--img-doc-on-doc-fill);
   }
-  .most-recent {
+  .mostRecent {
     -webkit-mask-image: var(--img-clock);
   }
-  .most-recent.active {
+  .mostRecent.isActive {
     -webkit-mask-image: var(--img-clock-fill);
   }
   .tags {
     -webkit-mask-image: var(--img-tag);
   }
-  .tags.active {
+  .tags.isActive {
     -webkit-mask-image: var(--img-tag-fill);
   }
   .media {
     -webkit-mask-image: var(--img-photo);
   }
-  .media.active {
+  .media.isActive {
     -webkit-mask-image: var(--img-photo-fill);
   }
   .citations {
     -webkit-mask-image: var(--img-quote-bubble);
   }
-  .citations.active {
+  .citations.isActive {
     -webkit-mask-image: var(--img-quote-bubble-fill);
   }
   .search {
     -webkit-mask-image: var(--img-magnifyingglass);
   }
-  .search.active {
+  .search.isActive {
     -webkit-mask-image: var(--img-magnifyingglass);
   }
 </style>
@@ -72,8 +73,8 @@
 <svelte:options immutable={true} />
 <li
   on:click={() => window.api.send('dispatch', {
-      type: 'SELECT_SIDEBAR_TAB_BY_NAME',
-      name: tab.name,
+      type: 'SELECT_SIDEBAR_TAB_BY_ID',
+      id: id,
     })}
-  class:active={tab.active}
-  class={tab.name} />
+  class:isActive
+  class={id} />

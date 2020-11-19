@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron'
+import { debounce } from 'debounce'
+import { app, BrowserWindow, screen } from 'electron'
 import path from 'path'
 import url from 'url'
 import { hasChangedTo } from '../shared/utils'
@@ -9,29 +10,62 @@ export class WindowManager {
 
     // Listen for state changes
     global.store.onDidAnyChange((state, oldState) => {
-      const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState)
-      if (isStartingUp) {
-        state.projects.forEach(async (p, index) => {
-          this.createWindow(index)
-        })
-      } else if (state.projects.length > oldState.projects.length) {
-        this.createWindow(state.projects.length - 1)
+      if (state.projects.length > oldState.projects.length) {
+        const newProjectIndex = state.projects.length - 1
+        const newProject = state.projects[newProjectIndex]
+        this.createWindow(newProjectIndex, newProject)
       }
+      // const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState)
+      // if (isStartingUp) {
+      //   state.projects.forEach(async (p, index) => {
+      //     this.createWindow(index, p.window.bounds)
+      //   })
+      // } else if (state.projects.length > oldState.projects.length) {
+      //   this.createWindow(state.projects.length - 1)
+      // }
     })
   }
 
-  createWindow(projectIndex) {
+  /**
+   * On startup, create a BrowserWindow for each project.
+   */
+  async startup() {
+    let index = 0
+    for (const project of global.state().projects) {
+      await this.createWindow(index, project)
+      index++
+    }
+  }
+
+  async createWindow(projectIndex, project) {
 
     const win = new BrowserWindow(browserWindowConfig)
+    const isFirstRun = project.directory == ''
+
+    // Set size. If project directory is empty, it's first run, and we set window centered, and filling most of the primary screen. Else we restore the previous window size and position (stored in `bounds` property)/
+    // Else, create a new window centered on screen.
+    if (isFirstRun) {
+      const menuBarHeight = 24
+      const { width, height } = screen.getPrimaryDisplay().workAreaSize
+      const padding = 80
+      win.setBounds({
+        x: padding,
+        y: padding,
+        width: width - padding * 2,
+        height: height - padding * 2
+      }, false)
+    } else {
+      win.setBounds(project.window.bounds, false)
+    }
 
     // Load index.html
-    win.loadFile(path.join(__dirname, 'index.html'), {
+    await win.loadFile(path.join(__dirname, 'index.html'), {
       query: {
         id: win.id
       },
     })
 
-    // Have to manually set this to 1.0. That should be the default, but somewhere it's being set to 0.91, resulting in the UI being slightly too-small.
+    // Have to manually set this to 1.0. That should be the default, but I've had problem where something was setting it to 0.91, resulting in the UI being slightly too-small.
     win.webContents.zoomFactor = 1.0
 
     // Listen for close action. Is triggered by pressing close button on window, or close menu item, or app quit. Prevent default, and update state.
@@ -53,6 +87,11 @@ export class WindowManager {
           break
       }
     })
+
+    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming)
+    // Using `debounce` package: https://www.npmjs.com/package/debounce
+    win.on('resize', debounce(() => { saveWindowBoundsToState(win) }, 1000))
+    win.on('move', debounce(() => { saveWindowBoundsToState(win) }, 1000))
 
     // Listen for app quiting, and start to close window
     global.store.onDidAnyChange(async (state, oldState) => {
@@ -81,11 +120,16 @@ export class WindowManager {
   }
 }
 
+/**
+ * Save window bounds to state, so we can restore after restart.
+ */
+function saveWindowBoundsToState(win) {
+  global.store.dispatch({ type: 'SAVE_WINDOW_BOUNDS', windowBounds: win.getBounds() }, win.id)
+}
+
 
 const browserWindowConfig = {
   show: false,
-  width: 1600,
-  height: 900,
   zoomFactor: 1.0,
   vibrancy: 'sidebar',
   transparent: true,

@@ -1,58 +1,63 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import { css } from '../actions/css'
   const dispatch = createEventDispatcher()
 
   export let width = 34
   export let height = 28
-  export let borderRadius = 2
+  export let padding = 4
+  export let left = 4
+  export let rotation = 0
+
   export let iconImage = 'img-chevron-right'
   export let iconColor = 'controlTextColor'
-  export let iconInset = 4
   export let label = null
   export let tooltip = null
 
-  let buttonStyles = ''
-  let iconStyles = ''
-
-  // Button styles
-  $: {
-    buttonStyles = `width: ${width}px; height: ${height}px; border-radius: ${borderRadius}px;`
-  }
-
-  // Icon styles
-  $: {
-    if (iconImage) {
-      iconStyles = `-webkit-mask-image: var(--${iconImage}); background-color: var(--${iconColor}); width: calc(100% - ${iconInset}px); height: calc(100% - ${iconInset}px);`
-    }
-  }
 </script>
 
 <style type="text/scss">
   @import '../../../../styles/_mixins.scss';
 
-  .button {
-    position: relative;
+  .disclosure {
+    --width: 0;
+    --height: 0;
+    --padding: 0;
+    --left: 0;
+    --rotation: 0;
+    @include absolute-vertical-center;
+    position: absolute;
+    width: calc(var(--width) * 1px);
+    height: calc(var(--height) * 1px);
+    left: calc(var(--left) * 1px);
     // &:hover {
     //   background-color: var(--disabledControlTextColor);
     // }
+    // outline: 2px solid pink;
   }
 
   .icon {
-    @include absolute_centered;
     @include centered_mask_image;
+    width: calc(100% - calc(var(--padding) * 1px));
+    height: calc(100% - calc(var(--padding) * 1px));
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotateZ(calc(var(--rotation) * 1deg));
+    // outline: 2px solid turquoise;
   }
 </style>
 
 <div
-  class="button"
-  style={buttonStyles}
-  role="button"
-  on:mousedown|stopPropagation={() => dispatch('toggle')}>
-  <div class="icon" style={iconStyles} />
+  class="disclosure"
+  use:css={{ width, height, left, padding, rotation }}
+  on:mousedown|stopPropagation={() => dispatch('toggle')}
+  role="button">
+  <div class="icon" style={`background-color: var(--${iconColor}); -webkit-mask-image: var(--${iconImage});`} />
   {#if label}
     <div class="label">{label}</div>
   {/if}
   {#if tooltip}
-    <div class="tooltip">{tooltip}</div>
+    <!-- <div class="tooltip">{tooltip}</div> -->
   {/if}
 </div>

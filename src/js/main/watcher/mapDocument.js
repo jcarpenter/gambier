@@ -1,29 +1,33 @@
 import { stat } from 'fs-extra'
 import matter from 'gray-matter'
 import removeMd from 'remove-markdown'
-import { Document } from './formats'
 import path from 'path'
+import { getMediaType } from '../../shared/utils'
 
 /**
  * For specified path, return document details
  */
-export default async function (filePath, stats = undefined, parentId = '', nestDepth) {
+export async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
 
-	const doc = Object.assign({}, Document)
+	if (stats == undefined) stats = await stat(filepath)
 
-	if (stats == undefined) {
-		stats = await stat(filePath)
-	}
-
-	doc.path = filePath
-	doc.id = `doc-${stats.ino}`
-	doc.parentId = parentId
-	doc.modified = stats.mtime.toISOString()
-	doc.created = stats.birthtime.toISOString()
-	doc.nestDepth = nestDepth
+	const doc = {
+		type: 'doc',
+		name: '',
+		path: filepath,
+		id: `doc-${stats.ino}`,
+		parentId: parentId,
+		created: stats.birthtime.toISOString(),
+		modified: stats.mtime.toISOString(),
+		nestDepth: nestDepth,
+		// --- Doc-specific --- //
+		title: '',
+		excerpt: '',
+		tags: [],
+	}	
 
 	// Get front matter
-	const gm = matter.read(filePath)
+	const gm = matter.read(filepath)
 
 	// Set excerpt
 	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
@@ -38,7 +42,7 @@ export default async function (filePath, stats = undefined, parentId = '', nestD
 	}
 
 	// Set title. E.g. "Sea Level Rise"
-	doc.title = getTitle(gm, path.basename(filePath))
+	doc.title = getTitle(gm, path.basename(filepath))
 	doc.name = doc.title
 
 	return doc

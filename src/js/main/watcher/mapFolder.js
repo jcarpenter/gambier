@@ -1,37 +1,54 @@
 import { stat, readdir } from 'fs-extra'
 import path from 'path'
-import { mapDocument, mapFolder, mapMedia } from './index.js'
-import { Folder, imageFormats, avFormats } from './formats'
-import colors from 'colors'
+import { mapDocument } from './mapDocument'
+import { mapMedia } from './mapMedia'
+import { isDoc, isMedia, getMediaType } from '../../shared/utils.js'
+// import colors from 'colors'
 
 
 /**
  * For specified folder path, map the folder and it's child  
  * documents, media, and citations, and return `contents` object
  * with four arrays (one for each type).
+ * @param {*} files - Reference to shared object we write changes to, and then return
+ * @param {*} parentTreeItem - Tree item to add self to
  * @param {*} folderPath - Path to map
  * @param {*} stats - Optional. Can pass in stats, or if undefined, will get them in function.
  * @param {*} parentId - Optional. If undefined, we regard the folder as `root`
- * @param {*} recursive - Optional. If true, map descendant directories also.
+ * @param {*} nestDepth - Optional.
  */
-export default async function (files, folderPath, stats = undefined, parentId = '', recursive = false, nestDepth = 0) {
+export async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, parentId = '', nestDepth = 0) {
 
   // -------- New Folder -------- //
 
   if (!stats) stats = await stat(folderPath)
 
-  const folder = { ...Folder }
-  // folder.id = `folder-${stats.ino}`
-  folder.name = folderPath.substring(folderPath.lastIndexOf('/') + 1)
-  folder.path = folderPath
-  folder.parentId = parentId
-  folder.modified = stats.mtime.toISOString()
-  folder.children = []
-  folder.nestDepth = nestDepth
+  // Create and populate new folder
+  const folder = {
+    type: 'folder',
+    name: folderPath.substring(folderPath.lastIndexOf('/') + 1),
+    path: folderPath,
+    id: `folder-${stats.ino}`,
+    parentId: parentId,
+    created: stats.birthtime.toISOString(),
+    modified: stats.mtime.toISOString(),
+    nestDepth: nestDepth,
+    // --- Folder-specific --- //
+    numChildren: 0,
+    numDescendants: 0,
+  }
 
-  const id = `folder-${stats.ino}`
-  files.folders.byId[id] = folder
-  files.folders.allIds.push(id)
+  // Add to `files`
+  files.byId[folder.id] = folder
+  files.allIds.push(folder.id)
+
+  // Populate tree details
+  const treeItem = {
+    id: folder.id,
+    parentId: parentId,
+    children: []
+  }
+  parentTreeItem.push(treeItem)
 
 
   // -------- Contents -------- //
@@ -39,77 +56,47 @@ export default async function (files, folderPath, stats = undefined, parentId = 
   // Get everything in directory with `readdir`.
   // Returns array of `fs.Dirent` objects.
   // https://nodejs.org/api/fs.html#fs_class_fs_dirent
-  const everything = await readdir(folderPath, { withFileTypes: true })
-
-  // if (!everything.length > 0) return contents
-  // console.log(folder.name, "---")
-
-  // everything.forEach(async (e) => {
-
-  //   if (e.isFile()) {
-
-  //     const ePath = path.join(folder.path, e.name)
-  //     const ext = path.extname(e.name)
-  //     const stats = await stat(ePath)
-
-  //     if (ext == '.md' || ext == '.markdown') {
-  //       folder.children.push(`doc-${stats.ino}`)
-  //     }
-  //   }
-  // })
+  const directoryContents = await readdir(folderPath, { withFileTypes: true })
 
   await Promise.all(
-    everything.map(async (e) => {
+    directoryContents.map(async (f) => {
 
       // Get path by combining folderPath with file name.
-      const ePath = path.join(folderPath, e.name)
+      const filepath = path.join(folderPath, f.name)
 
       // Get extension
-      const ext = path.extname(e.name)
+      const ext = path.extname(f.name)
 
-      // Get stats
-      const stats = await stat(ePath)
+      if (f.isDirectory()) {
 
-      if (e.isDirectory() && recursive) {
+        const { numDescendants } = await mapFolder(files, treeItem.children, filepath, undefined, folder.id, nestDepth + 1)
 
-        const { folders, docs, media } = await mapFolder(files, ePath, stats, id, true, nestDepth + 1)
+        // Increment child counters
+        folder.numChildren++
+        folder.numDescendants += numDescendants
 
-        // folder.directChildCount++
-        // folder.recursiveChildCount++
+      } else if (isDoc(ext) || isMedia(ext)) {
 
-        // for (const fldr in folders.byId) {
-        //   folder.recursiveChildCount += folders.byId[fldr].directChildCount
-        // }
+        const file = isDoc(ext) ? 
+          await mapDocument(filepath, folder.id, nestDepth + 1) : 
+          await mapMedia(filepath, folder.id, nestDepth + 1)
 
-        // folders.byId.forEach((f) => {
-        //   folder.recursiveChildCount += f.directChildCount
-        // })
+        files.byId[file.id] = file
+        files.allIds.push(file.id)
+        treeItem.children.push({
+          id: file.id,
+          parentId: folder.id,
+        })
 
-      } else if (ext == '.md' || ext == '.markdown') {
-        const doc = await mapDocument(ePath, stats, folder.id, nestDepth + 1)
-        files.docs.byId[doc.id] = folder
-        files.docs.allIds.push(doc.id)
-        // folder.directChildCount++
-        // folder.recursiveChildCount++
-
-        // OLDER
-        // contents.documents.push(doc)
-        // folder.children.push(doc.id)
-
-      } else if (imageFormats.includes(ext) || avFormats.includes(ext)) {
-
-        const media = await mapMedia(ePath, stats, folder.id, ext, nestDepth + 1)
-        files.media.byId[media.id] = folder
-        files.media.allIds.push(media.id)
-        // folder.directChildCount++
-        // folder.recursiveChildCount++
-
-        // OLDER
-        // contents.media.push(media)
-        // folder.children.push(media.id)
+        // Increment child counters
+        folder.numChildren++
       }
     })
   )
 
-  return files
+  folder.numDescendants += folder.numChildren
+
+  return {
+    numDescendants: folder.numDescendants
+  }
 }
