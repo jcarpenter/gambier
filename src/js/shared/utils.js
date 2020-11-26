@@ -92,12 +92,12 @@ function extractKeysFromString(keyAsString) {
 }
 
 /**
- * Check if a state property has changed, and (optional) if it equals a specified value. Determine by checking latest state patches (returned by Immer). For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
- * @param {*} props - Either a string, or an array (for more precision)/
+ * Check Immer patches to see if a property has changed, and (optionally) if it equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
+ * @param {*} props - Either a string, or an array (for more precision).
  * @param {*} [toValue] - Optional value to check prop against
  */
-export function propHasChanged(props, toValue = '') {
-	return global.patches.some((patch) => {
+export function propHasChanged(patches, props, toValue = '') {
+	return patches.some((patch) => {
 
   	const pathAsString = patch.path.toString()
 		const checkMultipleProps = Array.isArray(props)

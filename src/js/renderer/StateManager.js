@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import { applyPatches, enablePatches } from "immer"
+import { propHasChanged } from "../shared/utils";
 
 enablePatches() // Required by immer
 
@@ -19,12 +20,12 @@ let filesAsObject = {}
 export class StateManager {
   constructor(initialState, initialFiles) {
 
-    console.log('StateManager: constructor')
-
     // Set `window.id`
     const queryString = window.location.search
     const urlParams = new URLSearchParams(queryString);
     window.id = urlParams.get('id')
+
+    // -------- FILES -------- //
 
     // Set initial files. 
     // When we start the app, we try to fetch `files` from main. In case files aren't ready yet (e.g. on project first run the directory is initially undefined), we also create a listener for main process to send the initial files. 
@@ -38,24 +39,28 @@ export class StateManager {
     window.api.receive('initialFilesFromMain', (files) => {
       filesAsObject = files
       updateFilesStore()
-    })  
+    })
 
     // Update files when patches arrive from main...
     window.api.receive("filesPatchesFromMain", (patches) => {
-      console.log('StateManager: filesPatchesFromMain: ', patches)
       filesAsObject = applyPatches(filesAsObject, patches)
       updateFilesStore()
     })
+
+    // -------- STATE -------- //
 
     // Update state when patches arrive from main...
     window.api.receive("statePatchesFromMain", (patches) => {
       stateAsObject = applyPatches(stateAsObject, patches)
       updateStateStores()
+      const osAppearanceHasChanged = propHasChanged(patches, ['appearance', 'os'])
+      if (osAppearanceHasChanged) updateAppearance()
     })
 
-    // Set initial state value
+    // Set initial values
     stateAsObject = initialState
     updateStateStores()
+    updateAppearance()
   }
 }
 
@@ -68,4 +73,36 @@ function updateStateStores() {
 
 function updateFilesStore() {
   files.set(filesAsObject)
+}
+
+function updateAppearance() {
+
+  const root = document.documentElement
+  const themeName = stateAsObject.appearance.theme
+  const colors = stateAsObject.appearance.os.colors
+  const isDarkMode = stateAsObject.appearance.os.isDarkMode
+  // const isHighContrast = stateAsObject.appearance.os.isHighContrast
+  // const isInverted = stateAsObject.appearance.os.isInverted
+  // const isReducedMotion = stateAsObject.appearance.os.isReducedMotion
+
+  // Set stylesheet href in index.html to new theme's stylesheet.
+  // If stylesheet name = 'gambier-light',
+  // then stylesheet href = './styles/themes/gambier-light/gambier-light.css'.
+  const stylesheet = document.getElementById('theme-stylesheet')
+  const href = `./styles/themes/${themeName}/${themeName}.css`
+  stylesheet.setAttribute('href', href)
+
+  // Make system colors available app-wide as CSS variables on the root element.
+  for (const [varName, rgbaHex] of Object.entries(colors)) {
+    root.style.setProperty(`--${varName}`, rgbaHex)
+  }
+
+  // Set dark/light mode class on bod
+  if (isDarkMode) {
+    root.classList.add('darkMode')
+    root.classList.remove('lightMode')
+  } else {
+    root.classList.remove('darkMode')
+    root.classList.add('lightMode')
+  }
 }

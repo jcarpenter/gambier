@@ -12,7 +12,6 @@ var chokidar = require('chokidar');
 var matter = require('gray-matter');
 var removeMd = require('remove-markdown');
 var sizeOf = require('image-size');
-require('deep-diff');
 var debounce = require('debounce');
 require('url');
 
@@ -78,6 +77,13 @@ const update = (state, action, windowId) =>
 
       case 'CAN_SAFELY_QUIT': {
         draft.appStatus = 'safeToQuit';
+        break
+      }
+
+      // -------- APPEARANCE & TIMING -------- //
+
+      case 'SAVE_SYSTEM_APPEARANCE_SETTINGS': {
+        draft.appearance.os = action.settings;
         break
       }
 
@@ -164,18 +170,25 @@ const update = (state, action, windowId) =>
 
       // -------- SIDEBAR 2 -------- //
 
+      case 'SIDEBAR_SET_SORTING': {
+        const tab = project.sidebar.tabsById[action.tabId];
+        tab.sortBy = action.sortBy;
+        tab.sortOrder = action.sortOrder;
+        break
+      }
+
       case 'SELECT_SIDEBAR_TAB_BY_ID': {
         project.sidebar.activeTabId = action.id;
         break
       }
 
-      case 'EXPAND_SIDEBAR_ITEMS': {
+      case 'SIDEBAR_SET_EXPANDED': {
         const tab = project.sidebar.tabsById[action.tabId];
         tab.expanded = action.expanded;
         break
       }
 
-      case 'SELECT_SIDEBAR_ITEMS': {
+      case 'SIDEBAR_SET_SELECTED': {
         const tab = project.sidebar.tabsById[action.tabId];
         tab.lastSelected = action.lastSelected;
         tab.selected = action.selected;
@@ -267,6 +280,60 @@ const storeDefault = {
   appearance: {
     userPref: 'match-system',
     theme: 'gambier-light',
+    os: {
+      themeSource: 'system',
+      isDarkMode: false,
+      isHighContrast: false,
+      isInverted: false,
+      isReducedMotion: false,
+      colors: {
+        // System Colors
+        systemBlue: [],
+        systemBrown: [],
+        systemGray: [],
+        systemGreen: [],
+        systemIndigo: [],
+        systemOrange: [],
+        systemPink: [],
+        systemPurple: [],
+        systemRed: [],
+        systemTeal: [],
+        systemYellow: [],
+        // Dynamic System Colors
+        alternateSelectedControlTextColor: [],
+        controlAccentColor: [],
+        controlBackgroundColor: [],
+        controlColor: [],
+        controlTextColor: [],
+        disabledControlTextColor: [],
+        findHighlightColor: [],
+        gridColor: [],
+        headerTextColor: [],
+        highlightColor: [],
+        keyboardFocusIndicatorColor: [],
+        labelColor: [],
+        linkColor: [],
+        placeholderTextColor: [],
+        quaternaryLabelColor: [],
+        secondaryLabelColor: [],
+        selectedContentBackgroundColor: [],
+        selectedControlColor: [],
+        selectedControlTextColor: [],
+        selectedMenuItemTextColor: [],
+        selectedTextBackgroundColor: [],
+        selectedTextColor: [],
+        separatorColor: [],
+        shadowColor: [],
+        tertiaryLabelColor: [],
+        textBackgroundColor: [],
+        textColor: [],
+        unemphasizedSelectedContentBackgroundColor: [],
+        unemphasizedSelectedTextBackgroundColor: [],
+        unemphasizedSelectedTextColor: [],
+        windowBackgroundColor: [],
+        windowFrameTextColor: [],
+      }
+    }
   },
 
   timing: {
@@ -278,6 +345,7 @@ const storeDefault = {
   projects: []
 
 };
+
 
 const newProject = {
 
@@ -312,26 +380,36 @@ const newProject = {
         lastSelected: {}, // id
         selected: [], // Array of ids
         expanded: [], // Array of folder ids
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       allDocs: {
         title: 'All Documents',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       mostRecent: {
         title: 'Most Recent',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       tags: {
         title: 'Tags',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       media: {
         title: 'Media',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Name',
+        sortOrder: 'Ascending'
       },
       citations: {
         title: 'Citations',
@@ -347,6 +425,233 @@ const newProject = {
     tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
   }
 };
+
+class AppearanceManager {
+  constructor() {
+
+    // Listen for system appearance changes (e.g. when user sets Dark mode in System Preferences). The `nativTheme` API emits 'updated' event: "...when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
+
+    electron.nativeTheme.on('updated', systemAppearanceChanged);
+
+
+  }
+
+  startup() {
+    systemAppearanceChanged();
+  }
+
+}
+
+/**
+ * When system appearance changes, save values to state.
+ */
+function systemAppearanceChanged() {
+
+  const isDarkMode = electron.nativeTheme.shouldUseDarkColors;
+  const isHighContrast = electron.nativeTheme.shouldUseHighContrastColors;
+  const isInverted = electron.nativeTheme.shouldUseInvertedColorScheme;
+
+  store.dispatch({
+    type: 'SAVE_SYSTEM_APPEARANCE_SETTINGS',
+    settings: {
+      themeSource: electron.nativeTheme.themeSource,
+      isDarkMode: isDarkMode,
+      isHighContrast: isHighContrast,
+      isInverted: isInverted,
+      isReducedMotion: electron.systemPreferences.getAnimationSettings().prefersReducedMotion,
+      colors: isDarkMode ? getColors(true) : getColors(false)
+    }
+  });
+
+  // const userPref = store.store.appearance.userPref
+  // console.log("main.js: nativeTheme updated")
+  // if (userPref == 'match-system') {
+  //   store.dispatch({
+  //     type: 'SET_APPEARANCE',
+  //     theme: nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
+  //   })
+  // }
+}
+
+function getColors(isDarkMode, isHighContrast, isInverted) {
+
+  if (isDarkMode) {
+    return {
+      // System Colors
+      systemBlue: '#0A84FFFF',
+      systemBrown: '#AC8E68FF',
+      systemGray: '#98989DFF',
+      systemGreen: '#32D74BFF',
+      systemIndigo: '#5E5CE6FF',
+      systemOrange: '#FF9F0AFF',
+      systemPink: '#FF375FFF',
+      systemPurple: '#BF5AF2FF',
+      systemRed: '#FF453AFF',
+      systemTeal: '#64D2FFFF',
+      systemYellow: '#FFD60AFF',
+      // Dynamic System Colors
+      alternateSelectedControlTextColor: '#FFFFFFFF',
+      controlAccentColor: '#007AFFFF',
+      controlBackgroundColor: '#1E1E1EFF',
+      controlColor: '#FFFFFF3F',
+      controlTextColor: '#FFFFFFD8',
+      disabledControlTextColor: '#FFFFFF3F',
+      findHighlightColor: '#FFFF00FF',
+      gridColor: '#FFFFFF19',
+      headerTextColor: '#FFFFFFFF',
+      highlightColor: '#B4B4B4FF',
+      keyboardFocusIndicatorColor: '#1AA9FF4C',
+      labelColor: '#FFFFFFD8',
+      linkColor: '#419CFFFF',
+      placeholderTextColor: '#FFFFFF3F',
+      quaternaryLabelColor: '#FFFFFF19',
+      secondaryLabelColor: '#FFFFFF8C',
+      selectedContentBackgroundColor: '#0058D0FF',
+      selectedControlColor: '#3F638BFF',
+      selectedControlTextColor: '#FFFFFFD8',
+      selectedMenuItemTextColor: '#FFFFFFFF',
+      selectedTextBackgroundColor: '#3F638BFF',
+      selectedTextColor: '#FFFFFFFF',
+      separatorColor: '#FFFFFF19',
+      shadowColor: '#000000FF',
+      tertiaryLabelColor: '#FFFFFF3F',
+      textBackgroundColor: '#1E1E1EFF',
+      textColor: '#FFFFFFFF',
+      unemphasizedSelectedContentBackgroundColor: '#464646FF',
+      unemphasizedSelectedTextBackgroundColor: '#464646FF',
+      unemphasizedSelectedTextColor: '#FFFFFFFF',
+      windowBackgroundColor: '#323232FF',
+      windowFrameTextColor: '#FFFFFFD8',
+      // Gambier-specific colors.
+      foregroundColor: '255, 255, 255',
+      backgroundColor: '0, 0, 0',
+      menuMaterialColor: rgbaHexToRgbaCSS('#1E1E1EFF', 0.1)
+    }
+  } else {
+    return {
+      //System Colors
+      systemBlue: '#007AFFFF',
+      systemBrown: '#A2845EFF',
+      systemGray: '#8E8E93FF',
+      systemGreen: '#28CD41FF',
+      systemIndigo: '#5856D6FF',
+      systemOrange: '#FF9500FF',
+      systemPink: '#FF2D55FF',
+      systemPurple: '#AF52DEFF',
+      systemRed: '#FF3B30FF',
+      systemTeal: '#5AC8FAFF',
+      systemYellow: '#FFCC00FF',
+      // Dynamic System Colors
+      alternateSelectedControlTextColor: '#FFFFFFFF',
+      controlAccentColor: '#007AFFFF',
+      controlBackgroundColor: '#FFFFFFFF',
+      controlColor: '#FFFFFFFF',
+      controlTextColor: '#000000D8',
+      disabledControlTextColor: '#0000003F',
+      findHighlightColor: '#FFFF00FF',
+      gridColor: '#CCCCCCFF',
+      headerTextColor: '#000000D8',
+      highlightColor: '#FFFFFFFF',
+      keyboardFocusIndicatorColor: '#0067F43F',
+      labelColor: '#000000D8',
+      linkColor: '#0068DAFF',
+      placeholderTextColor: '#0000003F',
+      quaternaryLabelColor: '#00000019',
+      secondaryLabelColor: '#0000007F',
+      selectedContentBackgroundColor: '#0063E1FF',
+      selectedControlColor: '#B3D7FFFF',
+      selectedControlTextColor: '#000000D8',
+      selectedMenuItemTextColor: '#FFFFFFFF',
+      selectedTextBackgroundColor: '#B3D7FFFF',
+      selectedTextColor: '#000000FF',
+      separatorColor: '#00000019',
+      shadowColor: '#000000FF',
+      tertiaryLabelColor: '#0000003F',
+      textBackgroundColor: '#FFFFFFFF',
+      textColor: '#000000FF',
+      unemphasizedSelectedContentBackgroundColor: '#DCDCDCFF',
+      unemphasizedSelectedTextBackgroundColor: '#DCDCDCFF',
+      unemphasizedSelectedTextColor: '#000000FF',
+      windowBackgroundColor: '#ECECECFF',
+      windowFrameTextColor: '#000000D8',
+      // Gambier-specific colors
+      foregroundColor: '0, 0, 0',
+      backgroundColor: '255, 255, 255',
+      // menuMaterialColor: Used in `material-menu` mixin (which simulates the `menu` macOS material), this is `controlBackgroundColor` with low opacity. 
+      menuMaterialColor: rgbaHexToRgbaCSS('#FFFFFFFF', 0.9, -5)
+    }
+  }
+}
+
+function rgbaHexToRgbaCSS(hex, alphaOveride, brightnessAdjustment = 0){
+  const r = parseInt(hex.slice(1, 3), 16) + brightnessAdjustment;
+  const g = parseInt(hex.slice(3, 5), 16) + brightnessAdjustment;
+  const b = parseInt(hex.slice(5, 7), 16) + brightnessAdjustment;
+  const a = alphaOveride ? alphaOveride : parseInt(hex.slice(8, 9), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${a})`
+}
+
+// // -------- Theme -------- //
+
+/**
+ * When OS appearance changes, update app theme to match (dark or light):
+ * NOTE: Is also called on startup.
+ * Listen for changes to nativeTheme. These are triggered when the OS appearance changes (e.g. when the user modifies "Appearance" in System Preferences > General, on Mac). If the user has selected the "Match System" appearance option in the app, we need to match the new OS appearance. Check the `nativeTheme.shouldUseDarkColors` value, and set the theme accordingly (dark or light).
+ * nativeTheme.on('updated'): "Emitted when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
+ */
+
+
+/**
+ * When user modifies "Appearance" setting (e.g in `View` menu), update `nativeTheme`
+ */
+// store.onDidChange('appearance', () => {
+//   setNativeTheme()
+// })
+
+
+
+// /**
+//  * Update `nativeTheme` electron property
+//  * Setting `nativeTheme.themeSource` has several effects. E.g. it tells Chrome how to UI elements such as menus, window frames, etc; it sets `prefers-color-scheme` css query; it sets `nativeTheme.shouldUseDarkColors` value.
+//  * Per: https://www.electronjs.org/docs/api/native-theme
+//  */
+// export function setNativeTheme() {
+//   const userPref = store.store.appearance.userPref
+//   switch (userPref) {
+//     case 'match-system':
+//       nativeTheme.themeSource = 'system'
+//       break
+//     case 'light':
+//       nativeTheme.themeSource = 'light'
+//       break
+//     case 'dark':
+//       nativeTheme.themeSource = 'dark'
+//       break
+//   }
+
+//   // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
+//   // console.log('setNativeTheme(). userPref = ', userPref)
+//   // console.log('setNativeTheme(). systemPreferences.getAccent   Color() = ', systemPreferences.getAccentColor())
+//   // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
+//   // 
+
+//   // Reload (close then open) DevTools to force it to load the new theme. Unfortunately DevTools does not respond to `nativeTheme.themeSource` changes automatically. In Electron, or in Chrome.
+//   if (!app.isPackaged && win && win.webContents && win.webContents.isDevToolsOpened()) {
+//     win.webContents.closeDevTools()
+//     win.webContents.openDevTools()
+//   }
+// }
+
+// console.log("Hi ------ ")
+// console.log(systemPreferences.isDarkMode())
+// console.log(systemPreferences.getUserDefault('AppleInterfaceStyle', 'string'))
+// console.log(systemPreferences.getUserDefault('AppleAquaColorVariant', 'integer'))
+// console.log(systemPreferences.getUserDefault('AppleHighlightColor', 'string'))
+// console.log(systemPreferences.getUserDefault('AppleShowScrollBars', 'string'))
+// console.log(systemPreferences.getAccentColor())
+// console.log(systemPreferences.getSystemColor('blue'))
+// console.log(systemPreferences.effectiveAppearance)
 
 const formats = {
   document: ['.md', '.markdown'],
@@ -408,12 +713,12 @@ function extractKeysFromString(keyAsString) {
 }
 
 /**
- * Check if a state property has changed, and (optional) if it equals a specified value. Determine by checking latest state patches (returned by Immer). For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
- * @param {*} props - Either a string, or an array (for more precision)/
+ * Check Immer patches to see if a property has changed, and (optionally) if it equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
+ * @param {*} props - Either a string, or an array (for more precision).
  * @param {*} [toValue] - Optional value to check prop against
  */
-function propHasChanged(props, toValue = '') {
-	return global.patches.some((patch) => {
+function propHasChanged(patches, props, toValue = '') {
+	return patches.some((patch) => {
 
   	const pathAsString = patch.path.toString();
 		const checkMultipleProps = Array.isArray(props);
@@ -500,9 +805,12 @@ async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
 		doc.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
 	}
 
-	// Set title. E.g. "Sea Level Rise"
+	// Set title, if present. E.g. "Sea Level Rise"
 	doc.title = getTitle(gm, path__default['default'].basename(filepath));
-	doc.name = doc.title;
+
+	// Set name from filename (minus file extension)
+	doc.name = path__default['default'].basename(filepath);
+	doc.name = doc.name.slice(0, doc.name.lastIndexOf('.'));
 
 	return doc
 
@@ -523,7 +831,7 @@ async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
  * Set title, in following order of preference:
  * 1. From first h1 in content
  * 2. From `title` field of front matter
- * 3. From filename, minus extension
+ * 3. Leave blank (means no title was found)
  */
 function getTitle(graymatter, filename) {
 
@@ -533,7 +841,8 @@ function getTitle(graymatter, filename) {
 	} else if (graymatter.data.hasOwnProperty('title')) {
 		return graymatter.data.title
 	} else {
-		return filename.slice(0, filename.lastIndexOf('.'))
+		return ''
+		// return filename.slice(0, filename.lastIndexOf('.'))
 	}
 }
 
@@ -547,7 +856,7 @@ function getExcerpt(content) {
 	// Remove h1, if it exists. Then trim to 200 characters.
 	let excerpt = content
 		.replace(/^# (.*)\n/gm, '')
-		.substring(0, 400);
+		.substring(0, 600);
 
 	// Remove markdown formatting. Start with remove-markdown rules.
 	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
@@ -560,7 +869,7 @@ function getExcerpt(content) {
 		.replace(/\[@.*?\]/gm, '')    // Citations
 		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
 		.replace(/\s{2,}/gm, ' ')     // Extra spaces
-		.substring(0, 200);            // Trim to 200 characters
+		.substring(0, 450);            // Trim to 200 characters
 
 	return excerpt
 }
@@ -694,11 +1003,6 @@ async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, p
  * @param {*} projectPath 
  */
 async function mapProject (projectPath) {
-
-  // await isWorkingPath(directory)
-  // if (!isWorkingPath) {
-  //   console.error('directory is not valid')
-  // }
 
   try {
 
@@ -924,10 +1228,11 @@ class DiskManager {
 					- If no, do nothing
 		*/
 		global.store.onDidAnyChange((state, oldState) => {
-
+			
+			if (state.appStatus !== 'open') return
 			// const isColdStart = hasChangedTo('appStatus', 'coldStarting', state, oldState)
-			// const isColdStart = propHasChanged('appStatus', 'coldStarting')
-			const projectDirectoryChanged = propHasChanged(['projects', 'directory']);
+			// const isColdStart = propHasChanged(global.patches, ['appStatus', 'coldStarting'])
+			const projectDirectoryChanged = propHasChanged(global.patches, ['projects', 'directory']);
 			const projectAdded = state.projects.length > oldState.projects.length;
 			const projectRemoved = state.projects.length < oldState.projects.length;
 
@@ -990,7 +1295,7 @@ class DiskManager {
 	watchers = []
 
 	/**
-	 * On startup, create a Watcher instance for each project with a valid `directory`. If a project does not have a valid directory, do nothing. We'll catch the change and set one up later (see listeners in Constructor).
+	 * On startup, create a Watcher instance for each project. If a project does not have a valid directory, the watcher will not start itself until one is assigned.
 	 */
 	async startup() {
 		for (const project of global.state().projects) {
@@ -1113,7 +1418,7 @@ class IpcManager {
     electron.ipcMain.handle('getFiles', (evt) => {
       const win = electron.BrowserWindow.fromWebContents(evt.sender);
       const watcher = global.watchers.find((watcher) => watcher.id == win.id);
-      return watcher.files
+      return watcher ? watcher.files : undefined
     });
   }
 }
@@ -1428,6 +1733,7 @@ class WindowManager {
 
     // Listen for state changes
     global.store.onDidAnyChange((state, oldState) => {
+      if (state.appStatus !== 'open') return
       if (state.projects.length > oldState.projects.length) {
         const newProjectIndex = state.projects.length - 1;
         const newProject = state.projects[newProjectIndex];
@@ -1464,7 +1770,7 @@ class WindowManager {
     // Else, create a new window centered on screen.
     if (isFirstRun) {
       const { width, height } = electron.screen.getPrimaryDisplay().workAreaSize;
-      const padding = 80;
+      const padding = 200;
       win.setBounds({
         x: padding,
         y: padding,
@@ -1547,6 +1853,8 @@ function saveWindowBoundsToState(win) {
 
 const browserWindowConfig = {
   show: false,
+  width: 200, 
+  height: 200,
   zoomFactor: 1.0,
   vibrancy: 'sidebar',
   transparent: true,
@@ -1617,6 +1925,9 @@ if (!electron.app.isPackaged) {
 global.store = new Store();
 global.state = () => global.store.store;
 global.patches = []; // Most recent patches from Immer
+
+// Create managers
+const appearanceManager = new AppearanceManager();
 const diskManager = new DiskManager();
 const ipcManager = new IpcManager();
 const menuBarManager = new MenuBarManager();
@@ -1631,12 +1942,12 @@ electron.app.allowRendererProcessReuse = true;
 // Start app
 electron.app.whenReady()
   .then(async () => {
-    // TODO
-    // appearanceManager.setNativeTheme
-
-    // Kickoff app cold start. Reducers prep state as necessary.
-    // E.g. Prune projects with inaccessible directoris.
+    
+    // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' });
+    console.log(global.state().projects);
+    // Get system appearance settings
+    appearanceManager.startup();
     // Create a window for each project
     await windowManager.startup();
     // Create a Watcher instance for each project

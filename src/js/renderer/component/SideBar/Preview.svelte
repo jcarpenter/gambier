@@ -1,122 +1,188 @@
 <script>
-  import Header from './Header.svelte'
+  import { findInTree, prettySize } from '../../../shared/utils'
+  import { sidebar, files } from '../../StateManager'
+
   import DisclosureButton from '../UI/DisclosureButton.svelte'
+  import Header from './Header.svelte'
   import Label from '../UI/Label.svelte'
   import Separator from '../UI/Separator.svelte'
   import Thumbnail from '../UI/Thumbnail.svelte'
 
-  export let state
+  $: isOpen = $sidebar.isPreviewOpen
+  $: activeTab = $sidebar.tabsById[$sidebar.activeTabId]
 
-  let firstRun = true
-  let activeTab = {}
-  let quantitySelected = 0
-  let item = {}
-  let isOpen = true
+  let file = {}
 
-  $: onStateChange(state)
-
-  // -------- STATE -------- //
-
-  function onStateChange(state) {
-    if (state.changed.includes('sideBar.activeTab') || firstRun) {
-      activeTab = getActiveTab()
-      quantitySelected = activeTab.selected.length
-      item = getLastSelectedItem()
+  $: {
+    if (activeTab.selected.length) {
+      const fileId = activeTab.selected[activeTab.selected.length - 1]
+      file = $files.byId[fileId]
     }
-
-    if (state.changed.includes('sideBar.preview') || firstRun) {
-      isOpen = state.sideBar2.preview.isOpen
-    }
-
-    firstRun = false
   }
 
-  // -------- HELPERS -------- //
+  /**
+   * Shorten filepath by making it relative to project directory, 
+   * instead of the entire file system.
+   * Before: /Users/josh/Desktop/Climate Research/geothermal.md
+   * After: Climate Research/geothermal.md
+  */
+  function shortenPath() {
 
-  function getActiveTab() {
-    return state.sideBar2.tabs.find(
-      (t) => t.name == state.sideBar2.activeTab.name
-    )
   }
 
-  function getLastSelectedItem() {
-    const type = activeTab.lastSelected.type
-    const id = activeTab.lastSelected.id
-    let arrayToLookIn
-    switch (type) {
-      case 'folder':
-        arrayToLookIn = state.folders
-        break
-      case 'doc':
-        arrayToLookIn = state.documents
-        break
-      case 'media':
-        arrayToLookIn = state.media
-        break
-    }
-    return arrayToLookIn.find((i) => i.id == id)
-  }
-
-  function toggleOpenClose() {
-    window.api.send('dispatch', {
-      type: 'TOGGLE_SIDEBAR_PREVIEW',
-    })
+  function showFileOnDrive(filepath) {
+    console.log(filepath)
   }
 </script>
 
 <style type="text/scss">
+  @import '../../../../styles/_mixins.scss';
+  
   #preview {
-    flex-shrink: 0;
     display: flex;
+    flex-shrink: 0;
     flex-direction: column;
-    height: 255px;
-    position: absolute;
-    transform: translate(0, 100%);
+    transition: flex 250ms ease-out;
+    max-height: 215px;
+    overflow: hidden;
 
     &:not(.isOpen) {
-      bottom: 30px;
+      flex-basis: 30px;
     }
 
     &.isOpen {
-      bottom: 255px;
+      flex-basis: 215px;
     }
   }
 
-  .media {
-    padding: 5px 10px 10px;
+  .content {
+    // height: 205px;
+    flex-grow: 1;
+    margin: 5px 10px 10px;
     display: flex;
     flex-direction: column;
+    // border: 1px solid red;
+  }
+
+  .doc-excerpt,
+  .img-thumb {
     flex-grow: 1;
+    flex-basis: 0;
+    flex-shrink: 0;
     overflow: hidden;
+    // border-bottom: 1px solid red;
+  }
+
+  .img-thumb {
+    margin-bottom: 10px;
+  }
+
+  .doc-excerpt {
+    p {
+      .title {
+        @include label-normal-bold;
+        color: var(--labelColor);;
+        // font-weight: 500;
+      }
+      // border-left: 4px solid var(--tertiaryLabelColor);
+      @include label-normal;
+      color: var(--labelColor);
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 10;
+      overflow: hidden;
+      pointer-events: none;
+      word-break: break-word;
+      line-break: auto;
+      line-height: 16px;
+      // height: 10rem;
+      padding: 0 0.75em;
+      margin: 0;
+    }
+  }
+
+  .metadata {
+    flex-grow: 0;
+    // flex-basis: 0;
+    // flex-shrink: 1;
+
+    .path {
+      @include label-normal-small;
+      color: var(--labelColor);
+      opacity: 0.75;
+      white-space: nowrap;                   
+      overflow: hidden;
+      text-overflow: ellipsis;  
+      direction: rtl;
+      text-align: left;
+      line-break: anywhere;
+      
+      &:hover {
+        text-decoration: underline;
+        opacity: 1;
+      }
+    }
   }
 </style>
 
 <div id="preview" class:isOpen>
+
   <Separator />
+  
   <Header title={'Preview'}>
     <DisclosureButton
-      width={16}
-      height={16}
-      padding={4}
-      on:toggle={toggleOpenClose} />
+      width={14}
+      height={14}
+      padding={6}
+      left={$sidebar.width - 20}
+      rotation={$sidebar.isPreviewOpen ? -90 : 90}
+      tooltip={'Toggle Expanded'}
+      on:toggle={() => {
+        window.api.send('dispatch', { type: 'TOGGLE_SIDEBAR_PREVIEW' })
+      }} />
   </Header>
-  {#if item.type == 'folder'}
-    Folder
-  {:else if item.type == 'doc'}
-    Doc
-  {:else if item.type == 'media'}
-    <div class="media">
-      <Thumbnail src={item.path} margin={'0 0 10px 0'} />
-      <Label color={'primary'} typography={'label-normal-small-bold'}>
-        {item.name}
-      </Label>
-      <Label color={'secondary'} typography={'label-normal-small'}>
-        {item.filetype.substring(1).toUpperCase()}
-        image - 1.25 MB
-      </Label>
-      <Label color={'secondary'} typography={'label-normal-small'}>
-        945 x 1.25
-      </Label>
-    </div>
-  {/if}
+
+  <div class="content">
+    {#if file.type == 'doc'}
+
+      <!-- DOC -->
+
+      <div class="doc-excerpt">
+        <p>
+          <span class="title">{file.title ? file.title : file.name} - </span>
+          {file.excerpt}
+        </p>
+      </div>
+      <!-- <div class="metadata">
+        <Label color={'primary'} typography={'label-normal-small-bold'}>
+          {file.title}
+        </Label>
+        <div class="path" on:click={() => showFileOnDrive(file.path)}>
+          {file.path}
+        </div>
+      </div> -->
+
+    {:else if file.type == 'img'}
+
+      <!-- IMAGE -->
+
+      <div class="img-thumb">
+        <Thumbnail src={file.path} margin={'0 0 0 0'} />
+        flex-basis: 0;
+      </div>
+      <div class="metadata">
+        <!-- <Label color={'primary'} typography={'label-normal-small-bold'}>
+          {file.name}
+        </Label> -->
+        <Label align="center" color={'primary'} opacity={0.75} typography={'label-normal-small'}>
+          <!-- {file.format.toUpperCase()} -  -->
+          {prettySize(file.sizeInBytes, ' ')} - 
+          {file.dimensions.width} x {file.dimensions.height}
+        </Label>
+        <!-- <div class="path" on:click={() => showFileOnDrive(file.path)}>
+          {shortenPath(file.path)}
+        </div> -->
+      </div>
+    {:else if file.type == 'av'}AV{/if}
+  </div>
 </div>

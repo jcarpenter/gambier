@@ -29,7 +29,7 @@ export function maskChild(node, { duration = 100, easing = standardEase }) {
  */
 export function slideUp(node, { duration = 100, easing = standardEase }) {
   return {
-    duration,
+    duration: duration,
     easing,
     css: (t, u) => `transform: translate(0, ${u * -100}%)`,
   }

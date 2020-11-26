@@ -1,5 +1,5 @@
 // External dependencies
-import { app, BrowserWindow, clipboard, dialog, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, shell, webFrame } from 'electron'
 import path from 'path'
 import { writeFile, readFile, pathExists } from 'fs-extra'
 
@@ -74,12 +74,12 @@ app.allowRendererProcessReuse = true
 // Start app
 app.whenReady()
   .then(async () => {
-    // TODO
-    // appearanceManager.setNativeTheme
-
-    // Kickoff app cold start. Reducers prep state as necessary.
-    // E.g. Prune projects with inaccessible directoris.
+    
+    // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' })
+    console.log(global.state().projects)
+    // Get system appearance settings
+    appearanceManager.startup()
     // Create a window for each project
     await windowManager.startup()
     // Create a Watcher instance for each project

@@ -20,7 +20,7 @@
     @include label-normal;
     margin: 10px 10px 0;
     position: relative;
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: var(--quaternaryLabelColor);
     border-radius: 4px;
     min-height: 20px;
     display: flex;

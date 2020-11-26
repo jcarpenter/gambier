@@ -10,6 +10,7 @@ export class WindowManager {
 
     // Listen for state changes
     global.store.onDidAnyChange((state, oldState) => {
+      if (state.appStatus !== 'open') return
       if (state.projects.length > oldState.projects.length) {
         const newProjectIndex = state.projects.length - 1
         const newProject = state.projects[newProjectIndex]
@@ -47,7 +48,7 @@ export class WindowManager {
     if (isFirstRun) {
       const menuBarHeight = 24
       const { width, height } = screen.getPrimaryDisplay().workAreaSize
-      const padding = 80
+      const padding = 200
       win.setBounds({
         x: padding,
         y: padding,
@@ -130,6 +131,8 @@ function saveWindowBoundsToState(win) {
 
 const browserWindowConfig = {
   show: false,
+  width: 200, 
+  height: 200,
   zoomFactor: 1.0,
   vibrancy: 'sidebar',
   transparent: true,

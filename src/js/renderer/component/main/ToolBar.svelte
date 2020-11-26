@@ -1,5 +1,5 @@
 <script>
-import ToolbarButton from "./UI/ToolbarButton.svelte";
+import ToolbarButton from "../ui/ToolbarButton.svelte";
 import AddressBar from "./AddressBar.svelte";
 
 export let state = {}

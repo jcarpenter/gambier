@@ -1,16 +1,10 @@
 import { mapFolder } from './mapFolder'
-import { isWorkingPath } from '../utils-main'
 
 /**
  * Map project path recursively and dispatch results to store
  * @param {*} projectPath 
  */
 export async function mapProject (projectPath) {
-
-  // await isWorkingPath(directory)
-  // if (!isWorkingPath) {
-  //   console.error('directory is not valid')
-  // }
 
   try {
 

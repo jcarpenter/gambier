@@ -62,7 +62,7 @@ export class IpcManager {
     ipcMain.handle('getFiles', (evt) => {
       const win = BrowserWindow.fromWebContents(evt.sender)
       const watcher = global.watchers.find((watcher) => watcher.id == win.id)
-      return watcher.files
+      return watcher ? watcher.files : undefined
     })
   }
 }

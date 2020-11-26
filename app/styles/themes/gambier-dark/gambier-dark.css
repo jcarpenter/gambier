@@ -2,79 +2,28 @@
   /* -------------- Easing -------------- */
   --standardEase: cubic-bezier(0.4, 0, 0.2, 1);
   --decelerateEase: cubic-bezier(0, 0, 0.2, 1);
-  /* -------------- Layouts (CSS grid) -------------- */
-  --layout: [nav-start] minmax(calc(var(--grid) * 6), calc(var(--grid) * 8)) [nav-end files-start]
-        minmax(calc(var(--grid) * 8), calc(var(--grid) * 10)) [files-end editor-start] 1fr [editor-end];
-  /* -------------- Colors -------------- */
-  --clr-editorText: #24292e;
-  --side-bar-bg-color: #fafafa;
-  --control-text-color: #777;
-  --body-color: rgb(51, 51, 51);
-  --body-color-light: rgb(96, 96, 96);
-  --clr-warning: rgba(255, 50, 50, 0.4);
-  --clr-warning-dark: rgba(255, 50, 50, 0.75);
-  --clr-gray-darkest: hsl(0, 0%, 7.5%);
-  --clr-gray-darker: hsl(0, 0%, 15%);
-  --clr-gray-dark: hsl(0, 0%, 30%);
-  --clr-gray: hsl(0, 0%, 50%);
-  --clr-gray-light: hsl(0, 0%, 70%);
-  --clr-gray-lighter: hsl(0, 0%, 85%);
-  --clr-gray-lightest: hsl(0, 0%, 92.5%);
-  --clr-blue: rgb(13, 103, 220);
-  --clr-blue-light: #b9d0ee;
-  --clr-blue-lighter: rgb(232, 242, 255);
-  /* -------------- Type sizes -------------- */
-  --baseFontSize: 16px;
-  --baseLineHeight: 1.625rem;
-  /* 26px */
-  --baseFontScale: 1.125;
-  --font-base-size: 1rem;
-  --font-sml-3: calc(var(--font-sml-2) / var(--baseFontScale));
-  /* 11.237 */
-  --font-sml-2: calc(var(--font-sml-1) / var(--baseFontScale));
-  /* 12.641 */
-  --font-sml-1: calc(var(--font-base-size) / var(--baseFontScale));
-  /* 14.222 */
-  --font-lg-1: calc(var(--font-base-size) * var(--baseFontScale));
-  /* 18.000 */
-  --font-lg-2: calc(var(--font-lg-1) * var(--baseFontScale));
-  /* 20.250 */
-  --font-lg-3: calc(var(--font-lg-2) * var(--baseFontScale));
-  /* 22.781 */
-  --font-lg-4: calc(var(--font-lg-3) * var(--baseFontScale));
-  /* 25.628 */
-  --font-lg-5: calc(var(--font-lg-4) * var(--baseFontScale));
-  /* 28.832 */
-  --font-lg-6: calc(var(--font-lg-5) * var(--baseFontScale));
-  /* 32.436 */
-  --font-lg-7: calc(var(--font-lg-6) * var(--baseFontScale));
-  /* 36.491 */
-  --font-lg-8: calc(var(--font-lg-7) * var(--baseFontScale));
-  /* 41.052 */
-  /* -------------- Grid units -------------- */
-  --grid: var(--baseLineHeight);
-  --grid-eighth: calc(var(--grid) * 0.125);
-  --grid-sixth: calc(var(--grid) * 0.166);
-  --grid-quarter: calc(var(--grid) * 0.25);
-  --grid-half: calc(var(--grid) * 0.5);
-  --grid-three-quarters: calc(var(--grid) * 0.75);
-  --grid-1-and-quarter: calc(var(--grid) * 1.25);
-  --grid-1-and-half: calc(var(--grid) * 1.5);
-  --grid-1-and-three-quarters: calc(var(--grid) * 1.75);
-  --grid-2: calc(var(--grid) * 2);
-  --grid-3: calc(var(--grid) * 3);
-  --grid-4: calc(var(--grid) * 4);
-  --grid-5: calc(var(--grid) * 5);
-  --grid-6: calc(var(--grid) * 6);
-  --grid-7: calc(var(--grid) * 7);
-  --grid-8: calc(var(--grid) * 8);
-  --grid-9: calc(var(--grid) * 9);
-  --grid-10: calc(var(--grid) * 10);
-  --grid-12: calc(var(--grid) * 12);
-  --grid-14: calc(var(--grid) * 14);
-  --grid-16: calc(var(--grid) * 16);
-  --grid-24: calc(var(--grid) * 24);
-  --grid-32: calc(var(--grid) * 32);
+  /* -------------- Images -------------- */
+  --img-chevron-up-down: url(styles/themes/gambier-light/img/chevron.up.down.svg);
+  --img-chevron-right: url(styles/themes/gambier-light/img/chevron.right.svg);
+  --img-checkmark: url(styles/themes/gambier-light/img/checkmark.svg);
+  --img-clock-fill: url(styles/themes/gambier-light/img/clock.fill.svg);
+  --img-clock: url(styles/themes/gambier-light/img/clock.svg);
+  --img-doc-on-doc-fill: url(styles/themes/gambier-light/img/doc.on.doc.fill.svg);
+  --img-doc-on-doc: url(styles/themes/gambier-light/img/doc.on.doc.svg);
+  --img-doc-text: url(styles/themes/gambier-light/img/doc.text.svg);
+  --img-folder-fill: url(styles/themes/gambier-light/img/folder.fill.svg);
+  --img-folder: url(styles/themes/gambier-light/img/folder.svg);
+  --img-magnifyingglass: url(styles/themes/gambier-light/img/magnifyingglass.svg);
+  --img-play-rectangle: url(styles/themes/gambier-light/img/play.rectangle.svg);
+  --img-play-rectangle-fill: url(styles/themes/gambier-light/img/play.rectangle.fill.svg);
+  --img-photo-fill: url(styles/themes/gambier-light/img/photo.fill.svg);
+  --img-photo: url(styles/themes/gambier-light/img/photo.svg);
+  --img-quote-bubble-fill: url(styles/themes/gambier-light/img/quote.bubble.fill.svg);
+  --img-quote-bubble: url(styles/themes/gambier-light/img/quote.bubble.svg);
+  --img-tag-fill: url(styles/themes/gambier-light/img/tag.fill.svg);
+  --img-tag: url(styles/themes/gambier-light/img/tag.svg);
+  --img-sidebar-left: url(styles/themes/gambier-light/img/sidebar.left.svg);
+  --img-rectangle-grid-2x2: url(styles/themes/gambier-light/img/rectangle.grid.2x2.svg);
 }
 
 :root {

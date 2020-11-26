@@ -549,14 +549,14 @@ async function reducers(action, windowId = undefined) {
 
     // -------- SIDEBAR 2 -------- //
 
-    case 'EXPAND_SIDEBAR_ITEMS': {
+    case 'SIDEBAR_SET_EXPANDED': {
       const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
       tab.expanded = action.expanded
       newState.changed.push(`sideBar.tabs.${action.tabName}`)
       break
     }
 
-    case 'SELECT_SIDEBAR_ITEMS': {
+    case 'SIDEBAR_SET_SELECTED': {
       console.log(action)
       const tab = newState.sideBar2.tabs.find((i) => i.name == action.tabName)
       tab.lastSelectedItem = action.lastSelectedItem

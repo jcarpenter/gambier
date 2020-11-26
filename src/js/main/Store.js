@@ -54,6 +54,60 @@ const storeDefault = {
   appearance: {
     userPref: 'match-system',
     theme: 'gambier-light',
+    os: {
+      themeSource: 'system',
+      isDarkMode: false,
+      isHighContrast: false,
+      isInverted: false,
+      isReducedMotion: false,
+      colors: {
+        // System Colors
+        systemBlue: [],
+        systemBrown: [],
+        systemGray: [],
+        systemGreen: [],
+        systemIndigo: [],
+        systemOrange: [],
+        systemPink: [],
+        systemPurple: [],
+        systemRed: [],
+        systemTeal: [],
+        systemYellow: [],
+        // Dynamic System Colors
+        alternateSelectedControlTextColor: [],
+        controlAccentColor: [],
+        controlBackgroundColor: [],
+        controlColor: [],
+        controlTextColor: [],
+        disabledControlTextColor: [],
+        findHighlightColor: [],
+        gridColor: [],
+        headerTextColor: [],
+        highlightColor: [],
+        keyboardFocusIndicatorColor: [],
+        labelColor: [],
+        linkColor: [],
+        placeholderTextColor: [],
+        quaternaryLabelColor: [],
+        secondaryLabelColor: [],
+        selectedContentBackgroundColor: [],
+        selectedControlColor: [],
+        selectedControlTextColor: [],
+        selectedMenuItemTextColor: [],
+        selectedTextBackgroundColor: [],
+        selectedTextColor: [],
+        separatorColor: [],
+        shadowColor: [],
+        tertiaryLabelColor: [],
+        textBackgroundColor: [],
+        textColor: [],
+        unemphasizedSelectedContentBackgroundColor: [],
+        unemphasizedSelectedTextBackgroundColor: [],
+        unemphasizedSelectedTextColor: [],
+        windowBackgroundColor: [],
+        windowFrameTextColor: [],
+      }
+    }
   },
 
   timing: {
@@ -65,6 +119,7 @@ const storeDefault = {
   projects: []
 
 }
+
 
 export const newProject = {
 
@@ -99,26 +154,36 @@ export const newProject = {
         lastSelected: {}, // id
         selected: [], // Array of ids
         expanded: [], // Array of folder ids
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       allDocs: {
         title: 'All Documents',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       mostRecent: {
         title: 'Most Recent',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       tags: {
         title: 'Tags',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Title',
+        sortOrder: 'Ascending'
       },
       media: {
         title: 'Media',
         lastSelected: {},
         selected: [],
+        sortBy: 'By Name',
+        sortOrder: 'Ascending'
       },
       citations: {
         title: 'Citations',

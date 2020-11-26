@@ -2,7 +2,7 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../styles/_mixins.scss';
+  @import '../../../../styles/_mixins.scss';
 
   #firstrun {
     padding: 4rem;

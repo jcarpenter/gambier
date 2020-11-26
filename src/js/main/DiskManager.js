@@ -22,10 +22,11 @@ export class DiskManager {
 					- If no, do nothing
 		*/
 		global.store.onDidAnyChange((state, oldState) => {
-
+			
+			if (state.appStatus !== 'open') return
 			// const isColdStart = hasChangedTo('appStatus', 'coldStarting', state, oldState)
-			// const isColdStart = propHasChanged('appStatus', 'coldStarting')
-			const projectDirectoryChanged = propHasChanged(['projects', 'directory'])
+			// const isColdStart = propHasChanged(global.patches, ['appStatus', 'coldStarting'])
+			const projectDirectoryChanged = propHasChanged(global.patches, ['projects', 'directory'])
 			const projectAdded = state.projects.length > oldState.projects.length
 			const projectRemoved = state.projects.length < oldState.projects.length
 
@@ -88,7 +89,7 @@ export class DiskManager {
 	watchers = []
 
 	/**
-	 * On startup, create a Watcher instance for each project with a valid `directory`. If a project does not have a valid directory, do nothing. We'll catch the change and set one up later (see listeners in Constructor).
+	 * On startup, create a Watcher instance for each project. If a project does not have a valid directory, the watcher will not start itself until one is assigned.
 	 */
 	async startup() {
 		let index = 0

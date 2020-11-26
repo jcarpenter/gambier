@@ -58,6 +58,13 @@ export const update = (state, action, windowId) =>
         break
       }
 
+      // -------- APPEARANCE & TIMING -------- //
+
+      case 'SAVE_SYSTEM_APPEARANCE_SETTINGS': {
+        draft.appearance.os = action.settings
+        break
+      }
+
 
       // -------- PROJECT/WINDOW: CREATE AND CLOSE -------- //
 
@@ -141,18 +148,25 @@ export const update = (state, action, windowId) =>
 
       // -------- SIDEBAR 2 -------- //
 
+      case 'SIDEBAR_SET_SORTING': {
+        const tab = project.sidebar.tabsById[action.tabId]
+        tab.sortBy = action.sortBy
+        tab.sortOrder = action.sortOrder
+        break
+      }
+
       case 'SELECT_SIDEBAR_TAB_BY_ID': {
         project.sidebar.activeTabId = action.id
         break
       }
 
-      case 'EXPAND_SIDEBAR_ITEMS': {
+      case 'SIDEBAR_SET_EXPANDED': {
         const tab = project.sidebar.tabsById[action.tabId]
         tab.expanded = action.expanded
         break
       }
 
-      case 'SELECT_SIDEBAR_ITEMS': {
+      case 'SIDEBAR_SET_SELECTED': {
         const tab = project.sidebar.tabsById[action.tabId]
         tab.lastSelected = action.lastSelected
         tab.selected = action.selected

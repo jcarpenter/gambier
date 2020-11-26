@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="69px" height="68px" viewBox="0 0 69 68" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Path</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="checkmark" transform="translate(-1712.000000, -628.000000)" fill="#000000" fill-rule="nonzero">
+            <g id="Symbols" transform="translate(510.000000, 625.000000)">
+                <g id="Medium-S" transform="translate(1201.440000, 3.000000)">
+                    <path d="M27.4746,67.365234 C29.7207,67.365234 31.4297,66.4375 32.6992,64.58203 L68.1973,9.0645 C69.125,7.6484 69.4668,6.4766 69.4668,5.3047 C69.4668,2.375 67.416,0.3242 64.4375,0.3242 C62.3379,0.3242 61.1172,1.0566 59.8477,3.1074 L27.2793,55.0605 L10.3359,32.7461 C9.0664,31.1348 7.7969,30.4512 5.9414,30.4512 C2.9141,30.4512 0.76562,32.5508 0.76562,35.4805 C0.76562,36.7988 1.2051,38.0195 2.2793,39.3379 L22.2012,64.63086 C23.7148,66.48633 25.2773,67.365234 27.4746,67.365234 Z" id="Path"></path>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

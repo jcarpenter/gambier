@@ -1,6 +1,8 @@
 <script>
   import { createEventDispatcher } from 'svelte'
-  import { css } from '../actions/css'
+  import { css } from '../ui/actions'
+  import { state } from '../../StateManager'
+
   const dispatch = createEventDispatcher()
 
   export let width = 34
@@ -9,10 +11,12 @@
   export let left = 4
   export let rotation = 0
 
+  export let iconColor = $state.appearance.os.colors.controlTextColor
   export let iconImage = 'img-chevron-right'
-  export let iconColor = 'controlTextColor'
   export let label = null
   export let tooltip = null
+
+  $: image = `var(--${iconImage})`
 
 </script>
 
@@ -25,6 +29,8 @@
     --padding: 0;
     --left: 0;
     --rotation: 0;
+    --iconColor: '';
+    --image: '';
     @include absolute-vertical-center;
     position: absolute;
     width: calc(var(--width) * 1px);
@@ -44,16 +50,18 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotateZ(calc(var(--rotation) * 1deg));
-    // outline: 2px solid turquoise;
+    background-color: var(--iconColor);
+    -webkit-mask-image: var(--image);
+
   }
 </style>
 
 <div
   class="disclosure"
-  use:css={{ width, height, left, padding, rotation }}
+  use:css={{ width, height, left, padding, rotation, iconColor, image }}
   on:mousedown|stopPropagation={() => dispatch('toggle')}
   role="button">
-  <div class="icon" style={`background-color: var(--${iconColor}); -webkit-mask-image: var(--${iconImage});`} />
+  <div class="icon" />
   {#if label}
     <div class="label">{label}</div>
   {/if}

@@ -1,20 +1,13 @@
 <script>
   import { project, files } from '../StateManager'
-  import FirstRun from './FirstRun.svelte'
-  import SideBar from './SideBar/SideBar.svelte'
-  import StateDisplay from './StateDisplay.svelte'
-  import Toolbar from './Toolbar.svelte'
-  import Separator from './UI/Separator.svelte'
+  import FirstRun from './firstrun/FirstRun.svelte'
+  import SideBar from './sidebar/SideBar.svelte'
+  import Toolbar from './main/Toolbar.svelte'
+  import Separator from './ui/Separator.svelte'
+  import StateDisplay from './dev/StateDisplay.svelte'
 
   $: directoryIsSet = $project.directory
   $: filesPopulated = $files.tree
-
-  // console.log("--- Layout.svelte ---")
-  // $: console.log(directoryIsSet)
-  // $: console.log(filesPopulated)
-  // $: console.log($project.directory)
-  // $: console.log($files.tree)
-  $: console.log($files)
 
 </script>
 
@@ -24,11 +17,12 @@
 
   #main {
     background-color: var(--windowBackgroundColor);
-    width: calc(100vw - 250px);
+    // width: calc(100vw - 250px);
     transform: translate(250px, 0);
+    overflow: scroll;
     position: absolute;
-    top: 0;
-    left: 0;
+    // top: 0;
+    // left: 0;
   }
 </style>
 
@@ -41,6 +35,5 @@
     <Toolbar />
     <Separator />
     <StateDisplay />
-    <!-- <UITests /> -->
   </div>
 {/if}

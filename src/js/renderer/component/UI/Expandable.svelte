@@ -1,5 +1,5 @@
 <script>
-  import { css } from '../actions/css.js'
+  import { css } from '../ui/actions'
   import { slide } from 'svelte/transition'
   import { linear, cubicOut } from 'svelte/easing'
   import BezierEasing from 'bezier-easing'

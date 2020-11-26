@@ -41,9 +41,12 @@ export async function mapDocument (filepath, parentId, nestDepth, stats = undefi
 		doc.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : []
 	}
 
-	// Set title. E.g. "Sea Level Rise"
+	// Set title, if present. E.g. "Sea Level Rise"
 	doc.title = getTitle(gm, path.basename(filepath))
-	doc.name = doc.title
+
+	// Set name from filename (minus file extension)
+	doc.name = path.basename(filepath)
+	doc.name = doc.name.slice(0, doc.name.lastIndexOf('.'))
 
 	return doc
 
@@ -64,7 +67,7 @@ export async function mapDocument (filepath, parentId, nestDepth, stats = undefi
  * Set title, in following order of preference:
  * 1. From first h1 in content
  * 2. From `title` field of front matter
- * 3. From filename, minus extension
+ * 3. Leave blank (means no title was found)
  */
 function getTitle(graymatter, filename) {
 
@@ -74,7 +77,8 @@ function getTitle(graymatter, filename) {
 	} else if (graymatter.data.hasOwnProperty('title')) {
 		return graymatter.data.title
 	} else {
-		return filename.slice(0, filename.lastIndexOf('.'))
+		return ''
+		// return filename.slice(0, filename.lastIndexOf('.'))
 	}
 }
 
@@ -88,7 +92,7 @@ function getExcerpt(content) {
 	// Remove h1, if it exists. Then trim to 200 characters.
 	let excerpt = content
 		.replace(/^# (.*)\n/gm, '')
-		.substring(0, 400)
+		.substring(0, 600)
 
 	// Remove markdown formatting. Start with remove-markdown rules.
 	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
@@ -101,7 +105,7 @@ function getExcerpt(content) {
 		.replace(/\[@.*?\]/gm, '')    // Citations
 		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
 		.replace(/\s{2,}/gm, ' ')     // Extra spaces
-		.substring(0, 200)            // Trim to 200 characters
+		.substring(0, 450)            // Trim to 200 characters
 
 	return excerpt
 }

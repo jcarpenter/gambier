@@ -7,7 +7,6 @@
 }
 
 html {
-    // font-size: var(--baseFontSize);
     height: 100vh;
 }
 
@@ -54,287 +53,124 @@ body {
     }
 }
 
-// -------------- FIRST RUN -------------- //
 
-#firstrun {
-    padding: var(--grid-2);
-    width: 100%;
-    height: 100%;
-    z-index: 100;
-    position: fixed;
-    background-color: white;
 
-    h1 {
-        @include label-large-bold;
-    }
+// // -------------- DOC LIST -------------- //
 
-    h2 {
-        @include label-normal;
-        color: gray;
-        margin: 4em 0 1em;
-    }
-
-    button {
-        @include label-normal;
-    }
-}
-
-// -------------- SIDEBAR -------------- //
-
-// #sidebar {
+// #docList {
 //     width: 100%;
 //     height: 100%;
-//     overflow-y: scroll;
-//     position: relative;
-//     border-right: 1px solid var(--separatorColor);
-//     user-select: none;
-//     background-color: var(--sidebarMaterial);
+//     overflow: hidden;
+//     display: flex;
+//     flex-direction: column;
+//     backdrop-filter: brightness(0.4);
+//     background-color: rgba(255, 255, 255, 0.1);
+//     // background-color: rgba(255, 255, 255, 0.6);
+//     // background-color: var(--windowBackgroundColor);
 
-//     &.focused {
-//         background-color: red;
-//     }
+//     #header {
+//         margin: 0;
+//         padding: 0.5rem;
+//         border-right: 1px solid var(--separatorColor);
+//         border-bottom: 1px solid var(--separatorColor);
+//         width: 100%;
+//         z-index: 1;
+//         position: relative;
+//         overflow: hidden;
+//         display: flex;
+//         flex-wrap: nowrap;
+//         align-items: center;
+//         justify-content: space-between;
+//         height: 2rem;
 
-//     h1 {
-//         @include label-normal-small-bold;
-//         margin: 15px 0 0 9px;
-//         color: var(--labelColor);
+//         h1 {
+//             @include label-normal;
+//             font-weight: bold;
+//             margin: 0;
+//             padding: 0;
+//             white-space: nowrap;
+//             color: var(--labelColor);
+//         }
 
-//         &:first-of-type {
-//             margin-top: 9px;
+//         &:hover #sorting-options {
+//             display: block;
 //         }
 //     }
+
+//     #sorting-options {
+//         @include label-normal-small;
+
+//         display: none;
+//         position: absolute;
+//         right: 0.5em;
+//         top: 50%;
+//         transform: translate(0%, -50%);
+//         background: white;
+//         color: var(--labelColor);
+//         // padding-left: 0.5rem;
+//         box-shadow: 0px 0px 15px 20px white;
+
+//         select {
+//             @include label-normal-small;
+//             font-weight: bold;
+//         }
+//     }
+
+//     #docs {
+//         width: 100%;
+//         flex-grow: 1;
+//         overflow-y: scroll;
+//         border-right: 1px solid var(--separatorColor);
+//         padding: 0;
+//         user-select: none;
+//     }
+
+//     .doc {
+//         padding: 0.5em 1em 0.5em;
+//         overflow-y: hidden;
+//         border-bottom: 1px solid var(--separatorColor);
+//         contain: content;
+
+//         &:focus {
+//             outline: none;
+//         }
+//     }
+
+//     h2,
+//     p {
+//         margin: 0;
+//         padding: 0;
+//         pointer-events: none;
+//         word-break: break-word;
+//     }
+
+//     h2 {
+//         @include column;
+//         color: var(--labelColor);
+//     }
+
+//     p {
+//         @include column;
+//         color: var(--secondaryLabelColor);
+//         height: 4em;
+//         // display: -webkit-box;
+//         // -webkit-line-clamp: 3;
+//         // -webkit-box-orient: vertical;
+//         overflow: hidden;
+//     }
+
+//     .selected {
+//         background-color: var(--unemphasizedSelectedContentBackgroundColor);
+//     }
+
+//     .focused.selected {
+//         h2 {
+//             color: var(--selectedMenuItemTextColor);
+//         }
+//         p {
+//             color: var(--selectedMenuItemTextColor);
+//             opacity: 0.8;
+//         }
+//         background-color: var(--controlAccentColor);
+//     }
 // }
-
-// -------------- SIDEBAR 2-------------- //
-
-
-
-
-.sideBarItem {
-    overflow: hidden;
-    position: relative;
-
-    #flex-row {
-        margin-top: 2px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-    }
-
-    .selected > #flex-row {
-        background-color: rgba(0, 0, 0, 0.1);
-    }
-
-    #disclosure-triangle {
-        @include unstyled-button;
-        margin-left: 4px;
-        width: 13px;
-        height: 13px;
-        background-color: transparent;
-
-        img {
-            width: 100%;
-            height: 100%;
-            display: none;
-        }
-
-        &.expandable img {
-            display: inline;
-        }
-
-        &.expanded img {
-            transform: rotate(90deg);
-        }
-    }
-
-    [data-nestDepth="1"] #disclosure-triangle {
-        margin-left: calc(4px + calc(16px * 1));
-    }
-
-    [data-nestDepth="2"] #disclosure-triangle {
-        margin-left: calc(4px + calc(16px * 2));
-    }
-
-    [data-nestDepth="3"] #disclosure-triangle {
-        margin-left: calc(4px + calc(16px * 3));
-    }
-
-    #icon {
-        margin-left: 4px;
-        width: 18px;
-        height: 18px;
-    }
-
-    #label {
-        @include label-normal;
-        color: var(--labelColor);
-        flex: 1;
-        margin-left: 6px;
-        overflow: hidden;
-        white-space: nowrap;
-    }
-
-    // Children
-    #children {
-        height: 0;
-
-        &.expanded {
-            height: auto;
-        }
-    }
-}
-
-// -------------- DOC LIST -------------- //
-
-#docList {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    backdrop-filter: brightness(0.4);
-    background-color: rgba(255, 255, 255, 0.1);
-    // background-color: rgba(255, 255, 255, 0.6);
-    // background-color: var(--windowBackgroundColor);
-
-    #header {
-        margin: 0;
-        padding: 0.5rem;
-        border-right: 1px solid var(--separatorColor);
-        border-bottom: 1px solid var(--separatorColor);
-        width: 100%;
-        z-index: 1;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-content: space-between;
-        height: 2rem;
-
-        h1 {
-            @include label-normal;
-            font-weight: bold;
-            margin: 0;
-            padding: 0;
-            white-space: nowrap;
-            color: var(--labelColor);
-        }
-
-        &:hover #sorting-options {
-            display: block;
-        }
-    }
-
-    #sorting-options {
-        @include label-normal-small;
-
-        display: none;
-        position: absolute;
-        right: 0.5em;
-        top: 50%;
-        transform: translate(0%, -50%);
-        background: white;
-        color: var(--labelColor);
-        // padding-left: 0.5rem;
-        box-shadow: 0px 0px 15px 20px white;
-
-        select {
-            @include label-normal-small;
-            font-weight: bold;
-        }
-    }
-
-    #docs {
-        width: 100%;
-        flex-grow: 1;
-        overflow-y: scroll;
-        border-right: 1px solid var(--separatorColor);
-        padding: 0;
-        user-select: none;
-    }
-
-    .doc {
-        padding: 0.5em 1em 0.5em;
-        overflow-y: hidden;
-        border-bottom: 1px solid var(--separatorColor);
-        contain: content;
-
-        &:focus {
-            outline: none;
-        }
-    }
-
-    h2,
-    p {
-        margin: 0;
-        padding: 0;
-        pointer-events: none;
-        word-break: break-word;
-    }
-
-    h2 {
-        @include column;
-        color: var(--labelColor);
-    }
-
-    p {
-        @include column;
-        color: var(--secondaryLabelColor);
-        height: 4em;
-        // display: -webkit-box;
-        // -webkit-line-clamp: 3;
-        // -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .selected {
-        background-color: var(--unemphasizedSelectedContentBackgroundColor);
-    }
-
-    .focused.selected {
-        h2 {
-            color: var(--selectedMenuItemTextColor);
-        }
-        p {
-            color: var(--selectedMenuItemTextColor);
-            opacity: 0.8;
-        }
-        background-color: var(--controlAccentColor);
-    }
-}
-
-// -------------- EDITOR -------------- //
-
-// Docs: https://codemirror.net/doc/manual.html#styling
-
-#editor {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-}
-
-// ".CodeMirror: The outer element of the editor. This should be used for the editor width, height, borders and positioning. Can also be used to set styles that should hold for everything inside the editor (such as font and font size), or to set a background. Setting this class' height style to auto will make the editor resize to fit its content (it is recommended to also set the viewportMargin option to Infinity when doing this."
-.CodeMirror {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
-    font-size: var(--font-sml-1);
-    line-height: var(--baseLineHeight);
-
-    // "The visible lines. This is where you specify vertical padding for the editor content."
-    .CodeMirror-lines {
-        // We want the white space on the left and right of each line to be a selectable.
-        // thereby increasing the hit target for selections. Hence the large margin.
-        // The margin `auto` width value also automatically centers the content.
-        margin: var(--grid) auto;
-        min-width: 30em;
-        max-width: 48em;
-
-        // Add padding to bottom of doc, so that when we're at bottom of
-        // scroll, there's padding before edge of editor.
-        padding: 0 3em 18em;
-    }
-}

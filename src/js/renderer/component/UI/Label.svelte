@@ -1,4 +1,9 @@
 <script>
+  import { css } from '../ui/actions'
+  
+  export let opacity = '1'
+  export let display = 'block'
+  export let align = 'left'
   export let color = 'primary'
   export let typography = 'label-normal'
 </script>
@@ -6,9 +11,15 @@
 <style type="text/scss">
   @import '../../../../styles/_mixins.scss';
 
+  div, span {
+    --opacity: 1;
+    --align: 1;
+    opacity: var(--opacity);
+    text-align: var(--align);
+  }
+
   div {
     flex-grow: 1;
-    // border: 1px solid red;
   }
 
   // Color
@@ -50,4 +61,12 @@
   }
 </style>
 
-<div class="label {color} {typography}"><slot></slot></div>
+{#if display == 'block'}
+  <div class="label {color} {typography}" use:css={{opacity, align}}>
+    <slot></slot>
+  </div>
+{:else if display == 'inline'}
+  <span class="label {color} {typography}" use:css={{opacity, align}}>
+    <slot></slot>
+  </span>
+{/if}

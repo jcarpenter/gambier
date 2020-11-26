@@ -1,12 +1,12 @@
 <script>
   import { project, sidebar } from '../../StateManager'
 
-  import AllDocuments from './AllDocuments.svelte'
-  import Preview from './Preview.svelte'
-  import Preview2 from './Preview2.svelte'
   import Project from './Project.svelte'
-  import Separator from '../UI/Separator.svelte'
+  import AllDocuments from './AllDocuments.svelte'
+  
+  import Separator from '../ui/Separator.svelte'
   import Tab from './Tab.svelte'
+  import Preview from './Preview.svelte'
   
   // $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
@@ -17,15 +17,15 @@
 
   #sidebar {
     --state-sideBarWidth: 100px;
-    background-color: var(--windowBackgroundColor);
+    // background-color: var(--windowBackgroundColor);
     width: var(--state-sideBarWidth);
     height: 100%;
-    position: fixed;
+    position: absolute;
     margin: 0;
     padding: 40px 0 0 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    // overflow: hidden;
     border-right: 1px solid var(--separatorColor);
 
     & > div {
@@ -64,11 +64,23 @@
   <Separator />
 
   <!-- Sections -->
-  <Project />
+  {#if $sidebar.activeTabId == 'project'}
+    <Project />
+  {:else if $sidebar.activeTabId == 'allDocs'}
+    <AllDocuments />
+  {:else if $sidebar.activeTabId == 'mosRecent'}
+    Most Recent
+  {:else if $sidebar.activeTabId == 'tags'}
+    Tags
+  {:else if $sidebar.activeTabId == 'media'}
+    Media
+  {:else if $sidebar.activeTabId == 'citations'}
+    Citations
+  {:else if $sidebar.activeTabId == 'search'}
+    Search
+  {/if}
   <!-- <AllDocuments {state} {focused} /> -->
 
-  <Preview2/>
+  <Preview/>
 
-  <!-- Preview -->
-  <!-- <Preview {state} /> -->
 </div>

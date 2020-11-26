@@ -17,7 +17,7 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../styles/_mixins.scss';
+  @import '../../../../styles/_mixins.scss';
 
   #addressbar {
     margin: 0 auto;

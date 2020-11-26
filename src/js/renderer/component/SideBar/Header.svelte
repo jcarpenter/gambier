@@ -18,7 +18,6 @@
       color: var(--labelColor);
       user-select: none;
       font-weight: bold;
-      font-size: 13px;
       flex-grow: 1;
       margin: 0;
       padding: 0;
