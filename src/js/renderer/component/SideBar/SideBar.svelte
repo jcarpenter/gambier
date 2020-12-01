@@ -1,9 +1,9 @@
 <script>
   import { project, sidebar } from '../../StateManager'
-
   import Project from './Project.svelte'
   import AllDocuments from './AllDocuments.svelte'
-  
+  import MostRecent from './MostRecent.svelte'
+  import Media from './Media.svelte'
   import Separator from '../ui/Separator.svelte'
   import Tab from './Tab.svelte'
   import Preview from './Preview.svelte'
@@ -25,7 +25,6 @@
     padding: 40px 0 0 0;
     display: flex;
     flex-direction: column;
-    // overflow: hidden;
     border-right: 1px solid var(--separatorColor);
 
     & > div {
@@ -48,6 +47,15 @@
       align-items: center;
     }
   }
+
+  // We use :global to apply this to each `.section` child, to keep things DRY
+  #sidebar :global(.section){
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+    overflow-x: visible;
+    flex-grow: 1;
+  }
 </style>
 
 <div id="sidebar" style="--state-sideBarWidth: 250px">
@@ -56,7 +64,7 @@
   <div id="tabs">
     <ul>
       {#each $sidebar.tabsAll as id}
-        <Tab {id} isActive={$sidebar.activeTabId == id} />
+        <Tab {id} />
       {/each}
     </ul>
   </div>
@@ -68,18 +76,17 @@
     <Project />
   {:else if $sidebar.activeTabId == 'allDocs'}
     <AllDocuments />
-  {:else if $sidebar.activeTabId == 'mosRecent'}
-    Most Recent
+  {:else if $sidebar.activeTabId == 'mostRecent'}
+    <MostRecent />
   {:else if $sidebar.activeTabId == 'tags'}
     Tags
   {:else if $sidebar.activeTabId == 'media'}
-    Media
+    <Media />
   {:else if $sidebar.activeTabId == 'citations'}
     Citations
   {:else if $sidebar.activeTabId == 'search'}
     Search
   {/if}
-  <!-- <AllDocuments {state} {focused} /> -->
 
   <Preview/>
 

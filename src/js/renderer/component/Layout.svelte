@@ -4,6 +4,8 @@
   import SideBar from './sidebar/SideBar.svelte'
   import Toolbar from './main/Toolbar.svelte'
   import Separator from './ui/Separator.svelte'
+  import Menu from './ui/Menu.svelte'
+  import Tooltip from './ui/Tooltip.svelte'
   import StateDisplay from './dev/StateDisplay.svelte'
 
   $: directoryIsSet = $project.directory
@@ -23,15 +25,22 @@
     position: absolute;
     // top: 0;
     // left: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
   }
 </style>
 
+
+<Menu />
+<Tooltip />
 
 {#if !directoryIsSet || !filesPopulated}
   <FirstRun />
 {:else}
   <SideBar />
-  <div id="main" class="flexContainerColumn">
+  <div id="main">
     <Toolbar />
     <Separator />
     <StateDisplay />

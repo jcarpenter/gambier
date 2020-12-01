@@ -2,23 +2,32 @@
   import { project, sidebar, files } from '../../StateManager'
   import { createTreeHierarchy, createFlatHierarchy } from 'hierarchy-js'
   import produce from 'immer'
-
   import Header from './Header.svelte'
+  import SortMenu from './SortMenu.svelte'
   import SearchField from '../ui/SearchField.svelte'
   import Separator from '../ui/Separator.svelte'
   import TreeList from './list/TreeList.svelte'
   import DocList from './list/DocList.svelte'
   import File from './list/File.svelte'
   import { setContext } from 'svelte';
+  import moment from 'moment'
   
   let query = '' // Bound to search field
   
-  setContext('tabId', 'project');
-  $: tabId = 'project'
+  let tabId = 'project'
+  setContext('tabId', tabId);
+  $: tab = $sidebar.tabsById[tabId]
 
-  $: tab = $sidebar.tabsById.project
   $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
   
+  $: sortOptions = [
+    { label: 'By Title', group: 'sortBy', isChecked: tab.sortBy == 'By Title' },
+    { label: 'By Modified', group: 'sortBy', isChecked: tab.sortBy == 'By Modified' },
+    { label: 'separator' },
+    { label: 'Ascending', group: 'sortOrder', isChecked: tab.sortOrder == 'Ascending' },
+    { label: 'Descending', group: 'sortOrder', isChecked: tab.sortOrder == 'Descending' },
+  ]
+
   /* ---- How file updating works ----
    - User makes changes to project directory (e.g. adds a file).
    - Watcher chokidar instance catches. (main)
@@ -53,15 +62,15 @@
       $files,
       (draft) => {
 
-        // If query is empty, get all files.
-        // Else, get only files matching query criteria.
+        // If query is empty, render list as tree, and show all files.
+        // Else, render list as DocList, and only show files that match query criteria.
         if (query == '') {
           
           // Delete `byId` array
           delete draft.byId
 
           // Make tree of files
-          sortTree(draft.tree[0])
+          sortSubTree(draft.tree[0])
           mapVisibleDescendants(draft.tree[0], true)
           insertEmptyRows(draft.tree[0])
           
@@ -92,7 +101,7 @@
 
         // Set selection. First try to maintain the current selection. But if none of the search results are already selected, then select the first result.
         let noResultsAreSelected = !tab.selected.some((selectedId) => {
-          return draft.allIds.some((id) => id ==selectedId)
+          return draft.allIds.some((id) => id == selectedId)
         })
         
         if (noResultsAreSelected) {
@@ -110,26 +119,47 @@
     // console.log(data)
   }
 
+  /** 
+   * For a given list of items, sort by the sort criteria 
+   */
+  function sort(items) {
+    items.sort((a, b) => {
+
+      const itemA = $files.byId[a.id]
+      const itemB = $files.byId[b.id]
+
+      if (tab.sortBy == 'By Title') {
+        if (tab.sortOrder == 'Ascending') {
+          return itemA.name.localeCompare(itemB.name)
+        } else {
+          return itemB.name.localeCompare(itemA.name)
+        }
+      } else if (tab.sortBy == 'By Modified') {
+        if (tab.sortOrder == 'Ascending') {
+          return moment(itemA.modified).isBefore(itemB.modified)
+        } else {
+          return moment(itemB.modified).isBefore(itemA.modified)
+        }
+      }
+    })
+  }
+
   /**
    * Sort tree items by sorting criteria.
   */
-  function sortTree(folder) {
+  function sortSubTree(folder) {
     // Sort
-    folder.children.sort((a, b) => {
-      const itemA = $files.byId[a.id]
-      const itemB = $files.byId[b.id]
-      return itemA.name.localeCompare(itemB.name)
-    })
+    sort(folder.children)
     folder.children.forEach((c) => {
       const type = $files.byId[c.id].type
       if (type == 'folder' && c.children.length) {
         // If folder is not expanded, remove children.
         // Else, recursively sort
         const isExpanded = tab.expanded.includes(c.id)
-        if (isExpanded) {
-          sortTree(c)
-        } else {
+        if (!isExpanded) {
           c.children = []
+        } else {
+          sortSubTree(c)
         }
       }
     })
@@ -189,23 +219,12 @@
 
 </script>
 
-<style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
-
-  #project {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex-grow: 1;
-  }
-
+<style type="text/css">
 </style>
 
-<!-- <svelte:window on:keydown={onKeydown} /> -->
-
-<div id="project" class="wrapper">
-  <Header title={tab.title}>
-    <!-- Sort -->
+<div class="section">
+  <Header title={tab.title} hoverToShowSlot={true}>
+    <SortMenu options={sortOptions} />
   </Header>
   <Separator marginSides={10} />
   <SearchField focused bind:query placeholder={'Name'} />

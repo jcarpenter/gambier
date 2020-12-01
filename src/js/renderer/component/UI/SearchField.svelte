@@ -20,20 +20,19 @@
     @include label-normal;
     margin: 10px 10px 0;
     position: relative;
-    background-color: var(--quaternaryLabelColor);
-    border-radius: 4px;
-    min-height: 20px;
+    background-color: rgba(var(--foregroundColor), 0.05);
+    border-radius: 6px;
+    min-height: 28px;
     display: flex;
     flex-direction: row;
     align-items: center;
-    // border: 1px solid black;
+    border: 1px solid rgba(var(--foregroundColor), 0.05);
 
     &:focus-within {
       animation-fill-mode: forwards;
       animation-name: selectField;
       animation-duration: 0.3s;
     }
-
   }
 
   @keyframes selectField {
@@ -60,6 +59,7 @@
 
   .placeholder {
     @include absolute-vertical-center;
+    user-select: none;
     color: var(--placeholderTextColor);
     left: 24px;
     pointer-events: none;
@@ -81,6 +81,8 @@
   <div
     on:mousedown|preventDefault={() => input.select()}
     class="magnifying-glass" />
-  {#if !query}<span class="placeholder">{placeholder}</span>{/if}
+  {#if !query}
+    <span class="placeholder">{placeholder}</span>
+  {/if}
   <input type="text" bind:this={input} bind:value={query} />
 </div>

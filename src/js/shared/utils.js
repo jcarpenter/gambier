@@ -26,6 +26,17 @@ const formats = {
   ]
 }
 
+/**
+ * Wrap setTimeout in a promise so we can use with async/await. 
+ * Use like: `await wait(1000);`
+ * @param {*} ms 
+ */
+export async function wait(ms) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export function isDoc(fileExtension) {
   return formats.document.includes(fileExtension)
 }

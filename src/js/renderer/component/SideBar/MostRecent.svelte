@@ -13,16 +13,13 @@
 
   let query = '' // Bound to search field
   
-  let tabId = 'allDocs'
+  let tabId = 'mostRecent'
   setContext('tabId', tabId);
   $: tab = $sidebar.tabsById[tabId]
 
   $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
   $: sortOptions = [
-    { label: 'By Title', group: 'sortBy', isChecked: tab.sortBy == 'By Title' },
-    { label: 'By Modified', group: 'sortBy', isChecked: tab.sortBy == 'By Modified' },
-    { label: 'separator' },
     { label: 'Ascending', group: 'sortOrder', isChecked: tab.sortOrder == 'Ascending' },
     { label: 'Descending', group: 'sortOrder', isChecked: tab.sortOrder == 'Descending' },
   ]
@@ -49,20 +46,13 @@
         const itemA = $files.byId[a]
         const itemB = $files.byId[b]
 
-        if (tab.sortBy == 'By Title') {
-          if (tab.sortOrder == 'Ascending') {
-            return itemA.name.localeCompare(itemB.name)
-          } else {
-            return itemB.name.localeCompare(itemA.name)
-          }
-        } else if (tab.sortBy == 'By Modified') {
-          if (tab.sortOrder == 'Ascending') {
-            return moment(itemA.modified).isBefore(itemB.modified)
-          } else {
-            return moment(itemB.modified).isBefore(itemA.modified)
-          }
+        if (tab.sortOrder == 'Ascending') {
+          return moment(itemA.modified).isBefore(itemB.modified)
+        } else {
+          return moment(itemB.modified).isBefore(itemA.modified)
         }
       })
+      
       return draft
     })
   }

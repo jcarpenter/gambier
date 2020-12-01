@@ -539,7 +539,7 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       systemPink: '#FF2D55FF',
       systemPurple: '#AF52DEFF',
       systemRed: '#FF3B30FF',
-      systemTeal: '#5AC8FAFF',
+      systemTeal: '#55BEF0FF',
       systemYellow: '#FFCC00FF',
       // Dynamic System Colors
       alternateSelectedControlTextColor: '#FFFFFFFF',
@@ -549,7 +549,7 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       controlTextColor: '#000000D8',
       disabledControlTextColor: '#0000003F',
       findHighlightColor: '#FFFF00FF',
-      gridColor: '#CCCCCCFF',
+      gridColor: '#E6E6E6FF',
       headerTextColor: '#000000D8',
       highlightColor: '#FFFFFFFF',
       keyboardFocusIndicatorColor: '#0067F43F',
@@ -566,7 +566,7 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       selectedTextColor: '#000000FF',
       separatorColor: '#00000019',
       shadowColor: '#000000FF',
-      tertiaryLabelColor: '#0000003F',
+      tertiaryLabelColor: '#00000042',
       textBackgroundColor: '#FFFFFFFF',
       textColor: '#000000FF',
       unemphasizedSelectedContentBackgroundColor: '#DCDCDCFF',
@@ -583,7 +583,7 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
   }
 }
 
-function rgbaHexToRgbaCSS(hex, alphaOveride, brightnessAdjustment = 0){
+function rgbaHexToRgbaCSS(hex, alphaOveride, brightnessAdjustment = 0) {
   const r = parseInt(hex.slice(1, 3), 16) + brightnessAdjustment;
   const g = parseInt(hex.slice(3, 5), 16) + brightnessAdjustment;
   const b = parseInt(hex.slice(5, 7), 16) + brightnessAdjustment;

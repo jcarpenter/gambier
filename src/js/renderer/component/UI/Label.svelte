@@ -6,6 +6,8 @@
   export let align = 'left'
   export let color = 'primary'
   export let typography = 'label-normal'
+  export let isSelected = false
+
 </script>
 
 <style type="text/scss">
@@ -16,6 +18,10 @@
     --align: 1;
     opacity: var(--opacity);
     text-align: var(--align);
+  }
+
+  .isSelected {
+    color: var(--controlColor) !important;
   }
 
   div {
@@ -44,6 +50,11 @@
     @include label-normal;
   }
 
+  // Typography
+  .label-normal-bold {
+    @include label-normal-bold;
+  }
+
   .label-normal-small {
     @include label-normal-small;
   }
@@ -62,11 +73,11 @@
 </style>
 
 {#if display == 'block'}
-  <div class="label {color} {typography}" use:css={{opacity, align}}>
+  <div class="label {color} {typography}" class:isSelected use:css={{opacity, align}}>
     <slot></slot>
   </div>
 {:else if display == 'inline'}
-  <span class="label {color} {typography}" use:css={{opacity, align}}>
+  <span class="label {color} {typography}" class:isSelected use:css={{opacity, align}}>
     <slot></slot>
   </span>
 {/if}

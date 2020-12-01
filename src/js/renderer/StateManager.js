@@ -6,10 +6,45 @@ enablePatches() // Required by immer
 
 // -------- STORES -------- //
 
-export let state = writable({})
-export let project = writable({})
-export let sidebar = writable({})
-export let files = writable({})
+export const state = writable({})
+export const project = writable({})
+export const sidebar = writable({})
+
+export const files = writable({})
+export const tooltip = writable({ 
+  status: 'hide', // 'show', 'hide', or 'hideAfterDelay'
+  text: '', 
+  x: 0, 
+  y: 0 
+})
+
+export const menu = writable({
+  id: undefined,
+  isOpen: false,
+  options: [],
+  selectedOption: undefined,
+  // type: 'popup', // 'popup' or 'pulldown'
+  width: 0,
+  itemHeight: 0,
+  x: 0,
+  y: 0,
+})
+
+export function openMenu(params) {
+  console.log('openMenu')
+  menu.update((m) => { return {...m, ...params}})
+}
+
+export function selectMenuOption(option) {
+  console.log('selectMenuOption')
+  menu.update((m) => { return {...m, selectedOption: option, isOpen: false}})
+}
+
+export function closeMenu() {
+  console.log('closeMenu')
+  menu.update((m) => { return { ...m, isOpen: false }})
+}
+
 
 // This (seemingly redundant) `stateAsObject` variable is for performance reasons. When we applyPatches(state, patches), we need to pass it the current state. We could get that from `state` writable by using `get(state)`, but that creates and destroys a one-time subscriber every time. Which has performance implications given how often we modify state. Svelte specifically recommends against this type of use, in the docs: https://svelte.dev/docs#get. So instead we create an intemediary `stateAsObject`, apply patches to it, and then pass it to state.set(...).
 let stateAsObject = {}

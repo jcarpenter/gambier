@@ -1,12 +1,12 @@
 <script>
-  import { findInTree, prettySize } from '../../../shared/utils'
+  import { prettySize } from '../../../shared/utils'
   import { sidebar, files } from '../../StateManager'
 
-  import DisclosureButton from '../UI/DisclosureButton.svelte'
+  import DisclosureButton from '../ui/DisclosureButton.svelte'
   import Header from './Header.svelte'
-  import Label from '../UI/Label.svelte'
-  import Separator from '../UI/Separator.svelte'
-  import Thumbnail from '../UI/Thumbnail.svelte'
+  import Label from '../ui/Label.svelte'
+  import Separator from '../ui/Separator.svelte'
+  import Thumbnail from '../ui/Thumbnail.svelte'
 
   $: isOpen = $sidebar.isPreviewOpen
   $: activeTab = $sidebar.tabsById[$sidebar.activeTabId]
@@ -129,7 +129,7 @@
 
   <Separator />
   
-  <Header title={'Preview'}>
+  <Header title={'Details'}>
     <DisclosureButton
       width={14}
       height={14}
@@ -168,7 +168,6 @@
 
       <div class="img-thumb">
         <Thumbnail src={file.path} margin={'0 0 0 0'} />
-        flex-basis: 0;
       </div>
       <div class="metadata">
         <!-- <Label color={'primary'} typography={'label-normal-small-bold'}>

@@ -21,6 +21,52 @@ export function css(node, properties) {
   };
 }
 
+import { tooltip } from '../../StateManager'
+
+export function setTooltip(node, text) {
+
+  function onMouseEnter(evt) {
+    tooltip.set({
+      status: 'show',
+      text: text,
+      x: evt.clientX, 
+      y: evt.clientY + 4
+    })  
+  }
+
+  function onMouseDown() {
+    tooltip.set({
+      status: 'hide',
+      text: '',
+      x: 0, 
+      y: 0
+    })
+  }
+
+  function onMouseLeave(evt) {
+    tooltip.set({
+      status: 'hideAfterDelay',
+      text: '',
+      x: 0,
+      y: 0
+    })
+  }
+
+  node.addEventListener('mouseenter', onMouseEnter);
+  node.addEventListener('mousedown', onMouseDown);
+  node.addEventListener('mouseleave', onMouseLeave);
+
+  return {
+    destroy() {
+			node.removeEventListener('mouseenter', onMouseEnter);
+			node.removeEventListener('click', onMouseDown);
+			node.removeEventListener('mouseleave', onMouseLeave);
+		}
+  }
+}
+
+
+
 export function flash(element) {
 	requestAnimationFrame(() => {
 		element.style.transition = 'none';

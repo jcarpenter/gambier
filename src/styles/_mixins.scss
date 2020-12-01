@@ -34,6 +34,10 @@
     list-style-type: none;
 }
 
+@mixin generic-push-button {
+    
+}
+
 /* -------------- Materials -------------- */
 
 // These are CSS equivalents to Apple's macOS materials. Materials "...define the amounts of translucency, blurring, and vibrancy applied to your interface.". Basically they are recipes of other macOS settings, e.g. degree of blurring, color, etc.
@@ -68,7 +72,6 @@
     font-size: 13px;
     line-height: 15px;
     letter-spacing: -0.08px;
-    color: var(--labelColor);
 }
 
 // NOTE: Not an actual Apple style
@@ -78,7 +81,6 @@
     font-size: 13px;
     line-height: 15px;
     letter-spacing: -0.08px;
-    color: var(--labelColor);
 }
 
 @mixin label-normal-small {

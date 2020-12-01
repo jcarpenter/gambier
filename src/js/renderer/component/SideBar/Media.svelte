@@ -6,21 +6,21 @@
   import SearchField from '../ui/SearchField.svelte'
   import Separator from '../ui/Separator.svelte'
   import DocList from './list/DocList.svelte'
-  import Doc from './list/Doc.svelte'
+  import Media from './list/Media.svelte'
   import { setContext } from 'svelte';
   import moment from 'moment'
 
 
   let query = '' // Bound to search field
   
-  let tabId = 'allDocs'
+  let tabId = 'media'
   setContext('tabId', tabId);
   $: tab = $sidebar.tabsById[tabId]
 
   $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
   $: sortOptions = [
-    { label: 'By Title', group: 'sortBy', isChecked: tab.sortBy == 'By Title' },
+    { label: 'By Name', group: 'sortBy', isChecked: tab.sortBy == 'By Name' },
     { label: 'By Modified', group: 'sortBy', isChecked: tab.sortBy == 'By Modified' },
     { label: 'separator' },
     { label: 'Ascending', group: 'sortOrder', isChecked: tab.sortOrder == 'Ascending' },
@@ -36,8 +36,8 @@
   function getData() {
     data = produce($files.allIds, (draft) => {
       
-      // Get ids with file type 'doc'
-      draft = draft.filter((id) => $files.byId[id].type == 'doc')
+      // Get ids with file type 'img' or 'av'
+      draft = draft.filter((id) => $files.byId[id].type == 'img' || $files.byId[id].type == 'av')
       
       // Filter by query 
       if (query) {
@@ -49,7 +49,7 @@
         const itemA = $files.byId[a]
         const itemB = $files.byId[b]
 
-        if (tab.sortBy == 'By Title') {
+        if (tab.sortBy == 'By Name') {
           if (tab.sortOrder == 'Ascending') {
             return itemA.name.localeCompare(itemB.name)
           } else {
@@ -63,6 +63,7 @@
           }
         }
       })
+      
       return draft
     })
   }
@@ -78,6 +79,6 @@
   </Header>
   <Separator marginSides={10} />
   <SearchField focused bind:query placeholder={'Name'} />
-  <DocList listIds={data} component={Doc} />
+  <DocList listIds={data} component={Media} />
 </div>
 

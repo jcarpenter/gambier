@@ -1,6 +1,12 @@
 <script>
+  import { sidebar } from '../../StateManager'
+  import { setTooltip } from '../ui/actions'
+
   export let id
-  export let isActive
+  
+  $: tab = $sidebar.tabsById[id]
+  $: isActive = $sidebar.activeTabId == id
+
 </script>
 
 <style type="text/scss">
@@ -71,10 +77,13 @@
 </style>
 
 <svelte:options immutable={true} />
+
 <li
   on:click={() => window.api.send('dispatch', {
       type: 'SELECT_SIDEBAR_TAB_BY_ID',
       id: id,
     })}
   class:isActive
-  class={id} />
+  class={id} 
+  use:setTooltip={`Show ${tab.title}`}
+/>
