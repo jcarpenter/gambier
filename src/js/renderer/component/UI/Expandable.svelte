@@ -1,81 +1,77 @@
 <script>
   import { css } from '../ui/actions'
-  import { slide } from 'svelte/transition'
-  import { linear, cubicOut } from 'svelte/easing'
-  import BezierEasing from 'bezier-easing'
+  import DisclosureButton from './DisclosureButton.svelte';
 
-  import { standardEase } from './easing'
-
-  export let duration = 0
-  export let expandedHeight = 0
-  export let top = 0
-  export let itemWidth = 0
-  export let isExpanded = true
-
-  $: height = isExpanded ? expandedHeight : 0
-  $: console.log(isExpanded, expandedHeight, height)
-
-  // const asdsa = [0.4, 0.0, 0.2, 1]
-  // const easing = BezierEasing(...asdsa)
-
-  // function test(t) {
-  //   // const f = t - 1.0
-  //   // return f * f * f + 1.0
-  //   return easing(t)
-  // }
-
-  function scale(node, { duration = 100 }) {
-    return {
-      duration,
-      easing: standardEase,
-      css: (t, u) => `transform: scale(1, ${t})`,
-    }
+  export let title = 'Title'
+  export let maxExpandedHeight = 100
+  export let isOpen = true
+  
+  function todo() {
+    isOpen = !isOpen
   }
 
-  function counterScale(node, { duration = 100 }) {
-    return {
-      duration,
-      easing: standardEase,
-      css: (t, u) => `transform: scale(1, ${1 / t})`,
-    }
-  }
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
-  .outer {
-    --duration: 0;
-    --height: 0;
-    --heightEasing: ;
-    --top: 0;
-    --itemWidth: 0;
+  .expandable {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    transition: flex 250ms ease-out;
+    // max-height: 215px;
+    overflow: hidden;
+    // border: 1px solid red;
 
-    position: absolute;
-    // contain: strict;
-    // border: 2px solid rgba(255, 0, 0, 0.3);
-    height: calc(var(--height) * 1px);
-    // overflow: hidden;
-    // top: calc(var(--top) * 1px);
-    width: calc(var(--itemWidth) * 1px);
-    // transition: height calc(var(--duration) * 1ms) step-end;
+    &.isOpen {
+      flex-basis: calc(var(--maxExpandedHeight) * 1px);
+    }
+
+    &:not(.isOpen) {
+      flex-basis: 20px;
+    }
   }
 
-  .outer,
-  .inner {
-    // contain: strict;
-    // position: absolute;
-    transform-origin: left top;
-    will-change: transform;
+  header {
+    padding: 0 10px;
+    display: flex;
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    min-height: 20px;
+    user-select: none;
+    // outline: 1px solid black;
+
+    h1 {
+      @include label-normal-small-bold;
+      color: var(--labelColor);
+      font-weight: bold;
+      flex-grow: 1;
+      margin: 0;
+      padding: 0;
+      position: absolute;
+      left: 22px;
+    }
   }
+
+
 </style>
 
 <svelte:options immutable={true} />
-<div
-  class="outer"
-  transition:scale={{ duration: duration }}
-  use:css={{ duration, height, top, itemWidth }}>
-  <div transition:counterScale={{ duration: duration }} class="inner">
+
+<div class="expandable" class:isOpen use:css={{ maxExpandedHeight }}>
+  <header>
+    <DisclosureButton
+      width={12}
+      height={12}
+      padding={5}
+      left={8}
+      rotation={isOpen ? 90 : 0}
+      tooltip={'Toggle Expanded'}
+      on:toggle={todo} />
+    <h1>{title}</h1>
+  </header>
+  <div class="content">
     <slot />
   </div>
 </div>

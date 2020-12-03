@@ -1,9 +1,10 @@
 <script>
   // import * as editor from '../editor/editor.js'
+  import { state, project, files } from '../../StateManager'
   import { onMount, createEventDispatcher } from 'svelte'
+  import { createEditor } from '../../editor/createEditor'
   import {
     clearLineMarks,
-    createEditor,
     focusEditor,
     loadFileByPath,
     mapDoc,
@@ -12,7 +13,7 @@
     remapInlineElementsForLine,
     saveFile,
     toggleSource,
-  } from '../editor/index.js'
+  } from '../../editor/index.js'
 
   import Wizard from './wizard/Wizard.svelte'
   import Autocomplete from './Autocomplete.svelte'

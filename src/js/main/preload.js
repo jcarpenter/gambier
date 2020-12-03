@@ -1,4 +1,34 @@
 import { contextBridge, ipcRenderer } from 'electron'
+// import { copySync } from 'fs-extra'
+// import ipc from 'node-ipc'
+
+// IPC testing
+
+// ipc.config.id = 'hello';
+// ipc.config.retry = 1500;
+
+// ipc.connectTo('world', () => {
+  
+//   ipc.of.world.on('connect', () => {
+//     ipc.log('## connected to world ##'.rainbow, ipc.config.delay)
+//     ipc.of.world.emit(
+//       'message',  //any event or message type your server listens for
+//       'hello'
+//     )
+//   })
+  
+//   ipc.of.world.on('disconnect', () => {
+//     ipc.log('disconnected from world'.notice)
+//   })
+  
+//   // Any event or message type your server listens for
+//   ipc.of.world.on('message',(data) => {
+//       ipc.log('got a message from world : '.debug, data)
+//     }
+//   )
+// })
+
+// console.log("Hi there")
 
 // Whitelist channels
 

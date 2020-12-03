@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
 
-import { saveFile, deleteFile, deleteFiles, setProjectPath } from './actions/index.js'
+import { saveFile, deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
 
 export class IpcManager {
   constructor() {
@@ -35,8 +35,11 @@ export class IpcManager {
     ipcMain.on('dispatch', async (evt, action) => {
       const win = BrowserWindow.fromWebContents(evt.sender)
       switch (action.type) {
-        case ('SELECT_PROJECT_DIRECTORY'):
-          store.dispatch(await setProjectPath(), win.id)
+        case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
+          store.dispatch(await selectCitationsFileFromDialog(), win.id)
+          break
+        case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
+          store.dispatch(await selectProjectDirectoryFromDialog(), win.id)
           break
         case ('SAVE_FILE'):
           store.dispatch(await saveFile(action.path, action.data), win.id)
@@ -54,6 +57,19 @@ export class IpcManager {
     })
 
     // -------- IPC: Invoke -------- //
+
+    ipcMain.handle('queryDb', (evt, params) => {
+      const { query } = params
+      const results = global.db.prepare(`
+        SELECT highlight(docs, 2, '<b>', '</b>') title,
+               highlight(docs, 3, '<b>', '</b>') body,
+               id
+        FROM docs 
+        WHERE docs MATCH ? 
+        ORDER BY rank`
+      ).all(query)
+      return results
+    })
 
     ipcMain.handle('getState', (evt) => {
       return global.state()

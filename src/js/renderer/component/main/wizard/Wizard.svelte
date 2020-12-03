@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick } from 'svelte'
-  import { getCharAt } from '../../editor/editor-utils'
+  import { getCharAt } from '../../../editor/editor-utils'
   import FootnoteInline from './FootnoteInline.svelte'
   import Link from './Link.svelte'
 

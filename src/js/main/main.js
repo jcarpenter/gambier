@@ -6,6 +6,7 @@ import { writeFile, readFile, pathExists } from 'fs-extra'
 // Bundled dependencies
 import { Store } from './Store'
 import { AppearanceManager } from './AppearanceManager'
+import { DbManager } from './DbManager'
 import { DiskManager } from './DiskManager'
 import { IpcManager } from './IpcManager'
 import { MenuBarManager } from './MenuBarManager'
@@ -51,6 +52,32 @@ if (!app.isPackaged) {
 }
 
 
+// -------- IPC TESTING -------- //
+
+// ipc.config.id = 'world';
+// ipc.config.retry = 1500;
+
+// ipc.serve(() => {
+
+//     ipc.server.on('message', (data, socket) => {
+//       ipc.log('got a message : '.debug, data)
+//       ipc.server.emit(
+//         socket,
+//         'message',  // This can be anything you want so long as your client knows.
+//         data + ' world!'
+//       )
+//     })
+
+//     ipc.server.on('socket.disconnected', (socket, destroyedSocketID) => {
+//       ipc.log('client ' + destroyedSocketID + ' has disconnected!')
+//     })
+//   }
+// )
+
+// ipc.server.start()
+
+
+
 // -------- SETUP -------- //
 
 // Create store (and global variables for store and state)
@@ -64,6 +91,7 @@ const diskManager = new DiskManager()
 const ipcManager = new IpcManager()
 const menuBarManager = new MenuBarManager()
 const windowManager = new WindowManager()
+const dbManager = new DbManager()
 
 // One more global variable
 global.watchers = diskManager.watchers
@@ -74,10 +102,11 @@ app.allowRendererProcessReuse = true
 // Start app
 app.whenReady()
   .then(async () => {
-    
+
+    dbManager.init()
+
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' })
-    console.log(global.state().projects)
     // Get system appearance settings
     appearanceManager.startup()
     // Create a window for each project

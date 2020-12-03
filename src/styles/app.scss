@@ -1,5 +1,5 @@
 @import "variables";
-@import "mixins";
+// @import "mixins";
 // @import "citation-collapsed";
 
 * {
@@ -15,6 +15,10 @@ body {
     padding: 0;
     height: 100%;
     overflow: hidden;
+}
+
+#layout {
+    height: 100%;
 }
 
 .flexContainerRow {

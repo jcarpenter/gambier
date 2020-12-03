@@ -35,9 +35,7 @@
   }
 </script>
 
-<style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
-  
+<style type="text/scss">  
   #preview {
     display: flex;
     flex-shrink: 0;
@@ -45,13 +43,13 @@
     transition: flex 250ms ease-out;
     max-height: 215px;
     overflow: hidden;
+    
+    &.isOpen {
+      flex-basis: 215px;
+    }
 
     &:not(.isOpen) {
       flex-basis: 30px;
-    }
-
-    &.isOpen {
-      flex-basis: 215px;
     }
   }
 

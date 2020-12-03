@@ -80,7 +80,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   #stateDisplay {
     padding: 0rem 1rem;
@@ -154,7 +153,6 @@
   
   <div class="stateTable colors">
     <h2>Dynamic System Colors</h2>
-    
     <SwatchTable title={'Labels'} colors={labelColors} />    
     <SwatchTable title={'Text'} colors={textColors} />    
     <SwatchTable title={'Content'} colors={contentColors} />
@@ -163,7 +161,6 @@
     <SwatchTable title={'Controls'} colors={controlColors} />
     <SwatchTable title={'Windows'} colors={windowColors} />
     <SwatchTable title={'Highlights & Shadows'} colors={highlightColors} />
-  
   </div>
 
   <div class="stateTable">

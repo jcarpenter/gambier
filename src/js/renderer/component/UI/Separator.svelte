@@ -1,5 +1,10 @@
 <script>
-  export let marginSides = '0';
+  import { css } from "./actions";
+
+  export let marginSides = 0;
+  export let marginTop = 0;
+  export let marginBottom = 0;
+
 </script>
 
 <style type="text/scss">
@@ -7,15 +12,12 @@
     min-height: 1px;
     border: 0;
     background-color: var(--separatorColor);
-
-    &.full {
-      margin: 0;
-    }
-
-    &.nested {
-      margin: 0 10px;
-    }
+    margin: 
+      calc(var(--marginTop) * 1px)
+      calc(var(--marginSides) * 1px)
+      calc(var(--marginBottom) * 1px)
+      calc(var(--marginSides) * 1px);
   }
 </style>
 
-<hr style="margin: 0 {marginSides}px" />
+<hr use:css={{marginSides, marginTop, marginBottom}} />

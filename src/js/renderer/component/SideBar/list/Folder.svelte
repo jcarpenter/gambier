@@ -41,13 +41,8 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../../styles/_mixins.scss';
 
   .folder {
-		--folderHeight: 0;
-		--folderEasing: 0;
-		--duration: 0;
-			
 		// contain: strict;
 		position: absolute;
 		width: 100%;

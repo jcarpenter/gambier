@@ -2,6 +2,37 @@
 
 var electron = require('electron');
 
+// import { copySync } from 'fs-extra'
+// import ipc from 'node-ipc'
+
+// IPC testing
+
+// ipc.config.id = 'hello';
+// ipc.config.retry = 1500;
+
+// ipc.connectTo('world', () => {
+  
+//   ipc.of.world.on('connect', () => {
+//     ipc.log('## connected to world ##'.rainbow, ipc.config.delay)
+//     ipc.of.world.emit(
+//       'message',  //any event or message type your server listens for
+//       'hello'
+//     )
+//   })
+  
+//   ipc.of.world.on('disconnect', () => {
+//     ipc.log('disconnected from world'.notice)
+//   })
+  
+//   // Any event or message type your server listens for
+//   ipc.of.world.on('message',(data) => {
+//       ipc.log('got a message from world : '.debug, data)
+//     }
+//   )
+// })
+
+// console.log("Hi there")
+
 // Whitelist channels
 
 // Renderer "receives" from Main
@@ -11,7 +42,7 @@ let validReceiveChannels = ['mainWantsToCloseWindow', 'mainWantsToQuitApp', 'mai
 let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'saveFileThenCloseWindow', 'saveFileThenQuitApp', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch',];
 
 // Round trip: Renderer --> Main --> Renderer
-let validInvokeChannels = ['getSystemColors', 'getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles'];
+let validInvokeChannels = ['getSystemColors', 'getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb'];
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 electron.contextBridge.exposeInMainWorld(

@@ -1,11 +1,12 @@
 <script>
-	import { createEventDispatcher, afterUpdate } from 'svelte'
-	import { state, project, files, sidebar } from '../../../StateManager'
+	import { project, files, sidebar } from '../../../StateManager'
+	import Token from '../../ui/Token.svelte'
   import { onMousedown } from './interactions'
   import { getContext } from 'svelte';
 
 	export let id
 	export let listIds
+	export let showTags = false
 	
 	const tabId = getContext('tabId')
 	$: tab = $sidebar.tabsById[tabId]
@@ -38,6 +39,12 @@
 		line-height: 16px;
 	}
 
+	.tags {
+		margin-bottom: 3px;
+		white-space: nowrap;
+		overflow: hidden;
+	}
+
 	.excerpt {
 		@include label-normal;
 		color: var(--secondaryLabelColor);
@@ -50,6 +57,10 @@
 		word-break: break-word;
 		line-break: auto;
 		line-height: 16px;
+	}
+
+	.showTags .excerpt {
+		-webkit-line-clamp: 2;
 	}
 
 	.isSelected {
@@ -77,10 +88,18 @@
 
 <div
 	class="doc"
+	class:showTags
 	class:isSelected
 	class:isSidebarFocused
 	on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds)}
 	>
 		<div class="title">{doc.title ? doc.title : doc.name}</div>
+			{#if showTags}
+				<div class="tags">
+					{#each doc.tags as tag}
+						<Token label={tag} />
+					{/each}
+				</div>
+			{/if}
 		<div class="excerpt">{doc.excerpt}</div>
 </div>

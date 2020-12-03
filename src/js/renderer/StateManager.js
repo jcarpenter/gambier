@@ -21,9 +21,11 @@ export const tooltip = writable({
 export const menu = writable({
   id: undefined,
   isOpen: false,
+  isCompact: false,
+  buttonType: 'text', // 'text' or 'icon'
+  menuType: 'pulldown', // 'pulldown' or 'popup'
   options: [],
   selectedOption: undefined,
-  // type: 'popup', // 'popup' or 'pulldown'
   width: 0,
   itemHeight: 0,
   x: 0,
@@ -31,17 +33,14 @@ export const menu = writable({
 })
 
 export function openMenu(params) {
-  console.log('openMenu')
   menu.update((m) => { return {...m, ...params}})
 }
 
 export function selectMenuOption(option) {
-  console.log('selectMenuOption')
   menu.update((m) => { return {...m, selectedOption: option, isOpen: false}})
 }
 
 export function closeMenu() {
-  console.log('closeMenu')
   menu.update((m) => { return { ...m, isOpen: false }})
 }
 

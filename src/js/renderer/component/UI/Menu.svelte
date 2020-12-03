@@ -2,10 +2,13 @@
   import { menu, closeMenu, selectMenuOption } from '../../StateManager'
   import { fade } from 'svelte/transition';
   import { css } from './actions';
-  import { createEventDispatcher } from 'svelte';
   import { wait } from '../../../shared/utils';
+  import { tick } from 'svelte';
+  let ul // binds to <ul> element
 
+  let id = ''
   let isOpen = false
+  let isCompact = false
   let options = []
   let width = 0
   let itemHeight = 0
@@ -16,7 +19,6 @@
 
   let isLive = false
   let isClosing = false
-
 
   /**
    * When menu store changes, we need to determine what to do, based on menu store. 
@@ -33,7 +35,6 @@
     const wasClosedIsOpen = !isOpen && $menu.isOpen
     const wasOpenHasNewTarget = isOpen && $menu.isOpen && id !== $menu.id
     const wasOpenIsClosed = isOpen && !$menu.isOpen
-    console.log(wasOpenIsClosed)
 
     if (wasClosedIsOpen) {
       updateValues()
@@ -49,14 +50,41 @@
   /**
    * Upate local copies of store values. These values drive local reactivity, and are used to determine what changed in state.
    */
-  function updateValues() {
-    isOpen = $menu.id
+  async function updateValues() {
+    id = $menu.id
     isOpen = $menu.isOpen
+    isCompact = $menu.isCompact
     options = $menu.options
     width =  $menu.width
-    itemHeight = $menu.itemHeight
-    x = $menu.x
-    y = $menu.y
+    itemHeight = isCompact ? 18 : 21 // If isCompact, tighten height
+    await tick();
+    x = getX()
+    y = getY()
+  }
+
+  /**
+   * Menu position depends on several factors:
+   * - Type of menu (e.g. popup or pulldown)
+   * - Type of button (e.g. text or icon)
+   * - Whether it's compact or not
+   */
+  function getX() {
+    if ($menu.menuType == 'popup') {
+      return $menu.x + (isCompact ? -13 : -20)
+    } else {
+      return $menu.x
+    }
+  }
+
+  function getY() {
+
+    const selectedItem = ul.querySelector('.isChecked')
+
+    if ($menu.menuType == 'popup') {
+      return $menu.y - selectedItem.offsetTop
+    } else {
+      return $menu.y + itemHeight
+    }
   }
 
   /**
@@ -84,9 +112,10 @@
    * Close the menu when the user clicks outside the menu. NOTE: If the user clicks the button that opened the menu, that will also close the menu. The button logic will handle the close action and stop event propagation, and this code path will not be reached. If we don't take this approach, this code will close the menu as soon as it's opened.
    */
   function checkIfClickedOutsideTheMenu(evt) {
+
+    if (!isOpen) return
     
     const clickedInside = evt.clientX > x && evt.clientX < x + w && evt.clientY > y && evt.clientY < y + h
-    
     
     if (!clickedInside) {
       closeMenu()
@@ -96,10 +125,23 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   // We need to break the menu out any parent overflow:hidden elements (e.g. a sidebar tab), so we set position relative on the top div, and position fixed on the menu div. Per this tip: https://github.com/w3c/csswg-drafts/issues/4092#issuecomment-595247838
   
+  // Compact
+  .menu.isCompact {
+    @include label-normal-small;
+
+    .checkmark {
+      margin: 0 5px 0 4px;
+      width: 7px;
+      height: 7px;
+    }
+    // hr {
+    //   margin: 2px 0;
+    // }
+  }
+
   .menu {
     @include label-normal;
     user-select: none;
@@ -123,13 +165,12 @@
     transform: translate(0, 0);
     overflow: hidden;
     box-shadow: 
-      0 0 0 0.5px rgba(var(--foregroundColor), 0.2), 
+      0 0 0 0.5px rgba(var(--foregroundColor), 0.15), 
       0 0 3px 0 rgba(var(--foregroundColor), 0.1), 
-      0 5px 11px 0 rgba(var(--foregroundColor), 0.28);
+      0 5px 16px 0 rgba(var(--foregroundColor), 0.20);
   }
 
   li {
-    @include label-normal;
     cursor: default;
     white-space: nowrap;
     height: calc(var(--itemHeight) * 1px);
@@ -150,14 +191,14 @@
     display: inline-block;
     margin: 0 7px 0 6px;
     padding: 0;
-    width: 9px;
-    height: 9px;
+    width: 10px;
+    height: 10px;
     opacity: 0;
   }
 
   .label {
     color: var(--labelColor);
-    opacity: 0.76;
+    opacity: 1;
   }
 
   li.hover {
@@ -178,23 +219,25 @@
   }
 
   hr {
-    border: 1px solid var(--separatorColor);
+    border: none;
+    border-bottom: 1px solid var(--separatorColor);
     margin: 4px 0;
   }
 
 
 </style>
 
-<svelte:window on:mousedown={() => { if (isOpen) checkIfClickedOutsideTheMenu }} />
+<svelte:window on:mousedown={checkIfClickedOutsideTheMenu} />
 
 {#if isOpen}
   <div 
     class="menu" 
+    class:isCompact
     bind:clientWidth={w} bind:clientHeight={h}
     use:css={{width, itemHeight, x, y}}
     out:fade={{ duration: 250 }} 
   >
-    <ul>
+    <ul bind:this={ul}>
       {#each options as option}
         {#if option.label == 'separator'}
           <hr />

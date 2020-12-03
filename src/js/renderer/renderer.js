@@ -17,10 +17,6 @@ window.api.receive("stateChanged", (state, oldState) => {
   }
 });
 
-window.api.receive('initialFilesFromMain', (files) => {
-  console.log('renderer.js: receive initialFilesFromMain')
-})
-
 
 // Setup renderer
 async function setup() {

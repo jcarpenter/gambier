@@ -176,7 +176,8 @@ export const newProject = {
         lastSelected: {},
         selected: [],
         sortBy: 'By Title',
-        sortOrder: 'Ascending'
+        sortOrder: 'Ascending',
+        selectedTags: []
       },
       media: {
         title: 'Media',
@@ -194,6 +195,12 @@ export const newProject = {
         title: 'Search',
         lastSelected: {},
         selected: [],
+        options: {
+          matchCase: false,
+          matchExactPhrase: false,
+          lookIn: 'all-folders',
+          tags: []
+        }
       }
     },
     tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']

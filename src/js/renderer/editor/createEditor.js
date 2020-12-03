@@ -2,7 +2,7 @@ import defineGambierMode from './gambierCodeMirrorMode'
 import * as actions from './keymapActions'
 import { getCharAt } from './editor-utils'
 
-export default function (element, theme) {
+export function createEditor (element, theme) {
 
   // Define "gambier" CodeMirror mode
   defineGambierMode()

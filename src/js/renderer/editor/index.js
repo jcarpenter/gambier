@@ -1,4 +1,4 @@
-export { default as createEditor } from './createEditor';
+// export { default as createEditor } from './createEditor';
 
 
 // -------- LOAD, FOCUS, TOGGLE -------- //
@@ -73,8 +73,8 @@ export function toggleSource(cm) {
 
 // -------- MAP -------- //
 
-import { getBlockElements } from '../editor/getBlockElements'
-import { getInlineElementsForLine } from '../editor/getInlineElementsForLine'
+import { getBlockElements } from './getBlockElements'
+import { getInlineElementsForLine } from './getInlineElementsForLine'
 
 /**
  * Find each element in the loaded document, and save their information into block and inline element arrays, in editorState. We use these arrays to then mark the document, help drive interactions, etc.
@@ -138,7 +138,7 @@ export function remapInlineElementsForLine(cm, lineHandle) {
 // -------- MARK -------- //
 
 // import markLinks from '../editor/markLinks.js'
-import markText from '../editor/markText.js'
+import markText from './markText.js'
 
 /**
  * Mark all lines in the document

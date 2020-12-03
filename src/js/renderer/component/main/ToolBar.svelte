@@ -1,15 +1,18 @@
 <script>
-import ToolbarButton from "../ui/ToolbarButton.svelte";
+import IconButton from "../ui/IconButton.svelte";
 import AddressBar from "./AddressBar.svelte";
 
 export let state = {}
+
+function todo() {
+    console.log('Toolbar.svelte: TODO')
+}
 
 </script>
 
 <style type="text/scss">
     #address-bar {
         width: 100%;
-        // background-color: pink;
         height: 40px;
         display: flex;
         flex-direction: row;
@@ -17,13 +20,10 @@ export let state = {}
         padding: 0 5px;
     }
 
-    .sidebarBtn {
-
-    }
 </style>
 
 <div id="address-bar">
-    <ToolbarButton class="sidebarBtn" iconImage={'--img-sidebar-left'}/>
+    <IconButton tooltip={'Show sidebar'} icon={'--img-sidebar-left'} on:mousedown={todo} />
     <AddressBar {state} />
-    <ToolbarButton class="gridBtn" iconImage={'--img-rectangle-grid-2x2'}/>
+    <IconButton icon={'--img-rectangle-grid-2x2'} on:mousedown={todo} />
 </div>

@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 import produce, { enablePatches } from 'immer'
 import { newProject } from './Store.js'
-import { existsSync, pathExistsSync, accessSync } from 'fs-extra'
+import { accessSync } from 'fs-extra'
 import fs from 'fs'
 
 enablePatches()
@@ -69,13 +69,19 @@ export const update = (state, action, windowId) =>
       // -------- PROJECT/WINDOW: CREATE AND CLOSE -------- //
 
       case 'CREATE_NEW_PROJECT': {
-        createNewProject(draft)
+        draft.projects.push(createNewProject())
         break
       }
 
       case 'SET_PROJECT_DIRECTORY': {
-
-        project.directory = action.directory
+        // Do we have write permissions for the selected directory?
+        // If yes, proceed.
+        try {
+          accessSync(action.directory, fs.constants.W_OK)
+          project.directory = action.directory
+        } catch(err) {
+          console.log(err)
+        }
         break
       }
 
@@ -108,24 +114,18 @@ export const update = (state, action, windowId) =>
 
       // -------- PROJECT -------- //
 
+      // Citations
 
-      // Directory
-
-      case 'SET_PROJECTPATH_SUCCESS': {
+      case 'SET_PROJECT_CITATIONS_FILE': {
+        // Do we have read and write permissions for the selected file?
+        // If yes, proceed.
+        // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
         try {
-          // Is path valid, and can we write to it?
-          // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
           accessSync(action.path, fs.constants.W_OK)
-          // If yes, proceed.
-          project.directory = action.path
+          project.citations = action.path
         } catch (err) {
-          // Else, do nothing.
+          console.log(err)
         }
-        break
-      }
-
-      case 'SET_PROJECTPATH_FAIL': {
-        // DO NOTHING
         break
       }
 
@@ -148,15 +148,20 @@ export const update = (state, action, windowId) =>
 
       // -------- SIDEBAR 2 -------- //
 
+      case 'SELECT_SIDEBAR_TAB_BY_ID': {
+        project.sidebar.activeTabId = action.id
+        break
+      }
+
+      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
+        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index]
+        break
+      }
+
       case 'SIDEBAR_SET_SORTING': {
         const tab = project.sidebar.tabsById[action.tabId]
         tab.sortBy = action.sortBy
         tab.sortOrder = action.sortOrder
-        break
-      }
-
-      case 'SELECT_SIDEBAR_TAB_BY_ID': {
-        project.sidebar.activeTabId = action.id
         break
       }
 
@@ -173,10 +178,18 @@ export const update = (state, action, windowId) =>
         break
       }
 
-      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
-        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index]
+      case 'SIDEBAR_SELECT_TAGS': {
+        const tab = project.sidebar.tabsById[action.tabId]
+        tab.selectedTags = action.tags
         break
       }
+
+      case 'SIDEBAR_SET_SEARCH_PARAMS': {
+        const tab = project.sidebar.tabsById.search
+        tab.options = action.options
+        break
+      }
+
       case 'TOGGLE_SIDEBAR_PREVIEW': {
         project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen
         break

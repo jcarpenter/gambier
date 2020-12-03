@@ -7,7 +7,14 @@
 
   function handleKeydown(evt) {
     if (!focused) return
+    
+    // Focus on Cmd-F
     if (evt.key == 'f' && evt.metaKey) {
+      input.select()
+    }
+
+    // Select all
+    if (evt.metaKey && evt.key == 'a') {
       input.select()
     }
   }
@@ -67,6 +74,7 @@
 
   input {
     @include label-normal;
+    color: var(--textColor);
     margin: 1px 0 0 24px;
     width: 100%;
     background: transparent;

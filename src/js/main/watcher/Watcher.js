@@ -20,7 +20,7 @@ export class Watcher {
 
     // Create listener for directory changes
     global.store.onDidAnyChange((state, oldState) => {
-      
+
       const directory = state.projects.find((p) => p.window.id == this.id).directory
       const directoryIsDefined = directory !== ''
       const directoryWasEmpty = this.directory == ''
@@ -49,6 +49,8 @@ export class Watcher {
   id = 0
 
   async start() {
+    
+    const stmt = global.db.prepare('INSERT INTO docs (id, name, title, body) VALUES (?, ?, ?, ?)')
 
     this.files = await mapProject(this.directory)
     // console.log(JSON.stringify(this.files.tree, null, 2))
@@ -66,6 +68,17 @@ export class Watcher {
     // Send initial files to browser window
     const win = BrowserWindow.fromId(this.id)
     win.webContents.send('initialFilesFromMain', this.files)
+
+    // Index files into DB
+    this.files.allIds.forEach((id) => {
+      const file = this.files.byId[id]
+      if (file.type == 'doc') {
+        stmt.run(id, file.name, file.title, file.excerpt)
+      }
+    })
+
+    const getAll = global.db.prepare('SELECT * FROM docs')
+    console.log(getAll.all())
   }
 
   stop() {
@@ -143,7 +156,7 @@ export class Watcher {
                 const file = getFileByPath(draft, c.path)
                 // Remove from `byId`, `allIds`, and parent's children.
                 delete draft.byId[file.id]
-                draft.allIds.splice(file.index, 1)
+                draft.allIds.splice(file.index, nnpm1)
                 const indexInChildren = parentTreeItem.children.findIndex((child) => child.id == file.id)
                 parentTreeItem.children.splice(indexInChildren, 1)
                 break

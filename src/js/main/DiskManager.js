@@ -89,7 +89,9 @@ export class DiskManager {
 	watchers = []
 
 	/**
-	 * On startup, create a Watcher instance for each project. If a project does not have a valid directory, the watcher will not start itself until one is assigned.
+	 * On startup, create a Watcher instance for each project. 
+	 * If a project does not have a valid directory, the watcher will watch for 
+	 * changes, and start itself when a directory is assigned.
 	 */
 	async startup() {
 		let index = 0

@@ -4,8 +4,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
-
   header {
     padding: 0 10px;
     display: flex;

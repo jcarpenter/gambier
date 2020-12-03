@@ -7,6 +7,7 @@ var ElectronStore = require('electron-store');
 var produce = require('immer');
 var fs = require('fs');
 require('colors');
+var Database = require('better-sqlite3');
 require('deep-eql');
 var chokidar = require('chokidar');
 var matter = require('gray-matter');
@@ -21,6 +22,7 @@ var path__default = /*#__PURE__*/_interopDefaultLegacy(path);
 var ElectronStore__default = /*#__PURE__*/_interopDefaultLegacy(ElectronStore);
 var produce__default = /*#__PURE__*/_interopDefaultLegacy(produce);
 var fs__default = /*#__PURE__*/_interopDefaultLegacy(fs);
+var Database__default = /*#__PURE__*/_interopDefaultLegacy(Database);
 var chokidar__default = /*#__PURE__*/_interopDefaultLegacy(chokidar);
 var matter__default = /*#__PURE__*/_interopDefaultLegacy(matter);
 var removeMd__default = /*#__PURE__*/_interopDefaultLegacy(removeMd);
@@ -91,13 +93,19 @@ const update = (state, action, windowId) =>
       // -------- PROJECT/WINDOW: CREATE AND CLOSE -------- //
 
       case 'CREATE_NEW_PROJECT': {
-        createNewProject();
+        draft.projects.push(createNewProject());
         break
       }
 
       case 'SET_PROJECT_DIRECTORY': {
-
-        project.directory = action.directory;
+        // Do we have write permissions for the selected directory?
+        // If yes, proceed.
+        try {
+          fsExtra.accessSync(action.directory, fs__default['default'].constants.W_OK);
+          project.directory = action.directory;
+        } catch(err) {
+          console.log(err);
+        }
         break
       }
 
@@ -130,24 +138,18 @@ const update = (state, action, windowId) =>
 
       // -------- PROJECT -------- //
 
+      // Citations
 
-      // Directory
-
-      case 'SET_PROJECTPATH_SUCCESS': {
+      case 'SET_PROJECT_CITATIONS_FILE': {
+        // Do we have read and write permissions for the selected file?
+        // If yes, proceed.
+        // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
         try {
-          // Is path valid, and can we write to it?
-          // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
           fsExtra.accessSync(action.path, fs__default['default'].constants.W_OK);
-          // If yes, proceed.
-          project.directory = action.path;
+          project.citations = action.path;
         } catch (err) {
-          // Else, do nothing.
+          console.log(err);
         }
-        break
-      }
-
-      case 'SET_PROJECTPATH_FAIL': {
-        // DO NOTHING
         break
       }
 
@@ -170,15 +172,20 @@ const update = (state, action, windowId) =>
 
       // -------- SIDEBAR 2 -------- //
 
+      case 'SELECT_SIDEBAR_TAB_BY_ID': {
+        project.sidebar.activeTabId = action.id;
+        break
+      }
+
+      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
+        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index];
+        break
+      }
+
       case 'SIDEBAR_SET_SORTING': {
         const tab = project.sidebar.tabsById[action.tabId];
         tab.sortBy = action.sortBy;
         tab.sortOrder = action.sortOrder;
-        break
-      }
-
-      case 'SELECT_SIDEBAR_TAB_BY_ID': {
-        project.sidebar.activeTabId = action.id;
         break
       }
 
@@ -195,10 +202,18 @@ const update = (state, action, windowId) =>
         break
       }
 
-      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
-        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index];
+      case 'SIDEBAR_SELECT_TAGS': {
+        const tab = project.sidebar.tabsById[action.tabId];
+        tab.selectedTags = action.tags;
         break
       }
+
+      case 'SIDEBAR_SET_SEARCH_PARAMS': {
+        const tab = project.sidebar.tabsById.search;
+        tab.options = action.options;
+        break
+      }
+
       case 'TOGGLE_SIDEBAR_PREVIEW': {
         project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen;
         break
@@ -402,7 +417,8 @@ const newProject = {
         lastSelected: {},
         selected: [],
         sortBy: 'By Title',
-        sortOrder: 'Ascending'
+        sortOrder: 'Ascending',
+        selectedTags: []
       },
       media: {
         title: 'Media',
@@ -420,6 +436,12 @@ const newProject = {
         title: 'Search',
         lastSelected: {},
         selected: [],
+        options: {
+          matchCase: false,
+          matchExactPhrase: false,
+          lookIn: 'all-folders',
+          tags: []
+        }
       }
     },
     tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
@@ -652,6 +674,51 @@ function rgbaHexToRgbaCSS(hex, alphaOveride, brightnessAdjustment = 0) {
 // console.log(systemPreferences.getAccentColor())
 // console.log(systemPreferences.getSystemColor('blue'))
 // console.log(systemPreferences.effectiveAppearance)
+
+class DbManager {
+  constructor() {
+  }
+
+  init() {
+
+    // Create Database object.
+    // Pass ":memory:" as the first argument to create an in-memory db.
+    global.db = new Database__default['default'](':memory:', { verbose: console.log });
+    const createTable = global.db.prepare('CREATE VIRTUAL TABLE docs USING FTS5(id, name, title, body)');
+    createTable.run();
+    
+    // const insertTest = global.db.prepare('INSERT INTO docs (title, path) VALUES (?, ?)')
+    // const info = insertTest.run("My time in Tuscany", "Was mostly unremarkable, to be perfectly honest.")
+    // console.log(info.changes)
+
+    // const insert = global.db.prepare('INSERT INTO docs (id, name, title, body) VALUES (?, ?, ?, ?)');
+
+    // const insertMany = global.db.transaction((data) => {
+    //   for (const item of data) {
+    //     insert.run(item)
+    //   }
+    // });
+
+    // insertMany([
+    //   { title: 'Joey', path: 'docs/joey.md' },
+    //   { title: 'Sally', path: 'docs/salley.md' },
+    //   { title: 'Junior', path: 'docs/junior.md' },
+    // ]);
+
+    // const joey = global.db.prepare('SELECT * FROM docs WHERE title = ?').get('Junior')
+    // console.log(joey)
+
+    // const deleteTest = global.db.prepare('DELETE FROM docs WHERE title = ?').run("Sally")
+   
+    // const getAll = global.db.prepare('SELECT * FROM docs')
+    // console.log(getAll.all())
+    
+    // const updateTest = global.db.prepare('UPDATE docs SET title = ? WHERE title = ?').run('Zelda!', 'Joey')
+    
+    // console.log(getAll.all())
+
+  }
+}
 
 const formats = {
   document: ['.md', '.markdown'],
@@ -1036,7 +1103,7 @@ class Watcher {
 
     // Create listener for directory changes
     global.store.onDidAnyChange((state, oldState) => {
-      
+
       const directory = state.projects.find((p) => p.window.id == this.id).directory;
       const directoryIsDefined = directory !== '';
       const directoryWasEmpty = this.directory == '';
@@ -1065,6 +1132,8 @@ class Watcher {
   id = 0
 
   async start() {
+    
+    const stmt = global.db.prepare('INSERT INTO docs (id, name, title, body) VALUES (?, ?, ?, ?)');
 
     this.files = await mapProject(this.directory);
     // console.log(JSON.stringify(this.files.tree, null, 2))
@@ -1082,6 +1151,17 @@ class Watcher {
     // Send initial files to browser window
     const win = electron.BrowserWindow.fromId(this.id);
     win.webContents.send('initialFilesFromMain', this.files);
+
+    // Index files into DB
+    this.files.allIds.forEach((id) => {
+      const file = this.files.byId[id];
+      if (file.type == 'doc') {
+        stmt.run(id, file.name, file.title, file.excerpt);
+      }
+    });
+
+    const getAll = global.db.prepare('SELECT * FROM docs');
+    console.log(getAll.all());
   }
 
   stop() {
@@ -1159,7 +1239,7 @@ class Watcher {
                 const file = getFileByPath(draft, c.path);
                 // Remove from `byId`, `allIds`, and parent's children.
                 delete draft.byId[file.id];
-                draft.allIds.splice(file.index, 1);
+                draft.allIds.splice(file.index, nnpm1);
                 const indexInChildren = parentTreeItem.children.findIndex((child) => child.id == file.id);
                 parentTreeItem.children.splice(indexInChildren, 1);
                 break
@@ -1295,7 +1375,9 @@ class DiskManager {
 	watchers = []
 
 	/**
-	 * On startup, create a Watcher instance for each project. If a project does not have a valid directory, the watcher will not start itself until one is assigned.
+	 * On startup, create a Watcher instance for each project. 
+	 * If a project does not have a valid directory, the watcher will watch for 
+	 * changes, and start itself when a directory is assigned.
 	 */
 	async startup() {
 		for (const project of global.state().projects) {
@@ -1344,7 +1426,7 @@ async function saveFile (path, data) {
 	}
 }
 
-async function setProjectPath () {
+async function selectProjectDirectoryFromDialog () {
 
   const win = electron.BrowserWindow.getFocusedWindow();
 
@@ -1354,7 +1436,30 @@ async function setProjectPath () {
   });
 
   if (!selection.canceled) {
-    return { type: 'SET_PROJECT_DIRECTORY', directory: selection.filePaths[0] }
+    return { 
+      type: 'SET_PROJECT_DIRECTORY', 
+      directory: selection.filePaths[0] 
+    }
+  }
+}
+
+async function selectCitationsFileFromDialog () {
+
+  const win = electron.BrowserWindow.getFocusedWindow();
+
+  const selection = await electron.dialog.showOpenDialog(win, {
+    title: 'Select Citations File',
+    properties: ['openFile'],
+    filters: [
+      { name: 'JSON', extensions: ['json'] },
+    ]
+  });
+
+  if (!selection.canceled) {
+    return { 
+      type: 'SET_PROJECT_CITATIONS_FILE', 
+      path: selection.filePaths[0] 
+    }
   }
 }
 
@@ -1391,8 +1496,11 @@ class IpcManager {
     electron.ipcMain.on('dispatch', async (evt, action) => {
       const win = electron.BrowserWindow.fromWebContents(evt.sender);
       switch (action.type) {
-        case ('SELECT_PROJECT_DIRECTORY'):
-          store.dispatch(await setProjectPath(), win.id);
+        case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
+          store.dispatch(await selectCitationsFileFromDialog(), win.id);
+          break
+        case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
+          store.dispatch(await selectProjectDirectoryFromDialog(), win.id);
           break
         case ('SAVE_FILE'):
           store.dispatch(await saveFile(action.path, action.data), win.id);
@@ -1410,6 +1518,19 @@ class IpcManager {
     });
 
     // -------- IPC: Invoke -------- //
+
+    electron.ipcMain.handle('queryDb', (evt, params) => {
+      const { query } = params;
+      const results = global.db.prepare(`
+        SELECT highlight(docs, 2, '<b>', '</b>') title,
+               highlight(docs, 3, '<b>', '</b>') body,
+               id
+        FROM docs 
+        WHERE docs MATCH ? 
+        ORDER BY rank`
+      ).all(query);
+      return results
+    });
 
     electron.ipcMain.handle('getState', (evt) => {
       return global.state()
@@ -1919,6 +2040,32 @@ if (!electron.app.isPackaged) {
 }
 
 
+// -------- IPC TESTING -------- //
+
+// ipc.config.id = 'world';
+// ipc.config.retry = 1500;
+
+// ipc.serve(() => {
+
+//     ipc.server.on('message', (data, socket) => {
+//       ipc.log('got a message : '.debug, data)
+//       ipc.server.emit(
+//         socket,
+//         'message',  // This can be anything you want so long as your client knows.
+//         data + ' world!'
+//       )
+//     })
+
+//     ipc.server.on('socket.disconnected', (socket, destroyedSocketID) => {
+//       ipc.log('client ' + destroyedSocketID + ' has disconnected!')
+//     })
+//   }
+// )
+
+// ipc.server.start()
+
+
+
 // -------- SETUP -------- //
 
 // Create store (and global variables for store and state)
@@ -1932,6 +2079,7 @@ const diskManager = new DiskManager();
 const ipcManager = new IpcManager();
 const menuBarManager = new MenuBarManager();
 const windowManager = new WindowManager();
+const dbManager = new DbManager();
 
 // One more global variable
 global.watchers = diskManager.watchers;
@@ -1942,10 +2090,11 @@ electron.app.allowRendererProcessReuse = true;
 // Start app
 electron.app.whenReady()
   .then(async () => {
-    
+
+    dbManager.init();
+
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' });
-    console.log(global.state().projects);
     // Get system appearance settings
     appearanceManager.startup();
     // Create a window for each project

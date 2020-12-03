@@ -3,47 +3,53 @@
 
   export let isActive = false
   export let width = 100
-  export let height = 22
   export let label = 'Label'
   export let type = 'push' // push, pulldown, or popup
-
-  let isOpen = false
+  export let isCompact = false
+    
 </script>
 
 <style type="text/scss">
-  @import '../../../../../styles/_mixins.scss';
 
   // We need to break the menu out any parent overflow:hidden elements (e.g. a sidebar tab), so we set position relative on the top div, and position fixed on the menu div. Per this tip: https://github.com/w3c/csswg-drafts/issues/4092#issuecomment-595247838
 
-  // // Compact
-  // .compact {
-  //   .button {
-  //     height: 14px;
-  //     @include label-normal-small;
-  //   }
-  // }
+  // Compact
+  .button.isCompact {
+    @include label-normal-small;
+    height: 18px;
+    border-radius: 5px;
+    .icon {
+      top: 3px;
+      right: 3px;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      .img {
+        -webkit-mask-size: 6px;
+      }
+    }
+  }
+  
   // Button
   .button {
-    --width: 0;
-    --height: 0;
-
     width: calc(var(--width) * 1px);
-    height: calc(var(--height) * 1px);
+    height: 22px;
 
     @include label-normal;
     user-select: none;
     position: relative;
     background-color: var(--controlBackgroundColor);
-    border-radius: 7px;
+    border-radius: 6px;
     box-shadow: 
-      0 0 0 0.5px rgba(var(--foregroundColor), 0.15) inset, 
-      0 0.5px 0 0 rgba(var(--foregroundColor), 0.25);
+      0 0 0 0.5px rgba(var(--foregroundColor), 0.2) inset, 
+      0 0.5px 0 0 rgba(var(--foregroundColor), 0.15),
+      0 1px 1px 0 rgba(var(--foregroundColor), 0.1);
 
     display: flex;
     align-items: center;
   
     // On press, tint whole button dark or light (depending on the mode)
-    &.isOpen {
+    &.isActive {
       filter: brightness(0.95);
     }
   }
@@ -67,22 +73,21 @@
   // And icon inside a blue square
   .icon {
     position: absolute;
+    background: 
+        linear-gradient(rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0)),
+        linear-gradient(var(--controlAccentColor), var(--controlAccentColor));
     right: 3px;
     top: 3px;
     width: 16px;
     height: 16px;
-    background: var(--controlAccentColor);
-    border-radius: 5px;
+    border-radius: 4px;
 
     .img {
       @include centered_mask_image;
-      width: 100%;
-      height: 100%;
-      -webkit-mask-size: 8px;
+      @include absolute_centered;
+      width: 14px;
+      height: 14px;
       background-color: white;
-      // background-size: 8px;
-      // background-position: center;
-      // background-repeat: no-repeat;
     }
   }
 
@@ -92,6 +97,7 @@
 
   .pulldown .img {
     -webkit-mask-image: var(--img-chevron-down-bold);
+    -webkit-mask-size: 8px;
   }
   
 </style>
@@ -99,8 +105,9 @@
 
 <div 
   class="button {type}" 
-  class:isOpen
-  use:css={{width, height}} 
+  class:isActive
+  class:isCompact
+  use:css={{width}} 
   on:mousedown 
   >
   <span class="label">{label}</span>

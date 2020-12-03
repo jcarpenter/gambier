@@ -1,11 +1,14 @@
 <script>
   import { project, sidebar } from '../../StateManager'
+  import Tab from './Tab.svelte'
+  import Separator from '../ui/Separator.svelte'
   import Project from './Project.svelte'
   import AllDocuments from './AllDocuments.svelte'
   import MostRecent from './MostRecent.svelte'
+  import Tags from './Tags.svelte'
   import Media from './Media.svelte'
-  import Separator from '../ui/Separator.svelte'
-  import Tab from './Tab.svelte'
+  import Citations from './Citations.svelte'
+  import Search from './Search.svelte'
   import Preview from './Preview.svelte'
   
   // $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
@@ -13,8 +16,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
-
   #sidebar {
     --state-sideBarWidth: 100px;
     // background-color: var(--windowBackgroundColor);
@@ -79,15 +80,15 @@
   {:else if $sidebar.activeTabId == 'mostRecent'}
     <MostRecent />
   {:else if $sidebar.activeTabId == 'tags'}
-    Tags
+    <Tags />
   {:else if $sidebar.activeTabId == 'media'}
     <Media />
   {:else if $sidebar.activeTabId == 'citations'}
-    Citations
+    <Citations />
   {:else if $sidebar.activeTabId == 'search'}
-    Search
+    <Search />
   {/if}
 
-  <Preview/>
+  <!-- <Preview/> -->
 
 </div>

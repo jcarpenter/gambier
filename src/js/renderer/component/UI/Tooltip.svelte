@@ -7,6 +7,10 @@
   let x = 0
   let y = 0
 
+  const msDelayUntilShow = 1600
+  const msDelayUntilUpdate = 250
+  const msDelayUntilHide = 500
+
   let oldStatus, oldText
   let updateDelayTimer
   let hideDelayTimer
@@ -35,7 +39,7 @@
             text = $tooltip.text
             x = $tooltip.x
             y = $tooltip.y
-          }, 250)
+          }, msDelayUntilUpdate)
         } else {
           // Show after delay. Is triggered on mouseover. Delay is implemented by the `isVisible` class transition-delay. If a hide timer is active, cancel it.
           isVisible = true
@@ -52,7 +56,7 @@
         // Hide after delay. Is triggered when mousing out.
         hideDelayTimer = setTimeout(() => {
           isVisible = false
-        }, 500);
+        }, msDelayUntilHide);
         break
     }
 
@@ -94,13 +98,13 @@
     &.isVisible {
       opacity: 1;
       transition: 
-        opacity 1ms 1200ms;
+        opacity 1ms calc(var(--msDelayUntilShow) * 1ms);
     }
   }
 
 
 </style>
 
-<div id="tooltip" class:isVisible use:css={{x, y, text}}>
+<div id="tooltip" class:isVisible use:css={{x, y, text, msDelayUntilShow}}>
   {text}
 </div>

@@ -7,6 +7,7 @@
   import Menu from './ui/Menu.svelte'
   import Tooltip from './ui/Tooltip.svelte'
   import StateDisplay from './dev/StateDisplay.svelte'
+  // import Editor from './main/Editor.svelte'
 
   $: directoryIsSet = $project.directory
   $: filesPopulated = $files.tree
@@ -15,8 +16,6 @@
 
 
 <style type="text/scss">
-  @import '../../../styles/_mixins.scss';
-
   #main {
     background-color: var(--windowBackgroundColor);
     // width: calc(100vw - 250px);
@@ -44,5 +43,6 @@
     <Toolbar />
     <Separator />
     <StateDisplay />
+    <!-- <Editor /> -->
   </div>
 {/if}

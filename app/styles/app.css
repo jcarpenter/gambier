@@ -4,6 +4,7 @@
   --decelerateEase: cubic-bezier(0, 0, 0.2, 1);
   /* -------------- Images -------------- */
   --img-arrow-up-arrow-down: url(styles/themes/gambier-light/img/arrow.up.arrow.down.svg);
+  --img-checkmark-heavy: url(styles/themes/gambier-light/img/checkmark.heavy.svg);
   --img-checkmark: url(styles/themes/gambier-light/img/checkmark.svg);
   --img-chevron-right: url(styles/themes/gambier-light/img/chevron.right.svg);
   --img-chevron-down-bold: url(styles/themes/gambier-light/img/chevron.down.bold.svg);
@@ -29,10 +30,6 @@
   --img-tag: url(styles/themes/gambier-light/img/tag.svg);
 }
 
-/* -------------- Misc -------------- */
-/* -------------- Materials -------------- */
-/* -------------- Patterns -------------- */
-/* -------------- Typography -------------- */
 * {
   box-sizing: border-box;
 }
@@ -46,6 +43,10 @@ body {
   padding: 0;
   height: 100%;
   overflow: hidden;
+}
+
+#layout {
+  height: 100%;
 }
 
 .flexContainerRow {

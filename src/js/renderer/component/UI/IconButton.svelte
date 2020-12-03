@@ -5,7 +5,7 @@
   export let icon = null // E.g. '--img-photo'
   export let showCaret = false
   export let isActive = false
-  export let tooltip = 'Wonder wider'
+  export let tooltip = ''
 
   // export let iconColor = '--controlTextColor'
 

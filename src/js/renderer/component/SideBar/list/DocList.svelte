@@ -4,7 +4,8 @@
   import { getContext } from 'svelte';
 	
 	export let listIds = []
-	export let component
+  export let component
+  export let showTags = false
   
   const tabId = getContext('tabId')
   $: tab = $sidebar.tabsById[tabId]
@@ -34,6 +35,6 @@
 
 <div class="list">
 	{#each listIds as id (id)}
-		<svelte:component this={component} {id} {listIds} />
+		<svelte:component this={component} {id} {listIds} {showTags} />
 	{/each}
 </div>
