@@ -164,7 +164,6 @@
   </div>
 
   <div class="stateTable">
-    <!-- <header>Stores</header> -->
     <div class="property">
       <div class="key">state</div>
       <div class="val">{stringify($state)}</div>

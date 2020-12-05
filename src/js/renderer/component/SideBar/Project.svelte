@@ -165,6 +165,7 @@
     })
   }
 
+
   /**
    * Determine how many visible descendants each expanded folder has.
    * We use these values to determine how many "empty" row items to insert.

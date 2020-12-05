@@ -29,16 +29,16 @@ export function setTooltip(node, text) {
     tooltip.set({
       status: 'show',
       text: text,
-      x: evt.clientX, 
+      x: evt.clientX,
       y: evt.clientY + 4
-    })  
+    })
   }
 
   function onMouseDown() {
     tooltip.set({
       status: 'hide',
       text: '',
-      x: 0, 
+      x: 0,
       y: 0
     })
   }
@@ -58,29 +58,79 @@ export function setTooltip(node, text) {
 
   return {
     destroy() {
-			node.removeEventListener('mouseenter', onMouseEnter);
-			node.removeEventListener('click', onMouseDown);
-			node.removeEventListener('mouseleave', onMouseLeave);
-		}
+      node.removeEventListener('mouseenter', onMouseEnter);
+      node.removeEventListener('click', onMouseDown);
+      node.removeEventListener('mouseleave', onMouseLeave);
+    }
   }
 }
 
 
+export function dragIntoFolder(node, properties) {
 
-export function flash(element) {
-	requestAnimationFrame(() => {
-		element.style.transition = 'none';
-		element.style.color = 'rgba(255,62,0,1)';
-		element.style.backgroundColor = 'rgba(255,62,0,1)';
-		element.style.outline = '4px solid black';
+  const { isFolder, folderPath } = properties
 
-		setTimeout(() => {
-			element.style.transition = 'color 1s, background 1s, outline 1s';
-			element.style.color = '';
-			element.style.backgroundColor = '';
-			element.style.outline = '';
-		});
-	});
+  // on:dragover|preventDefault|stopPropagation={() => { isDraggedOver = true }}
+  // on:dragleave|preventDefault|stopPropagation={() => { isDraggedOver = false }}
+  // on:drop|preventDefault|stopPropagation={drop}
+
+  function onDragOver(evt) {
+    evt.preventDefault()
+    if (isFolder) {
+      node.classList.add('isDraggedOver')
+    }
+  }
+
+  function onDragLeave(evt) {
+    evt.preventDefault()
+    if (isFolder) {
+      node.classList.remove('isDraggedOver')
+    }
+  }
+
+  function onDrop(evt) {
+    // const type = file.type == '' ? 'folder' : file.type.includes('markdown') ? 'doc' : undefined
+    if (isFolder) {
+      node.classList.remove('isDraggedOver')
+      const file = evt.dataTransfer.files[0]
+      window.api.send('dispatch', {
+        type: 'DRAG_INTO_FOLDER',
+        filePath: file.path,
+        folderPath: folderPath
+      })
+    }
+  }
+
+  node.addEventListener('dragover', onDragOver);
+  node.addEventListener('dragleave', onDragLeave);
+  node.addEventListener('drop', onDrop);
+
+  return {
+    destroy() {
+      node.removeEventListener('dragover', onDragOver);
+      node.removeEventListener('dragleave', onDragLeave);
+      node.removeEventListener('drop', onDrop);
+    }
+  }
+
+}
+
+
+
+export function flash(node) {
+  requestAnimationFrame(() => {
+    node.style.transition = 'none';
+    node.style.color = 'rgba(255,62,0,1)';
+    node.style.backgroundColor = 'rgba(255,62,0,1)';
+    node.style.outline = '4px solid black';
+
+    setTimeout(() => {
+      node.style.transition = 'color 1s, background 1s, outline 1s';
+      node.style.color = '';
+      node.style.backgroundColor = '';
+      node.style.outline = '';
+    });
+  });
 }
 
 // const listItemProps = {
@@ -107,9 +157,9 @@ export function flash(element) {
 //     const clickedWhileNotSelected = !evt.metaKey && !props.isSelected
 //     const cmdClickedWhileNotSelected = evt.metaKey && !props.isSelected
 //     const cmdClickedWhileSelected = evt.metaKey && props.isSelected
-  
+
 //     let selected = []
-  
+
 //     if (clickedWhileSelected) {
 //       return
 //     } else if (shiftClicked) {
@@ -138,7 +188,7 @@ export function flash(element) {
 //       const indexToRemove = selected.indexOf(props.id)
 //       selected.splice(indexToRemove, 1)
 //     }
-  
+
 //     // If there are multiple selected, find and remove any duplicates.
 //     // Per: https://stackoverflow.com/a/14438954
 //     if (selected.length > 1) {

@@ -4,21 +4,24 @@
   import { onMousedown } from './interactions'
   import { getContext } from 'svelte';
 
-	export let id
-	export let listIds
+	// Optionally pass in file to use for doc. If undefined, we'll get doc from $files
+	// Gives us flexibility. In most cases we'll want the version from files, but
+	// in case of search results, we want to pass in modified version of file, with
+	// highlighted excerpt, etc.
+	export let file = undefined
+	export let id = ''
+	export let listIds = []
 	export let showTags = false
 	
 	const tabId = getContext('tabId')
 	$: tab = $sidebar.tabsById[tabId]
-	$: doc = $files.byId[id]
+	$: doc = file ? file : $files.byId[id]
 	$: isSelected = tab.selected.some((id) => id == doc.id)
 	$: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
 </script>
 
 <style type="text/scss">
-  @import '../../../../../styles/_mixins.scss';
-		
 	.doc {
 		contain: strict;
 		user-select: none;
@@ -59,6 +62,10 @@
 		line-height: 16px;
 	}
 
+	.excerpt :global(.highlight) {
+		text-decoration: underline;
+	}
+
 	.showTags .excerpt {
 		-webkit-line-clamp: 2;
 	}
@@ -69,7 +76,7 @@
 		height: 79px; // height minus 1, to create 1px gap below
 		margin-bottom: 1px;
 		.title, .excerpt {
-			color: var(--controlColor);
+			color: var(--selectedMenuItemTextColor);
 		}
 		&.isSidebarFocused {
 		  background-color: var(--selectedContentBackgroundColor);
@@ -80,8 +87,6 @@
 		  background-color: var(--disabledControlTextColor);
 		}
 	}
-
-	
 </style>
 
 <svelte:options immutable={true} />
@@ -101,5 +106,5 @@
 					{/each}
 				</div>
 			{/if}
-		<div class="excerpt">{doc.excerpt}</div>
+		<div class="excerpt">{@html doc.excerpt}</div>
 </div>

@@ -58,18 +58,10 @@ export class IpcManager {
 
     // -------- IPC: Invoke -------- //
 
-    ipcMain.handle('queryDb', (evt, params) => {
-      const { query } = params
-      const results = global.db.prepare(`
-        SELECT highlight(docs, 2, '<b>', '</b>') title,
-               highlight(docs, 3, '<b>', '</b>') body,
-               id
-        FROM docs 
-        WHERE docs MATCH ? 
-        ORDER BY rank`
-      ).all(query)
-      return results
-    })
+    // NOTE: We handle this in DbManager.js
+    // ipcMain.handle('queryDb', (evt, params) => {
+    //   ...
+    // })
 
     ipcMain.handle('getState', (evt) => {
       return global.state()

@@ -2,7 +2,6 @@ import { stat } from 'fs-extra'
 import matter from 'gray-matter'
 import removeMd from 'remove-markdown'
 import path from 'path'
-import { getMediaType } from '../../shared/utils'
 
 /**
  * For specified path, return document details
@@ -31,7 +30,7 @@ export async function mapDocument (filepath, parentId, nestDepth, stats = undefi
 
 	// Set excerpt
 	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
-	doc.excerpt = getExcerpt(gm.content)
+	doc.excerpt = removeMarkdown(gm.content, 350)
 
 	// Set fields from front matter (if it exists)
 	// gray-matter `isEmpty` property returns "true if front-matter is empty".
@@ -83,29 +82,54 @@ function getTitle(graymatter, filename) {
 }
 
 /**
- * Return excerpt from content, stripped of markdown characters.
+ * Return content stripped of markdown characters.
+ * And (optionally) trimmed down to specific character length.
  * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
- * @param {*} file 
+ * @param {*} content 
+ * @param {*} trimToLength 
  */
-function getExcerpt(content) {
+export function removeMarkdown(content, trimToLength = undefined) {
 
-	// Remove h1, if it exists. Then trim to 200 characters.
-	let excerpt = content
-		.replace(/^# (.*)\n/gm, '')
-		.substring(0, 600)
+	// Remove h1, if it exists. Currently atx-style only.
+	let text = content.replace(/^# (.*)\n/gm, '')
+	
+	// If `trimToLength` is defined, do initial trim.
+	// We will then remove markdown characters, and trim to final size.
+	// We do initial trim for performance purposes: to reduce amount of
+	// text that regex replacements below have to process. We add buffer
+	// of 100 characters, or else trimming markdown characters could put
+	// use under the specified `trimToLength` length.
+	if (trimToLength) {
+		text = text.substring(0, trimToLength + 100)
+	}
 
 	// Remove markdown formatting. Start with remove-markdown rules.
 	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
 	// Then add whatever additional changes I want (e.g. new lines).
-	excerpt = removeMd(excerpt)
-		.replace(/^> /gm, '')         // Block quotes
-		.replace(/^\n/gm, '')         // New lines at start of line (usually doc)
-		.replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
-		.replace(/\t/gm, ' ')         // Artifact left from list replacement
-		.replace(/\[@.*?\]/gm, '')    // Citations
-		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
-		.replace(/\s{2,}/gm, ' ')     // Extra spaces
-		.substring(0, 450)            // Trim to 200 characters
+	text = removeMd(text)
+		.replace(blockQuotes, '') 
+		.replace(newLines, '')         // New lines at start of line (usually doc)
+		.replace(unwantedWhiteSpace, ' ')
+		.replace(bracketedSpans, ' ')
+		// .replace(citations, '')
 
-	return excerpt
+	// If `trimToLength` is defined, trim to final length.
+	if (trimToLength) {
+		text = text.substring(0, trimToLength)
+	}
+
+	return text
 }
+
+const blockQuotes = /^> /gm
+const bracketedSpans = /:::.*?:::/gm
+const citations = /\[@.*?\]/gm
+
+// New lines at start of doc
+const newLines = /^\n/gm
+
+// Replace with space:
+// - New lines in-line
+// - Artifact left from list replacement
+// - Extra spaces
+const unwantedWhiteSpace = /\n|\t|\s{2,}/gm

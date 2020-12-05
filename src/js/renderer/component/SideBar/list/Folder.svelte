@@ -37,7 +37,6 @@
 		const isExpanded = isExpandable && $sidebar.tabsById.project.expanded.some((id) => id == file.id)
 		return isExpanded
 	}
-	
 </script>
 
 <style type="text/scss">
@@ -88,7 +87,7 @@
 <div 
 	class="folder" 
 	use:css={{folderHeight, folderEasing, duration}}
-	class:isRoot 
+	class:isRoot
 	>
 	<ul class="rows" transition:slideUp|local={{ duration: isRoot ? 0 : duration }}>
 		{#each subtree.children as child (child.id)}
@@ -96,7 +95,7 @@
 				{#if !child.id.includes('empty')}
 				
 					<!-- File -->
-					<File id={child.id} {tabId} {listIds} nestDepth={nestDepth} />
+					<File id={child.id} {listIds} nestDepth={nestDepth} />
 					
 					<!-- Folder -->
 					{#if isExpandedFolder(child.id)}

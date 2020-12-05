@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher, afterUpdate } from 'svelte'
   import { state, project, files, sidebar } from '../../../StateManager'
-  import { css } from '../../ui/actions'
+  import { css, dragIntoFolder } from '../../ui/actions'
   import {onMousedown, toggleExpanded} from './interactions'
   import DisclosureButton from '../../ui/DisclosureButton.svelte'
   import { getContext } from 'svelte';
@@ -9,13 +9,14 @@
   export let id = ''
 	export let listIds = []
   export let nestDepth = 0  
+  // export let isDraggedOver = false
   
 	const tabId = getContext('tabId')
 	$: tab = $sidebar.tabsById[tabId]
   $: file = $files.byId[id]
-  $: isExpandable = file.type == 'folder' && file.numChildren
-  $: isExpanded = $sidebar.tabsById.project.expanded.some((id) => id == file.id)
-  $: isSelected = $sidebar.tabsById.project.selected.some((id) => id == file.id)
+  $: isExpandable = file?.type == 'folder'
+  $: isExpanded = $sidebar.tabsById.project.expanded.some((id) => id == file?.id)
+  $: isSelected = $sidebar.tabsById.project.selected.some((id) => id == file?.id)
   $: leftOffset = nestDepth * 15
   $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
@@ -41,6 +42,7 @@
       left: calc(calc(var(--leftOffset) * 1px) + 20px);
       width: 14px;
       height: 14px;
+      pointer-events: none;
     }
 
     .label {
@@ -49,6 +51,7 @@
       color: var(--labelColor);
       left: calc(calc(var(--leftOffset) * 1px) + 42px);
       white-space: nowrap;
+      pointer-events: none;
     }
 
     .counter {
@@ -57,6 +60,7 @@
       color: var(--tertiaryLabelColor);
       position: absolute;
       right: 7px;
+      pointer-events: none;
     }
   }
 
@@ -77,9 +81,9 @@
     -webkit-mask-image: var(--img-play-rectangle);
   }
 
-
   // Selection
-  .isSelected {
+  .file.isDraggedOver,
+  .file.isSelected {
     
     // Selected, and parent list IS focused
     .disclosure [role='button'],
@@ -108,30 +112,34 @@
 <svelte:options immutable={true} />
 
 <!-- use:listItem={{id, tabId, tab, listIds, isSelected}} -->
-<div
-  use:css={{ leftOffset }}
-  class="file {file.type}"
-  class:isSidebarFocused
-  class:isSelected
-  class:isExpanded
-  on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds)}
-  >
-    
-  {#if isExpandable}
-    <DisclosureButton
-      width={14}
-      height={14}
-      padding={6}
-      left={leftOffset + 3}
-      rotation={isExpanded ? 90 : 0}
-      tooltip={'Toggle Expanded'}
-      iconColor={isSelected ? 'white' : $state.appearance.os.colors.controlTextColor}
-      on:toggle={() => toggleExpanded(id, isExpanded, tab, tabId)} />
+{#if file}
+  <div
+    use:css={{ leftOffset }}
+    use:dragIntoFolder={{isFolder: isExpandable, folderPath: file.path}}
+    class="file {file.type}"
+    class:isSidebarFocused
+    class:isSelected
+    class:isExpanded
+    on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds)}
+    >
+      
+    {#if isExpandable}
+      <DisclosureButton
+        width={14}
+        height={14}
+        padding={6}
+        left={leftOffset + 3}
+        rotation={isExpanded ? 90 : 0}
+        tooltip={'Toggle Expanded'}
+        iconColor={isSelected ? 'white' : $state.appearance.os.colors.controlTextColor}
+        on:toggle={() => toggleExpanded(id, isExpanded, tab, tabId)} />
 
-  {/if}
-  <div class="icon" />
-  <div class="label">{file.title ? file.title : file.name}</div>
-  {#if isExpandable}
-    <div class="counter">{file.numDescendants}</div>
-  {/if}
-</div>
+    {/if}
+    <div class="icon" />
+    <div class="label">{file.title ? file.title : file.name}</div>
+    {#if isExpandable}
+      <!-- <div class="counter">{file.numDescendants}</div> -->
+      <div class="counter">{file.numDescendants}</div>
+    {/if}
+  </div>
+{/if}

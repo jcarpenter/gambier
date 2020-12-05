@@ -12,12 +12,15 @@
   import MenuButton from '../ui/MenuButton.svelte';
   import Token from '../ui/Token.svelte';
   import Checkbox from '../ui/Checkbox.svelte';
-  
+  import { arrowUpDown } from './list/interactions';
+
   let query = '' // Bound to search field
 
   let tabId = 'search'
   setContext('tabId', tabId);
   $: tab = $sidebar.tabsById[tabId]
+
+	$: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
   // -------- SORTING -------- //
 
@@ -29,7 +32,7 @@
     { label: 'Descending', group: 'sortOrder', isChecked: tab.sortOrder == 'Descending' },
   ]
 
-  // -------- OPTIONS -------- //
+  // -------- OPTIONS -------- //file.path
 
   $: options = tab.options
 
@@ -57,7 +60,7 @@
 
     // Starting options
     lookInOptions = [
-      { label: 'All Folders', isChecked: options.lookIn == 'All Folders' },
+      { label: 'All Folders', id: '*', isChecked: options.lookIn == '*' },
       { label: 'separator' },
     ]
     
@@ -65,7 +68,7 @@
     $files.allIds.forEach((id) => {
       const file = $files.byId[id]
       if (file.type == 'folder') {
-        lookInOptions.push({ label: file.name, isChecked: options.lookIn == file.name })
+        lookInOptions.push({ label: file.name, id: id, isChecked: options.lookIn == id })
       }
     })
   }
@@ -74,6 +77,7 @@
   // -------- RESULTS -------- //
 
   let results = []
+  $: resultIds = results.map((r) => r.id)
 
   $: $files, query, options, getResults()
 
@@ -85,7 +89,9 @@
     }
 
     const params = {
-      query: options.matchExactPhrase ? query : `${query}*`
+      query: query,
+      path: options.lookIn == '*' ? $project.directory : $files.byId[options.lookIn].path,
+      matchExactPhrase: options.matchExactPhrase
     }
 
     const dbResults = await window.api.invoke('queryDb', params)
@@ -95,10 +101,9 @@
     results = dbResults.map((r) => {
       const file = { ...$files.byId[r.id] }
       if (r.body) file.excerpt = r.body
-      if (r.title) file.title = r.title
-      return r.id
+      // if (r.title) file.title = r.title
+      return file
     })
-    console.log(results)
   }
 
 </script>
@@ -136,7 +141,25 @@
       margin-top: 5px;
     }
   }
+
+  .list {
+    padding: 10px;
+    flex-grow: 1;
+    overflow-y: scroll;
+    position: relative;
+  }
 </style>
+
+<svelte:window on:keydown={(evt) => {
+	if (!isSidebarFocused) return
+  switch (evt.key) {
+    case 'ArrowUp':
+    case 'ArrowDown':
+      evt.preventDefault()
+      arrowUpDown(evt.key, evt.shiftKey, evt.altKey, tab, tabId, resultIds)
+      break
+  }
+}} />
 
 <div class="section">
   <Header title={tab.title} hoverToShowSlot={true}>
@@ -161,7 +184,7 @@
     <div class="row">
       <div class="label">Look In:</div>
     <div>
-      <MenuButton isCompact={true} options={lookInOptions} menuType={'pulldown'} buttonType={'text'} buttonWidth={110} on:select={(evt) => updateOptions('lookIn', evt.detail.option.label)}/>
+      <MenuButton isCompact={true} options={lookInOptions} menuType={'pulldown'} buttonType={'text'} buttonWidth={110} on:select={(evt) => updateOptions('lookIn', evt.detail.option.id)}/>
     </div>
     </div>
     
@@ -197,6 +220,11 @@
     <div id="numberOfResults">Found results in {results.length} documents</div>
   {/if}
   <Separator marginSides={10} />
-  <DocList listIds={results} component={Doc} />
+  <div class="list">
+    {#each results as file (file.id)}
+      <Doc id={file.id} file={file} listIds={resultIds} />
+    {/each}
+  </div>
+  <!-- <DocList listIds={results} component={Doc} /> -->
 </div>
 

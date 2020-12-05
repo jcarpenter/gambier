@@ -2,10 +2,6 @@
 
 An experimental markdown editor.
 
-## WIP Notes
-
-* Dec 2: We need to disable contextIsolation in browser window config webPreferences, or else we cannot load modules into preload. And we need to load node-ipc. When contextIsolation is true, preload is limited to a subset of electron 
-
 ## Features
 
 ### Keyboard Shortcuts

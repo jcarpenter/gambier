@@ -9,8 +9,8 @@
   
   const tabId = getContext('tabId')
   $: tab = $sidebar.tabsById[tabId]
-	$: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
-
+  $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+  
 </script>
 
 <style type="text/scss">
@@ -39,5 +39,5 @@
 }} />
 
 <div class="list">
-	<Folder {tabId} {subtree} {listIds} />
+	<Folder {subtree} {listIds} />
 </div>

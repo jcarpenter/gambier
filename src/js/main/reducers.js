@@ -1,8 +1,9 @@
 import { BrowserWindow } from 'electron'
 import produce, { enablePatches } from 'immer'
 import { newProject } from './Store.js'
-import { accessSync } from 'fs-extra'
+import { accessSync, renameSync } from 'fs-extra'
 import fs from 'fs'
+import path from 'path'
 
 enablePatches()
 
@@ -193,6 +194,16 @@ export const update = (state, action, windowId) =>
       case 'TOGGLE_SIDEBAR_PREVIEW': {
         project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen
         break
+      }
+
+      case 'DRAG_INTO_FOLDER': {
+        // const tab = project.sidebar.tabsById.project
+        const fileName = path.basename(action.filePath)
+        const newFilePath = path.format({
+          dir: action.folderPath,
+          base: fileName
+        })
+        renameSync(action.filePath, newFilePath)
       }
 
     }

@@ -2,9 +2,9 @@
 
 var electron = require('electron');
 var path = require('path');
-var fsExtra = require('fs-extra');
 var ElectronStore = require('electron-store');
 var produce = require('immer');
+var fsExtra = require('fs-extra');
 var fs = require('fs');
 require('colors');
 var Database = require('better-sqlite3');
@@ -217,6 +217,16 @@ const update = (state, action, windowId) =>
       case 'TOGGLE_SIDEBAR_PREVIEW': {
         project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen;
         break
+      }
+
+      case 'DRAG_INTO_FOLDER': {
+        // const tab = project.sidebar.tabsById.project
+        const fileName = path__default['default'].basename(action.filePath);
+        const newFilePath = path__default['default'].format({
+          dir: action.folderPath,
+          base: fileName
+        });
+        fsExtra.renameSync(action.filePath, newFilePath);
       }
 
     }
@@ -677,16 +687,114 @@ function rgbaHexToRgbaCSS(hex, alphaOveride, brightnessAdjustment = 0) {
 
 class DbManager {
   constructor() {
+
+    // Create database
+    // Pass ":memory:" as the first argument to create an in-memory db.
+    this.db = new Database__default['default'](':memory:');
+    // this.db = new Database(':memory:', { verbose: console.log })
+
+    // Create table
+    this.table = this.db.prepare(`
+      CREATE VIRTUAL TABLE docs 
+      USING FTS5(id, name, title, path, body)
+    `).run();
+
+    // Statement for inserting new docs
+
+    // Using `INSERT OR REPLACE` means we replace the row, if it already exists. Else, we create (insert) it. 
+
+    // The following says: "Does a row with the same id already exist? If yes, get it's rowid. And insert the new values at that same rowid, thereby replacing the original row. Else, insert a new row." `rowid` is a unique integer index value automatically assigned to each row on creation, in FTS tables (or any sqlite table where we don't specify a primary key).
+
+    // This is all a bit convuluted. That's because we're using FTS tables. Normally we could jusy, say, set the `id` column as the primary key, and sqlite would automatically trigger the replace action if we tried to add a row with the same id. But FTS tables don't allow primary key declaration or constraints (the other tool we could use). So instead we have to insert at specific rowid's, ala working with arrays by indexes.
+    this.insert_stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO docs (rowid, id, name, title, path, body) 
+      VALUES ((SELECT rowid FROM docs WHERE id = @id LIMIT 1), @id, @name, @title, @path, @body)
+    `);
+
+    this.insert_many_stmt = this.db.transaction((docs) => {
+      for (const doc of docs) {
+        this.insert_stmt.run(doc);
+      }    });
+
+    this.delete_stmt = this.db.prepare(`
+      DELETE FROM docs
+      WHERE id = ?
+      LIMIT 1
+    `);
+
+    // Statement for full text search
+    this.fts_stmt = this.db.prepare(`
+      SELECT id,
+             title,
+             snippet(docs, 4, '<span class="highlight">', '</span>', '...', 24) body
+      FROM docs 
+      WHERE docs MATCH ?
+      ORDER BY rank
+    `);
+
+    // Setup listener to handle queries from renderer. Take the provided paramaters for query string (e.g. 'dogs'), matchExactPhrase (boolean), and path (e.g. '/User/Documents/ClimateResearch'), and create the string we'll pass into 
+
+    // We use column filters to specify which columns to search. We only want params.path to search the `path` column, for example. And we never want to search `id` column. For example: `body: "Rex" *` says "Search body column for tokens that start with 'Rex'`. Per: https://www.sqlite.org/fts5.html#fts5_column_filters
+
+    // If `matchExactPhrase` is false, we add a '*' after our query string, which tells sqlite to treat the string as a "prefix token", and match any tokens that start with the query. Per: https://www.sqlite.org/fts5.html#fts5_prefix_queries
+
+    // For `path`, we're inserting `^` before the string, to tell sqlite to only match if the string starts at the first token in the column. Like ^ works in regex. Per: https://www.sqlite.org/fts5.html#fts5_initial_token_queries
+
+    // We wrap our strings in double-quotation marks to escape characters such as - and /, which would otherwise trigger sql errors. Forward slashes will always appear in paths, and other characters may appear in the query string.
+
+    // We use boolean operators to combine our phrases. Matches MUST be descendants of the specified `params.path` (folder path), AND have query matches in either `body`, `title`, or `name` columns.
+
+    // Docs: https://www.sqlite.org/fts5.html#extending_fts5
+    electron.ipcMain.handle('queryDb', (evt, params) => {
+
+      // Create the query string
+      const body = `body:"${params.query}"${params.matchExactPhrase ? '' : ' *'}`;
+      const title = `title:"${params.query}"${params.matchExactPhrase ? '' : ' *'}`;
+      const name = `name:"${params.query}"${params.matchExactPhrase ? '' : ' *'}`;
+      const path = `path:^ "${params.path}"${params.matchExactPhrase ? '' : ' *'}`;
+      const query = `${path} AND (${body} OR ${title} OR ${name})`;
+
+      console.log(query);
+
+      // Run the full text search statement with the query string.
+      let results = this.fts_stmt.all(query);
+      console.log(results);
+
+      // Return the results. Will be array of objects; one for each row.
+      return results
+    });
+  }
+
+  /**
+   * Insert single row into database.
+   */
+  insert(doc = {
+    id: '',
+    name: '',
+    title: '',
+    path: '',
+    body: ''
+  }) {
+    this.insert_stmt.run(doc);
+  }
+
+  /**
+   * Insert multiple rows into the database.
+   * @param {} docs - Array of docs
+   */
+  insertMany(docs) {
+    this.insert_many_stmt(docs);
+  }
+
+  /**
+   * Delete single row from database.
+   */
+  delete(id) {
+    this.delete_stmt.run(id);
   }
 
   init() {
 
-    // Create Database object.
-    // Pass ":memory:" as the first argument to create an in-memory db.
-    global.db = new Database__default['default'](':memory:', { verbose: console.log });
-    const createTable = global.db.prepare('CREATE VIRTUAL TABLE docs USING FTS5(id, name, title, body)');
-    createTable.run();
-    
     // const insertTest = global.db.prepare('INSERT INTO docs (title, path) VALUES (?, ?)')
     // const info = insertTest.run("My time in Tuscany", "Was mostly unremarkable, to be perfectly honest.")
     // console.log(info.changes)
@@ -709,14 +817,13 @@ class DbManager {
     // console.log(joey)
 
     // const deleteTest = global.db.prepare('DELETE FROM docs WHERE title = ?').run("Sally")
-   
+
     // const getAll = global.db.prepare('SELECT * FROM docs')
     // console.log(getAll.all())
-    
-    // const updateTest = global.db.prepare('UPDATE docs SET title = ? WHERE title = ?').run('Zelda!', 'Joey')
-    
-    // console.log(getAll.all())
 
+    // const updateTest = global.db.prepare('UPDATE docs SET title = ? WHERE title = ?').run('Zelda!', 'Joey')
+
+    // console.log(getAll.all())
   }
 }
 
@@ -862,7 +969,7 @@ async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
 
 	// Set excerpt
 	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
-	doc.excerpt = getExcerpt(gm.content);
+	doc.excerpt = removeMarkdown(gm.content, 350);
 
 	// Set fields from front matter (if it exists)
 	// gray-matter `isEmpty` property returns "true if front-matter is empty".
@@ -914,32 +1021,56 @@ function getTitle(graymatter, filename) {
 }
 
 /**
- * Return excerpt from content, stripped of markdown characters.
+ * Return content stripped of markdown characters.
+ * And (optionally) trimmed down to specific character length.
  * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
- * @param {*} file 
+ * @param {*} content 
+ * @param {*} trimToLength 
  */
-function getExcerpt(content) {
+function removeMarkdown(content, trimToLength = undefined) {
 
-	// Remove h1, if it exists. Then trim to 200 characters.
-	let excerpt = content
-		.replace(/^# (.*)\n/gm, '')
-		.substring(0, 600);
+	// Remove h1, if it exists. Currently atx-style only.
+	let text = content.replace(/^# (.*)\n/gm, '');
+	
+	// If `trimToLength` is defined, do initial trim.
+	// We will then remove markdown characters, and trim to final size.
+	// We do initial trim for performance purposes: to reduce amount of
+	// text that regex replacements below have to process. We add buffer
+	// of 100 characters, or else trimming markdown characters could put
+	// use under the specified `trimToLength` length.
+	if (trimToLength) {
+		text = text.substring(0, trimToLength + 100);
+	}
 
 	// Remove markdown formatting. Start with remove-markdown rules.
 	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
 	// Then add whatever additional changes I want (e.g. new lines).
-	excerpt = removeMd__default['default'](excerpt)
-		.replace(/^> /gm, '')         // Block quotes
-		.replace(/^\n/gm, '')         // New lines at start of line (usually doc)
-		.replace(/\n/gm, ' ')         // New lines in-line (replace with spaces)
-		.replace(/\t/gm, ' ')         // Artifact left from list replacement
-		.replace(/\[@.*?\]/gm, '')    // Citations
-		.replace(/:::.*?:::/gm, ' ')  // Bracketed spans
-		.replace(/\s{2,}/gm, ' ')     // Extra spaces
-		.substring(0, 450);            // Trim to 200 characters
+	text = removeMd__default['default'](text)
+		.replace(blockQuotes, '') 
+		.replace(newLines, '')         // New lines at start of line (usually doc)
+		.replace(unwantedWhiteSpace, ' ')
+		.replace(bracketedSpans, ' ');
+		// .replace(citations, '')
 
-	return excerpt
+	// If `trimToLength` is defined, trim to final length.
+	if (trimToLength) {
+		text = text.substring(0, trimToLength);
+	}
+
+	return text
 }
+
+const blockQuotes = /^> /gm;
+const bracketedSpans = /:::.*?:::/gm;
+
+// New lines at start of doc
+const newLines = /^\n/gm;
+
+// Replace with space:
+// - New lines in-line
+// - Artifact left from list replacement
+// - Extra spaces
+const unwantedWhiteSpace = /\n|\t|\s{2,}/gm;
 
 /**
  * For specified path, return document details
@@ -1125,18 +1256,14 @@ class Watcher {
   }
 
   chokidarInstance = undefined
-  changes = []
+  pendingChanges = []
   changeTimer = undefined
   directory = ''
   files = {}
   id = 0
 
   async start() {
-    
-    const stmt = global.db.prepare('INSERT INTO docs (id, name, title, body) VALUES (?, ?, ?, ?)');
 
-    this.files = await mapProject(this.directory);
-    // console.log(JSON.stringify(this.files.tree, null, 2))
     // Start watcher
     this.chokidarInstance = chokidar__default['default'].watch(this.directory, chokidarConfig);
 
@@ -1148,132 +1275,213 @@ class Watcher {
       .on('addDir', (filePath) => this.batchChanges('addDir', filePath))
       .on('unlinkDir', (filePath) => this.batchChanges('unlinkDir', filePath));
 
+    // Map project
+    this.files = await mapProject(this.directory);
+
     // Send initial files to browser window
     const win = electron.BrowserWindow.fromId(this.id);
     win.webContents.send('initialFilesFromMain', this.files);
 
     // Index files into DB
-    this.files.allIds.forEach((id) => {
-      const file = this.files.byId[id];
-      if (file.type == 'doc') {
-        stmt.run(id, file.name, file.title, file.excerpt);
-      }
-    });
+    insertAllDocsIntoDb(this.files);
 
-    const getAll = global.db.prepare('SELECT * FROM docs');
-    console.log(getAll.all());
   }
 
   stop() {
     // await watcher.close()
-
   }
 
   /**
    * Create a tally of changes as they occur, and once things settle down, evaluate them. We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
    */
+  debounceFunc = debounce.debounce(() => {
+    this.applyChanges(this.pendingChanges);
+    this.pendingChanges = []; // Reset
+  }, 500)
+
   batchChanges(event, filePath, stats) {
     const change = { event: event, path: filePath };
 
     if (stats) change.stats = stats;
-    // console.log(event)
 
-    // Make the timer longer if `addDir` event comes through. 
-    // If it's too quick, subsequent `add` events are not caught by the timer.
-    const timerDuration = event == 'addDir' ? 500 : 100;
+    // Push into list of pending changes
+    this.pendingChanges.push(change);
 
-    // Start a new timer if one is not already active.
-    // Or refresh a timer already in progress.
-    if (this.changeTimer == undefined || !this.changeTimer.hasRef()) {
-      this.changes = [change];
-      this.changeTimer = setTimeout(() => this.applyChanges(this.changes), timerDuration);
-    } else {
-      this.changes.push(change);
-      this.changeTimer.refresh();
-    }
+    // Wait a bit, then apply the pending changes. Make the debounce timer longer if `addDir` event comes through. If it's too quick, subsequent `add` events are not caught by the timer.
+    // const debounceTimer = event == 'addDir' ? 500 : 100
+    // console.log(change, debounceTimer)
+
+    this.debounceFunc();
+
+    // () => debounce(() => {
+    //   console.log("hi there")
+    // }, 200)
+
+    // // Start a new timer if one is not already active.
+    // // Or refresh a timer already in progress.
+    // if (this.changeTimer == undefined || !this.changeTimer.hasRef()) {
+    //   this.changes = [change]
+    //   this.changeTimer = setTimeout(() => this.applyChanges(this.changes), timerDuration);
+    // } else {
+    //   this.changes.push(change)
+    //   this.changeTimer.refresh()
+    // }
   }
 
   /**
-   * Take batched changes and update `files`, then send patches to associated BrowserWindow.
+   * Take batched changes and update `files`, then send patches to associated BrowserWindow. If a directory was added or removede, remap everything.
    * @param {*} changes 
    */
   async applyChanges(changes) {
 
+    // console.log(changes)
+
     const directoryWasAddedOrRemoved = changes.some((c) => c.event == 'addDir' || c.event == 'unlinkDir');
 
     if (directoryWasAddedOrRemoved) {
+
+      // Map project
       this.files = await mapProject(this.directory);
+
+      // Send files to browser window
+      const win = electron.BrowserWindow.fromId(this.id);
+      win.webContents.send('initialFilesFromMain', this.files);
+
+      // Index files into DB
+      insertAllDocsIntoDb(this.files);
+
     } else {
+
+      // Update `files` using Immer.
       this.files = await produce__default['default'](this.files, async (draft) => {
         for (const c of changes) {
           const ext = path__default['default'].extname(c.path);
           const parentPath = path__default['default'].dirname(c.path);
-          const parentFolder = getFileByPath(draft, parentPath);
+          const parentId = draft.allIds.find((id) => draft.byId[id].path == parentPath);
+          const parentFolder = draft.byId[parentId];
           const parentTreeItem = findInTree(draft.tree, parentFolder.id, 'id');
 
           if (isDoc(ext) || isMedia(ext)) {
 
             switch (c.event) {
+
               case 'add': {
                 const file = isDoc(ext) ?
                   await mapDocument(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats) :
                   await mapMedia(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats);
-                // Add to `byId`, `allIds`, and parent's children.
+                // Add to `byId`
                 draft.byId[file.id] = file;
+                // Add to `allIds`
                 draft.allIds.push(file.id);
+                // Add to `tree`
                 parentTreeItem.children.push({
                   id: file.id,
                   parentId: file.parentId,
                   type: file.type
                 });
+                // Increment `numChildren` of parent folder
+                parentFolder.numChildren++;
+                // Recursively increment parent folder(s) `numDescendants`
+                incrementNumDescendants(parentFolder);
+                function incrementNumDescendants(folder) {
+                  folder.numDescendants++;
+                  if (folder.parentId !== '') {
+                    incrementNumDescendants(draft.byId[folder.parentId]);
+                  }
+                }
+                // Add to database (if it's a doc)
+                if (isDoc(ext)) insertDocIntoDb(file);
                 break
               }
+
               case 'change': {
                 const file = isDoc(ext) ?
                   await mapDocument(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats) :
                   await mapMedia(c.path, parentFolder.id, parentFolder.nestDepth + 1, c.stats);
                 draft.byId[file.id] = file;
+                // If doc, update row in db
+                if (isDoc) insertDocIntoDb(file);
                 break
               }
+
               case 'unlink': {
-                const file = getFileByPath(draft, c.path);
-                // Remove from `byId`, `allIds`, and parent's children.
-                delete draft.byId[file.id];
-                draft.allIds.splice(file.index, nnpm1);
-                const indexInChildren = parentTreeItem.children.findIndex((child) => child.id == file.id);
-                parentTreeItem.children.splice(indexInChildren, 1);
+                const id = draft.allIds.find((id) => draft.byId[id].path == c.path);
+                // Remove from `byId`
+                delete draft.byId[id];
+                // Remove from `allIds`
+                draft.allIds.splice(draft.allIds.indexOf(id), 1);
+                // Remove from `tree`
+                parentTreeItem.children.splice(parentTreeItem.children.findIndex((child) => child.id == id), 1);
+                // Decrement `numChidren` of parent folder
+                parentFolder.numChildren--;
+                // Recursively decrement parent folder(s) `numDescendants`
+                decrementNumDescendants(parentFolder);
+                function decrementNumDescendants(folder) {
+                  folder.numDescendants--;
+                  if (folder.parentId !== '') {
+                    decrementNumDescendants(draft.byId[folder.parentId]);
+                  }
+                }
+                // Delete from database (if it's a doc)
+                if (isDoc(ext)) global.db.delete(file.id);
                 break
               }
             }
           }
+
         }
       }, (patches, inversePatches) => {
         const win = electron.BrowserWindow.fromId(this.id);
-        console.log(patches);
+        // console.log(patches)
         win.webContents.send('filesPatchesFromMain', patches);
       });
     }
   }
+
 }
 
 /**
- * Utility function for getting objects (folders, docs, or media), from `files` by path.
- * @param {*} lookIn - `files.folders`, `files.docs`, or `files.media`
- * @param {*} path 
+ * For each doc found in files, add it to the sqlite database. Most important is the document body, which we need for full text search. We get it as plain text by 1) loading the doc using gray-matter, which returns `content` for us, without front matter, and 2) removing markdown formatting.
  */
-function getFileByPath(lookIn, path) {
-  let file = {};
-  lookIn.allIds.find((id, index) => {
-    if (lookIn.byId[id].path == path) {
-      file = {
-        id: id,
-        nestDepth: lookIn.byId[id].nestDepth,
-        index: index,
-      };
-      return true
+function insertAllDocsIntoDb(files) {
+  const filesForDb = [];
+  files.allIds.forEach((id) => {
+    const file = files.byId[id];
+    if (file.type == 'doc') {
+      filesForDb.push(getDbReadyFile(file));
     }
   });
-  return file
+  // Insert the files into the db
+  global.db.insertMany(filesForDb);
+}
+
+/** 
+ * Insert specified file in the sqlite database. If a row with the same `file.id` already exists, it will be replaced.
+ */
+function insertDocIntoDb(file) {
+  global.db.insert(getDbReadyFile(file));
+}
+
+/**
+ * Utility function that returns an object with 1) the file's metadata, and 2) it's full text content, stripped of markdown characters, excess whitespace, etc. We'll insert this object as a row in the sql database, for later full text searching.
+ * @param {*} file - Taken from `files.byId`. Has title, path, etc.
+ */
+function getDbReadyFile(file) {
+
+  // Get doc text, minus any front matter
+  let { content } = matter__default['default'].read(file.path);
+
+  // Remove markdown formatting from text
+  content = removeMarkdown(content);
+
+  // Return object, ready for the db.
+  return {
+    id: file.id,
+    name: file.name,
+    title: file.title,
+    path: file.path,
+    body: content
+  }
 }
 
 /**
@@ -1519,18 +1727,10 @@ class IpcManager {
 
     // -------- IPC: Invoke -------- //
 
-    electron.ipcMain.handle('queryDb', (evt, params) => {
-      const { query } = params;
-      const results = global.db.prepare(`
-        SELECT highlight(docs, 2, '<b>', '</b>') title,
-               highlight(docs, 3, '<b>', '</b>') body,
-               id
-        FROM docs 
-        WHERE docs MATCH ? 
-        ORDER BY rank`
-      ).all(query);
-      return results
-    });
+    // NOTE: We handle this in DbManager.js
+    // ipcMain.handle('queryDb', (evt, params) => {
+    //   ...
+    // })
 
     electron.ipcMain.handle('getState', (evt) => {
       return global.state()
@@ -1932,8 +2132,7 @@ class WindowManager {
       }
     });
 
-    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming)
-    // Using `debounce` package: https://www.npmjs.com/package/debounce
+    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
     win.on('resize', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
     win.on('move', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
 
@@ -2079,9 +2278,13 @@ const diskManager = new DiskManager();
 const ipcManager = new IpcManager();
 const menuBarManager = new MenuBarManager();
 const windowManager = new WindowManager();
-const dbManager = new DbManager();
 
-// One more global variable
+// Create Sqlite databaase (happens in the constructor). 
+// Class instance has useful functions for interacting w/ the db.
+// E.g. Insert new row, update, etc.
+global.db = new DbManager();
+
+// One more global variable for watchers
 global.watchers = diskManager.watchers;
 
 // Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
@@ -2090,8 +2293,6 @@ electron.app.allowRendererProcessReuse = true;
 // Start app
 electron.app.whenReady()
   .then(async () => {
-
-    dbManager.init();
 
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' });

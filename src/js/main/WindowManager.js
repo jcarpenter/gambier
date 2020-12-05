@@ -89,8 +89,7 @@ export class WindowManager {
       }
     })
 
-    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming)
-    // Using `debounce` package: https://www.npmjs.com/package/debounce
+    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
     win.on('resize', debounce(() => { saveWindowBoundsToState(win) }, 1000))
     win.on('move', debounce(() => { saveWindowBoundsToState(win) }, 1000))
 

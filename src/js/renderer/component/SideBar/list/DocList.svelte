@@ -1,6 +1,6 @@
 <script>
-	import { project, sidebar, files } from '../../../StateManager'
-	import {onMousedown, arrowUpDown} from './interactions'
+	import { project, sidebar } from '../../../StateManager'
+	import { arrowUpDown} from './interactions'
   import { getContext } from 'svelte';
 	
 	export let listIds = []

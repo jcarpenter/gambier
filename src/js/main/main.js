@@ -1,7 +1,6 @@
 // External dependencies
 import { app, BrowserWindow, clipboard, dialog, shell, webFrame } from 'electron'
 import path from 'path'
-import { writeFile, readFile, pathExists } from 'fs-extra'
 
 // Bundled dependencies
 import { Store } from './Store'
@@ -11,7 +10,6 @@ import { DiskManager } from './DiskManager'
 import { IpcManager } from './IpcManager'
 import { MenuBarManager } from './MenuBarManager'
 import { WindowManager } from './WindowManager'
-import { hasChanged, hasChangedTo } from '../shared/utils.js'
 
 
 // -------- Process variables -------- //
@@ -91,9 +89,13 @@ const diskManager = new DiskManager()
 const ipcManager = new IpcManager()
 const menuBarManager = new MenuBarManager()
 const windowManager = new WindowManager()
-const dbManager = new DbManager()
 
-// One more global variable
+// Create Sqlite databaase (happens in the constructor). 
+// Class instance has useful functions for interacting w/ the db.
+// E.g. Insert new row, update, etc.
+global.db = new DbManager()
+
+// One more global variable for watchers
 global.watchers = diskManager.watchers
 
 // Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
@@ -102,8 +104,6 @@ app.allowRendererProcessReuse = true
 // Start app
 app.whenReady()
   .then(async () => {
-
-    dbManager.init()
 
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' })
