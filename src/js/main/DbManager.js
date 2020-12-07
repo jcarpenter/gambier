@@ -71,11 +71,8 @@ export class DbManager {
       const path = `path:^ "${params.path}"${params.matchExactPhrase ? '' : ' *'}`
       const query = `${path} AND (${body} OR ${title} OR ${name})`
 
-      console.log(query)
-
       // Run the full text search statement with the query string.
       let results = this.fts_stmt.all(query)
-      console.log(results)
 
       // Return the results. Will be array of objects; one for each row.
       return results

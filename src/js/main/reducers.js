@@ -1,7 +1,7 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, dialog } from 'electron'
 import produce, { enablePatches } from 'immer'
 import { newProject } from './Store.js'
-import { accessSync, renameSync } from 'fs-extra'
+import { accessSync, renameSync, existsSync, readdirSync } from 'fs-extra'
 import fs from 'fs'
 import path from 'path'
 
@@ -145,6 +145,26 @@ export const update = (state, action, windowId) =>
         break
       }
 
+      case 'WINDOW_FOCUSED': {
+        project.window.isFocused = true
+        break
+      }
+
+      case 'WINDOW_BLURRED': {
+        project.window.isFocused = false
+        break
+      }
+
+      case 'WINDOW_DRAG_OVER': {
+        project.window.isDraggedOver = true
+        break
+      }
+
+      case 'WINDOW_DRAG_LEAVE': {
+        project.window.isDraggedOver = false
+        break
+      }
+
 
 
       // -------- SIDEBAR 2 -------- //
@@ -195,17 +215,6 @@ export const update = (state, action, windowId) =>
         project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen
         break
       }
-
-      case 'DRAG_INTO_FOLDER': {
-        // const tab = project.sidebar.tabsById.project
-        const fileName = path.basename(action.filePath)
-        const newFilePath = path.format({
-          dir: action.folderPath,
-          base: fileName
-        })
-        renameSync(action.filePath, newFilePath)
-      }
-
     }
   }, (patches) => {
     // Update `global.patches`
@@ -232,3 +241,4 @@ function createNewProject() {
   project.window.id = getNextWindowId()
   return project
 }
+

@@ -21,6 +21,59 @@ export function css(node, properties) {
   };
 }
 
+/**
+ * For the given array of values, set the margin on the node (in px).
+ * @param {*} values - Array of values. Mimics margin values. 
+ */
+export function setSize(node, params) {
+  const {width, margin, padding} = params
+  node.style.width = width;
+  node.style.margin = margin;
+  node.style.padding = padding;
+  // switch (margin.length) {
+  //   case 1:
+  //     node.style.margin = `${margin[0]}px`
+  //     break
+  //   case 2:
+  //     node.style.margin = `${margin[0]}px ${margin[1]}px`
+  //     break
+  //   case 3:
+  //     node.style.margin = `${margin[0]}px ${margin[1]}px ${margin[2]}px`
+  //     break
+  //   case 4:
+  //     node.style.margin = `${margin[0]}px ${margin[1]}px ${margin[2]}px ${margin[3]}px`
+  //     break
+  // }
+}
+
+/**
+ * 
+ * @param {*} node 
+ * @param {*} sectionName 
+ */
+export function setLayoutFocus(node, params) {
+
+  let {current, setTo} = params
+
+  function onClick() {
+    if (current !== setTo) {
+      window.api.send('dispatch', { type: 'SET_LAYOUT_FOCUS', section: setTo })
+    }
+  }
+
+  node.addEventListener('click', onClick)
+
+  return {
+    update(newParams) {
+      current = newParams.current
+      setTo = newParams.setTo
+    },
+    destroy() {
+      node.removeEventListener('click', onClick);
+    }
+  }
+}
+
 import { tooltip } from '../../StateManager'
 
 export function setTooltip(node, text) {
@@ -88,17 +141,17 @@ export function dragIntoFolder(node, properties) {
     }
   }
 
+  /**
+   * Copy or move the dropped file into the folder
+   * @param {*} evt 
+   */
   function onDrop(evt) {
-    // const type = file.type == '' ? 'folder' : file.type.includes('markdown') ? 'doc' : undefined
+    evt.preventDefault()
     if (isFolder) {
-      node.classList.remove('isDraggedOver')
       const file = evt.dataTransfer.files[0]
-      window.api.send('dispatch', {
-        type: 'DRAG_INTO_FOLDER',
-        filePath: file.path,
-        folderPath: folderPath
-      })
+      window.api.send('moveOrCopyIntoFolder', file.path, folderPath, evt.altKey)
     }
+    node.classList.remove('isDraggedOver')
   }
 
   node.addEventListener('dragover', onDragOver);
@@ -112,7 +165,6 @@ export function dragIntoFolder(node, properties) {
       node.removeEventListener('drop', onDrop);
     }
   }
-
 }
 
 

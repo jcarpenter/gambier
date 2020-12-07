@@ -12,7 +12,8 @@
   export let isCompact = false
   export let tooltip = ''
   export let label = ''
-  export let buttonType = 'text' // text or icon
+  export let buttonType = 'text' // 'text' or 'icon'
+  export let icon = '' // E.g. 'img-arrow-up-arrow-down'. Used if buttonType is 'icon'
   export let buttonWidth = 100
   export let menuType = 'popup' // popup or pulldown
   export let menuWidth = buttonWidth
@@ -47,6 +48,9 @@
       let menuX = x
       let menuY = y
 
+        // If buttonType is 'text', we want menu to match button, plus some padding.
+      const width = buttonType == 'text' ? buttonWidth + (isCompact ? 6 : 12) : menuWidth
+
       // Set menu store values
       openMenu({
         id: id, 
@@ -56,8 +60,7 @@
         menuType: menuType,
         options: options,
         selectedOption: undefined,
-        // If buttonType is 'text', we want menu to match button, plus some padding.
-        width: buttonType == 'text' ? buttonWidth + (isCompact ? 6 : 12) : menuWidth,
+        width: width,
         x: menuX,
         y: menuY
       })
@@ -88,9 +91,9 @@
 
   <!-- Button -->
   {#if buttonType == 'text'}
-    <GenericTextButton {isCompact} isActive={isOpen} type={menuType} width={buttonWidth} label={buttonLabel} on:mousedown={toggleOpenClose} />
+    <GenericTextButton {isCompact} isActive={isOpen} type={menuType} width={`${buttonWidth}px`} label={buttonLabel} on:mousedown={toggleOpenClose} />
   {:else if buttonType == 'icon'}
-    <IconButton {tooltip} isActive={isOpen} icon={'--img-arrow-up-arrow-down'} showCaret={false} on:mousedown={toggleOpenClose} />
+    <IconButton {tooltip} isActive={isOpen} icon={icon} showCaret={false} on:mousedown={toggleOpenClose} />
   {/if}
   
 </div>

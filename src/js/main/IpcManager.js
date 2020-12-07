@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
-
+import { readFile, writeFile, renameSync, copyFileSync, existsSync, readdirSync } from 'fs-extra'
+import path from 'path'
 import { saveFile, deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
 
 export class IpcManager {
@@ -22,6 +23,7 @@ export class IpcManager {
       win.show()
     })
 
+  
     ipcMain.on('safelyCloseWindow', async (evt) => {
       const win = BrowserWindow.fromWebContents(evt.sender)
       if (!global.state().areQuiting) {
@@ -31,6 +33,66 @@ export class IpcManager {
       }
       win.destroy()
     })
+
+    ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths) => {
+      // Get all notes that match current query
+      filePaths.forEach(async (filePath) => {
+        let file = await readFile(filePath, 'utf8')
+        file = file.replaceAll(query, replaceWith)
+        await writeFile(filePath, file, 'utf8')
+      })
+
+      // Open each, find all instances of `replaceWith`, and replace. 
+    })
+
+
+    ipcMain.on('moveOrCopyIntoFolder', async (evt, filePath, folderPath, isCopy) => {
+      // Get destination
+      const fileName = path.basename(filePath)
+      let destinationPath = path.format({
+        dir: folderPath,
+        base: fileName
+      })
+
+      // Does file already exist at destination?
+      const fileAlreadyExists = existsSync(destinationPath)
+
+      // If yes, prompt user to confirm overwrite. 
+      // Else, just move/copy
+      if (fileAlreadyExists) {
+        const selectedButtonId = dialog.showMessageBoxSync({
+          type: 'question',
+          message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
+          buttons: ['Keep Both', 'Stop', 'Replace'],
+          cancelId: 1
+        })
+        switch (selectedButtonId) {
+          // Keep both
+          case 0:
+            destinationPath = getIncrementedFileName(destinationPath)
+            copyFileSync(filePath, destinationPath)
+            break
+          // Stop (Do nothing)
+          case 1:
+            break
+          // Replace
+          case 2:
+            if (isCopy) {
+              copyFileSync(filePath, destinationPath)
+            } else {
+              renameSync(filePath, destinationPath)
+            }
+            break
+        }
+      } else {
+        if (isCopy) {
+          copyFileSync(filePath, destinationPath)
+        } else {
+          renameSync(filePath, destinationPath)
+        }
+      }
+    })
+
 
     ipcMain.on('dispatch', async (evt, action) => {
       const win = BrowserWindow.fromWebContents(evt.sender)
@@ -270,3 +332,44 @@ export class IpcManager {
 // // ipcMain.handle('getFormatOfClipboard', (event) => {
 // //   return clipboard.availableFormats()
 // // })
+
+
+/**
+ * Utility function that returns filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
+ * Original:      /Users/Susan/Notes/ship.jpg
+ * First copy:    /Users/Susan/Notes/ship 2.jpg
+ * Second copy:   /Users/Susan/Notes/ship 3.jpg
+ * @param {*} origName 
+ */
+function getIncrementedFileName(origPath) {
+
+  const directory = path.dirname(origPath) // /Users/Susan/Notes
+  const extension = path.extname(origPath) // .jpg
+  const name = path.basename(origPath, extension) // ship
+
+  const allFilesInDirectory = readdirSync(directory)
+
+  let increment = 2
+
+  // Basename in `path` is filename + extension. E.g. `ship.jpg`
+  // https://nodejs.org/api/path.html#path_path_basename_path_ext
+  let newBase = ''
+
+  // Keep looping until we find incremented name that's not already used
+  // Most of time this will be `ship 2.jpg`.
+  while (true) {
+    newBase = `${name} ${increment}${extension}` // ship 2.jpg
+    const alreadyExists = allFilesInDirectory.includes(newBase)
+    if (alreadyExists) {
+      increment++
+    } else {
+      break
+    }
+  }
+
+  // /Users/Susan/Notes/ship 2.jpg
+  return path.format({
+    dir: directory,
+    base: newBase
+  })
+}

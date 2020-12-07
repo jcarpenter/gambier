@@ -1,8 +1,9 @@
 <script>
-  import { css } from '../actions';
+  import { setSize } from '../actions';
 
   export let isActive = false
-  export let width = 100
+  export let width = '100px'
+  export let margin = '0'
   export let label = 'Label'
   export let type = 'push' // push, pulldown, or popup
   export let isCompact = false
@@ -32,10 +33,8 @@
   
   // Button
   .button {
-    width: calc(var(--width) * 1px);
-    height: 22px;
-
     @include label-normal;
+    height: 22px;
     user-select: none;
     position: relative;
     background-color: var(--controlBackgroundColor);
@@ -60,8 +59,16 @@
     flex-grow: 1;
   }
 
-  .push .label {
-    text-align: center;
+  .push {
+    &:active {
+      background: var(--controlAccentColor);
+      .label { 
+        color: white; 
+      }
+    }
+    .label {
+      text-align: center;
+    }
   }
 
   .popup .label,
@@ -99,15 +106,13 @@
     -webkit-mask-image: var(--img-chevron-down-bold);
     -webkit-mask-size: 8px;
   }
-  
 </style>
-
 
 <div 
   class="button {type}" 
   class:isActive
   class:isCompact
-  use:css={{width}} 
+  use:setSize={{width, margin}} 
   on:mousedown 
   >
   <span class="label">{label}</span>

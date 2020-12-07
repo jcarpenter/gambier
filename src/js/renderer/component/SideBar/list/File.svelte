@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher, afterUpdate } from 'svelte'
   import { state, project, files, sidebar } from '../../../StateManager'
-  import { css, dragIntoFolder } from '../../ui/actions'
+  import { css } from '../../ui/actions'
   import {onMousedown, toggleExpanded} from './interactions'
   import DisclosureButton from '../../ui/DisclosureButton.svelte'
   import { getContext } from 'svelte';
@@ -9,25 +9,26 @@
   export let id = ''
 	export let listIds = []
   export let nestDepth = 0  
-  // export let isDraggedOver = false
+  export let isDragTarget = false
   
 	const tabId = getContext('tabId')
 	$: tab = $sidebar.tabsById[tabId]
   $: file = $files.byId[id]
-  $: isExpandable = file?.type == 'folder'
-  $: isExpanded = $sidebar.tabsById.project.expanded.some((id) => id == file?.id)
-  $: isSelected = $sidebar.tabsById.project.selected.some((id) => id == file?.id)
   $: leftOffset = nestDepth * 15
-  $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+  $: isExpandable = file?.type == 'folder'
+  $: isFolder = $sidebar.tabsById.project.expanded.some((id) => id == file?.id)
+  $: isSelected = $sidebar.tabsById.project.selected.some((id) => id == file?.id)
+  $: isWindowFocused = $project.window.isFocused
+  $: isWindowDraggedOver = $project.window.isDraggedOver
+  $: isSectionFocused = $project.focusedLayoutSection == 'sidebar'
+
+  $: isHighlighted = (isSelected && isWindowFocused && isSectionFocused && !isWindowDraggedOver) || isDragTarget
+  $: isHighlightedInBg = (isSelected && isWindowFocused && !isSectionFocused) || (isSelected && !isWindowFocused) || (isSelected && isWindowDraggedOver && !isDragTarget)
 
 </script>
 
 <style type="text/scss">
-  @import '../../../../../styles/_mixins.scss';
-
-  // Shared
   .file {
-    --leftOffset: 0;
     contain: strict;
     user-select: none;
     border-radius: 4px;
@@ -81,11 +82,9 @@
     -webkit-mask-image: var(--img-play-rectangle);
   }
 
-  // Selection
-  .file.isDraggedOver,
-  .file.isSelected {
-    
-    // Selected, and parent list IS focused
+  .file.isHighlighted {
+    background-color: var(--selectedContentBackgroundColor);
+
     .disclosure [role='button'],
     .icon {
       background-color: var(--selectedMenuItemTextColor);
@@ -97,29 +96,55 @@
       color: var(--controlColor);
       // opacity: 0.4;
     }
-
-    &.isSidebarFocused {
-      background-color: var(--selectedContentBackgroundColor);
-    }
-
-    // Selected, and parent list NOT focused
-    &:not(.isSidebarFocused) {
-      background-color: var(--disabledControlTextColor);
-    }
   }
+
+  .file.isHighlightedInBg {
+    background-color: var(--unemphasizedSelectedContentBackgroundColor);
+  }
+
+  // File is target of drag operation
+  // File is seleted, app window is in foreground, and parent section is selected.
+  // .file.isWindowDraggedOver.isDragTarget,
+  // .file.isSelected.isSectionFocused.isWindowFocused:not(.isWindowDraggedOver) {
+    
+  //   background-color: var(--selectedContentBackgroundColor);
+
+  //   .disclosure [role='button'],
+  //   .icon {
+  //     background-color: var(--selectedMenuItemTextColor);
+  //   }
+  //   .label {
+  //     color: var(--selectedMenuItemTextColor);
+  //   }
+  //   .counter {
+  //     color: var(--controlColor);
+  //     // opacity: 0.4;
+  //   }
+  // }
+
+  // File is selected, but a drag is active and this File is not the targt.
+  // File is selected, but the app or the parent section are not.
+  // .file.isSelected.isWindowDraggedOver:not(.isDragTarget),
+  // .file.isSelected:not(.isWindowFocused),
+  // .file.isSelected:not(.isSectionFocused) {
+  //   background-color: var(--unemphasizedSelectedContentBackgroundColor);
+  // }
 </style>
 
 <svelte:options immutable={true} />
 
 <!-- use:listItem={{id, tabId, tab, listIds, isSelected}} -->
+<!-- use:dragIntoFolder={{isFolder: isExpandable, folderPath: file.path}} -->
 {#if file}
   <div
     use:css={{ leftOffset }}
-    use:dragIntoFolder={{isFolder: isExpandable, folderPath: file.path}}
     class="file {file.type}"
-    class:isSidebarFocused
-    class:isSelected
-    class:isExpanded
+    class:isHighlighted
+    class:isHighlightedInBg
+    class:isFolder
+    on:dragover|preventDefault|stopPropagation
+    on:dragleave|preventDefault|stopPropagation
+    on:drop|preventDefault|stopPropagation
     on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds)}
     >
       
@@ -129,16 +154,15 @@
         height={14}
         padding={6}
         left={leftOffset + 3}
-        rotation={isExpanded ? 90 : 0}
+        rotation={isFolder ? 90 : 0}
         tooltip={'Toggle Expanded'}
-        iconColor={isSelected ? 'white' : $state.appearance.os.colors.controlTextColor}
-        on:toggle={() => toggleExpanded(id, isExpanded, tab, tabId)} />
+        iconColor={isHighlighted ? 'white' : $state.appearance.os.colors.controlTextColor}
+        on:toggle={() => toggleExpanded(id, isFolder, tab, tabId)} />
 
     {/if}
     <div class="icon" />
     <div class="label">{file.title ? file.title : file.name}</div>
     {#if isExpandable}
-      <!-- <div class="counter">{file.numDescendants}</div> -->
       <div class="counter">{file.numDescendants}</div>
     {/if}
   </div>

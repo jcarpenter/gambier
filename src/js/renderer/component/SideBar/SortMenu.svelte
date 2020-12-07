@@ -38,5 +38,5 @@
 </style>
 
 <div class="sortMenu">
-<MenuButton tooltip={'Change the sorting criteria and direction'} buttonType={'icon'} menuType={'pulldown'} menuWidth={105} {options} on:select={setSorting}/>
+<MenuButton tooltip={'Change the sorting criteria and direction'} buttonType={'icon'} icon={'img-arrow-up-arrow-down'} menuType={'pulldown'} menuWidth={105} {options} on:select={setSorting}/>
 </div>

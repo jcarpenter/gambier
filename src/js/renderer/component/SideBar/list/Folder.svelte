@@ -11,6 +11,8 @@
 	export let listIds
 	export let isRoot = true
 	export let nestDepth = 0
+
+	let isDragTarget = false
 	
 	const tabId = getContext('tabId')
 	$: duration = $state.timing.treeListFolder
@@ -30,12 +32,32 @@
 		}
 	}
 
-	function isExpandedFolder(id) {
-		const file = $files.byId[id]
-		const isFolder = file.type == 'folder'
-  	const isExpandable = isFolder && file.numChildren
-		const isExpanded = isExpandable && $sidebar.tabsById.project.expanded.some((id) => id == file.id)
-		return isExpanded
+	$: folder = $files.byId[subtree.id]
+	$: isExpanded = folder.numChildren > 0 && 
+									$sidebar.tabsById.project.expanded.includes(folder.id)
+
+	function isFolder(id) {
+		return $files.byId[id].type == 'folder'
+	}
+
+	/**
+	 * Select folder `File` when we drag over it, or it's children.
+	 * Unless folder isRoot, in which case there is no visible parent `File`,
+	 * so we select nothing.
+	 */
+	function onDragOver() {
+		isDragTarget = true
+	}
+
+	function onDragLeave() {
+		isDragTarget = false
+	}
+
+	function onDrop(evt) {
+		console.log(evt)
+		isDragTarget = false
+		const file = evt.dataTransfer.files[0]
+    window.api.send('moveOrCopyIntoFolder', file.path, folder.path, evt.altKey)
 	}
 </script>
 
@@ -47,9 +69,18 @@
 		width: 100%;
 		overflow: hidden;
 		height: calc(var(--folderHeight) * 1px);
-		transition: height calc(var(--duration) * 1ms) var(--folderEasing);
+		
+		// Add delay for border-radius and box-shadow, to prevent flickering when dragging
+		// files into Project. The drag events tend to toggle `isDragTarget` rapidly, and 
+		// adding a delay to the removal of the styles helps hide that.
+		// Height delay is unrelated (is for the transition between open/close).
+		transition: 
+			height calc(var(--duration) * 1ms) var(--folderEasing),
+			border-radius 1ms 50ms,
+			box-shadow 1ms 50ms; 
 		
 		&.isRoot {
+			height: 100%;
 			// We set `position: relative` on root folder, 
 			// so `width: 100%` fits the parent div correctly.
 			position: relative;
@@ -63,6 +94,14 @@
     transform-origin: left top;
     will-change: transform;
 	}
+
+	// See note above re: transitions for isDragTarget styles.
+	// Here we turn delay off, so the styles apply instantly when drag starts.
+	.folder.isRoot.isDragTarget {
+		box-shadow: inset 0 0 0 2px var(--keyboardFocusIndicatorColor);
+		border-radius: 4px;
+		transition-delay: 0; 
+	}
 	
 	ul,
 	li {
@@ -73,7 +112,7 @@
 		position: relative;
 		display: block;
 
-		&.empty {
+		&.isEmpty {
 			height: 28px;
 			pointer-events: none;
 			visibility: hidden;
@@ -84,30 +123,59 @@
 
 <!-- <svelte:options immutable={false} /> -->
 
-<div 
-	class="folder" 
-	use:css={{folderHeight, folderEasing, duration}}
-	class:isRoot
-	>
-	<ul class="rows" transition:slideUp|local={{ duration: isRoot ? 0 : duration }}>
-		{#each subtree.children as child (child.id)}
-			<li animate:flip={{duration: duration, easing: standardEase }} class:empty={child.id.includes('empty')}>
-				{#if !child.id.includes('empty')}
-				
-					<!-- File -->
-					<File id={child.id} {listIds} nestDepth={nestDepth} />
-					
-					<!-- Folder -->
-					{#if isExpandedFolder(child.id)}
-						<svelte:self
-						subtree={child}
-						{listIds}
-						isRoot={false}
-						nestDepth={nestDepth+1}
-						/>
+<!-- If it's not the root folder, show a File -->
+{#if !isRoot}
+	<File 
+		id={folder.id} {listIds} nestDepth={nestDepth-1} {isDragTarget} 
+		on:dragover={onDragOver} 
+		on:dragleave={onDragLeave} 
+		on:drop={onDrop}
+	/>
+{/if}
+
+<!-- If the folder is expanded, show the contents. -->
+<!-- When dragging over the folder, toggle `isDragTarget`. This in turn highlights the File (above). -->
+
+{#if isExpanded}
+	<div 
+		class="folder" 
+		class:isRoot
+		class:isDragTarget
+		on:dragover|preventDefault={() => { if (isRoot) onDragOver() }} 
+		on:dragleave|preventDefault={() => { if (isRoot) onDragLeave() }}
+		on:drop|preventDefault={(evt) => { console.log("drop"); if (isRoot) onDrop(evt) }}
+		use:css={{folderHeight, folderEasing, duration}}
+		>
+		<ul class="rows" transition:slideUp|local={{ duration: isRoot ? 0 : duration }}>
+			{#each subtree.children as child (child.id)}
+				<li 
+					animate:flip={{duration: duration, easing: standardEase }} 
+					class:isEmpty={child.id.includes('empty')}
+				>
+					{#if !child.id.includes('empty')}
+						<!-- {#if isExpandedFolder(child.id)} -->
+						{#if isFolder(child.id)}
+							
+							<!-- Folder -->
+							<svelte:self
+							subtree={child}
+							{listIds}
+							isRoot={false}
+							nestDepth={nestDepth+1}
+							/>
+
+						{:else}
+
+							<!-- File -->
+							<File id={child.id} {listIds} nestDepth={nestDepth}  
+							on:dragover={onDragOver} 
+							on:dragleave={onDragLeave} 
+							on:drop={onDrop}/>
+
+						{/if}
 					{/if}
-				{/if}
-			</li>
-		{/each}
-	</ul>
-</div>
+				</li>
+			{/each}
+		</ul>
+	</div>
+{/if}

@@ -128,6 +128,8 @@ export const newProject = {
     id: 0,
     // Used when closing window (to check if it's safe to do so or not)
     status: 'open',
+    isFocused: false,
+    isDraggedOver: false,
     bounds: { x: 0, y: 0, width: 1600, height: 1200 }
   },
 

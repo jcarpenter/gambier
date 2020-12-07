@@ -152,7 +152,7 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       foregroundColor: '0, 0, 0',
       backgroundColor: '255, 255, 255',
       // menuMaterialColor: Used in `material-menu` mixin (which simulates the `menu` macOS material), this is `controlBackgroundColor` with low opacity. 
-      menuMaterialColor: rgbaHexToRgbaCSS('#FFFFFFFF', 0.9, -5)
+      menuMaterialColor: rgbaHexToRgbaCSS('#FFFFFFFF', 0.925, -5)
     }
   }
 }

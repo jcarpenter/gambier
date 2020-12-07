@@ -159,6 +159,7 @@
   }
 
   ul {
+    // Drives most of the styling for the menu, including background color!
     @include material-menu;
     border-radius: 6px;
     padding: 5px;

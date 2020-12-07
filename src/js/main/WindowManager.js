@@ -92,6 +92,10 @@ export class WindowManager {
     // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
     win.on('resize', debounce(() => { saveWindowBoundsToState(win) }, 1000))
     win.on('move', debounce(() => { saveWindowBoundsToState(win) }, 1000))
+    
+    // On focus/blur, update project state
+    win.on('focus', () => global.store.dispatch({ type: 'WINDOW_FOCUSED' }, win.id))
+    win.on('blur', () => global.store.dispatch({ type: 'WINDOW_BLURRED' }, win.id))
 
     // Listen for app quiting, and start to close window
     global.store.onDidAnyChange(async (state, oldState) => {

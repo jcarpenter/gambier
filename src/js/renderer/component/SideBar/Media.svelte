@@ -10,7 +10,6 @@
   import { setContext } from 'svelte';
   import moment from 'moment'
 
-
   let query = '' // Bound to search field
   
   let tabId = 'media'
@@ -77,8 +76,8 @@
   <Header title={tab.title} hoverToShowSlot={true}>
     <SortMenu options={sortOptions} />
   </Header>
-  <Separator marginSides={10} />
-  <SearchField focused bind:query placeholder={'Name'} />
+  <Separator margin={'0 10px'} />
+  <SearchField focused bind:query placeholder={'Name'} margin={'10px 10px 0'} />
   <DocList listIds={data} component={Media} />
 </div>
 

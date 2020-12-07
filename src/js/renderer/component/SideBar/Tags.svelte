@@ -123,10 +123,15 @@
 
 </script>
 
-<style type="text/css">
+<style type="text/scss">
 
   #tagsList {
     padding: 8px 10px;
+  }
+
+  .noTags {
+    @include label-normal;
+    color: var(--secondaryLabelColor);
   }
 
 </style>
@@ -135,13 +140,17 @@
   <Header title={tab.title} hoverToShowSlot={true}>
     <SortMenu options={sortOptions} />
   </Header>
-  <Separator marginSides={10} />
+  <Separator margin={'0 10px'} />
   <div id="tagsList">
-    {#each allTags as tag}
-      <Token label={tag} isSelected={tab.selectedTags.includes(tag)} on:select={select} />
-    {/each}
+    {#if allTags.length > 0}
+      {#each allTags as tag}
+        <Token label={tag} isSelected={tab.selectedTags.includes(tag)} on:select={select} />
+      {/each}
+    {:else}
+      <span class="noTags">No tags found</span>
+    {/if}
   </div>
-  <Separator marginSides={10} />
+  <Separator margin={'0 10px'} />
   <!-- <SearchField focused bind:query placeholder={'Name'} /> -->
   <DocList listIds={data} component={Doc} showTags={selectedTags.length > 1} />
 </div>

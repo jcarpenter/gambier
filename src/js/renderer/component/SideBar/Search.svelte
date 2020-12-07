@@ -13,8 +13,10 @@
   import Token from '../ui/Token.svelte';
   import Checkbox from '../ui/Checkbox.svelte';
   import { arrowUpDown } from './list/interactions';
+  import GenericTextButton from '../ui/building-blocks/GenericTextButton.svelte';
 
   let query = '' // Bound to search field
+  let replaceWith = '' // Bound to replace field
 
   let tabId = 'search'
   setContext('tabId', tabId);
@@ -32,7 +34,7 @@
     { label: 'Descending', group: 'sortOrder', isChecked: tab.sortOrder == 'Descending' },
   ]
 
-  // -------- OPTIONS -------- //file.path
+  // -------- OPTIONS -------- //
 
   $: options = tab.options
 
@@ -73,6 +75,18 @@
     })
   }
 
+
+  // -------- REPLACE -------- //
+
+  /**
+   * Triggered by pressing 'Replace All' button
+   */
+  function replaceAll() {
+    if (replaceWith) {
+      const filePaths = results.map((r) => r.path)
+      window.api.send('replaceAll', query, replaceWith, filePaths)
+    }
+  }
 
   // -------- RESULTS -------- //
 
@@ -161,16 +175,19 @@
   }
 }} />
 
+
 <div class="section">
   <Header title={tab.title} hoverToShowSlot={true}>
     <SortMenu options={sortOptions} />
   </Header>
-  <Separator marginSides={10} />
-  <SearchField focused bind:query placeholder={'Name'} />
-  <Separator marginSides={10} marginTop={10} />
+  <Separator margin={'0 10px'} />
+  <SearchField icon={'img-magnifyingglass'} placeholder={'Name'} margin={'10px 10px 0'} bind:query={query} isCompact={true} />
+  <Separator margin={'10px 10px 0'} />
+
+  <!------------- OPTIONS ------------->
   <Expandable title={'Options:'} maxExpandedHeight={75}>
     
-    <!-- Match -->
+    <!-- Match: -->
     <div class="row">
       <div class="label">Match:</div>
       <div class="items">
@@ -180,12 +197,12 @@
       </div>
     </div>
 
-    <!-- Replace -->
+    <!-- Look In: -->
     <div class="row">
       <div class="label">Look In:</div>
-    <div>
-      <MenuButton isCompact={true} options={lookInOptions} menuType={'pulldown'} buttonType={'text'} buttonWidth={110} on:select={(evt) => updateOptions('lookIn', evt.detail.option.id)}/>
-    </div>
+      <div>
+        <MenuButton isCompact={true} options={lookInOptions} menuType={'pulldown'} buttonType={'text'} buttonWidth={110} on:select={(evt) => updateOptions('lookIn', evt.detail.option.id)}/>
+      </div>
     </div>
     
     <!-- Tags -->
@@ -196,9 +213,7 @@
     </div> -->
 
   </Expandable>
-  <Separator marginSides={10} />
-  <Expandable title={'Replace:'} isOpen={false} />
-  <Separator marginSides={10} />
+  <Separator margin={'0 10px'} />
 
   <!-- <Header title={'Options'}>
     <DisclosureButton
@@ -213,18 +228,25 @@
       }} />
   </Header> -->
 
-  <!-- Replace -->
+  <!------------- REPLACE ------------->
+  <Expandable title={'Replace:'} maxExpandedHeight={55} isOpen={true}>
+    <div class="row">
+      <SearchField placeholder={'Replace'} width={'100%'} isCompact={true} bind:query={replaceWith} />
+      <GenericTextButton label="Replace All" isCompact={false} width={'115px'} margin={'0 0 0 5px'} on:mousedown={replaceAll} />
+    </div>
+  </Expandable>
+  <Separator margin={'0 10px'} />
   
-  <!-- Results -->
+  
+  <!------------- RESULTS ------------->
   {#if query}
     <div id="numberOfResults">Found results in {results.length} documents</div>
+    <Separator margin={'0 10px'} />  
   {/if}
-  <Separator marginSides={10} />
   <div class="list">
     {#each results as file (file.id)}
       <Doc id={file.id} file={file} listIds={resultIds} />
     {/each}
   </div>
-  <!-- <DocList listIds={results} component={Doc} /> -->
 </div>
 

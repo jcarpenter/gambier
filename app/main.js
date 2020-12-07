@@ -168,6 +168,26 @@ const update = (state, action, windowId) =>
         break
       }
 
+      case 'WINDOW_FOCUSED': {
+        project.window.isFocused = true;
+        break
+      }
+
+      case 'WINDOW_BLURRED': {
+        project.window.isFocused = false;
+        break
+      }
+
+      case 'WINDOW_DRAG_OVER': {
+        project.window.isDraggedOver = true;
+        break
+      }
+
+      case 'WINDOW_DRAG_LEAVE': {
+        project.window.isDraggedOver = false;
+        break
+      }
+
 
 
       // -------- SIDEBAR 2 -------- //
@@ -218,17 +238,6 @@ const update = (state, action, windowId) =>
         project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen;
         break
       }
-
-      case 'DRAG_INTO_FOLDER': {
-        // const tab = project.sidebar.tabsById.project
-        const fileName = path__default['default'].basename(action.filePath);
-        const newFilePath = path__default['default'].format({
-          dir: action.folderPath,
-          base: fileName
-        });
-        fsExtra.renameSync(action.filePath, newFilePath);
-      }
-
     }
   }, (patches) => {
     // Update `global.patches`
@@ -379,6 +388,8 @@ const newProject = {
     id: 0,
     // Used when closing window (to check if it's safe to do so or not)
     status: 'open',
+    isFocused: false,
+    isDraggedOver: false,
     bounds: { x: 0, y: 0, width: 1600, height: 1200 }
   },
 
@@ -610,7 +621,7 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       foregroundColor: '0, 0, 0',
       backgroundColor: '255, 255, 255',
       // menuMaterialColor: Used in `material-menu` mixin (which simulates the `menu` macOS material), this is `controlBackgroundColor` with low opacity. 
-      menuMaterialColor: rgbaHexToRgbaCSS('#FFFFFFFF', 0.9, -5)
+      menuMaterialColor: rgbaHexToRgbaCSS('#FFFFFFFF', 0.925, -5)
     }
   }
 }
@@ -754,11 +765,8 @@ class DbManager {
       const path = `path:^ "${params.path}"${params.matchExactPhrase ? '' : ' *'}`;
       const query = `${path} AND (${body} OR ${title} OR ${name})`;
 
-      console.log(query);
-
       // Run the full text search statement with the query string.
       let results = this.fts_stmt.all(query);
-      console.log(results);
 
       // Return the results. Will be array of objects; one for each row.
       return results
@@ -1297,7 +1305,7 @@ class Watcher {
   debounceFunc = debounce.debounce(() => {
     this.applyChanges(this.pendingChanges);
     this.pendingChanges = []; // Reset
-  }, 500)
+  }, 400)
 
   batchChanges(event, filePath, stats) {
     const change = { event: event, path: filePath };
@@ -1309,23 +1317,8 @@ class Watcher {
 
     // Wait a bit, then apply the pending changes. Make the debounce timer longer if `addDir` event comes through. If it's too quick, subsequent `add` events are not caught by the timer.
     // const debounceTimer = event == 'addDir' ? 500 : 100
-    // console.log(change, debounceTimer)
 
     this.debounceFunc();
-
-    // () => debounce(() => {
-    //   console.log("hi there")
-    // }, 200)
-
-    // // Start a new timer if one is not already active.
-    // // Or refresh a timer already in progress.
-    // if (this.changeTimer == undefined || !this.changeTimer.hasRef()) {
-    //   this.changes = [change]
-    //   this.changeTimer = setTimeout(() => this.applyChanges(this.changes), timerDuration);
-    // } else {
-    //   this.changes.push(change)
-    //   this.changeTimer.refresh()
-    // }
   }
 
   /**
@@ -1691,6 +1684,7 @@ class IpcManager {
       win.show();
     });
 
+  
     electron.ipcMain.on('safelyCloseWindow', async (evt) => {
       const win = electron.BrowserWindow.fromWebContents(evt.sender);
       if (!global.state().areQuiting) {
@@ -1700,6 +1694,66 @@ class IpcManager {
       }
       win.destroy();
     });
+
+    electron.ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths) => {
+      // Get all notes that match current query
+      filePaths.forEach(async (filePath) => {
+        let file = await fsExtra.readFile(filePath, 'utf8');
+        file = file.replaceAll(query, replaceWith);
+        await fsExtra.writeFile(filePath, file, 'utf8');
+      });
+
+      // Open each, find all instances of `replaceWith`, and replace. 
+    });
+
+
+    electron.ipcMain.on('moveOrCopyIntoFolder', async (evt, filePath, folderPath, isCopy) => {
+      // Get destination
+      const fileName = path__default['default'].basename(filePath);
+      let destinationPath = path__default['default'].format({
+        dir: folderPath,
+        base: fileName
+      });
+
+      // Does file already exist at destination?
+      const fileAlreadyExists = fsExtra.existsSync(destinationPath);
+
+      // If yes, prompt user to confirm overwrite. 
+      // Else, just move/copy
+      if (fileAlreadyExists) {
+        const selectedButtonId = electron.dialog.showMessageBoxSync({
+          type: 'question',
+          message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
+          buttons: ['Keep Both', 'Stop', 'Replace'],
+          cancelId: 1
+        });
+        switch (selectedButtonId) {
+          // Keep both
+          case 0:
+            destinationPath = getIncrementedFileName(destinationPath);
+            fsExtra.copyFileSync(filePath, destinationPath);
+            break
+          // Stop (Do nothing)
+          case 1:
+            break
+          // Replace
+          case 2:
+            if (isCopy) {
+              fsExtra.copyFileSync(filePath, destinationPath);
+            } else {
+              fsExtra.renameSync(filePath, destinationPath);
+            }
+            break
+        }
+      } else {
+        if (isCopy) {
+          fsExtra.copyFileSync(filePath, destinationPath);
+        } else {
+          fsExtra.renameSync(filePath, destinationPath);
+        }
+      }
+    });
+
 
     electron.ipcMain.on('dispatch', async (evt, action) => {
       const win = electron.BrowserWindow.fromWebContents(evt.sender);
@@ -1940,6 +1994,47 @@ class IpcManager {
 // //   return clipboard.availableFormats()
 // // })
 
+
+/**
+ * Utility function that returns filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
+ * Original:      /Users/Susan/Notes/ship.jpg
+ * First copy:    /Users/Susan/Notes/ship 2.jpg
+ * Second copy:   /Users/Susan/Notes/ship 3.jpg
+ * @param {*} origName 
+ */
+function getIncrementedFileName(origPath) {
+
+  const directory = path__default['default'].dirname(origPath); // /Users/Susan/Notes
+  const extension = path__default['default'].extname(origPath); // .jpg
+  const name = path__default['default'].basename(origPath, extension); // ship
+
+  const allFilesInDirectory = fsExtra.readdirSync(directory);
+
+  let increment = 2;
+
+  // Basename in `path` is filename + extension. E.g. `ship.jpg`
+  // https://nodejs.org/api/path.html#path_path_basename_path_ext
+  let newBase = '';
+
+  // Keep looping until we find incremented name that's not already used
+  // Most of time this will be `ship 2.jpg`.
+  while (true) {
+    newBase = `${name} ${increment}${extension}`; // ship 2.jpg
+    const alreadyExists = allFilesInDirectory.includes(newBase);
+    if (alreadyExists) {
+      increment++;
+    } else {
+      break
+    }
+  }
+
+  // /Users/Susan/Notes/ship 2.jpg
+  return path__default['default'].format({
+    dir: directory,
+    base: newBase
+  })
+}
+
 class MenuBarManager {
   constructor() {
 
@@ -2135,6 +2230,10 @@ class WindowManager {
     // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
     win.on('resize', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
     win.on('move', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
+    
+    // On focus/blur, update project state
+    win.on('focus', () => global.store.dispatch({ type: 'WINDOW_FOCUSED' }, win.id));
+    win.on('blur', () => global.store.dispatch({ type: 'WINDOW_BLURRED' }, win.id));
 
     // Listen for app quiting, and start to close window
     global.store.onDidAnyChange(async (state, oldState) => {

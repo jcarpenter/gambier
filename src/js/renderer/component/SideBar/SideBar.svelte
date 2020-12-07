@@ -10,7 +10,8 @@
   import Citations from './Citations.svelte'
   import Search from './Search.svelte'
   import Preview from './Preview.svelte'
-  
+  import { setLayoutFocus } from '../ui/actions';
+
   // $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
 
 </script>
@@ -59,7 +60,7 @@
   }
 </style>
 
-<div id="sidebar" style="--state-sideBarWidth: 250px">
+<div id="sidebar" style="--state-sideBarWidth: 250px" use:setLayoutFocus={{current: $project.focusedLayoutSection, setTo: 'sidebar'}}>
   
   <!-- Tabs -->
   <div id="tabs">

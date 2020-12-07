@@ -85,7 +85,7 @@ export class Watcher {
   debounceFunc = debounce(() => {
     this.applyChanges(this.pendingChanges)
     this.pendingChanges = [] // Reset
-  }, 500)
+  }, 400)
 
   batchChanges(event, filePath, stats) {
     const change = { event: event, path: filePath }
@@ -97,23 +97,8 @@ export class Watcher {
 
     // Wait a bit, then apply the pending changes. Make the debounce timer longer if `addDir` event comes through. If it's too quick, subsequent `add` events are not caught by the timer.
     // const debounceTimer = event == 'addDir' ? 500 : 100
-    // console.log(change, debounceTimer)
 
     this.debounceFunc()
-
-    // () => debounce(() => {
-    //   console.log("hi there")
-    // }, 200)
-
-    // // Start a new timer if one is not already active.
-    // // Or refresh a timer already in progress.
-    // if (this.changeTimer == undefined || !this.changeTimer.hasRef()) {
-    //   this.changes = [change]
-    //   this.changeTimer = setTimeout(() => this.applyChanges(this.changes), timerDuration);
-    // } else {
-    //   this.changes.push(change)
-    //   this.changeTimer.refresh()
-    // }
   }
 
   /**

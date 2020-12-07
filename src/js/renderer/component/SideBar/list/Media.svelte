@@ -9,6 +9,7 @@
 
 	export let id
 	export let listIds
+	export let showTags = false // Not used
 	
 	const tabId = getContext('tabId')
 	$: tab = $sidebar.tabsById[tabId]

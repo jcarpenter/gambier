@@ -2,7 +2,7 @@
   import { css, setTooltip } from './actions';
 
   export let height = 28
-  export let icon = null // E.g. '--img-photo'
+  export let icon = null // E.g. 'img-photo'
   export let showCaret = false
   export let isActive = false
   export let tooltip = ''
@@ -12,8 +12,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
-
   .button {
     --height: 0;
     min-width: 34px;
@@ -62,7 +60,7 @@
 </style>
 
 <div class:isActive class="button" role="button" use:setTooltip={tooltip} use:css={{height}} tabindex="0" on:mousedown>
-  <div class="icon" style={`-webkit-mask-image: var(${icon});`} />
+  <div class="icon" style={`-webkit-mask-image: var(--${icon});`} />
   {#if showCaret}
     <div class="caret" />
   {/if}

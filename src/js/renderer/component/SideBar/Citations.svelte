@@ -34,7 +34,7 @@
   <Header title={tab.title} hoverToShowSlot={true}>
     <!-- <SortMenu options={sortOptions} /> -->
   </Header>
-  <Separator marginSides={10} />
+  <Separator margin={'0 10px'} />
   {#if citations}
     <SearchField focused bind:query placeholder={'Title or Key'} />
     <DocList listIds={data} component={Citation} />
