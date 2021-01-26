@@ -4,7 +4,7 @@ import { getLineStyles } from './getLineStyles'
 /**
  * Return an array of the inline elements on the line. First, parse `lineHandle.styles`, to create an array of the style objects on the line, and their start/stop points. Then pass this array to parsers for each element (citations, links, etc). These parsers create an object for each element, with it's details (e.g. string, start and end characters, url (in case of link)). We return an array of all the elements we find on the line.
  */
-function getInlineElementsForLine(cm, lineHandle) {
+export function getInlineElementsForLine(cm, lineHandle) {
 
   const doc = cm.getDoc()
   const blockElements = cm.getEditorState().blockElements
@@ -232,7 +232,7 @@ function getInlineElementsForLine(cm, lineHandle) {
 
         // If it has a label, it's a reference link.
         // Get definition
-        const definition = blockElements.find((e) => e.type.includes('reference-definition') && e.label.string == element.label.string
+        const definition = blockElements.find((e) => e.type?.includes('reference-definition') && e.label?.string == element.label.string
         )
 
         if (definition) {
@@ -297,5 +297,3 @@ function getInlineElementsForLine(cm, lineHandle) {
 
   return elements
 }
-
-export { getInlineElementsForLine }

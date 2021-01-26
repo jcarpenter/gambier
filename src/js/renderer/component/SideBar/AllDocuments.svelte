@@ -1,5 +1,6 @@
 <script>
-  import { project, sidebar, files } from '../../StateManager'
+  import { project, sidebar } from '../../StateManager'
+  import { files } from '../../FilesManager'
   import produce from 'immer'
   import Header from './Header.svelte'
   import SortMenu from './SortMenu.svelte'
@@ -17,14 +18,13 @@
   setContext('tabId', tabId);
   $: tab = $sidebar.tabsById[tabId]
 
-  $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+  $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
 
   $: sortOptions = [
-    { label: 'By Title', group: 'sortBy', isChecked: tab.sortBy == 'By Title' },
-    { label: 'By Modified', group: 'sortBy', isChecked: tab.sortBy == 'By Modified' },
-    { label: 'separator' },
-    { label: 'Ascending', group: 'sortOrder', isChecked: tab.sortOrder == 'Ascending' },
-    { label: 'Descending', group: 'sortOrder', isChecked: tab.sortOrder == 'Descending' },
+    { label: 'By Title', group: 'sortBy', checked: tab.sortBy == 'By Title' },
+    { label: 'By Modified', group: 'sortBy', checked: tab.sortBy == 'By Modified', separatorAfter: true},
+    { label: 'Ascending', group: 'sortOrder', checked: tab.sortOrder == 'Ascending' },
+    { label: 'Descending', group: 'sortOrder', checked: tab.sortOrder == 'Descending' },
   ]
 
   // -------- DATA -------- //
@@ -44,7 +44,7 @@
         draft = draft.filter((id) => $files.byId[id].name.includes(query))
       }
       
-      // Sort
+    // Sort
       draft = draft.sort((a, b) => {
         const itemA = $files.byId[a]
         const itemB = $files.byId[b]
@@ -74,7 +74,7 @@
 
 <div class="section">
   <Header title={tab.title} hoverToShowSlot={true}>
-    <SortMenu options={sortOptions} />
+    <SortMenu items={sortOptions} />
   </Header>
   <Separator margin={'0 10px'} />
   <SearchField focused bind:query placeholder={'Name'} margin={'10px 10px 0'} />

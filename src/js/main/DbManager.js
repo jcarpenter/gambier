@@ -43,7 +43,7 @@ export class DbManager {
     this.fts_stmt = this.db.prepare(`
       SELECT id,
              title,
-             snippet(docs, 4, '<span class="highlight">', '</span>', '...', 24) body
+             highlight(docs, 4, '<span class="highlight">', '</span>') body
       FROM docs 
       WHERE docs MATCH ?
       ORDER BY rank

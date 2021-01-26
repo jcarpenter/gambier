@@ -1,89 +1,74 @@
 <script>
-  import { menu, closeMenu, selectMenuOption } from '../../StateManager'
-  import { fade } from 'svelte/transition';
-  import { css } from './actions';
+  import { createEventDispatcher } from "svelte";
   import { wait } from '../../../shared/utils';
+  import { closeMenu, menu } from "../../MenuManager";
+  import { isWindowFocused } from "../../StateManager";
+  import { setSize } from './actions';
   import { tick } from 'svelte';
-  let ul // binds to <ul> element
 
-  let id = ''
+  const dispatch = createEventDispatcher();
+
   let isOpen = false
-  let isCompact = false
-  let options = []
-  let width = 0
-  let itemHeight = 0
-  let x = 0
-  let y = 0
-  let w = 0
-  let h = 0
+  let id = ''
+  let items = []
+  let selectedItem = undefined
+  let type = 'pulldown'
+  let compact = false
+  let position = { x: 0, y: 0}
+  let width = '0px'
 
   let isLive = false
   let isClosing = false
+  let self // `ul` dom element
 
-  /**
-   * When menu store changes, we need to determine what to do, based on menu store. 
-   * Possible states: 
-   * - Was closed, and is now open
-   * - Was already open, and has a new target
-   * - Was open, and is now closed
-   */
-
+  $: selectedIndex = undefined // tracks which item is 'selected' (hovered, arrowed-to, etc)
+  
    $: $menu, determineState()
 
-  function determineState() {
+   async function determineState() {
 
     const wasClosedIsOpen = !isOpen && $menu.isOpen
-    const wasOpenHasNewTarget = isOpen && $menu.isOpen && id !== $menu.id
     const wasOpenIsClosed = isOpen && !$menu.isOpen
 
     if (wasClosedIsOpen) {
-      updateValues()
       isLive = false
+      updateValues()
+      await tick();
+      setPosition()
       open()
-    } else if (wasOpenHasNewTarget) {
-      updateValues()
     } else if (wasOpenIsClosed) {
-      updateValues()
+      // updateValues()
+      isOpen = false
     }
   }
 
   /**
    * Upate local copies of store values. These values drive local reactivity, and are used to determine what changed in state.
    */
-  async function updateValues() {
-    id = $menu.id
+   function updateValues() {
+
     isOpen = $menu.isOpen
-    isCompact = $menu.isCompact
-    options = $menu.options
-    width =  $menu.width
-    itemHeight = isCompact ? 18 : 21 // If isCompact, tighten height
-    await tick();
-    x = getX()
-    y = getY()
+    id = $menu.id
+    items = $menu.items
+    type = $menu.type
+    compact = $menu.compact
+    position = $menu.position
+    width = $menu.width
   }
 
   /**
-   * Menu position depends on several factors:
-   * - Type of menu (e.g. popup or pulldown)
-   * - Type of button (e.g. text or icon)
-   * - Whether it's compact or not
+   * Set position, depending on the menu type. Popups appear with the checked item positioned directly over the button. Pulldowns appeaar below the button.
    */
-  function getX() {
-    if ($menu.menuType == 'popup') {
-      return $menu.x + (isCompact ? -13 : -20)
-    } else {
-      return $menu.x
-    }
-  }
-
-  function getY() {
-
-    const selectedItem = ul.querySelector('.isChecked')
-
-    if ($menu.menuType == 'popup') {
-      return $menu.y - selectedItem.offsetTop
-    } else {
-      return $menu.y + itemHeight
+   async function setPosition() {
+    if (!self) return
+    const { x, y } = position
+    if (type == 'pulldown') {
+      self.style.top = `${y}px`
+      self.style.left = `${x}px`
+    } else if (type == 'popup') {
+      const checkedEl = self.querySelector('.checked')
+      self.style.top = `${y - checkedEl.offsetTop - checkedEl.offsetHeight}px`
+      self.style.left = `${x - checkedEl.offsetLeft - (compact ? 6 : 12)}px`
     }
   }
 
@@ -91,34 +76,68 @@
    * Wait a few beats before "arming" the buttons. We do this so we can 1) click the menu without the mouseup event triggering a selection (within the arming timer window), or 2) press-hold-release to select an item (after the arming timing window is finished).
   */
   async function open() {
+    selectedIndex = undefined // So nothing is selected, at first.
     isClosing = false
-    await wait(150)
+    await wait(250)
     isLive = true
-  }
-  
-  /** 
-   * On option select, play flash animation, then close the menu. pointerEvents none disables the hover states. Then we add the isClosing class, which has the same styles as the hover state. This creates the appearance of the item flashing on/off.
-  */
-  async function select(evt, option) {
-    if (!isLive) return
-    isClosing = true
-    evt.target.classList.remove('hover')
-    await wait(50)
-    evt.target.classList.add('hover')
-    selectMenuOption(option)
   }
 
   /**
-   * Close the menu when the user clicks outside the menu. NOTE: If the user clicks the button that opened the menu, that will also close the menu. The button logic will handle the close action and stop event propagation, and this code path will not be reached. If we don't take this approach, this code will close the menu as soon as it's opened.
+   * On item selected, play exit animation, then call `closeMenu` to update store `isOpen` state.
    */
-  function checkIfClickedOutsideTheMenu(evt) {
+   async function selectItem(selectedItem) {
 
-    if (!isOpen) return
+    isClosing = true
+
+    const selectedEl = self.querySelector('.hover')
+
+    // Flash hover state on/off
+    selectedEl.classList.remove('hover')
+    await wait(60)
+    selectedEl.classList.add('hover')
+
+    // Fade out menu
+    const animation = self.animate([
+      { opacity: 1 },
+      { opacity: 0 },
+    ], 250)
     
-    const clickedInside = evt.clientX > x && evt.clientX < x + w && evt.clientY > y && evt.clientY < y + h
-    
-    if (!clickedInside) {
-      closeMenu()
+    // Update store
+    animation.onfinish = () => {
+      closeMenu(selectedItem)
+    }
+  }
+
+  
+  /**
+   * Triggered by `keydown` on window. Lets the user interact with the menu via the keyboard.
+   */
+  function onKeydown(domEvent) {
+    if (!isOpen || !isLive || isClosing) return
+    domEvent.preventDefault()
+
+    switch (domEvent.code) {
+      case 'Escape':
+        closeMenu(undefined)
+        break
+      case 'Enter':
+        const selectedItem = items[selectedIndex]
+        selectItem(selectedItem)
+        break
+      case 'ArrowUp':
+        if (selectedIndex > 0) {
+          selectedIndex--
+        } else if (selectedIndex == undefined) {
+          selectedIndex = items.length - 1
+        }
+        break
+      case 'ArrowDown':
+        if (selectedIndex < items.length - 1) {
+          selectedIndex++
+        } else if (selectedIndex == undefined) {
+          selectedIndex = 0
+        }
+        break
     }
   }
 
@@ -126,140 +145,172 @@
 
 <style type="text/scss">
 
-  // We need to break the menu out any parent overflow:hidden elements (e.g. a sidebar tab), so we set position relative on the top div, and position fixed on the menu div. Per this tip: https://github.com/w3c/csswg-drafts/issues/4092#issuecomment-595247838
-  
-  // Compact
-  .menu.isCompact {
-    @include label-normal-small;
+  // ------ Cover ------ //
 
-    .checkmark {
-      margin: 0 5px 0 4px;
-      width: 7px;
-      height: 7px;
-    }
-    // hr {
-    //   margin: 2px 0;
-    // }
+  #menuCover {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 99;
   }
+
+  // ------ Visibility ------ //
+
+  .menu.isOpen {
+    display: block;
+  }
+
+  .menu:not(.isOpen) {
+    display: none;
+  }
+
+  // ------ Layout: Normal ------ //
 
   .menu {
-    @include label-normal;
-    user-select: none;
-    width: calc(var(--width) * 1px);
-    position: fixed;
-    transform: translate(
-      calc(var(--x) * 1px), 
-      calc(var(--y) * 1px)
-    );
-    z-index: 100;
-  }
-
-  ul, li {
     @include list-reset;
+    position: fixed;
+    user-select: none;
+    z-index: 100;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    border-radius: 5.5px;
+    padding: 5px;
+
+    li {
+      @include label-normal;
+      cursor: default;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      outline: none;
+      border-radius: 4px;
+      height: 22px;
+
+      // Checkmark
+      &::before {
+        content: '';
+        @include centered_mask_image;
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        // transform: translate(0, -0.5px);
+        margin: 0 5px 0 5px;
+        -webkit-mask-size: contain;
+        -webkit-mask-image: var(--img-checkmark-heavy);
+      }
+    }
+
+    // Separator
+    hr {
+      border: none;
+      border-bottom: 1px solid var(--separatorColor);
+      margin: 5px 10px;
+      // pointer-events: none;
+    }
   }
 
-  ul {
-    // Drives most of the styling for the menu, including background color!
-    @include material-menu;
-    border-radius: 6px;
-    padding: 5px;
-    transform: translate(0, 0);
-    overflow: hidden;
-    box-shadow: 
-      0 0 0 0.5px rgba(var(--foregroundColor), 0.15), 
-      0 0 3px 0 rgba(var(--foregroundColor), 0.1), 
-      0 5px 16px 0 rgba(var(--foregroundColor), 0.20);
+  // ------ Layout: Compact ------ // 
+
+  .menu.compact {
+    li {
+      height: 20px;
+      border-radius: 3.5px;
+    }
+  }
+
+  // ------ Default ------ //
+  .menu {
+    @include dark { 
+      background: gray(17%, 0.9);
+      border: 1px solid white(0.2);
+      box-shadow:
+        0 0 0 0.5px black(1);
+    }
+    @include light { 
+      background: gray(95%, 0.8);
+      box-shadow: 
+        inset 0 0.5px 0 0 white(0.5), // Top bevel
+        0 0 0 0.5px black(0.12), // Outline
+        0 5px 16px 0 black(0.2); // Drop shadow
+    }
   }
 
   li {
-    cursor: default;
-    white-space: nowrap;
-    height: calc(var(--itemHeight) * 1px);
-    display: flex;
-    align-items: center;
-    border-radius: 4px;
-    outline: none;
-
-    * {
-      pointer-events: none;
+    color: var(--labelColor);
+    &::before { 
+      opacity: 0;
+      background: var(--labelColor);
     }
   }
 
-  .checkmark {
-    @include centered_mask_image;
-    -webkit-mask-image: var(--img-checkmark);
-    background-color: var(--controlTextColor);
-    display: inline-block;
-    margin: 0 7px 0 6px;
-    padding: 0;
-    width: 10px;
-    height: 10px;
-    opacity: 0;
+  // ------ Checked ------ //
+  
+  li.checked {
+    &::before { opacity: 1; }
   }
 
-  .label {
-    color: var(--labelColor);
-    opacity: 1;
-  }
-
+  // ------ Hover ------ //
   li.hover {
     background-color: var(--controlAccentColor);
-    .checkmark {
-      background-color: var(--controlColor);
-    }
-    .label {
-      color: var(--controlColor);
-      opacity: 1;
-    }
+    color: white;
+    &::before { background: white; }
   }
 
-  li.isChecked {
-    .checkmark {
-      opacity: 1;
-    }
-  }
-
-  hr {
-    border: none;
-    border-bottom: 1px solid var(--separatorColor);
-    margin: 4px 0;
-  }
-
+  // ------ Disabled ------ //
+  // ------ Window not focused ------ //
 
 </style>
 
-<svelte:window on:mousedown={checkIfClickedOutsideTheMenu} />
+<svelte:options accessors={true}/>
 
-{#if isOpen}
+<svelte:window on:keydown={onKeydown} />
+
+<ul
+  class="menu"
+  class:isOpen
+  class:compact
+  bind:this={self}
+  use:setSize={{width}}
+  on:mouseleave={() => {
+    if (isClosing) return
+    selectedIndex = undefined
+  }}
+>
+  {#each items as item, index}
+    <li
+      class:checked={item.checked}
+      class:hover={index == selectedIndex}
+      on:mouseenter={() => {
+        if (isClosing) return 
+        selectedIndex = index
+      }}
+      on:mouseup={() => {
+        if (!isLive) return
+        selectItem(item)
+      }}
+      >
+      {item.label}
+    </li>
+    {#if item.separatorAfter}
+      <hr on:mouseenter={() => {
+        if (isClosing) return
+        selectedIndex = undefined
+      }}/>
+    {/if}
+  {/each}
+</ul>
+
+<!--  
+Close the menu when the user clicks outside the menu. NOTE: If the user clicks the button that opened the menu, that will also close the menu. The button logic will handle the close action and stop event propagation, and this code path will not be reached. If we don't take this approach, this code will close the menu as soon as it's opened.
+-->
+{#if isOpen && isLive}
   <div 
-    class="menu" 
-    class:isCompact
-    bind:clientWidth={w} bind:clientHeight={h}
-    use:css={{width, itemHeight, x, y}}
-    out:fade={{ duration: 250 }} 
+    id="menuCover"
+    on:mousedown={() => {
+      // Call `closeMenu` to update store `isOpen` state
+      closeMenu(undefined)
+    }}
   >
-    <ul bind:this={ul}>
-      {#each options as option}
-        {#if option.label == 'separator'}
-          <hr />
-        {:else}
-          <li 
-            class:hover={false}
-            class:isChecked={option.isChecked} 
-            on:mousedown|preventDefault
-            on:mouseenter={(evt) => {
-              if (isClosing) return
-              evt.target.classList.add('hover')
-            }}
-            on:mouseout={(evt) => evt.target.classList.remove('hover')}
-            on:mouseup={(evt) => select(evt, option)}
-            tabindex="0"
-          >
-            <span class="checkmark"></span>
-            <span class="label">{option.label}</span>
-          </li>
-        {/if}
-      {/each}
-    </ul>
   </div>
 {/if}

@@ -6,15 +6,16 @@ var ElectronStore = require('electron-store');
 var produce = require('immer');
 var fsExtra = require('fs-extra');
 var fs = require('fs');
+var nonSecure = require('nanoid/non-secure');
 require('colors');
-var Database = require('better-sqlite3');
+var chroma = require('chroma-js');
 require('deep-eql');
+var Database = require('better-sqlite3');
 var chokidar = require('chokidar');
 var matter = require('gray-matter');
 var removeMd = require('remove-markdown');
 var sizeOf = require('image-size');
 var debounce = require('debounce');
-require('url');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -22,6 +23,7 @@ var path__default = /*#__PURE__*/_interopDefaultLegacy(path);
 var ElectronStore__default = /*#__PURE__*/_interopDefaultLegacy(ElectronStore);
 var produce__default = /*#__PURE__*/_interopDefaultLegacy(produce);
 var fs__default = /*#__PURE__*/_interopDefaultLegacy(fs);
+var chroma__default = /*#__PURE__*/_interopDefaultLegacy(chroma);
 var Database__default = /*#__PURE__*/_interopDefaultLegacy(Database);
 var chokidar__default = /*#__PURE__*/_interopDefaultLegacy(chokidar);
 var matter__default = /*#__PURE__*/_interopDefaultLegacy(matter);
@@ -30,39 +32,59 @@ var sizeOf__default = /*#__PURE__*/_interopDefaultLegacy(sizeOf);
 
 produce.enablePatches();
 
-const update = (state, action, windowId) =>
+function isDirectoryAccessible(directory) {
+  try {
+    fsExtra.accessSync(directory, fs__default['default'].constants.W_OK);
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+
+const update = (state, action, window) =>
   produce__default['default'](state, (draft) => {
 
     // Set a few useful, commonly-used variables
-    const win = windowId !== undefined ? electron.BrowserWindow.fromId(windowId) : undefined;
-    const project = windowId !== undefined ? draft.projects.find((p) => p.window.id == windowId) : undefined;
+    // const project = window?.projectId !== undefined ? draft.projects.byId[window.projectId] : undefined
+    const project = draft.projects.byId[window?.projectId];
 
     switch (action.type) {
 
-      // -------- APP -------- //
+
+      // ------------------------ APP-WIDE ------------------------ //
 
       case 'START_COLD_START': {
 
-        // Update appStatus
+        // Update appStatus 
         draft.appStatus = 'coldStarting';
 
-        // If there are existing projects, check their directories. Prune any that 1) are missing a directory (blank value, or path doesn't exist), or 2) that we don't have write permissions for.
-        if (draft.projects.length) {
-          draft.projects = draft.projects.filter((project) => {
-            if (!project.directory) return false
-            try {
-              fsExtra.accessSync(project.directory, fs__default['default'].constants.W_OK);
-              return true
-            } catch(err) {
-              return false
+        // Delete existing projects that 1) are missing their directory, or 2) have an inaccessible directory
+        if (draft.projects.allIds.length) {
+          draft.projects.allIds.forEach((id) => {
+
+            const project = draft.projects.byId[id];
+            const directoryIsMissing = !project.directory;
+            const directoryIsInaccessible = !isDirectoryAccessible(project.directory);
+
+            if (directoryIsMissing || directoryIsInaccessible) {
+              delete draft.projects.byId[id];
             }
           });
+
+          // Update `allIds` to match `byId`
+          draft.projects.allIds = Object.keys(draft.projects.byId);
         }
 
         // If there are no projects, create a new empty one.
-        if (!draft.projects.length) {
-          draft.projects.push(createNewProject());
+        if (!draft.projects.allIds.length) {
+          const id = nonSecure.nanoid();
+          draft.projects.byId[id] = { ...newProject };
+          draft.projects.allIds.push(id);
         }
+
+        // Close preferences
+        draft.prefs.isOpen = false;
 
         break
       }
@@ -77,68 +99,89 @@ const update = (state, action, windowId) =>
         break
       }
 
-      case 'CAN_SAFELY_QUIT': {
-        draft.appStatus = 'safeToQuit';
+      // case 'CAN_SAFELY_QUIT': {
+      //   draft.appStatus = 'canSafelyQuit'
+      //   break
+      // }
+
+      // FOCUSED/UNFOCUSED WINDOW
+
+      case 'FOCUSED_WINDOW': {
+        draft.focusedWindowId = window.projectId;
         break
       }
 
-      // -------- APPEARANCE & TIMING -------- //
+      case 'NO_WINDOW_FOCUSED': {
+        draft.focusedWindowId = "";
+        break
+      }
 
-      case 'SAVE_SYSTEM_APPEARANCE_SETTINGS': {
-        draft.appearance.os = action.settings;
+      // PREFERENCES
+
+      case 'OPEN_PREFERENCES': {
+        draft.prefs.isOpen = true;
+        break
+      }
+
+      case 'CLOSE_PREFERENCES': {
+        draft.prefs.isOpen = false;
+        break
+      }
+
+      // APPEARANCE
+
+      case 'SET_APP_THEME': {
+        draft.theme.app = action.theme;
+        break
+      }
+
+      case 'SAVE_CHROMIUM_VALUES': {
+        draft.chromium = action.values;
+        break
+      }
+
+      case 'SAVE_COLORS': {
+        draft.colors = action.colors;
         break
       }
 
 
-      // -------- PROJECT/WINDOW: CREATE AND CLOSE -------- //
+
+
+      // ------------------------ PROJECT-SPECIFIC ------------------------ //
+
+      // CREATE, EDIT, REMOVE
 
       case 'CREATE_NEW_PROJECT': {
-        draft.projects.push(createNewProject());
-        break
-      }
-
-      case 'SET_PROJECT_DIRECTORY': {
-        // Do we have write permissions for the selected directory?
-        // If yes, proceed.
-        try {
-          fsExtra.accessSync(action.directory, fs__default['default'].constants.W_OK);
-          project.directory = action.directory;
-        } catch(err) {
-          console.log(err);
-        }
-        break
-      }
-
-      case 'OPENED_WINDOW': {
-        // Update window status
-        const project = draft.projects[action.projectIndex];
-        project.window.status = 'open';
-        project.window.id = windowId;
-        break
-      }
-
-      case 'START_TO_CLOSE_WINDOW': {
-        project.window.status = 'wantsToClose';
-        break
-      }
-
-      case 'CAN_SAFELY_CLOSE_WINDOW': {
-        project.window.status = 'safeToClose';
+        const id = nonSecure.nanoid();
+        draft.projects.byId[id] = { ...newProject };
+        draft.projects.allIds.push(id);
         break
       }
 
       case 'REMOVE_PROJECT': {
-        const projects = draft.projects.slice(0);
-        const indexOfProjectToRemove = projects.findIndex((p) => p.window.id == windowId);
-        projects.splice(indexOfProjectToRemove, 1);
-        draft.projects = { ...projects };
+        delete draft.projects.byId[window.projectId];
+        draft.projects.allIds = Object.keys(draft.projects.byId);
         break
       }
 
+      case 'SET_PROJECT_DIRECTORY': {
+        // Do we have write permissions for the selected directory? If yes, proceed. 
+        // Else, if current directory is valid, keep using it.
+        // Else, set directory as blank.
+        if (isDirectoryAccessible(action.directory)) {
+          project.directory = action.directory;
+        } else {
+          if (isDirectoryAccessible(project.directory)) ; else {
+            project.directory = "";
+          }
+        }
 
-      // -------- PROJECT -------- //
-
-      // Citations
+        // Reset panels
+        project.focusedPanelIndex = 0;
+        project.panels = [{ ...newPanel, id: nonSecure.nanoid() }];
+        break
+      }
 
       case 'SET_PROJECT_CITATIONS_FILE': {
         // Do we have read and write permissions for the selected file?
@@ -153,44 +196,67 @@ const update = (state, action, windowId) =>
         break
       }
 
-      // UI
+      // PROJECT WINDOW
 
-      case 'SET_LAYOUT_FOCUS': {
-        project.focusedLayoutSection = action.section;
+      case 'OPENED_PROJECT_WINDOW': {
+        // Update window status
+        project.window.status = 'open';
         break
       }
 
-      // Window
+      case 'START_TO_CLOSE_PROJECT_WINDOW': {
+        project.window.status = 'wantsToClose';
+        break
+      }
+
+      case 'CAN_SAFELY_CLOSE_PROJECT_WINDOW': {
+
+        project.window.status = 'safeToClose';
+
+        // Every time a window marks itself 'safeToClose', check if the app is quitting. If true, check if all windows are 'safeToClose' yet. If true, we can safely quit the app.
+
+        if (draft.appStatus == 'wantsToQuit') {
+
+          const allWindowsAreSafeToClose = draft.projects.allIds.every((id) => {
+            const windowStatus = draft.projects.byId[id].window.status;
+            return windowStatus == 'safeToClose'
+          });
+
+          if (allWindowsAreSafeToClose) {
+            draft.appStatus = 'canSafelyQuit';
+          }
+        }
+
+        break
+      }
 
       // Save window bounds to state, so we can restore later
-      case 'SAVE_WINDOW_BOUNDS': {
+      case 'SAVE_PROJECT_WINDOW_BOUNDS': {
         project.window.bounds = action.windowBounds;
         break
       }
 
-      case 'WINDOW_FOCUSED': {
-        project.window.isFocused = true;
-        break
-      }
-
-      case 'WINDOW_BLURRED': {
-        project.window.isFocused = false;
-        break
-      }
-
-      case 'WINDOW_DRAG_OVER': {
+      case 'PROJECT_WINDOW_DRAG_OVER': {
         project.window.isDraggedOver = true;
         break
       }
 
-      case 'WINDOW_DRAG_LEAVE': {
+      case 'PROJECT_WINDOW_DRAG_LEAVE': {
         project.window.isDraggedOver = false;
         break
       }
 
+      case 'SET_LAYOUT_FOCUS': {
+        project.focusedSectionId = action.section;
+        break
+      }
 
+      // case 'SET_DRAGGED_FILE': {
+      //   project.draggedFileId = action.id
+      //   break
+      // }
 
-      // -------- SIDEBAR 2 -------- //
+      // SIDEBAR
 
       case 'SELECT_SIDEBAR_TAB_BY_ID': {
         project.sidebar.activeTabId = action.id;
@@ -204,8 +270,12 @@ const update = (state, action, windowId) =>
 
       case 'SIDEBAR_SET_SORTING': {
         const tab = project.sidebar.tabsById[action.tabId];
-        tab.sortBy = action.sortBy;
-        tab.sortOrder = action.sortOrder;
+        if (tab.sortBy) {
+          tab.sortBy = action.sortBy;
+        }
+        if (tab.sortOrder) {
+          tab.sortOrder = action.sortOrder;
+        }
         break
       }
 
@@ -228,9 +298,15 @@ const update = (state, action, windowId) =>
         break
       }
 
-      case 'SIDEBAR_SET_SEARCH_PARAMS': {
+      case 'SIDEBAR_SET_SEARCH_OPTIONS': {
         const tab = project.sidebar.tabsById.search;
         tab.options = action.options;
+        break
+      }
+
+      case 'SIDEBAR_TOGGLE_EXPANDABLE': {
+        const tab = project.sidebar.tabsById[action.tabId];
+        tab[action.expandable].isOpen = !tab[action.expandable].isOpen;
         break
       }
 
@@ -238,32 +314,141 @@ const update = (state, action, windowId) =>
         project.sidebar.isPreviewOpen = !project.sidebar.isPreviewOpen;
         break
       }
+
+      // PANEL
+
+      case 'OPEN_DOC_IN_PANEL': {
+        const panel = project.panels[action.panelIndex];
+        panel.docId = action.docId;
+        panel.unsavedChanges = false;
+        break
+      }
+
+      case 'OPEN_DOC_IN_FOCUSED_PANEL': {
+        const focusedPanel = project.panels[project.focusedPanelIndex];
+        focusedPanel.docId = action.docId;
+        focusedPanel.unsavedChanges = false;
+        break
+      }
+
+      case 'OPEN_NEW_PANEL': {
+
+        // Insert new panel at specified index
+        project.panels.splice(action.panelIndex, 0, {
+          ...newPanel,
+          id: nonSecure.nanoid(),
+          docId: action.docId,
+        });
+
+        // Update panel indexes
+        project.panels.forEach((p, i) => p.index = i);
+
+        // Focus new panel
+        project.focusedPanelIndex = action.panelIndex;
+
+        // Set all panels equal width
+        const panelWidth = (100 / project.panels.length).toFixed(1);
+        project.panels.forEach((p) => p.width = panelWidth);
+
+        break
+      }
+
+      case 'MOVE_PANEL': {
+
+        // Delete the panel from it's current position.
+        // Splice returns the moved panel's array item.
+        const movedPanel = project.panels.splice(action.fromIndex, 1);
+
+        // Move the item to its new position
+        project.panels.splice(action.toIndex, 0, movedPanel[0]);
+
+        // Update panel indexes
+        project.panels.forEach((p, i) => p.index = i);
+
+        // Focus the panel  
+        project.focusedPanelIndex = action.toIndex;
+
+        break
+      }
+
+      case 'CLOSE_PANEL': {
+        project.panels.splice(action.panelIndex, 1);
+
+        // Set all panels to equal percentage of total
+        const panelWidth = (100 / project.panels.length).toFixed(1);
+        project.panels.forEach((p) => p.width = panelWidth);
+
+        // Update focusedPanel:
+        // If there is only one panel left, focus it. Else...
+        // * If it was to LEFT of the closed panel, the value is unchanged.
+        // * If it WAS closed the closed panel, the value is unchanged (this will focus the adjacent panel).
+        // * ...unless it was the panel furthest right, in which case we focus the new last panel.
+        // * If it was to RIGHT of the closed panel, decrement the value by one.
+
+        if (project.panels.length == 1) {
+          project.focusedPanelIndex = 0;
+        } else {
+          const closedPanelWasLeftOfFocusedPanel = action.panelIndex < project.focusedPanelIndex;
+          const closedPanelWasFocusedAndFurthestRight = action.panelIndex == project.focusedPanelIndex && action.panelIndex == project.panels.length;
+
+          if (closedPanelWasLeftOfFocusedPanel) {
+            project.focusedPanelIndex = project.focusedPanelIndex - 1;
+          } else if (closedPanelWasFocusedAndFurthestRight) {
+            project.focusedPanelIndex = project.panels.length - 1;
+          }
+        }
+
+        // Update panel indexes
+        project.panels.forEach((p, i) => p.index = i);
+
+        break
+      }
+
+      // case 'SET_PANEL_WIDTH': {
+      //   // Set width of the panel of `panelIndex`, and the one to it's right (if there is one)
+      //   const panel = project.panels[action.panelIndex]
+      //   const panelToRight = project.panels[action.panelIndex + 1]
+
+      //   break
+      // }
+
+      case 'SET_PANEL_WIDTHS': {
+        project.panels.forEach((panel, i) => panel.width = action.widths[i]);
+        break
+      }
+
+      case 'FOCUS_PANEL': {
+        project.focusedPanelIndex = action.panelIndex;
+        break
+      }
+
+      // EDITING
+
+      case 'SET_SOURCE_MODE': {
+        draft.sourceMode = action.enabled;
+        break
+      }
+
+      case 'SET_UNSAVED_CHANGES': {
+        const panel = project.panels[action.panelIndex];
+        panel.unsavedChanges = action.value;
+        break
+      }
+
+      case 'SAVE_DOC_SUCCESS': {
+        const panel = project.panels[action.panelIndex];
+        panel.unsavedChanges = false;
+        break
+      }
+
+
+
     }
   }, (patches) => {
     // Update `global.patches`
     global.patches = patches;
-  });
-
-
-
-/**
-* Each project needs to store the ID of the window it's associated with. The BrowserWindow hasn't been created yet for this project (that's handled by WindowManager), but we know what ID the window will be: BrowserWindow ids start at 1 and go up. And removed BrowserWindows do not release their IDs back into the available set. So the next BrowserWindow id is always +1 of the highest existing.
-*/
-function getNextWindowId() {
-  const existingWindowIds = electron.BrowserWindow.getAllWindows()
-    .map((win) => win.id);
-  const nextWindowId = Math.max(existingWindowIds) + 1;
-  return nextWindowId
-}
-
-/**
- * Insert a new blank project into state.projects array
- */
-function createNewProject() {
-  const project = { ...newProject };
-  project.window.id = getNextWindowId();
-  return project
-}
+  }
+  );
 
 class Store extends ElectronStore__default['default'] {
   constructor() {
@@ -277,13 +462,13 @@ class Store extends ElectronStore__default['default'] {
     });
   }
 
-  async dispatch(action, windowId = undefined) {
+  async dispatch(action, window = undefined) {
 
     if (!electron.app.isPackaged) logTheAction(action);
 
     // Get next state. 
     // `update` function also updates `global.patches`.
-    const nextState = update(store.store, action, windowId);
+    const nextState = update(store.store, action, window);
 
     // Apply next state to Store
     this.set(nextState);
@@ -310,64 +495,25 @@ const storeDefault = {
 
   appStatus: 'open',
 
-  // App theme. See Readme.
-  appearance: {
-    userPref: 'match-system',
-    theme: 'gambier-light',
-    os: {
-      themeSource: 'system',
-      isDarkMode: false,
-      isHighContrast: false,
-      isInverted: false,
-      isReducedMotion: false,
-      colors: {
-        // System Colors
-        systemBlue: [],
-        systemBrown: [],
-        systemGray: [],
-        systemGreen: [],
-        systemIndigo: [],
-        systemOrange: [],
-        systemPink: [],
-        systemPurple: [],
-        systemRed: [],
-        systemTeal: [],
-        systemYellow: [],
-        // Dynamic System Colors
-        alternateSelectedControlTextColor: [],
-        controlAccentColor: [],
-        controlBackgroundColor: [],
-        controlColor: [],
-        controlTextColor: [],
-        disabledControlTextColor: [],
-        findHighlightColor: [],
-        gridColor: [],
-        headerTextColor: [],
-        highlightColor: [],
-        keyboardFocusIndicatorColor: [],
-        labelColor: [],
-        linkColor: [],
-        placeholderTextColor: [],
-        quaternaryLabelColor: [],
-        secondaryLabelColor: [],
-        selectedContentBackgroundColor: [],
-        selectedControlColor: [],
-        selectedControlTextColor: [],
-        selectedMenuItemTextColor: [],
-        selectedTextBackgroundColor: [],
-        selectedTextColor: [],
-        separatorColor: [],
-        shadowColor: [],
-        tertiaryLabelColor: [],
-        textBackgroundColor: [],
-        textColor: [],
-        unemphasizedSelectedContentBackgroundColor: [],
-        unemphasizedSelectedTextBackgroundColor: [],
-        unemphasizedSelectedTextColor: [],
-        windowBackgroundColor: [],
-        windowFrameTextColor: [],
-      }
-    }
+  theme: {
+    app: 'match-system',
+    editor: 'gambier'
+  },
+
+  chromium: {
+    themeSource: 'system',
+    isDarkMode: false,
+    isHighContrast: false,
+    isInverted: false,
+    isReducedMotion: false,
+  },
+
+  sourceMode: false,
+
+  focusedWindowId: 0,
+
+  prefs: {
+    isOpen: false
   },
 
   timing: {
@@ -376,19 +522,33 @@ const storeDefault = {
 
   // ----------- PROJECTS ----------- //
 
-  projects: []
+  projects: {
+    allIds: [],
+    byId: {}
+  }
+
+  // projects: []
 
 };
 
+const newPanel = {
+  index: 0,
+  id: '', // Generate with nanoid
+  docId: '',
+  width: '100', // Percentage
+  unsavedChanges: false
+};
 
 const newProject = {
 
+  // Used to associate windows with projects. Generated by nanoid.
+  // id: '',
+  
   window: {
     // Used to associate windows with projects
     id: 0,
     // Used when closing window (to check if it's safe to do so or not)
-    status: 'open',
-    isFocused: false,
+    status: 'new',
     isDraggedOver: false,
     bounds: { x: 0, y: 0, width: 1600, height: 1200 }
   },
@@ -399,10 +559,20 @@ const newProject = {
   // User specified path to CSL-JSON file containing their citatons
   citations: '',
 
-  focusedLayoutSection: 'sidebar',
+  focusedSectionId: 'sidebar',
+  
+  // Index of focused panel
+  focusedPanelIndex: 0,
+
+  // draggedFileId: '',
 
   // A copy of the object of the document currently visible in the editor.
+  // TODO: Is made obsolete by switch to panels. Remove.
   openDoc: {},
+
+  // List of the open panels
+  // See `newPanel` for template
+  panels: [],
 
   // SideBar
   sidebar: {
@@ -458,10 +628,14 @@ const newProject = {
         lastSelected: {},
         selected: [],
         options: {
+          isOpen: false,
           matchCase: false,
           matchExactPhrase: false,
-          lookIn: 'all-folders',
+          lookIn: '*',
           tags: []
+        },
+        replace: {
+          isOpen: false,
         }
       }
     },
@@ -469,58 +643,260 @@ const newProject = {
   }
 };
 
-class AppearanceManager {
-  constructor() {
+/**
+ * Get the diff between two arrays
+ * For [1, 2, 3] and [1, 2], it will return [3]
+ * From: https://stackoverflow.com/a/33034768
+ */
+function getArrayDiff(arr1, arr2) {
+  return arr1.filter(x => !arr2.includes(x));
+}
 
-    // Listen for system appearance changes (e.g. when user sets Dark mode in System Preferences). The `nativTheme` API emits 'updated' event: "...when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
+const formats = {
+  document: ['.md', '.markdown'],
+  image: [
+    '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
+  ],
+  av: [
+    '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
+  ]
+};
 
-    electron.nativeTheme.on('updated', systemAppearanceChanged);
+/**
+ * Wrap setTimeout in a promise so we can use with async/await. 
+ * Use like: `await wait(1000);`
+ * @param {*} ms 
+ */
+async function wait(ms) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
 
+function isDoc(fileExtension) {
+  return formats.document.includes(fileExtension)
+}
 
+function isMedia(fileExtension) {
+  const isImage = formats.image.includes(fileExtension);
+  const isAV = formats.av.includes(fileExtension);
+  return isImage || isAV
+}
+
+function getMediaType(fileExtension) {
+  const isImage = formats.image.includes(fileExtension);
+  const isAV = formats.av.includes(fileExtension);
+  if (isImage) {
+    return 'img'
+  } else if (isAV) {
+    return 'av'
+  } else {
+    console.error('File extension does not match supported media types');
   }
+}
 
-  startup() {
-    systemAppearanceChanged();
+function findInTree (tree, value, key = 'id', reverse = false) {
+  const stack = [ tree[0] ];
+  while (stack.length) {
+    const node = stack[reverse ? 'pop' : 'shift']();
+    if (node[key] === value) return node
+    node.children && stack.push(...node.children);
   }
+  return null
+}
 
+
+// -------- COMPARE PATCHES -------- //
+
+/**
+ * Check if state property has changed by comparing Immer patches. And (optionally) if property now equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
+ * @param {*} props - Either a string, or an array (for more precision).
+ * @param {*} [toValue] - Optional value to check prop against
+ */
+function stateHasChanged(patches, props, toValue = '') {
+	return patches.some((patch) => {
+
+  	const pathAsString = patch.path.toString();
+		const checkMultipleProps = Array.isArray(props);
+
+		const hasChanged = checkMultipleProps ?
+    	props.every((key) => pathAsString.includes(key)) :
+      pathAsString.includes(props);
+    
+    // If optional 'toValue' argument is specified, check it.
+    // Else, only check `hasChanged`
+    if (toValue) {
+      const equalsValue = patch.value == toValue;
+      return hasChanged && equalsValue
+    } else {
+      return hasChanged
+    }
+  })
 }
 
 /**
- * When system appearance changes, save values to state.
+ * Check if an object property has changed to a specific value,
+ * by comparing old and new versions of the object.
+ * @param {*} keysAsString 
+ * @param {*} value 
+ * @param {*} objTo 
+ * @param {*} objFrom 
  */
-function systemAppearanceChanged() {
+function propHasChangedTo(keysAsString, value, objTo, objFrom) {
+  if (!keysAsString || !value ) {
+    // If either required arguments are missing or empty, return undefined
+    return undefined
+  } else {
+    const keys = extractKeysFromString(keysAsString);
+    const objToVal = getNestedObject(objTo, keys);
+    const objFromVal = getNestedObject(objFrom, keys);
+    if (typeof objToVal == 'object' || typeof objFromVal == 'object') {
+      // If either value is an object, return undefined.
+      // For now, we don't allow checking against objects.
+      return undefined
+    } else if (objToVal === objFromVal) {
+      // If no change, return false
+      return false
+    } else {
+      // Else, check if objTo equals value
+      return objToVal === value
+    }
+  }
+}
 
-  const isDarkMode = electron.nativeTheme.shouldUseDarkColors;
-  const isHighContrast = electron.nativeTheme.shouldUseHighContrastColors;
-  const isInverted = electron.nativeTheme.shouldUseInvertedColorScheme;
+/**
+ * Utility function for hasChanged. 
+ * Convert propAddress string to array of keys.
+ * Before: "projects[5].window"
+ * After: ["projects", 5, "window"]
+ * @param {*} keyAsString 
+ */
+function extractKeysFromString(keyAsString) {
+  const regex = /[^\.\[\]]+?(?=\.|\[|\]|$)/g;
+  const keys = keyAsString.match(regex);
+  if (keys && keys.length) {
+    keys.forEach((p, index, thisArray) => {
+      // Find strings that are just integers, and convert to integers
+      if (/\d/.test(p)) {
+        thisArray[index] = parseInt(p, 10);
+      }
+    });
+  }
+  return keys
+}
 
-  store.dispatch({
-    type: 'SAVE_SYSTEM_APPEARANCE_SETTINGS',
-    settings: {
-      themeSource: electron.nativeTheme.themeSource,
-      isDarkMode: isDarkMode,
-      isHighContrast: isHighContrast,
-      isInverted: isInverted,
-      isReducedMotion: electron.systemPreferences.getAnimationSettings().prefersReducedMotion,
-      colors: isDarkMode ? getColors(true) : getColors(false)
+/**
+ * Utility function for `hasChanged`. 
+ * @param {*} nestedObj 
+ * @param {*} pathArr 
+ */
+const getNestedObject = (nestedObj, pathArr) => {
+	return pathArr.reduce((obj, key) =>
+		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+};
+
+function init() {
+
+  // When nativeTheme changes for any reason, get updated colors.
+  // 'updated' fires when something tells Chromium to update visual settings.
+  // Can be triggered by app logic, or from the OS:
+  // 1) By app: App manually sets `nativeTheme.themeSource` to 'dark'.
+  // 2) By OS: Dark mode activates at 10pm. Chromium gets notification 
+  //    from OS that OS appearance has changed, and `nativeTheme.themeSource` 
+  //    is 'system', so Chromium accepts the change.
+  electron.nativeTheme.on('updated', () => {
+    saveChromiumValues();
+    sendUpdatedColorsToRenderProcess();
+  });
+
+  // When `theme.app` changes, update Chrome nativeTheme.themeSource.
+  global.store.onDidAnyChange((state, oldState) => {
+    const appThemeChanged = stateHasChanged(global.patches, ["theme", "app"]);
+    if (appThemeChanged) {
+      setNativeTheme(false);
     }
   });
 
-  // const userPref = store.store.appearance.userPref
-  // console.log("main.js: nativeTheme updated")
-  // if (userPref == 'match-system') {
-  //   store.dispatch({
-  //     type: 'SET_APPEARANCE',
-  //     theme: nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
-  //   })
-  // }
+  // Set native UI to theme value in store
+  setNativeTheme(true);
 }
 
-function getColors(isDarkMode, isHighContrast, isInverted) {
+/**
+ * Update `nativeTheme` electron property
+ * Setting `nativeTheme.themeSource` has several effects, including: it tells Chrome how to render UI elements such as menus, window frames, etc; it sets `prefers-color-scheme` css query; it sets `nativeTheme.shouldUseDarkColors` value.
+ * Per: https://www.electronjs.org/docs/api/native-theme
+ */
+function setNativeTheme(isFirstRun) {
+  const appTheme = global.state().theme.app;
+  switch (appTheme) {
+    case 'match-system':
+      electron.nativeTheme.themeSource = 'system';
+      break
+    case 'light':
+      electron.nativeTheme.themeSource = 'light';
+      break
+    case 'dark':
+      electron.nativeTheme.themeSource = 'dark';
+      break
+  }
+
+  if (!isFirstRun) {
+    // If dev tools is open, reload (close then open) to force it to load the new theme. Unfortunately it doesn't do so automatically, in either Electron or Chrome.
+    const win = electron.BrowserWindow.getFocusedWindow();
+    const devToolsIsOpen = !electron.app.isPackaged && win?.webContents?.isDevToolsOpened();
+    if (devToolsIsOpen) {
+      win.webContents.closeDevTools();
+      win.webContents.openDevTools();
+    }
+  }
+}
+
+/**
+ * Save Chromium appearance-related values to store. Note: nativeTheme properties  will usually match the OS, because they're usually set by the OS. But in some cases, they will differ. If the user chooses `View > Appearance > Light` while the OS is in dark mode, for example. 
+ */
+function saveChromiumValues() {
+  store.dispatch({
+    type: 'SAVE_CHROMIUM_VALUES',
+    values: {
+      themeSource: electron.nativeTheme.themeSource,
+      isDarkMode: electron.nativeTheme.shouldUseDarkColors,
+      isHighContrast: electron.nativeTheme.shouldUseHighContrastColors,
+      isInverted: electron.nativeTheme.shouldUseInvertedColorScheme,
+      isReducedMotion: electron.systemPreferences.getAnimationSettings().prefersReducedMotion
+    }
+  });
+}
+
+/** 
+ * When nativeTheme changes, we assume system colors have changed, 
+ * get the new values, and send them to render process. Which then
+ * applies them as css variables.
+*/
+function sendUpdatedColorsToRenderProcess() {
+  electron.webContents.getAllWebContents().forEach((contents) => {
+    contents.send('updatedSystemColors', getSystemColors());
+  });
+}
+
+
+
+
+
+
+
+
+
+
+
+// -------- COLORS -------- //
+
+function getSystemColors() {
+
+  const isDarkMode = electron.nativeTheme.shouldUseDarkColors;
 
   if (isDarkMode) {
     return {
-      // System Colors
+      // System colors
       systemBlue: '#0A84FFFF',
       systemBrown: '#AC8E68FF',
       systemGray: '#98989DFF',
@@ -532,9 +908,10 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       systemRed: '#FF453AFF',
       systemTeal: '#64D2FFFF',
       systemYellow: '#FFD60AFF',
-      // Dynamic System Colors
+      // Accent-influenced dynamic colors
+      ...getAccentColors(isDarkMode),
+      // All other dynamic dystem colors
       alternateSelectedControlTextColor: '#FFFFFFFF',
-      controlAccentColor: '#007AFFFF',
       controlBackgroundColor: '#1E1E1EFF',
       controlColor: '#FFFFFF3F',
       controlTextColor: '#FFFFFFD8',
@@ -543,17 +920,13 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       gridColor: '#FFFFFF19',
       headerTextColor: '#FFFFFFFF',
       highlightColor: '#B4B4B4FF',
-      keyboardFocusIndicatorColor: '#1AA9FF4C',
       labelColor: '#FFFFFFD8',
       linkColor: '#419CFFFF',
       placeholderTextColor: '#FFFFFF3F',
       quaternaryLabelColor: '#FFFFFF19',
       secondaryLabelColor: '#FFFFFF8C',
-      selectedContentBackgroundColor: '#0058D0FF',
-      selectedControlColor: '#3F638BFF',
       selectedControlTextColor: '#FFFFFFD8',
       selectedMenuItemTextColor: '#FFFFFFFF',
-      selectedTextBackgroundColor: '#3F638BFF',
       selectedTextColor: '#FFFFFFFF',
       separatorColor: '#FFFFFF19',
       shadowColor: '#000000FF',
@@ -568,11 +941,10 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       // Gambier-specific colors.
       foregroundColor: '255, 255, 255',
       backgroundColor: '0, 0, 0',
-      menuMaterialColor: rgbaHexToRgbaCSS('#1E1E1EFF', 0.1)
     }
   } else {
     return {
-      //System Colors
+      //System colors
       systemBlue: '#007AFFFF',
       systemBrown: '#A2845EFF',
       systemGray: '#8E8E93FF',
@@ -584,9 +956,10 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       systemRed: '#FF3B30FF',
       systemTeal: '#55BEF0FF',
       systemYellow: '#FFCC00FF',
-      // Dynamic System Colors
+      // Accent-influenced dynamic colors
+      ...getAccentColors(isDarkMode),
+      // All other dynamic dystem colors
       alternateSelectedControlTextColor: '#FFFFFFFF',
-      controlAccentColor: '#007AFFFF',
       controlBackgroundColor: '#FFFFFFFF',
       controlColor: '#FFFFFFFF',
       controlTextColor: '#000000D8',
@@ -595,17 +968,13 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       gridColor: '#E6E6E6FF',
       headerTextColor: '#000000D8',
       highlightColor: '#FFFFFFFF',
-      keyboardFocusIndicatorColor: '#0067F43F',
       labelColor: '#000000D8',
       linkColor: '#0068DAFF',
       placeholderTextColor: '#0000003F',
       quaternaryLabelColor: '#00000019',
       secondaryLabelColor: '#0000007F',
-      selectedContentBackgroundColor: '#0063E1FF',
-      selectedControlColor: '#B3D7FFFF',
       selectedControlTextColor: '#000000D8',
       selectedMenuItemTextColor: '#FFFFFFFF',
-      selectedTextBackgroundColor: '#B3D7FFFF',
       selectedTextColor: '#000000FF',
       separatorColor: '#00000019',
       shadowColor: '#000000FF',
@@ -620,81 +989,195 @@ function getColors(isDarkMode, isHighContrast, isInverted) {
       // Gambier-specific colors
       foregroundColor: '0, 0, 0',
       backgroundColor: '255, 255, 255',
-      // menuMaterialColor: Used in `material-menu` mixin (which simulates the `menu` macOS material), this is `controlBackgroundColor` with low opacity. 
-      menuMaterialColor: rgbaHexToRgbaCSS('#FFFFFFFF', 0.925, -5)
     }
   }
 }
 
-function rgbaHexToRgbaCSS(hex, alphaOveride, brightnessAdjustment = 0) {
-  const r = parseInt(hex.slice(1, 3), 16) + brightnessAdjustment;
-  const g = parseInt(hex.slice(3, 5), 16) + brightnessAdjustment;
-  const b = parseInt(hex.slice(5, 7), 16) + brightnessAdjustment;
-  const a = alphaOveride ? alphaOveride : parseInt(hex.slice(8, 9), 16);
+/**
+ * TEMPORARY: Electron returns incorrect values for controlAccentColor. So we have to hard-code the correct values. Filed issue here: https://github.com/electron/electron/issues/27048
+ */
+function getAccentColors(isDarkMode) {
 
-  return `rgba(${r}, ${g}, ${b}, ${a})`
+  const allegedAccentColor = `#${electron.systemPreferences.getAccentColor().toUpperCase()}`;
+
+  switch (allegedAccentColor) {
+
+    // ------------ BLUE ------------ //
+    case '#0A5FFFFF':
+      if (isDarkMode) {
+        return {
+          controlAccentColor: '#007AFFFF',
+          darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
+          keyboardFocusIndicatorColor: '#1AA9FF4C',
+          selectedContentBackgroundColor: '#0058D0FF',
+          selectedControlColor: '#3F638BFF',
+          selectedTextBackgroundColor: '#3F638BFF',
+        }
+      } else {
+        return {
+          controlAccentColor: '#007AFFFF',
+          darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
+          keyboardFocusIndicatorColor: '#0067F43F',
+          selectedContentBackgroundColor: '#0063E1FF',
+          selectedControlColor: '#B3D7FFFF',
+          selectedTextBackgroundColor: '#B3D7FFFF',
+        }
+      }
+
+    // ------------ PURPLE ------------ //
+    case '#923796FF': // Dark
+      return {
+        controlAccentColor: '#A550A7FF',
+        darkerControlAccentColor: getDarkerAccentColor('#A550A7FF'),
+        keyboardFocusIndicatorColor: '#DB78DE4C',
+        selectedContentBackgroundColor: '#7F3280FF',
+        selectedControlColor: '#705670FF',
+        selectedTextBackgroundColor: '#705670FF',
+      }
+    case '#812684FF': // Light
+      return {
+        controlAccentColor: '#953D96FF',
+        darkerControlAccentColor: getDarkerAccentColor('#953D96FF'),
+        keyboardFocusIndicatorColor: '#8326843F',
+        selectedContentBackgroundColor: '#7D2A7EFF',
+        selectedControlColor: '#DFC5DFFF',
+        selectedTextBackgroundColor: '#DFC5DFFF',
+      }
+
+    // ------------ PINK ------------ //
+    case '#F2318DFF':
+      if (isDarkMode) {
+        return {
+          controlAccentColor: '#F74F9EFF',
+          darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
+          keyboardFocusIndicatorColor: '#FF76D34C',
+          selectedContentBackgroundColor: '#C83179FF',
+          selectedControlColor: '#88566EFF',
+          selectedTextBackgroundColor: '#88566EFF',
+        }
+      } else {
+        return {
+          controlAccentColor: '#F74F9EFF',
+          darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
+          keyboardFocusIndicatorColor: '#EB398D3F',
+          selectedContentBackgroundColor: '#D93B85FF',
+          selectedControlColor: '#FCCAE2FF',
+          selectedTextBackgroundColor: '#FCCAE2FF',
+        }
+      }
+
+    // ------------ RED ------------ //
+    case '#FC3845FF': // Dark
+      return {
+        controlAccentColor: '#FF5257FF',
+        darkerControlAccentColor: getDarkerAccentColor('#FF5257FF'),
+        keyboardFocusIndicatorColor: '#FF7A804C',
+        selectedContentBackgroundColor: '#D03439FF',
+        selectedControlColor: '#8B5758FF',
+        selectedTextBackgroundColor: '#8B5758FF',
+      }
+    case '#D62130FF': // Light
+      return {
+        controlAccentColor: '#E0383EFF',
+        darkerControlAccentColor: getDarkerAccentColor('#E0383EFF'),
+        keyboardFocusIndicatorColor: '#D320273F',
+        selectedContentBackgroundColor: '#C3252BFF',
+        selectedControlColor: '#F5C3C5FF',
+        selectedTextBackgroundColor: '#F5C3C5FF',
+      }
+
+
+    // ------------ ORANGE ------------ //
+    case '#F36D16FF':
+      if (isDarkMode) {
+        return {
+          controlAccentColor: '#F7821BFF',
+          darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
+          keyboardFocusIndicatorColor: '#FFB2394C',
+          selectedContentBackgroundColor: '#C86003FF',
+          selectedControlColor: '#886547FF',
+          selectedTextBackgroundColor: '#886547FF',
+        }
+      } else {
+        return {
+          controlAccentColor: '#F7821BFF',
+          darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
+          keyboardFocusIndicatorColor: '#EB6F023F',
+          selectedContentBackgroundColor: '#D96B0AFF',
+          selectedControlColor: '#FCD9BBFF',
+          selectedTextBackgroundColor: '#FCD9BBFF',
+        }
+      }
+
+    // ------------ YELLOW ------------ //
+    case '#FEBC09FF': // Dark
+      return {
+        controlAccentColor: '#FFC600FF',
+        darkerControlAccentColor: getDarkerAccentColor('#FFC600FF'),
+        keyboardFocusIndicatorColor: '#FFFF1A4C',
+        selectedContentBackgroundColor: '#D09C00FF',
+        selectedControlColor: '#8B7A3FFF',
+        selectedTextBackgroundColor: '#8B7A3FFF',
+      }
+    case '#FEBD1EFF': // Light
+      return {
+        controlAccentColor: '#FFC726FF',
+        darkerControlAccentColor: getDarkerAccentColor('#FFC726FF'),
+        keyboardFocusIndicatorColor: '#F4B80D3F',
+        selectedContentBackgroundColor: '#E1AC14FF',
+        selectedControlColor: '#FFEEBEFF',
+        selectedTextBackgroundColor: '#FFEEBEFF',
+      }
+
+    // ------------ GREEN ------------ //
+    case '#53B036FF':
+      if (isDarkMode) {
+        return {
+          controlAccentColor: '#62BA46FF',
+          darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
+          keyboardFocusIndicatorColor: '#8DF46C4C',
+          selectedContentBackgroundColor: '#42912AFF',
+          selectedControlColor: '#5C7653FF',
+          selectedTextBackgroundColor: '#5C7653FF',
+        }
+      } else {
+        return {
+          controlAccentColor: '#62BA46FF',
+          darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
+          keyboardFocusIndicatorColor: '#4DAB2F3F',
+          selectedContentBackgroundColor: '#4DA032FF',
+          selectedControlColor: '#D0EAC7FF',
+          selectedTextBackgroundColor: '#D0EAC7FF',
+        }
+      }
+
+    // ------------ GRAPHITE ------------ //
+    case '#797979FF': // Dark
+      return {
+        controlAccentColor: '#8C8C8CFF',
+        darkerControlAccentColor: getDarkerAccentColor('#8C8C8CFF'),
+        keyboardFocusIndicatorColor: '#C3C3C37F',
+        selectedContentBackgroundColor: '#686868FF',
+        selectedControlColor: '#FFFFFF3F',
+        selectedTextBackgroundColor: '#FFFFFF3F',
+      }
+    case '#868686FF': // Light
+      return {
+        controlAccentColor: '#989898FF',
+        darkerControlAccentColor: getDarkerAccentColor('#989898FF'),
+        controlAccentColor: '#989898FF',
+        keyboardFocusIndicatorColor: '#99999EFF',
+        selectedContentBackgroundColor: '#808080FF',
+        selectedControlColor: '#E0E0E0FF',
+        selectedTextBackgroundColor: '#E0E0E0FF',
+      }
+  }
 }
 
-// // -------- Theme -------- //
 
-/**
- * When OS appearance changes, update app theme to match (dark or light):
- * NOTE: Is also called on startup.
- * Listen for changes to nativeTheme. These are triggered when the OS appearance changes (e.g. when the user modifies "Appearance" in System Preferences > General, on Mac). If the user has selected the "Match System" appearance option in the app, we need to match the new OS appearance. Check the `nativeTheme.shouldUseDarkColors` value, and set the theme accordingly (dark or light).
- * nativeTheme.on('updated'): "Emitted when something in the underlying NativeTheme has changed. This normally means that either the value of shouldUseDarkColors, shouldUseHighContrastColors or shouldUseInvertedColorScheme has changed. You will have to check them to determine which one has changed."
- */
-
-
-/**
- * When user modifies "Appearance" setting (e.g in `View` menu), update `nativeTheme`
- */
-// store.onDidChange('appearance', () => {
-//   setNativeTheme()
-// })
-
-
-
-// /**
-//  * Update `nativeTheme` electron property
-//  * Setting `nativeTheme.themeSource` has several effects. E.g. it tells Chrome how to UI elements such as menus, window frames, etc; it sets `prefers-color-scheme` css query; it sets `nativeTheme.shouldUseDarkColors` value.
-//  * Per: https://www.electronjs.org/docs/api/native-theme
-//  */
-// export function setNativeTheme() {
-//   const userPref = store.store.appearance.userPref
-//   switch (userPref) {
-//     case 'match-system':
-//       nativeTheme.themeSource = 'system'
-//       break
-//     case 'light':
-//       nativeTheme.themeSource = 'light'
-//       break
-//     case 'dark':
-//       nativeTheme.themeSource = 'dark'
-//       break
-//   }
-
-//   // console.log('setNativeTheme(). nativeTheme.themeSource = ', nativeTheme.themeSource)
-//   // console.log('setNativeTheme(). userPref = ', userPref)
-//   // console.log('setNativeTheme(). systemPreferences.getAccent   Color() = ', systemPreferences.getAccentColor())
-//   // console.log('setNativeTheme(). window-background = ', systemPreferences.getColor('window-background'))
-//   // 
-
-//   // Reload (close then open) DevTools to force it to load the new theme. Unfortunately DevTools does not respond to `nativeTheme.themeSource` changes automatically. In Electron, or in Chrome.
-//   if (!app.isPackaged && win && win.webContents && win.webContents.isDevToolsOpened()) {
-//     win.webContents.closeDevTools()
-//     win.webContents.openDevTools()
-//   }
-// }
-
-// console.log("Hi ------ ")
-// console.log(systemPreferences.isDarkMode())
-// console.log(systemPreferences.getUserDefault('AppleInterfaceStyle', 'string'))
-// console.log(systemPreferences.getUserDefault('AppleAquaColorVariant', 'integer'))
-// console.log(systemPreferences.getUserDefault('AppleHighlightColor', 'string'))
-// console.log(systemPreferences.getUserDefault('AppleShowScrollBars', 'string'))
-// console.log(systemPreferences.getAccentColor())
-// console.log(systemPreferences.getSystemColor('blue'))
-// console.log(systemPreferences.effectiveAppearance)
+function getDarkerAccentColor(accentColor) {
+  return chroma__default['default'].blend(accentColor, '#EEEEEE', 'burn').desaturate(0).hex();
+}
 
 class DbManager {
   constructor() {
@@ -737,7 +1220,7 @@ class DbManager {
     this.fts_stmt = this.db.prepare(`
       SELECT id,
              title,
-             snippet(docs, 4, '<span class="highlight">', '</span>', '...', 24) body
+             highlight(docs, 4, '<span class="highlight">', '</span>') body
       FROM docs 
       WHERE docs MATCH ?
       ORDER BY rank
@@ -835,119 +1318,829 @@ class DbManager {
   }
 }
 
-const formats = {
-  document: ['.md', '.markdown'],
-  image: [
-    '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
-  ],
-  av: [
-    '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
-  ]
-};
-
-function isDoc(fileExtension) {
-  return formats.document.includes(fileExtension)
+// 1/25: TODO: Can probably delete. Moved this into MenuBarManager
+async function deleteFile(path) {
+  try {
+		await fsExtra.remove(path);
+		return { type: 'DELETE_FILE_SUCCESS', path: path }
+	} catch(err) {
+		return { type: 'DELETE_FILE_FAIL', err: err }
+	}
 }
 
-function isMedia(fileExtension) {
-  const isImage = formats.image.includes(fileExtension);
-  const isAV = formats.av.includes(fileExtension);
-  return isImage || isAV
+// 1/25: TODO: Can probably delete. Moved this into MenuBarManager
+
+async function deleteFiles(paths) {
+  try {
+    let deletedPaths = await Promise.all(
+      paths.map(async (path) => {
+        await fsExtra.remove(path);
+      })
+    );
+		return { type: 'DELETE_FILES_SUCCESS', paths: deletedPaths }
+	} catch(err) {
+		return { type: 'DELETE_FILES_FAIL', err: err }
+	}
 }
 
-function getMediaType(fileExtension) {
-  const isImage = formats.image.includes(fileExtension);
-  const isAV = formats.av.includes(fileExtension);
-  if (isImage) {
-    return 'img'
-  } else if (isAV) {
-    return 'av'
-  } else {
-    console.error('File extension does not match supported media types');
+async function saveDoc (doc, data, panelIndex) {
+	try {
+		console.log(doc, panelIndex);
+		await fsExtra.writeFile(doc.path, data, 'utf8');
+		return {
+			type: 'SAVE_DOC_SUCCESS',
+			panelIndex: panelIndex,
+		}
+	} catch (err) {
+		return {
+			type: 'SAVE_DOC_FAIL',
+			err: err
+		}
+	}
+}
+
+async function selectProjectDirectoryFromDialog () {
+
+  const win = electron.BrowserWindow.getFocusedWindow();
+
+  const selection = await electron.dialog.showOpenDialog(win, {
+    title: 'Select Project Folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
+
+  if (!selection.canceled) {
+    return { 
+      type: 'SET_PROJECT_DIRECTORY', 
+      directory: selection.filePaths[0] 
+    }
   }
 }
 
-function findInTree (tree, value, key = 'id', reverse = false) {
-  const stack = [ tree[0] ];
-  while (stack.length) {
-    const node = stack[reverse ? 'pop' : 'shift']();
-    if (node[key] === value) return node
-    node.children && stack.push(...node.children);
+async function selectCitationsFileFromDialog () {
+
+  const win = electron.BrowserWindow.getFocusedWindow();
+
+  const selection = await electron.dialog.showOpenDialog(win, {
+    title: 'Select Citations File',
+    properties: ['openFile'],
+    filters: [
+      { name: 'JSON', extensions: ['json'] },
+    ]
+  });
+
+  if (!selection.canceled) {
+    return { 
+      type: 'SET_PROJECT_CITATIONS_FILE', 
+      path: selection.filePaths[0] 
+    }
   }
-  return null
 }
 
-function extractKeysFromString(keyAsString) {
-	// Convert propAddress string to array of keys
-  // Before: "projects[5].window"
-  // After: ["projects", 5, "window"]
-  const regex = /[^\.\[\]]+?(?=\.|\[|\]|$)/g;
-  const keys = keyAsString.match(regex);
-  if (keys && keys.length) {
-    keys.forEach((p, index, thisArray) => {
-      // Find strings that are just integers, and convert to integers
-      if (/\d/.test(p)) {
-        thisArray[index] = parseInt(p, 10);
-      }
+function init$1() {
+
+  // -------- IPC: Renderer "receives" from Main -------- //
+
+  // On change, send updated state to renderer (each BrowserWindow)
+  // global.store.onDidAnyChange(async (state, oldState) => {
+  //   const windows = BrowserWindow.getAllWindows()
+  //   if (windows.length) {
+  //     windows.forEach((win) => win.webContents.send(' ', state, oldState))
+  //   }
+  // })
+
+  // -------- IPC: Renderer "sends" to Main -------- //
+
+  electron.ipcMain.on('showWindow', (evt) => {
+    const win = electron.BrowserWindow.fromWebContents(evt.sender);
+    win.show();
+  });
+
+  // Commented this out Jan 14. Isn't being used at the moment.
+  // Need to investigate how to safely close windows, tho. 
+  // E.g. What happens when we click the red close button?
+  // ipcMain.on('safelyCloseWindow', async (evt) => {
+  //   const win = BrowserWindow.fromWebContents(evt.sender)
+  //   if (!global.state().areQuiting) {
+  //     await global.store.dispatch({
+  //       type: 'REMOVE_PROJECT'
+  //     }, win.id)
+  //   }
+  //   win.destroy()
+  // })
+
+  electron.ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths, isMatchCase, isMatchExactPhrase, isMetaKeyPressed) => {
+
+    // Define our regex for finding matches in the specified files.
+    // Demo: https://jsfiddle.net/m17zhoyj/1/
+    let queryRegex = undefined;
+    if (isMatchExactPhrase) {
+      // If `matchExactPhrase`, make sure there are no word characters immediately before or after the query phrase, using negative look behind and look ahead.
+      // Demo: https://regex101.com/r/Toj4WF/1
+      queryRegex = new RegExp(String.raw`(?<!\w)${query}(?!\w)`, isMatchCase ? 'g' : 'gi');
+    } else {
+      queryRegex = new RegExp(`${query}`, isMatchCase ? 'g' : 'gi');
+    }
+
+    // Ask user to confirm replacment, unless meta key was held down (provides a fast path).
+    if (!isMetaKeyPressed) {
+      const confirmReplacement = electron.dialog.showMessageBoxSync({
+        type: 'warning',
+        message: `Are you sure you want to replace "${query}" with "${replaceWith}" in ${filePaths.length} document${filePaths.length > 1 ? 's' : ''}?`,
+        buttons: ['Cancel', 'Replace'],
+        cancelId: 0
+      });
+
+      // If user does not press `Replace` (1), then `return` prematurely.
+      if (confirmReplacement !== 1) return
+    }
+
+    // Open each file in `filePaths`, find all instances of `query`, replace, and write file.
+    filePaths.forEach(async (filePath) => {
+      let file = await fsExtra.readFile(filePath, 'utf8');
+      file = file.replaceAll(queryRegex, replaceWith);
+      await fsExtra.writeFile(filePath, file, 'utf8');
     });
-  }
-  return keys
+  });
+
+
+  electron.ipcMain.on('moveOrCopyIntoFolder', async (evt, filePath, folderPath, isCopy) => {
+    // Get destination
+    const fileName = path__default['default'].basename(filePath);
+    let destinationPath = path__default['default'].format({
+      dir: folderPath,
+      base: fileName
+    });
+
+    // Does file already exist at destination?
+    const fileAlreadyExists = fsExtra.existsSync(destinationPath);
+
+    // If yes, prompt user to confirm overwrite. 
+    // Else, just move/copy
+    if (fileAlreadyExists) {
+      const selectedButtonId = electron.dialog.showMessageBoxSync({
+        type: 'question',
+        message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
+        buttons: ['Keep Both', 'Stop', 'Replace'],
+        cancelId: 1
+      });
+      switch (selectedButtonId) {
+        // Keep both
+        case 0:
+          destinationPath = getIncrementedFileName(destinationPath);
+          fsExtra.copyFileSync(filePath, destinationPath);
+          break
+        // Stop (Do nothing)
+        case 1:
+          break
+        // Replace
+        case 2:
+          if (isCopy) {
+            fsExtra.copyFileSync(filePath, destinationPath);
+          } else {
+            fsExtra.renameSync(filePath, destinationPath);
+          }
+          break
+      }
+    } else {
+      if (isCopy) {
+        fsExtra.copyFileSync(filePath, destinationPath);
+      } else {
+        fsExtra.renameSync(filePath, destinationPath);
+      }
+    }
+  });
+
+
+  electron.ipcMain.on('dispatch', async (evt, action) => {
+    const win = electron.BrowserWindow.fromWebContents(evt.sender);
+    switch (action.type) {
+      case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
+        store.dispatch(await selectCitationsFileFromDialog(), win);
+        break
+      case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
+        store.dispatch(await selectProjectDirectoryFromDialog(), win);
+        break
+      case ('SAVE_DOC'):
+        store.dispatch(await saveDoc(action.doc, action.data, action.panelIndex), win);
+        break
+      case ('DELETE_FILE'):
+        store.dispatch(await deleteFile(action.path), win);
+        break
+      case ('DELETE_FILES'):
+        store.dispatch(await deleteFiles(action.paths), win);
+        break
+      default:
+        store.dispatch(action, win);
+        break
+    }
+  });
+
+  // -------- IPC: Invoke -------- //
+
+  // NOTE: We handle this in DbManager.js
+  // ipcMain.handle('queryDb', (evt, params) => {
+  //   ...
+  // })
+
+  electron.ipcMain.handle('getState', (evt) => {
+    return global.state()
+  });
+
+  electron.ipcMain.handle('getFiles', (evt) => {
+    const win = electron.BrowserWindow.fromWebContents(evt.sender);
+    const watcher = global.watchers.find((watcher) => watcher.id == win.projectId);
+    return watcher ? watcher.files : undefined
+  });
+
+  // Load file and return text
+  electron.ipcMain.handle('getFileByPath', async (event, filePath, encoding = 'utf8') => {
+    let file = await fsExtra.readFile(filePath, encoding);
+    return file
+  });
+
+  // Get system colors and return
+  electron.ipcMain.handle('getSystemColors', () => {
+    return getSystemColors()
+  });
 }
+
+
+
+// -------- IPC: Renderer "sends" to Main -------- //
+
+
+// // ipcMain.on('saveProjectStateToDisk', (evt, state) => {
+// //   const win = BrowserWindow.fromWebContents(evt.sender)
+// //   const projects = store.store.projects.slice(0)
+// //   const indexOfProjectToUpdate = projects.findIndex((p) => p.windowId == state.windowId)
+// //   projects[indexOfProjectToUpdate] = state
+// //   store.set('projects', projects)
+// // })
+
+// // ipcMain.on('saveFileThenCloseWindow', async (event, path, data) => {
+// //   await writeFile(path, data, 'utf8')
+// //   canCloseWindowSafely = true
+// //   win.close()
+// // })
+
+// // ipcMain.on('saveFileThenQuitApp', async (event, path, data) => {
+// //   await writeFile(path, data, 'utf8')
+// //   canQuitAppSafely = true
+// //   app.quit()
+// // })
+
+// // ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
+// //   shell.openExternal(url)
+// // })
+
+
+
+// -------- IPC: Invoke -------- //
+
+
+
+
+// // ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
+// //   // return path.resolve(basePath, filepath)
+
+// //   /*
+// //   Element: Image, link, backlink, link reference definition
+// //   File type: directory, html, png|jpg|gif, md|mmd|markdown
+// //   */
+
+// //   // console.log('- - - - - -')
+// //   // console.log(pathToCheck.match(/.{0,2}\//))
+// //   const directory = path.parse(docPath).dir
+// //   const resolvedPath = path.resolve(directory, pathToCheck)
+
+// //   const docPathExists = await pathExists(docPath)
+// //   const pathToCheckExists = await pathExists(pathToCheck)
+// //   const resolvedPathExists = await pathExists(resolvedPath)
+
+// //   // console.log('docPath: ', docPath)
+// //   // console.log('pathToCheck: ', pathToCheck)
+// //   // console.log('resolvedPath: ', resolvedPath)
+// //   // console.log(docPathExists, pathToCheckExists, resolvedPathExists)
+
+// //   // if (pathToCheck.match(/.{0,2}\//)) {
+// //   //   console.log()
+// //   // }
+// // })
+
+// // ipcMain.handle('getResolvedPath', async (event, basePath, filepath) => {
+// //   return path.resolve(basePath, filepath)
+// // })
+
+// // ipcMain.handle('getParsedPath', async (event, filepath) => {
+// //   return path.parse(filepath)
+// // })
+
+// // ipcMain.handle('ifPathExists', async (event, filepath) => {
+// //   const exists = await pathExists(filepath)
+// //   return { path: filepath, exists: exists }
+// // })
+
+
+
+// // ipcMain.handle('getState', async (event) => {
+// //   return store.store
+// // })
+
+// // ipcMain.handle('getCitations', (event) => {
+// //   return projectCitations.getCitations()
+// // })
+
+// // ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
+
+// //   // Load file and return
+// //   let file = await readFile(filePath, encoding)
+// //   return file
+// // })
+
+// // ipcMain.handle('getFileById', async (event, id, encoding) => {
+
+// //   // Get path of file with matching id
+// //   const filePath = store.store.contents.find((f) => f.id == id).path
+
+// //   // Load file and return
+// //   let file = await readFile(filePath, encoding)
+// //   return file
+// // })
+
+// // ipcMain.handle('pathJoin', async (event, path1, path2) => {
+// //   return path.join(path1, path2)
+// // })
+
+// // ipcMain.handle('getHTMLFromClipboard', (event) => {
+// //   return clipboard.readHTML()
+// // })
+
+// // ipcMain.handle('getFormatOfClipboard', (event) => {
+// //   return clipboard.availableFormats()
+// // })
+
 
 /**
- * Check Immer patches to see if a property has changed, and (optionally) if it equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
- * @param {*} props - Either a string, or an array (for more precision).
- * @param {*} [toValue] - Optional value to check prop against
+ * Utility function that returns filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
+ * Original:      /Users/Susan/Notes/ship.jpg
+ * First copy:    /Users/Susan/Notes/ship 2.jpg
+ * Second copy:   /Users/Susan/Notes/ship 3.jpg
+ * @param {*} origName 
  */
-function propHasChanged(patches, props, toValue = '') {
-	return patches.some((patch) => {
+function getIncrementedFileName(origPath) {
 
-  	const pathAsString = patch.path.toString();
-		const checkMultipleProps = Array.isArray(props);
+  const directory = path__default['default'].dirname(origPath); // /Users/Susan/Notes
+  const extension = path__default['default'].extname(origPath); // .jpg
+  const name = path__default['default'].basename(origPath, extension); // ship
 
-		const hasChanged = checkMultipleProps ?
-    	props.every((key) => pathAsString.includes(key)) :
-      pathAsString.includes(props);
-    
-    // If optional 'toValue' argument is specified, check it.
-    // Else, only check `hasChanged`
-    if (toValue) {
-      const equalsValue = patch.value == toValue;
-      return hasChanged && equalsValue
+  const allFilesInDirectory = fsExtra.readdirSync(directory);
+
+  let increment = 2;
+
+  // Basename in `path` is filename + extension. E.g. `ship.jpg`
+  // https://nodejs.org/api/path.html#path_path_basename_path_ext
+  let newBase = '';
+
+  // Keep looping until we find incremented name that's not already used
+  // Most of time this will be `ship 2.jpg`.
+  while (true) {
+    newBase = `${name} ${increment}${extension}`; // ship 2.jpg
+    const alreadyExists = allFilesInDirectory.includes(newBase);
+    if (alreadyExists) {
+      increment++;
     } else {
-      return hasChanged
+      break
     }
+  }
+
+  // /Users/Susan/Notes/ship 2.jpg
+  return path__default['default'].format({
+    dir: directory,
+    base: newBase
   })
 }
 
+/*
+Main instantiates new MenuBarManager instance. 
+Constructor creates variables, change listeners, and calls init().
+*/
 
+// I want to get values from Editor.svelte to editor
+// Example I'll use: toggle source mode
+// User selects `View > Source mode`
+// Enabled == Is active project `panel.sourceMode` true?
+// Dispatch command to reducer
+// Reducer sets value to panel
+// EditorPanel.svelte detects the change, and updates the `sourceMode` prop of Editor.svelte
+// Editor.svelte, when value changes, tells editor.js
 
+const isMac = process.platform === 'darwin';
+let menu;
+let menuItems = {};
 
-const getNestedObject = (nestedObj, pathArr) => {
-	return pathArr.reduce((obj, key) =>
-		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
-};
+/**
+ * On startup, create initial menu bar, and create change listeners.
+ */
 
-function hasChangedTo(keysAsString, value, objTo, objFrom) {
-  if (!keysAsString || !value ) {
-    // If either required arguments are missing or empty, return undefined
-    return undefined
-  } else {
-    const keys = extractKeysFromString(keysAsString);
-    const objToVal = getNestedObject(objTo, keys);
-    const objFromVal = getNestedObject(objFrom, keys);
-    if (typeof objToVal == 'object' || typeof objFromVal == 'object') {
-      // If either value is an object, return undefined.
-      // For now, we don't allow checking against objects.
-      return undefined
-    } else if (objToVal === objFromVal) {
-      // If no change, return false
-      return false
-    } else {
-      // Else, check if objTo equals value
-      return objToVal === value
+function init$2() {
+
+  // ------ SETUP CHANGE LISTENERS ------ //
+
+  // We need to rebuild the menu whenever any of the follow change,
+  // because they drive one or more menu items' `enabled` states.
+
+  global.store.onDidAnyChange((state, oldState) => {
+
+    const hasChanged = [
+      // Focused window
+      stateHasChanged(global.patches, "focusedWindowId"),
+      // Focused panel
+      stateHasChanged(global.patches, ["projects", "byId", "focusedPanelIndex"]),
+      // Source mode
+      stateHasChanged(global.patches, "sourceMode"),
+      // Appearance
+      stateHasChanged(global.patches, "theme"),
+      stateHasChanged(global.patches, "chromium"),
+    ];
+
+    const anyOfTheAboveHaveChanged = hasChanged.includes(true);
+
+    if (anyOfTheAboveHaveChanged) {
+      electron.Menu.setApplicationMenu(getMenu());
     }
+  });
+
+  // ------ DO INITIAL SETUP ------ //
+
+  electron.Menu.setApplicationMenu(getMenu());
+}
+
+
+
+/**
+ * Return a populated electron Menu instance.
+ */
+function getMenu() {
+
+  // Create a new electron Menu instance
+  menu = new electron.Menu();
+
+  // Generate the menu iems
+  menuItems = getMenuItems();
+
+  // Append the menu items to the Menu
+  menuItems.topLevel.forEach((item) => menu.append(item));
+
+  return menu
+}
+
+
+function getFocusedProject() {
+  const state = global.state();
+  return state.projects.byId[state.focusedWindowId]
+}
+
+function getFocusedPanel() {
+  const project = getFocusedProject();
+  return project?.panels[project?.focusedPanelIndex]
+}
+
+/**
+ * Return Menu Items. These are appended to a new Menu instance.
+ */
+function getMenuItems() {
+
+  const state = global.state();
+  const project = getFocusedProject();
+  const panel = getFocusedPanel();
+
+  const items = {
+    topLevel: []
+  };
+
+  // Separator
+  const _______________ = new electron.MenuItem({ type: 'separator' });
+
+
+  // -------- App (Mac-only) -------- //
+
+  if (isMac) {
+    items.topLevel.push(new electron.MenuItem({
+      label: electron.app.name,
+      submenu: [
+        { role: 'about' },
+        _______________,
+        new electron.MenuItem({
+          label: 'Preferences',
+          accelerator: 'CmdOrCtrl+,',
+          async click() {
+            global.store.dispatch({ type: 'OPEN_PREFERENCES' });
+          }
+        }),
+        _______________,
+        { role: 'services', submenu: [] },
+        _______________,
+        { role: 'hide' },
+        { role: 'hideothers' },
+        { role: 'unhide' },
+        _______________,
+        { role: 'quit' }
+      ]
+    }));
   }
+
+
+  // -------- File (Mac-only) -------- //
+
+  if (isMac) {
+
+    items.closeEditor = new electron.MenuItem({
+      label: 'Close Editor',
+      accelerator: 'CmdOrCtrl+W',
+      enabled: panel !== undefined,
+      click(item, focusedWindow) {
+
+        // In dev mode, we can get into state where there's no focused window, and/or no project. I think it may happen when dev tools is open in a panel. Check before proceeding, or we'll get errors.
+        if (!focusedWindow || !project) return
+
+        // If there are multiple panels open, close the focused one. Else, close the project window.
+        if (project.panels.length > 1) {
+          global.store.dispatch({
+            type: 'CLOSE_PANEL',
+            panelIndex: project.focusedPanelIndex
+          }, focusedWindow);
+        } else {
+          focusedWindow.close();
+        }
+      }
+    });
+
+    items.closeWindow = new electron.MenuItem({
+      label: 'Close Window',
+      accelerator: 'CmdOrCtrl+Shift+W',
+      enabled: panel !== undefined,
+      click(item, focusedWindow) {
+        focusedWindow.close();
+      }
+    });
+
+    function isMoveToTrashEnabled() {
+      const sideBarIsOpen = project?.sidebar.isOpen;
+      const selectedTab = project?.sidebar.tabsById[project?.sidebar.activeTabId];
+      const fileIsSelectedInSidebar = selectedTab?.selected.length;
+      return sideBarIsOpen && fileIsSelectedInSidebar
+    }
+
+    items.moveToTrash = new electron.MenuItem({
+      label: 'Move to Trash',
+      accelerator: 'CmdOrCtrl+Backspace',
+      enabled: isMoveToTrashEnabled(),
+      async click(item, focusedWindow) {
+
+        // Get selected file paths
+        const watcher = global.watchers.find((w) => w.id == focusedWindow.projectId);
+        const project = getFocusedProject();
+        const activeSidebarTab = project.sidebar.tabsById[project.sidebar.activeTabId];
+        let filePathsToDelete = [];
+        activeSidebarTab.selected.forEach((id) => {
+          const filepath = watcher.files.byId[id]?.path;
+          filePathsToDelete.push(filepath);
+        });
+        
+        // Delete
+        await Promise.all(
+          filePathsToDelete.map(async (filepath) => {
+            await fsExtra.remove(filepath);
+          })
+        );
+
+        // focusedWindow.webContents.send('mainRequestsDeleteFile')
+      }
+    });
+
+    items.newDocument = new electron.MenuItem({
+      label: 'New Document',
+      accelerator: 'CmdOrCtrl+N',
+      enabled: project !== undefined,
+      async click(item, focusedWindow) {
+        // TODO
+        // global.store.dispatch(await newFile(state))
+      }
+    });
+
+    items.newEditor = new electron.MenuItem({
+      label: 'New Editor',
+      accelerator: 'CmdOrCtrl+T',
+      enabled: project !== undefined,
+      async click(item, focusedWindow) {
+        // Create new panel to right of the current focused panel
+        global.store.dispatch({
+          type: 'OPEN_NEW_PANEL',
+          docId: '',
+          panelIndex: project.focusedPanelIndex + 1
+        }, focusedWindow);
+      }
+    });
+
+    items.newWindow = new electron.MenuItem({
+      label: 'New Window',
+      accelerator: 'CmdOrCtrl+Shift+N',
+      async click(item, focusedWindow) {
+        global.store.dispatch({ type: 'CREATE_NEW_PROJECT' });
+      }
+    });
+
+    items.openProject = new electron.MenuItem({
+      label: 'Open Project...',
+      accelerator: 'CmdOrCtrl+Shift+O',
+      enabled: project !== undefined,
+      async click(item, focusedWindow) {
+        global.store.dispatch(await selectProjectDirectoryFromDialog(), focusedWindow);
+      }
+    });
+
+    items.save = new electron.MenuItem({
+      label: 'Save',
+      accelerator: 'CmdOrCtrl+S',
+      enabled: project !== undefined,
+      click(item, focusedWindow) {
+        if (getFocusedPanel().unsavedChanges) {
+          focusedWindow.webContents.send('mainRequestsSaveFocusedPanel');
+        }
+      }
+    });
+
+    items.saveAll = new electron.MenuItem({
+      label: 'Save All',
+      accelerator: 'CmdOrCtrl+Alt+S',
+      enabled: panel !== undefined,
+      click(item, focusedWindow) {
+        focusedWindow.webContents.send('mainRequestsSaveAll');
+      }
+    });
+
+    items.topLevel.push(new electron.MenuItem({
+      label: 'File',
+      submenu: [
+        items.newDocument,
+        items.newEditor,
+        items.newWindow,
+        _______________,
+        items.openProject,
+        _______________,
+        items.save,
+        items.saveAll,
+        items.moveToTrash,
+        _______________,
+        items.closeEditor,
+        items.closeWindow
+      ]
+    }));
+  }
+
+
+  // -------- Edit -------- //
+
+
+  // mI.startspeaking = new MenuItem({ role: 'startspeaking' })
+  // mI.stopspeaking = new MenuItem({ role: 'stopspeaking' })
+
+  items.findInFiles = new electron.MenuItem({
+    label: 'Find in Files',
+    accelerator: 'CmdOrCtrl+Shift+F',
+    enabled: project !== undefined,
+    click(item, focusedWindow) {
+      // focusedWindow.webContents.send('findInFiles')
+    }
+  });
+
+  items.replaceInFiles = new electron.MenuItem({
+    label: 'Replace in Files',
+    accelerator: 'CmdOrCtrl+Shift+H',
+    enabled: project !== undefined,
+    click(item, focusedWindow) {
+      // focusedWindow.webContents.send('findInFiles')
+    }
+  });
+
+  items.topLevel.push(new electron.MenuItem(
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        _______________,
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectall' },
+        _______________,
+        items.findInFiles,
+        items.replaceInFiles,
+        // If macOS, add speech options to Edit menu
+        ...isMac ? [
+          _______________,
+          {
+            label: 'Speech',
+            submenu: [
+              { role: 'startspeaking' },
+              { role: 'stopspeaking' }
+            ]
+          }
+        ] : []
+      ]
+    }
+  ));
+
+
+  // -------- View -------- //
+
+  items.themeDark = new electron.MenuItem({
+    label: 'Dark',
+    type: 'checkbox',
+    checked: state.theme.app == 'dark',
+    click() {
+      store.dispatch({
+        type: 'SET_APP_THEME',
+        theme: 'dark',
+      });
+    }
+  });
+
+  items.themeLight = new electron.MenuItem({
+    label: 'Light',
+    type: 'checkbox',
+    checked: state.theme.app == 'light',
+    click() {
+      store.dispatch({
+        type: 'SET_APP_THEME',
+        theme: 'light',
+      });
+    }
+  });
+
+  items.themeMatchSystem = new electron.MenuItem({
+    label: 'Match System',
+    type: 'checkbox',
+    checked: state.theme.app == 'match-system',
+    click() {
+      store.dispatch({
+        type: 'SET_APP_THEME',
+        theme: 'match-system',
+      });
+    }
+  });
+
+  items.sourceMode = new electron.MenuItem({
+    label: 'Source mode',
+    type: 'checkbox',
+    checked: state.sourceMode,
+    accelerator: 'CmdOrCtrl+/',
+    click(item, focusedWindow) {
+      if (focusedWindow) {
+        global.store.dispatch({
+          type: 'SET_SOURCE_MODE',
+          enabled: !global.state().sourceMode,
+        }, focusedWindow);
+      }
+    }
+  });
+
+  items.toggleDevTools = new electron.MenuItem({
+    label: 'Toggle Developer Tools',
+    accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+    role: 'toggleDevTools',
+  });
+
+  items.reload = new electron.MenuItem({
+    label: 'Reload',
+    accelerator: 'CmdOrCtrl+R',
+    role: 'reload'
+  });
+
+  items.topLevel.push(new electron.MenuItem({
+    label: 'View',
+    submenu: [
+      {
+        label: 'Appearance',
+        submenu: [
+          items.themeMatchSystem,
+          _______________,
+          items.themeLight,
+          items.themeDark
+        ]
+      },
+      _______________,
+      items.sourceMode,
+      ...electron.app.isPackaged ? [] : [
+        _______________,
+        items.toggleDevTools, 
+        items.reload
+      ],
+    ]
+  }));
+
+  return items
 }
 
 /**
@@ -1232,44 +2425,49 @@ async function mapProject (projectPath) {
 
 produce.enablePatches();
 
+/**
+ * Chokidar docs: https://www.npmjs.com/package/chokidar
+ */
+const chokidarConfig = {
+  ignored: /(^|[\/\\])\../, // Ignore dotfiles
+  ignoreInitial: true,
+  persistent: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 400,
+    pollInterval: 200
+  }
+};
+
 class Watcher {
-  constructor(project) {
-    this.id = project.window.id;
+  constructor(id, project, window) {
+    
+    this.id = id;
     this.directory = project.directory;
-    this.files = {};
-
-    // Start listening for directory value changes. Once user selects a project directory (e.g. in the first run experience), catch it 
-
-    // Create listener for directory changes
-    global.store.onDidAnyChange((state, oldState) => {
-
-      const directory = state.projects.find((p) => p.window.id == this.id).directory;
-      const directoryIsDefined = directory !== '';
-      const directoryWasEmpty = this.directory == '';
-      const directoryHasChanged = directory !== this.directory;
-
-      if (directoryIsDefined) {
-        if (directoryWasEmpty) {
-          this.directory = directory;
-          this.start();
-        } else if (directoryHasChanged) {
-          this.update();
-        }
-      }
-    });
-
+    this.window = window;
+    
+    // If directory is populated, create the watcher
     if (this.directory) {
       this.start();
     }
   }
 
+  // ------ VARIABLES ------ //
+
+  id = ''
+  directory = ''
+  window = undefined
+  
+  files = {}
   chokidarInstance = undefined
   pendingChanges = []
   changeTimer = undefined
-  directory = ''
-  files = {}
-  id = 0
 
+
+  // ------ METHODS ------ //
+
+  /**
+   * Start the chokidar instance. Called once `this.directory` is first defined.
+   */
   async start() {
 
     // Start watcher
@@ -1287,17 +2485,27 @@ class Watcher {
     this.files = await mapProject(this.directory);
 
     // Send initial files to browser window
-    const win = electron.BrowserWindow.fromId(this.id);
-    win.webContents.send('initialFilesFromMain', this.files);
+    this.window.webContents.send('initialFilesFromMain', this.files);
 
     // Index files into DB
     insertAllDocsIntoDb(this.files);
-
   }
 
+  changeDirectories(newDirectory) {
+    this.chokidarInstance.unwatch(this.directory);
+    this.directory = newDirectory;
+    this.start();
+  }
+
+
+  /**
+   * Stop the chokidar instance. Called when project is closed.
+   */
   stop() {
-    // await watcher.close()
+    // TODO: Stop watcher when project is closed
+    this.chokidarInstance.close();
   }
+
 
   /**
    * Create a tally of changes as they occur, and once things settle down, evaluate them. We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
@@ -1321,6 +2529,7 @@ class Watcher {
     this.debounceFunc();
   }
 
+
   /**
    * Take batched changes and update `files`, then send patches to associated BrowserWindow. If a directory was added or removede, remap everything.
    * @param {*} changes 
@@ -1337,8 +2546,7 @@ class Watcher {
       this.files = await mapProject(this.directory);
 
       // Send files to browser window
-      const win = electron.BrowserWindow.fromId(this.id);
-      win.webContents.send('initialFilesFromMain', this.files);
+      this.window.webContents.send('initialFilesFromMain', this.files);
 
       // Index files into DB
       insertAllDocsIntoDb(this.files);
@@ -1424,14 +2632,16 @@ class Watcher {
 
         }
       }, (patches, inversePatches) => {
-        const win = electron.BrowserWindow.fromId(this.id);
-        // console.log(patches)
-        win.webContents.send('filesPatchesFromMain', patches);
+        this.window.webContents.send('filesPatchesFromMain', patches);
       });
     }
   }
-
 }
+
+
+
+
+// ------ UTILITY FUNCTIONS ------ //
 
 /**
  * For each doc found in files, add it to the sqlite database. Most important is the document body, which we need for full text search. We get it as plain text by 1) loading the doc using gray-matter, which returns `content` for us, without front matter, and 2) removing markdown formatting.
@@ -1477,806 +2687,12 @@ function getDbReadyFile(file) {
   }
 }
 
-/**
- * Chokidar docs: https://www.npmjs.com/package/chokidar
- */
-const chokidarConfig = {
-  ignored: /(^|[\/\\])\../, // Ignore dotfiles
-  ignoreInitial: true,
-  persistent: true,
-  awaitWriteFinish: {
-    stabilityThreshold: 400,
-    pollInterval: 200
-  }
-};
-
-// -------- DISK MANAGER -------- //
-
-
-class DiskManager {
-	constructor() {
-
-		// Listen for state changes
-		/*
-			- Is it cold start?
-				- If yes, try to 
-			- Has a directory changed?
-				- If yes, for that project, does a Watcher already exist?
-					- If yes, update the Watcher.
-						- TODO
-				- If no, is the new directory path valid?
-					- If yes, create Watcher and pass in project
-					- If no, do nothing
-		*/
-		global.store.onDidAnyChange((state, oldState) => {
-			
-			if (state.appStatus !== 'open') return
-			// const isColdStart = hasChangedTo('appStatus', 'coldStarting', state, oldState)
-			// const isColdStart = propHasChanged(global.patches, ['appStatus', 'coldStarting'])
-			const projectDirectoryChanged = propHasChanged(global.patches, ['projects', 'directory']);
-			const projectAdded = state.projects.length > oldState.projects.length;
-			const projectRemoved = state.projects.length < oldState.projects.length;
-
-			// if (isColdStart) {
-
-			// 	// For each project with a valid directory, create a watcher
-			// 	state.projects.forEach((project) => {
-			// 		if (project.directory) {
-			// 			// Create Watcher and add to `watchers` array
-			// 			const watcher = new Watcher(project)
-			// 			this.watchers.push(watcher)
-			// 		}
-			// 	})
-			// } else 
-			// if (projectDirectoryChanged) {
-
-			// 	// Create array of projects whose directories have changed
-			// 	// First filter patches to those with directory changes
-			// 	// Then get the associated projects from `state.projects`
-			// 	const projectsWithNewDirectories = global.patches.filter((patch) => {
-			// 		const pathAsString = patch.path.toString()
-			// 		const dirHasChanged =
-			// 			pathAsString.includes('projects') &&
-			// 			pathAsString.includes('directory')
-			// 		return dirHasChanged
-			// 	}).map((patch) => {
-			// 		// Format of patch path will be:
-			// 		// `path: [ 'projects', 0, 'directory' ],`
-			// 		// The project index is the integer (always second value).
-			// 		const projectIndex = patch.path[1] //
-			// 		const project = state.projects[projectIndex]
-			// 		return project
-			// 	})
-
-			// 	projectsWithNewDirectories.forEach((project) => {
-			// 		// Does corresponding watcher exist?
-			// 		const watcher = global.watchers.find(({ id }) => id == project.id)
-
-			// 		// If yes, update it. Else, create one.
-			// 		if (watcher) {
-			// 			console.log("TODO: Update watcher!!")
-			// 		} else {
-			// 			const watcher = new Watcher(project)
-			// 			this.watchers.push(watcher)
-			// 		}
-			// 	})
-
-			// } else if (projectAdded) {
-			// 	// Get new project. Then create Watcher and add to `watchers` array
-			// 	const project = state.projects[state.projects.length - 1]
-			// 	const watcher = new Watcher(project)
-			// 	this.watchers.push(watcher)
-			// } else if (projectRemoved) {
-			// 	// Remove the matching watcher. Do so by comparing projects and watchers. Find the watcher who does not have a corresponding project, by comparing IDs, then remove it.
-			// }
-		});
-	}
-
-	// Array of Watcher instances.
-	watchers = []
-
-	/**
-	 * On startup, create a Watcher instance for each project. 
-	 * If a project does not have a valid directory, the watcher will watch for 
-	 * changes, and start itself when a directory is assigned.
-	 */
-	async startup() {
-		for (const project of global.state().projects) {
-
-			// Create Watcher and add to `watchers` array
-			const watcher = new Watcher(project);
-			this.watchers.push(watcher);
-		}
-	}
-}
-
-async function deleteFile(path) {
-  try {
-		await fsExtra.remove(path);
-		return { type: 'DELETE_FILE_SUCCESS', path: path }
-	} catch(err) {
-		return { type: 'DELETE_FILE_FAIL', err: err }
-	}
-}
-
-async function deleteFiles(paths) {
-  try {
-    let deletedPaths = await Promise.all(
-      paths.map(async (path) => {
-        await fsExtra.remove(path);
-      })
-    );
-		return { type: 'DELETE_FILES_SUCCESS', paths: deletedPaths }
-	} catch(err) {
-		return { type: 'DELETE_FILES_FAIL', err: err }
-	}
-}
-
-async function saveFile (path, data) {
-	try {
-		await fsExtra.writeFile(path, data, 'utf8');
-		return {
-			type: 'SAVE_FILE_SUCCESS',
-			path: path,
-		}
-	} catch (err) {
-		return {
-			type: 'SAVE_FILE_FAIL',
-			err: err
-		}
-	}
-}
-
-async function selectProjectDirectoryFromDialog () {
-
-  const win = electron.BrowserWindow.getFocusedWindow();
-
-  const selection = await electron.dialog.showOpenDialog(win, {
-    title: 'Select Project Folder',
-    properties: ['openDirectory', 'createDirectory']
-  });
-
-  if (!selection.canceled) {
-    return { 
-      type: 'SET_PROJECT_DIRECTORY', 
-      directory: selection.filePaths[0] 
-    }
-  }
-}
-
-async function selectCitationsFileFromDialog () {
-
-  const win = electron.BrowserWindow.getFocusedWindow();
-
-  const selection = await electron.dialog.showOpenDialog(win, {
-    title: 'Select Citations File',
-    properties: ['openFile'],
-    filters: [
-      { name: 'JSON', extensions: ['json'] },
-    ]
-  });
-
-  if (!selection.canceled) {
-    return { 
-      type: 'SET_PROJECT_CITATIONS_FILE', 
-      path: selection.filePaths[0] 
-    }
-  }
-}
-
-class IpcManager {
-  constructor() {
-
-    // -------- IPC: Renderer "receives" from Main -------- //
-
-    // On change, send updated state to renderer (each BrowserWindow)
-    // global.store.onDidAnyChange(async (state, oldState) => {
-    //   const windows = BrowserWindow.getAllWindows()
-    //   if (windows.length) {
-    //     windows.forEach((win) => win.webContents.send(' ', state, oldState))
-    //   }
-    // })
-
-    // -------- IPC: Renderer "sends" to Main -------- //
-
-    electron.ipcMain.on('showWindow', (evt) => {
-      const win = electron.BrowserWindow.fromWebContents(evt.sender);
-      win.show();
-    });
-
-  
-    electron.ipcMain.on('safelyCloseWindow', async (evt) => {
-      const win = electron.BrowserWindow.fromWebContents(evt.sender);
-      if (!global.state().areQuiting) {
-        await global.store.dispatch({
-          type: 'REMOVE_PROJECT'
-        }, win.id);
-      }
-      win.destroy();
-    });
-
-    electron.ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths) => {
-      // Get all notes that match current query
-      filePaths.forEach(async (filePath) => {
-        let file = await fsExtra.readFile(filePath, 'utf8');
-        file = file.replaceAll(query, replaceWith);
-        await fsExtra.writeFile(filePath, file, 'utf8');
-      });
-
-      // Open each, find all instances of `replaceWith`, and replace. 
-    });
-
-
-    electron.ipcMain.on('moveOrCopyIntoFolder', async (evt, filePath, folderPath, isCopy) => {
-      // Get destination
-      const fileName = path__default['default'].basename(filePath);
-      let destinationPath = path__default['default'].format({
-        dir: folderPath,
-        base: fileName
-      });
-
-      // Does file already exist at destination?
-      const fileAlreadyExists = fsExtra.existsSync(destinationPath);
-
-      // If yes, prompt user to confirm overwrite. 
-      // Else, just move/copy
-      if (fileAlreadyExists) {
-        const selectedButtonId = electron.dialog.showMessageBoxSync({
-          type: 'question',
-          message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
-          buttons: ['Keep Both', 'Stop', 'Replace'],
-          cancelId: 1
-        });
-        switch (selectedButtonId) {
-          // Keep both
-          case 0:
-            destinationPath = getIncrementedFileName(destinationPath);
-            fsExtra.copyFileSync(filePath, destinationPath);
-            break
-          // Stop (Do nothing)
-          case 1:
-            break
-          // Replace
-          case 2:
-            if (isCopy) {
-              fsExtra.copyFileSync(filePath, destinationPath);
-            } else {
-              fsExtra.renameSync(filePath, destinationPath);
-            }
-            break
-        }
-      } else {
-        if (isCopy) {
-          fsExtra.copyFileSync(filePath, destinationPath);
-        } else {
-          fsExtra.renameSync(filePath, destinationPath);
-        }
-      }
-    });
-
-
-    electron.ipcMain.on('dispatch', async (evt, action) => {
-      const win = electron.BrowserWindow.fromWebContents(evt.sender);
-      switch (action.type) {
-        case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
-          store.dispatch(await selectCitationsFileFromDialog(), win.id);
-          break
-        case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
-          store.dispatch(await selectProjectDirectoryFromDialog(), win.id);
-          break
-        case ('SAVE_FILE'):
-          store.dispatch(await saveFile(action.path, action.data), win.id);
-          break
-        case ('DELETE_FILE'):
-          store.dispatch(await deleteFile(action.path), win.id);
-          break
-        case ('DELETE_FILES'):
-          store.dispatch(await deleteFiles(action.paths), win.id);
-          break
-        default:
-          store.dispatch(action, win.id);
-          break
-      }
-    });
-
-    // -------- IPC: Invoke -------- //
-
-    // NOTE: We handle this in DbManager.js
-    // ipcMain.handle('queryDb', (evt, params) => {
-    //   ...
-    // })
-
-    electron.ipcMain.handle('getState', (evt) => {
-      return global.state()
-    });
-
-    electron.ipcMain.handle('getFiles', (evt) => {
-      const win = electron.BrowserWindow.fromWebContents(evt.sender);
-      const watcher = global.watchers.find((watcher) => watcher.id == win.id);
-      return watcher ? watcher.files : undefined
-    });
-  }
-}
-
-
-
-// -------- IPC: Renderer "sends" to Main -------- //
-
-
-// // ipcMain.on('saveProjectStateToDisk', (evt, state) => {
-// //   const win = BrowserWindow.fromWebContents(evt.sender)
-// //   const projects = store.store.projects.slice(0)
-// //   const indexOfProjectToUpdate = projects.findIndex((p) => p.windowId == state.windowId)
-// //   projects[indexOfProjectToUpdate] = state
-// //   store.set('projects', projects)
-// // })
-
-// // ipcMain.on('saveFileThenCloseWindow', async (event, path, data) => {
-// //   await writeFile(path, data, 'utf8')
-// //   canCloseWindowSafely = true
-// //   win.close()
-// // })
-
-// // ipcMain.on('saveFileThenQuitApp', async (event, path, data) => {
-// //   await writeFile(path, data, 'utf8')
-// //   canQuitAppSafely = true
-// //   app.quit()
-// // })
-
-// // ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
-// //   shell.openExternal(url)
-// // })
-
-
-
-// // // -------- IPC: Invoke -------- //
-
-// // ipcMain.handle('getSystemColors', () => {
-
-// //   // Get accent color, chop off last two characters (always `ff`, for 100% alpha), and prepend `#`.
-// //   // `0a5fffff` --> `#0a5fff`
-// //   let controlAccentColor = `#${systemPreferences.getAccentColor().slice(0, -2)}`
-
-// //   const systemColors = [
-
-// //     // -------------- System Colors -------------- //
-// //     // Note: Indigo and Teal exist in NSColor, but do not seem to be supported by Electron.
-
-// //     { name: 'systemBlue', color: systemPreferences.getSystemColor('blue') },
-// //     { name: 'systemBrown', color: systemPreferences.getSystemColor('brown') },
-// //     { name: 'systemGray', color: systemPreferences.getSystemColor('gray') },
-// //     { name: 'systemGreen', color: systemPreferences.getSystemColor('green') },
-// //     // { name: 'systemIndigo', color: systemPreferences.getSystemColor('systemIndigo')},
-// //     { name: 'systemOrange', color: systemPreferences.getSystemColor('orange') },
-// //     { name: 'systemPink', color: systemPreferences.getSystemColor('pink') },
-// //     { name: 'systemPurple', color: systemPreferences.getSystemColor('purple') },
-// //     { name: 'systemRed', color: systemPreferences.getSystemColor('red') },
-// //     // { name: 'systemTeal', color: systemPreferences.getSystemColor('teal')},
-// //     { name: 'systemYellow', color: systemPreferences.getSystemColor('yellow') },
-
-// //     // -------------- Label Colors -------------- //
-
-// //     { name: 'labelColor', color: systemPreferences.getColor('label') },
-// //     { name: 'secondaryLabelColor', color: systemPreferences.getColor('secondary-label') },
-// //     { name: 'tertiaryLabelColor', color: systemPreferences.getColor('tertiary-label') },
-// //     { name: 'quaternaryLabelColor', color: systemPreferences.getColor('quaternary-label') },
-
-// //     // -------------- Text Colors -------------- //
-
-// //     { name: 'textColor', color: systemPreferences.getColor('text') },
-// //     { name: 'placeholderTextColor', color: systemPreferences.getColor('placeholder-text') },
-// //     { name: 'selectedTextColor', color: systemPreferences.getColor('selected-text') },
-// //     { name: 'textBackgroundColor', color: systemPreferences.getColor('text-background') },
-// //     { name: 'selectedTextBackgroundColor', color: systemPreferences.getColor('selected-text-background') },
-// //     { name: 'keyboardFocusIndicatorColor', color: systemPreferences.getColor('keyboard-focus-indicator') },
-// //     { name: 'unemphasizedSelectedTextColor', color: systemPreferences.getColor('unemphasized-selected-text') },
-// //     { name: 'unemphasizedSelectedTextBackgroundColor', color: systemPreferences.getColor('unemphasized-selected-text-background') },
-
-// //     // -------------- Content Colors -------------- //
-
-// //     { name: 'linkColor', color: systemPreferences.getColor('link') },
-// //     { name: 'separatorColor', color: systemPreferences.getColor('separator') },
-// //     { name: 'selectedContentBackgroundColor', color: systemPreferences.getColor('selected-content-background') },
-// //     { name: 'unemphasizedSelectedContentBackgroundColor', color: systemPreferences.getColor('unemphasized-selected-content-background') },
-
-// //     // -------------- Menu Colors -------------- //
-
-// //     { name: 'selectedMenuItemTextColor', color: systemPreferences.getColor('selected-menu-item-text') },
-
-// //     // -------------- Table Colors -------------- //
-
-// //     { name: 'gridColor', color: systemPreferences.getColor('grid') },
-// //     { name: 'headerTextColor', color: systemPreferences.getColor('header-text') },
-
-// //     // -------------- Control Colors -------------- //
-
-// //     { name: 'controlAccentColor', color: controlAccentColor },
-// //     { name: 'controlColor', color: systemPreferences.getColor('control') },
-// //     { name: 'controlBackgroundColor', color: systemPreferences.getColor('control-background') },
-// //     { name: 'controlTextColor', color: systemPreferences.getColor('control-text') },
-// //     { name: 'disabledControlTextColor', color: systemPreferences.getColor('disabled-control-text') },
-// //     { name: 'selectedControlColor', color: systemPreferences.getColor('selected-control') },
-// //     { name: 'selectedControlTextColor', color: systemPreferences.getColor('selected-control-text') },
-// //     { name: 'alternateSelectedControlTextColor', color: systemPreferences.getColor('alternate-selected-control-text') },
-
-// //     // -------------- Window Colors -------------- //
-
-// //     { name: 'windowBackgroundColor', color: systemPreferences.getColor('window-background') },
-// //     { name: 'windowFrameTextColor', color: systemPreferences.getColor('window-frame-text') },
-
-// //     // -------------- Highlight & Shadow Colors -------------- //
-
-// //     { name: 'findHighlightColor', color: systemPreferences.getColor('find-highlight') },
-// //     { name: 'highlightColor', color: systemPreferences.getColor('highlight') },
-// //     { name: 'shadowColor', color: systemPreferences.getColor('shadow') },
-// //   ]
-
-// //   return systemColors
-// // })
-
-
-// // ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
-// //   // return path.resolve(basePath, filepath)
-
-// //   /*
-// //   Element: Image, link, backlink, link reference definition
-// //   File type: directory, html, png|jpg|gif, md|mmd|markdown
-// //   */
-
-// //   // console.log('- - - - - -')
-// //   // console.log(pathToCheck.match(/.{0,2}\//))
-// //   const directory = path.parse(docPath).dir
-// //   const resolvedPath = path.resolve(directory, pathToCheck)
-
-// //   const docPathExists = await pathExists(docPath)
-// //   const pathToCheckExists = await pathExists(pathToCheck)
-// //   const resolvedPathExists = await pathExists(resolvedPath)
-
-// //   // console.log('docPath: ', docPath)
-// //   // console.log('pathToCheck: ', pathToCheck)
-// //   // console.log('resolvedPath: ', resolvedPath)
-// //   // console.log(docPathExists, pathToCheckExists, resolvedPathExists)
-
-// //   // if (pathToCheck.match(/.{0,2}\//)) {
-// //   //   console.log()
-// //   // }
-// // })
-
-// // ipcMain.handle('getResolvedPath', async (event, basePath, filepath) => {
-// //   return path.resolve(basePath, filepath)
-// // })
-
-// // ipcMain.handle('getParsedPath', async (event, filepath) => {
-// //   return path.parse(filepath)
-// // })
-
-// // ipcMain.handle('ifPathExists', async (event, filepath) => {
-// //   const exists = await pathExists(filepath)
-// //   return { path: filepath, exists: exists }
-// // })
-
-
-
-// // ipcMain.handle('getState', async (event) => {
-// //   return store.store
-// // })
-
-// // ipcMain.handle('getCitations', (event) => {
-// //   return projectCitations.getCitations()
-// // })
-
-// // ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
-
-// //   // Load file and return
-// //   let file = await readFile(filePath, encoding)
-// //   return file
-// // })
-
-// // ipcMain.handle('getFileById', async (event, id, encoding) => {
-
-// //   // Get path of file with matching id
-// //   const filePath = store.store.contents.find((f) => f.id == id).path
-
-// //   // Load file and return
-// //   let file = await readFile(filePath, encoding)
-// //   return file
-// // })
-
-// // ipcMain.handle('pathJoin', async (event, path1, path2) => {
-// //   return path.join(path1, path2)
-// // })
-
-// // ipcMain.handle('getHTMLFromClipboard', (event) => {
-// //   return clipboard.readHTML()
-// // })
-
-// // ipcMain.handle('getFormatOfClipboard', (event) => {
-// //   return clipboard.availableFormats()
-// // })
-
-
-/**
- * Utility function that returns filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
- * Original:      /Users/Susan/Notes/ship.jpg
- * First copy:    /Users/Susan/Notes/ship 2.jpg
- * Second copy:   /Users/Susan/Notes/ship 3.jpg
- * @param {*} origName 
- */
-function getIncrementedFileName(origPath) {
-
-  const directory = path__default['default'].dirname(origPath); // /Users/Susan/Notes
-  const extension = path__default['default'].extname(origPath); // .jpg
-  const name = path__default['default'].basename(origPath, extension); // ship
-
-  const allFilesInDirectory = fsExtra.readdirSync(directory);
-
-  let increment = 2;
-
-  // Basename in `path` is filename + extension. E.g. `ship.jpg`
-  // https://nodejs.org/api/path.html#path_path_basename_path_ext
-  let newBase = '';
-
-  // Keep looping until we find incremented name that's not already used
-  // Most of time this will be `ship 2.jpg`.
-  while (true) {
-    newBase = `${name} ${increment}${extension}`; // ship 2.jpg
-    const alreadyExists = allFilesInDirectory.includes(newBase);
-    if (alreadyExists) {
-      increment++;
-    } else {
-      break
-    }
-  }
-
-  // /Users/Susan/Notes/ship 2.jpg
-  return path__default['default'].format({
-    dir: directory,
-    base: newBase
-  })
-}
-
-class MenuBarManager {
-  constructor() {
-
-    this.isMac = process.platform === 'darwin';
-    this.menuItems = {};
-
-    // Listen for state changes
-    global.store.onDidAnyChange((state, oldState) => {
-      // if (state.changed.includes('')) {
-
-      // }
-    });
-
-    // Set initial menu bar
-    this.setMenuBar();
-  }
-
-  setMenuBar() {
-    electron.Menu.setApplicationMenu(this.getMenu());
-  }
-
-  update() {
-    // TODO
-  }
-
-  getMenu() {
-    const menu = new electron.Menu();
-    this.menuItems = this.getMenuItems();
-    this.menuItems.topLevel.forEach((item) => menu.append(item));
-    return menu
-  }
-
-  getMenuItems() {
-    const items = { topLevel: [] }; // reset
-    const _______________ = new electron.MenuItem({ type: 'separator' });
-
-    // -------- App (Mac-only) -------- //
-
-    if (this.isMac) {
-      items.topLevel.push(new electron.MenuItem({
-        label: electron.app.name,
-        submenu: [
-          { role: 'about' },
-          { type: 'separator' },
-          { role: 'services', submenu: [] },
-          { type: 'separator' },
-          { role: 'hide' },
-          { role: 'hideothers' },
-          { role: 'unhide' },
-          { type: 'separator' },
-          { role: 'quit' }
-        ]
-      }));
-    }
-
-    // -------- File (Mac-only) -------- //
-
-    if (this.isMac) {
-
-      items.newDocument = new electron.MenuItem({
-        label: 'New Document',
-        accelerator: 'CmdOrCtrl+N',
-        async click(item, focusedWindow) {
-          // global.store.dispatch(await newFile(state))
-        }
-      });
-
-      items.newWindow = new electron.MenuItem({
-        label: 'New Window',
-        accelerator: 'CmdOrCtrl+Shift+N',
-        async click(item, focusedWindow) {
-          global.store.dispatch({ type: 'CREATE_NEW_PROJECT' });
-        }
-      });
-
-      items.save = new electron.MenuItem({
-        label: 'Save',
-        accelerator: 'CmdOrCtrl+S',
-        click(item, focusedWindow) {
-          // focusedWindow.webContents.send('mainRequestsSaveFile')
-        }
-      });
-
-      items.moveToTrash = new electron.MenuItem({
-        label: 'Move to Trash',
-        accelerator: 'CmdOrCtrl+Backspace',
-        enabled: state.focusedLayoutSection == 'navigation',
-        click(item, focusedWindow) {  
-          // focusedWindow.webContents.send('mainRequestsDeleteFile')
-        }
-      });
-
-      items.topLevel.push(new electron.MenuItem({
-        label: 'File',
-        submenu: [
-          items.newDocument,
-          items.newWindow,
-          _______________,
-          items.save,
-          items.moveToTrash
-        ]
-      }));
-    }
-
-    return items
-  }
-}
-
-class WindowManager {
-
-  constructor() {
-
-    // Listen for state changes
-    global.store.onDidAnyChange((state, oldState) => {
-      if (state.appStatus !== 'open') return
-      if (state.projects.length > oldState.projects.length) {
-        const newProjectIndex = state.projects.length - 1;
-        const newProject = state.projects[newProjectIndex];
-        this.createWindow(newProjectIndex, newProject);
-      }
-      // const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState)
-      // if (isStartingUp) {
-      //   state.projects.forEach(async (p, index) => {
-      //     this.createWindow(index, p.window.bounds)
-      //   })
-      // } else if (state.projects.length > oldState.projects.length) {
-      //   this.createWindow(state.projects.length - 1)
-      // }
-    });
-  }
-
-  /**
-   * On startup, create a BrowserWindow for each project.
-   */
-  async startup() {
-    let index = 0;
-    for (const project of global.state().projects) {
-      await this.createWindow(index, project);
-      index++;
-    }
-  }
-
-  async createWindow(projectIndex, project) {
-
-    const win = new electron.BrowserWindow(browserWindowConfig);
-    const isFirstRun = project.directory == '';
-
-    // Set size. If project directory is empty, it's first run, and we set window centered, and filling most of the primary screen. Else we restore the previous window size and position (stored in `bounds` property)/
-    // Else, create a new window centered on screen.
-    if (isFirstRun) {
-      const { width, height } = electron.screen.getPrimaryDisplay().workAreaSize;
-      const padding = 200;
-      win.setBounds({
-        x: padding,
-        y: padding,
-        width: width - padding * 2,
-        height: height - padding * 2
-      }, false);
-    } else {
-      win.setBounds(project.window.bounds, false);
-    }
-
-    // Load index.html
-    await win.loadFile(path__default['default'].join(__dirname, 'index.html'), {
-      query: {
-        id: win.id
-      },
-    });
-
-    // Have to manually set this to 1.0. That should be the default, but I've had problem where something was setting it to 0.91, resulting in the UI being slightly too-small.
-    win.webContents.zoomFactor = 1.0;
-
-    // Listen for close action. Is triggered by pressing close button on window, or close menu item, or app quit. Prevent default, and update state.
-    win.on('close', async (evt) => {
-      const state = global.state();
-      const project = state.projects.find((p) => p.window.id == win.id);
-
-      switch (project.window.status) {
-        case 'open':
-          evt.preventDefault();
-          await global.store.dispatch({ type: 'START_TO_CLOSE_WINDOW' }, win.id);
-          break
-        case 'safeToClose':
-          // Remove project from `state.projects` if window closing was NOT triggered by app quiting. When quiting, the user expects the project to still be there when the app is re-opened. 
-          const shouldRemoveProject = state.appStatus !== 'wantsToQuit';
-          if (shouldRemoveProject) {
-            global.store.dispatch({ type: 'REMOVE_PROJECT' }, win.id);
-          }
-          break
-      }
-    });
-
-    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
-    win.on('resize', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
-    win.on('move', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
-    
-    // On focus/blur, update project state
-    win.on('focus', () => global.store.dispatch({ type: 'WINDOW_FOCUSED' }, win.id));
-    win.on('blur', () => global.store.dispatch({ type: 'WINDOW_BLURRED' }, win.id));
-
-    // Listen for app quiting, and start to close window
-    global.store.onDidAnyChange(async (state, oldState) => {
-      const appWantsToQuit = hasChangedTo('appStatus', 'wantsToQuit', state, oldState);
-      if (appWantsToQuit) {
-        await global.store.dispatch({ type: 'START_TO_CLOSE_WINDOW' }, win.id);
-      } else {
-        const project = state.projects.find((p) => p.window.id == win.id);
-        const oldProject = oldState.projects.find((p) => p.window.id == win.id);
-        const isSafeToCloseThisWindow = hasChangedTo('window.status', 'safeToClose', project, oldProject);
-        if (isSafeToCloseThisWindow) {
-          win.close();
-        }
-      }
-    });
-
-    // Open DevTools
-    if (!electron.app.isPackaged) win.webContents.openDevTools();
-
-    global.store.dispatch({
-      type: 'OPENED_WINDOW',
-      projectIndex: projectIndex,
-    }, win.id);
-
-    return win
-  }
-}
-
-/**
- * Save window bounds to state, so we can restore after restart.
- */
-function saveWindowBoundsToState(win) {
-  global.store.dispatch({ type: 'SAVE_WINDOW_BOUNDS', windowBounds: win.getBounds() }, win.id);
-}
-
-
 const browserWindowConfig = {
   show: false,
-  width: 200, 
-  height: 200,
-  zoomFactor: 1.0,
-  vibrancy: 'sidebar',
-  transparent: true,
+  width: 700,
+  height: 500,
+  // vibrancy: 'sidebar', // Turning off due to poor performance.
+  // transparent: true,
   titleBarStyle: 'hiddenInset',
   webPreferences: {
     scrollBounce: false,
@@ -2297,6 +2713,344 @@ const browserWindowConfig = {
   }
 };
 
+
+async function createWindow(id, project) {
+
+  const win = new electron.BrowserWindow(browserWindowConfig);
+  win.projectId = id;
+
+  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
+  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
+  const backgroundColor = getSystemColors().windowBackgroundColor.slice(0, -2);
+  win.setBackgroundColor(backgroundColor);
+
+  const isNewProject = project.directory == '';
+
+  // Set size. If project directory is empty, it's a new project, and we manually set starting values. Else we restore the previous window size and position (stored in `bounds` property)/
+  // Else, create a new window centered on screen.
+  if (isNewProject) {
+    const padding = 200;
+    const displayWidth = electron.screen.getPrimaryDisplay().workAreaSize.width;
+    const displayHeight = electron.screen.getPrimaryDisplay().workAreaSize.height;
+    let winWidth = displayWidth - (padding * 2);
+    let winHeight = displayHeight - (padding * 2);
+    winWidth = winWidth > 1600 ? 1600 : winWidth;
+    winHeight = winHeight > 1200 ? 1200 : winHeight;
+    const offset = win.id * 20;
+    const centeredX = Math.round((displayWidth - winWidth) / 2 + offset);
+    const centeredY = Math.round((displayHeight - winHeight) / 2 + offset);
+    win.setBounds({
+      x: centeredX,
+      y: centeredY,
+      width: winWidth,
+      height: winHeight
+    }, false);
+  } else {
+    win.setBounds(project.window.bounds, false);
+
+  }
+
+  // Have to manually set this to 1.0. That should be the default, but I've had problem where something was setting it to 0.91, resulting in the UI being slightly too-small.
+  // win.webContents.zoomFactor = 1.0
+
+  // Listen for 'close' action. Can be triggered by either 1) manually closing individual window, (e.g. click close button on window, or type Cmd-W), or 2) quitting the app. 
+
+  // If closed manually, this event is triggered twice: the first time, we prevent the default, and tell webContents to save open documents. That process results in window.status being set to `safeToClose`. ProjectManager catches that state change, and tells this window to close again.
+  win.on('close', async (evt) => {
+
+    const userManuallyClosedWindow = global.state().appStatus !== 'canSafelyQuit';
+    const winIsSafeToClose = global.state().projects.byId[id].window.status == 'safeToClose';
+
+    // If window is closing because user manually closed it (e.g. typed Cmd-W), then check if it's safe to close yet. If not, begin that process. ProjectManager will call close again once the window is safe to close, and this time, 
+    if (userManuallyClosedWindow && !winIsSafeToClose) {
+      // Tell window to close
+      evt.preventDefault();
+      win.webContents.send('mainWantsToCloseWindow');
+    }
+  });
+
+  // If app is NOT quiting, we remove the project from store after closing the window. Because if the user manually closes a window, they mean to close the project. But if they quit the app, they want to their open projects to reopen, next session.
+  win.on('closed', async (evt) => {
+    
+    const appIsNotQuiting = global.state().appStatus == 'open';
+    if (appIsNotQuiting) {
+      await global.store.dispatch({ type: 'REMOVE_PROJECT' }, win);
+    }
+    
+    // If there are no other windows open, clear `focusedWindowId`
+    const otherWindowsAreOpen = electron.BrowserWindow.getAllWindows().length;
+    if (!otherWindowsAreOpen) {
+      global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' });
+    }
+  });
+
+  // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
+  win.on('resize', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
+  win.on('move', debounce.debounce(() => { saveWindowBoundsToState(win); }, 1000));
+
+  // On focus, set `focusedWindowId` to win.id
+  win.on('focus', () => {
+    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win);
+  });
+
+  /*
+  On blur, wait a beat. If the user has clicked on another Gambier window it will fire `FOCUSED_WINDOW` and set itself as the `focusedWindowId`. In which case we don't want to do anything. But if the user has clicked outside the app, `focusedWindowId` will still equal this win.projectId after the beat. In which case, set `focusedWindowId` to zero, which we take to mean that the app is in the background.
+  */
+  win.on('blur', async () => {
+    await wait(50);
+    if (global.state().focusedWindowId == win.projectId) {
+      global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' });
+    }
+  });
+
+  // Open DevTools
+  if (!electron.app.isPackaged) win.webContents.openDevTools();
+
+  // Load index.html
+  await win.loadFile(path__default['default'].join(__dirname, 'index.html'), {
+    query: {
+      id: win.projectId
+    },
+  });
+
+  // Save window bounds
+  saveWindowBoundsToState(win);
+
+  // Set project window status to 'open'
+  global.store.dispatch({
+    type: 'OPENED_PROJECT_WINDOW',
+  }, win);
+
+  return win
+}
+
+/**
+ * Save window bounds to state, so we can restore after restart.
+ */
+function saveWindowBoundsToState(win) {
+  global.store.dispatch({
+    type: 'SAVE_PROJECT_WINDOW_BOUNDS',
+    windowBounds: win.getBounds()
+  }, win);
+}
+
+// let projects = {
+//   allIds: [],
+//   byId: {}
+// }
+
+function init$3() {
+
+  // ------ SETUP CHANGE LISTENERS ------ //
+
+  global.store.onDidAnyChange(async (state, oldState) => {
+
+    const projectAdded = state.projects.allIds.length > oldState.projects.allIds.length;
+
+    const projectRemoved = state.projects.allIds.length < oldState.projects.allIds.length;
+
+    const aProjectDirectoryHasChanged = stateHasChanged(global.patches, ['projects', 'byId', 'directory']);
+
+    const aWindowIsSafeToClose = stateHasChanged(global.patches, ['window', 'status'], 'safeToClose');
+
+    const appIsQuitting = propHasChangedTo('appStatus', 'wantsToQuit', state, oldState);
+
+
+    // If project added, create a Window and Watcher 
+    // Determine new project by comparing new and old `allIds`.
+    if (projectAdded) {
+      const id = getArrayDiff(state.projects.allIds, oldState.projects.allIds)[0];
+      createWindowAndWatcher(state, id);
+    }
+
+    // If project directory changed, update (or start) the Watcher
+    if (aProjectDirectoryHasChanged) {
+      const projectIds = getIdsOfProjectsWhoseDirectoriesHaveChanged(state, oldState);
+      projectIds.forEach((id) => {
+        const project = state.projects.byId[id];
+        const watcher = global.watchers.find((watcher) => watcher.id == id);
+        const watcherIsRunning = watcher.directory !== '';
+        if (!watcherIsRunning) {
+          watcher.directory = project.directory;
+          watcher.start();
+        } else {
+          watcher.changeDirectories(project.directory);
+        }
+      });
+    }
+
+    // If project removed, stop the watcher, then remove from `global.watchers`.
+    // Determine removed project by comparing old and new `allIds`.
+    if (projectRemoved) {
+      const id = getArrayDiff(oldState.projects.allIds, state.projects.allIds)[0];
+      const watcher = global.watchers.find((w) => w.id == id);
+      const indexOfWatcher = global.watchers.findIndex((w) => w.id == id);
+      watcher.stop();
+      global.watchers.splice(indexOfWatcher, 1);
+    }
+
+    // Close any window whose `window.status` just changed to 'safeToClose'
+    if (aWindowIsSafeToClose) {
+      const windowsToClose = getWindowsThatAreSafeToClose(state, oldState);
+      windowsToClose.forEach((window) => window.close());
+    }
+
+    // If app is quitting, initiate closing procedure for all windows
+    if (appIsQuitting) {
+      startToCloseAllWindows();
+    }
+  });
+
+
+  // ------ DO INITIAL SETUP ------ //
+
+  const state = global.state();
+
+  // On startup, for each project, create a Window and Watcher
+  state.projects.allIds.forEach((id) => {
+    createWindowAndWatcher(state, id);
+  });
+}
+
+
+
+
+
+
+/**
+ * Create a window and watcher for a project
+ * @param {*} id - Of the project
+ */
+async function createWindowAndWatcher(state, id) {
+  const project = state.projects.byId[id];
+  const window = await createWindow(id, project);
+  const watcher = new Watcher(id, project, window);
+  global.watchers.push(watcher);
+}
+ 
+
+/**
+ * Get projects whose directories have changed
+ */
+function getIdsOfProjectsWhoseDirectoriesHaveChanged(state, oldState) {
+  let projects = [];
+  state.projects.allIds.forEach((id) => {
+    const directory = state.projects.byId[id].directory;
+    const oldDirectory = oldState.projects.byId[id].directory;
+    if (directory !== oldDirectory) {
+      projects.push(id);
+    }
+  });
+  return projects
+}
+
+/**
+ * Get windows that are safe to close
+ */
+function getWindowsThatAreSafeToClose(state, oldState) {
+  let windows = [];
+  state.projects.allIds.forEach((id) => {
+    const windowStatus = state.projects.byId[id].window.status;
+    const oldWindowStatus = oldState.projects.byId[id]?.window.status;
+    if (windowStatus == 'safeToClose' && oldWindowStatus !== 'safeToClose') {
+      const window = electron.BrowserWindow.getAllWindows().find((win) => win.projectId == id);
+      windows.push(window);
+    }
+  });
+  return windows
+}
+
+/**
+ * Called when appStatus changes to `wantsToQuit`.
+ */
+function startToCloseAllWindows() {
+  const windows = electron.BrowserWindow.getAllWindows();
+  if (windows.length) {
+    windows.forEach((win) => win.webContents.send('mainWantsToCloseWindow'));
+  }
+}
+
+const preferencesWindowConfig = {
+  show: false,
+  // width: 1060, // With dev tools open
+  width: 700,
+  height: 480,
+  zoomFactor: 1.0,
+  titleBarStyle: 'hidden',
+  resizable: false,
+  webPreferences: {
+    // Security:
+    allowRunningInsecureContent: false,
+    contextIsolation: true,
+    enableRemoteModule: false,
+    nativeWindowOpen: false,
+    nodeIntegration: false,
+    nodeIntegrationInWorker: false,
+    nodeIntegrationInSubFrames: false,
+    safeDialogs: true,
+    sandbox: true,
+    webSecurity: true,
+    webviewTag: false,
+    // Preload
+    preload: path__default['default'].join(__dirname, 'js/preload.js')
+  }
+};
+
+function init$4() {
+
+  // ------ SETUP CHANGE LISTENERS ------ //
+
+  // Did `prefs: isOpen` change?
+  global.store.onDidAnyChange((state, oldState) => {
+    if (state.prefs.isOpen !== oldState.prefs.isOpen && state.prefs.isOpen) {
+      open();
+    }
+  });
+}
+
+async function open() {
+
+  const win = new electron.BrowserWindow(preferencesWindowConfig);
+
+  win.once('ready-to-show', () => {
+    win.show();
+  });
+
+  // 'projectId' is a bit of a misnomer for Preferences, but we use it for the sake of consistency.
+  win.projectId = 'preferences';
+
+  // On focus, set `focusedWindowId` to win.id
+  win.on('focus', () => {
+    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win);
+  });
+
+  /*
+  On blur, wait a beat. If the user has clicked on another Gambier window it will fire `FOCUSED_WINDOW` and set itself as the `focusedWindowId`. In which case we don't want to do anything. But if the user has clicked outside the app, `focusedWindowId` will still equal this win.projectId after the beat. In which case, set `focusedWindowId` to zero, which we take to mean that the app is in the background.
+  */
+  win.on('blur', async () => {
+    await wait(50);
+    if (global.state().focusedWindowId == win.projectId) {
+      global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' });
+    }
+  });
+
+  win.on('close', () => {
+    global.store.dispatch({ type: 'CLOSE_PREFERENCES' });
+  });
+
+  // if (!app.isPackaged) {
+  //   win.webContents.openDevTools();
+  //   win.setBounds({ width: 1060 })
+  // }
+
+  // Load index.html
+  await win.loadFile(path__default['default'].join(__dirname, 'preferences.html'), {
+    query: {
+      id: win.projectId
+    },
+  });
+}
+
 // External dependencies
 
 
@@ -2306,6 +3060,9 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true;
 
 
 // -------- Reload (Development-only) -------- //
+
+electron.app.commandLine.appendSwitch('inspect=5858');
+electron.app.commandLine.appendSwitch('enable-transparent-visuals');
 
 if (!electron.app.isPackaged) {
 
@@ -2329,8 +3086,8 @@ if (!electron.app.isPackaged) {
     //   pollInterval: 50
     // },
     electron: path__default['default'].join(__dirname, '../node_modules', '.bin', 'electron'),
-    hardResetMethod: 'exit'
-    // argv: ['--inspect=5858'],
+    // hardResetMethod: 'exit',
+    argv: ['--inspect=5858', '--enable-transparent-visuals'],
   });
 
   console.log('// - - - - - - - - - - - - - - -');
@@ -2366,41 +3123,42 @@ if (!electron.app.isPackaged) {
 
 // -------- SETUP -------- //
 
+// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
+electron.app.allowRendererProcessReuse = true;
+
 // Create store (and global variables for store and state)
 global.store = new Store();
 global.state = () => global.store.store;
 global.patches = []; // Most recent patches from Immer
-
-// Create managers
-const appearanceManager = new AppearanceManager();
-const diskManager = new DiskManager();
-const ipcManager = new IpcManager();
-const menuBarManager = new MenuBarManager();
-const windowManager = new WindowManager();
+global.watchers = []; // Watchers. Are populdated by ProjectManager
 
 // Create Sqlite databaase (happens in the constructor). 
 // Class instance has useful functions for interacting w/ the db.
 // E.g. Insert new row, update, etc.
 global.db = new DbManager();
 
-// One more global variable for watchers
-global.watchers = diskManager.watchers;
-
-// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
-electron.app.allowRendererProcessReuse = true;
-
 // Start app
 electron.app.whenReady()
   .then(async () => {
 
+    // Create IPC listeners/handlers
+    init$1();
+
+    // Setup preferences manager
+    init$4();
+
+    // Setup menu bar
+    init$2();
+
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' });
-    // Get system appearance settings
-    appearanceManager.startup();
-    // Create a window for each project
-    await windowManager.startup();
-    // Create a Watcher instance for each project
-    await diskManager.startup();
+
+    // Get initial system appearance values
+    init();
+
+    // Create windows and watchers for projects
+    init$3();
+    
     // App startup complete!
     await global.store.dispatch({ type: 'FINISH_COLD_START' });
   });
@@ -2408,28 +3166,45 @@ electron.app.whenReady()
 
 // -------- LISTENERS -------- //
 
-// Quit app: Start by setting appStatus to 'safeToQuit', if it is not yet so. This triggers windows to close. Once all of them have closed, update appStatus to 'safeToQuit', and then trigger `app.quit` again. This time it will go through.
+// Start to quit app: Set appStatus to 'safeToQuit'. This triggers windows to close. Once all of them have safely closed (e.g. open docs are saved), appStatus is updated to 'safeToQuit', and we call `app.quit` again. This time it will go through.
 
 electron.app.on('before-quit', async (evt) => {
-  if (global.state().appStatus !== 'safeToQuit') {
+  if (global.state().appStatus == 'open') {
     evt.preventDefault();
     await global.store.dispatch({
       type: 'START_TO_QUIT'
     });
+  } else if (global.state().appStatus == 'wantsToQuit') {
+    // Prevent quitting while quit is already in progress
+    evt.preventDefault();
   }
 });
 
-global.store.onDidAnyChange(async (state) => {
-  if (state.appStatus == 'wantsToQuit') {
-    const isAllWindowsSafelyClosed = state.projects.every((p) => p.window.status == 'safeToClose');
-    if (isAllWindowsSafelyClosed) {
-      await global.store.dispatch({ type: 'CAN_SAFELY_QUIT' });
-      electron.app.quit();
-    }
+/**
+ * Quit app when appStatus changes to 'safeToQuit'
+ */
+global.store.onDidAnyChange(async (state, oldState) => {
+
+  const canSafelyQuit = propHasChangedTo('appStatus', 'canSafelyQuit', state, oldState);
+
+  if (canSafelyQuit) {
+    electron.app.quit();
   }
+  
+  // if (state.appStatus == 'wantsToQuit') {
+  //   const allWindowsAreSafeToClose = state.projects.allIds.every((id) => {
+  //     const project = state.projects.byId[id]
+  //     return project.status == 'safeToClose'
+  //   })
+
+  //   if (allWindowsAreSafeToClose) {
+  //     // await global.store.dispatch({ type: 'CAN_SAFELY_QUIT' });
+  //     electron.app.quit();
+  //   }
+  // }
 });
 
-// All windows closed
+// On all windows closed, do nothing. Leave app open.
 electron.app.on('window-all-closed', () => {
   // "On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q" — https://www.geeksforgeeks.org/save-files-in-electronjs/
   if (process.platform !== 'darwin') {

@@ -12,19 +12,20 @@
   import Preview from './Preview.svelte'
   import { setLayoutFocus } from '../ui/actions';
 
-  // $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+  // $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
 
 </script>
 
 <style type="text/scss">
   #sidebar {
     --state-sideBarWidth: 100px;
-    // background-color: var(--windowBackgroundColor);
+    background-color: var(--windowBackgroundColor);
+    // background-color: transparent;
+    // backdrop-filter: blur(8px);
     width: var(--state-sideBarWidth);
     height: 100%;
     position: absolute;
     margin: 0;
-    padding: 40px 0 0 0;
     display: flex;
     flex-direction: column;
     border-right: 1px solid var(--separatorColor);
@@ -34,9 +35,16 @@
     }
   }
 
+  #top-area {
+    -webkit-app-region: drag;
+    height: 40px;
+    flex: none;
+  }
+
   #tabs {
     // position: fixed;
-    min-height: 30px;
+    height: 30px;
+    flex: none;
     display: flex;
     justify-content: center;
 
@@ -60,8 +68,16 @@
   }
 </style>
 
-<div id="sidebar" style="--state-sideBarWidth: 250px" use:setLayoutFocus={{current: $project.focusedLayoutSection, setTo: 'sidebar'}}>
+<div 
+  id ="sidebar" 
+  style="--state-sideBarWidth: 250px" 
+  use:setLayoutFocus={{current: $project.focusedSectionId, setTo: 'sidebar'}}
+>
   
+  <!-- Top area (draggable) -->
+  <div id="top-area">
+  </div>
+
   <!-- Tabs -->
   <div id="tabs">
     <ul>

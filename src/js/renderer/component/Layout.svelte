@@ -1,15 +1,20 @@
 <script>
-  import { project, files } from '../StateManager'
+  import { project } from '../StateManager'
+  import { files } from '../FilesManager'
+  import EditorPanels from './main/EditorPanels.svelte'
   import FirstRun from './firstrun/FirstRun.svelte'
+  import FunctionalTests from './dev/FunctionalTests.svelte';
   import SideBar from './sidebar/SideBar.svelte'
   import Toolbar from './main/Toolbar.svelte'
   import Separator from './ui/Separator.svelte'
   import Menu from './ui/Menu.svelte'
   import Tooltip from './ui/Tooltip.svelte'
-  import StateDisplay from './dev/StateDisplay.svelte'
+  import Colors from './dev/Colors.svelte'
+  import UIElements from './dev/UIElements.svelte';
+  import Files from './dev/Files.svelte'
+  import State from './dev/State.svelte'
   import { setLayoutFocus } from './ui/actions';
-  // import Editor from './main/Editor.svelte'
-
+  
   $: directoryIsSet = $project.directory
   $: filesPopulated = $files.tree
   $: isWindowDraggedOver = $project.window.isDraggedOver
@@ -19,55 +24,72 @@
    */
   function onDragOver() {
     if (!isWindowDraggedOver) {
-      window.api.send('dispatch', { type: 'WINDOW_DRAG_OVER'})
+      window.api.send('dispatch', { type: 'PROJECT_WINDOW_DRAG_OVER'})
     }
   }
   
   /**
-   * We check the event `relatedTarget` to determine whether the user actually
-   * dragged outside the window, or just dragged over a child element. The 
-   * dragleave event fires in both cases, but we only care about the later.
+   * We check the event `relatedTarget` to determine whether the user actually dragged outside the window, or just dragged over a child element. The dragleave event fires in both cases, but we only care about the later.
    */
   function onDragLeave(evt) {
     if (isWindowDraggedOver && evt.relatedTarget == null) {
-      window.api.send('dispatch', { type: 'WINDOW_DRAG_LEAVE'})
+      window.api.send('dispatch', { type: 'PROJECT_WINDOW_DRAG_LEAVE'})
     }
   }
 
   function onDrop() {
-    window.api.send('dispatch', { type: 'WINDOW_DRAG_LEAVE'})
+    window.api.send('dispatch', { type: 'PROJECT_WINDOW_DRAG_LEAVE'})
   }
+  
 </script>
 
 <style type="text/scss">
   #main {
     background-color: var(--windowBackgroundColor);
-    // width: calc(100vw - 250px);
     transform: translate(250px, 0);
-    overflow: scroll;
     position: absolute;
-    // top: 0;
-    // left: 0;
     display: flex;
     flex-direction: column;
+    width: calc(100% - 250px);
+    height: 100%;
+  }
+
+  #content {
     width: 100%;
     height: 100%;
+    overflow: scroll;
   }
 </style>
 
-<svelte:window on:dragenter|preventDefault={onDragOver} on:dragleave|preventDefault={onDragLeave} on:drop|preventDefault={onDrop} /> 
+<svelte:window 
+  on:dragover|preventDefault={onDragOver} 
+  on:dragleave|preventDefault={onDragLeave} 
+  on:drop|preventDefault={onDrop} 
+/> 
 
-<Menu />
 <Tooltip />
+<Menu />
 
-{#if !directoryIsSet || !filesPopulated}
+<!-- <FunctionalTests /> -->
+
+{#if !directoryIsSet}
   <FirstRun />
 {:else}
-  <SideBar />
-  <div id="main" use:setLayoutFocus={{current: $project.focusedLayoutSection, setTo: 'main'}}>
-    <Toolbar />
-    <Separator />
-    <StateDisplay />
-    <!-- <Editor /> -->
-  </div>
+  {#if filesPopulated}  
+    <SideBar />
+    <div 
+      id="main" 
+      use:setLayoutFocus={{current: $project.focusedSectionId, setTo: 'main'}}
+    >
+      <Toolbar />
+      <Separator />
+      <div id="content">
+        <!-- <Colors /> -->
+        <!-- <UIElements /> -->
+        <!-- <State /> -->
+        <!-- <Files /> -->
+        <EditorPanels />
+      </div>
+    </div>
+  {/if}
 {/if}

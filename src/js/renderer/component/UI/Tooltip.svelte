@@ -1,8 +1,8 @@
 <script>
-  import { tooltip } from '../../StateManager'
+  import { tooltip } from '../../TooltipManager'
   import { css } from './actions'
 
-  let isVisible = false
+  let visible = false
   let text = ''
   let x = 0
   let y = 0
@@ -33,7 +33,7 @@
     switch ($tooltip.status) {
       case 'show':
 
-        if (isVisible) {
+        if (visible) {
           // If tooltip is already visible, and we've moused over a new target (which we know wee have, if valuesHaveChanged and status == 'show') wait a moment before updating. 
           updateDelayTimer = setTimeout(() => {
             text = $tooltip.text
@@ -41,8 +41,8 @@
             y = $tooltip.y
           }, msDelayUntilUpdate)
         } else {
-          // Show after delay. Is triggered on mouseover. Delay is implemented by the `isVisible` class transition-delay. If a hide timer is active, cancel it.
-          isVisible = true
+          // Show after delay. Is triggered on mouseover. Delay is implemented by the `visible` class transition-delay. If a hide timer is active, cancel it.
+          visible = true
           text = $tooltip.text
           x = $tooltip.x
           y = $tooltip.y
@@ -50,12 +50,12 @@
         break
       case 'hide':
         // Hide immediately. Is triggered by clicking.
-        isVisible = false
+        visible = false
         break
       case 'hideAfterDelay':
         // Hide after delay. Is triggered when mousing out.
         hideDelayTimer = setTimeout(() => {
-          isVisible = false
+          visible = false
         }, msDelayUntilHide);
         break
     }
@@ -71,22 +71,17 @@
 </script>
 
 <style type="text/scss">
-@import '../../../../styles/_mixins.scss';
 
   #tooltip {
-    pointer-events: none;
     @include label-normal-small;
-    color: var(--secondaryLabelColor);
-    background: var(--gridColor);
-    position: fixed;
-    max-width: 264px;
-    min-height: 19px;
-    padding: 2px 5px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.1);
-    border-radius: 3px;
+    line-height: 14px;
     display: flex;
     align-items: center;
+    pointer-events: none;
+    position: fixed;
+    max-width: 264px;
+    height: 18px;
+    padding: 2px 5px;
     z-index: 1000;
     opacity: 0;
     transform: translate(
@@ -94,17 +89,33 @@
       calc(var(--y) * 1px)
     );
     transition: opacity 500ms ease-in-out;
+    
+    color: var(--labelColor);
+    background: var(--windowBackgroundColor);
 
-    &.isVisible {
+    @include dark {
+      filter: brightness(0.8);
+      box-shadow:
+        0 0 0 0.5px gray(40%, 1), // Outline inner (light)
+        0 0 0 1px black(0.5), // Outline outer (dark)
+        0 2px 6px 0 black(0.1); // Drop shadow
+    }
+
+    @include light {
+      box-shadow:
+        0 0 0 0.5px black(0.125), // Outline
+        0 2px 6px 0 black(0.2); // Drop shadow
+    }
+
+    &.visible {
       opacity: 1;
       transition: 
         opacity 1ms calc(var(--msDelayUntilShow) * 1ms);
     }
   }
-
-
+  
 </style>
 
-<div id="tooltip" class:isVisible use:css={{x, y, text, msDelayUntilShow}}>
+<div id="tooltip" class:visible use:css={{x, y, text, msDelayUntilShow}}>
   {text}
 </div>

@@ -1,8 +1,9 @@
 <script>
   import { createEventDispatcher, afterUpdate } from 'svelte'
-  import { state, project, files, sidebar } from '../../../StateManager'
+  import { state, project, sidebar, isWindowFocused } from '../../../StateManager'
+  import { files } from '../../../FilesManager'
   import { css } from '../../ui/actions'
-  import {onMousedown, toggleExpanded} from './interactions'
+  import {onMousedown, toggleExpanded, onMouseup} from './interactions'
   import DisclosureButton from '../../ui/DisclosureButton.svelte'
   import { getContext } from 'svelte';
 
@@ -18,16 +19,24 @@
   $: isExpandable = file?.type == 'folder'
   $: isFolder = $sidebar.tabsById.project.expanded.some((id) => id == file?.id)
   $: isSelected = $sidebar.tabsById.project.selected.some((id) => id == file?.id)
-  $: isWindowFocused = $project.window.isFocused
+  // TODO ^ Update to new system
   $: isWindowDraggedOver = $project.window.isDraggedOver
-  $: isSectionFocused = $project.focusedLayoutSection == 'sidebar'
+  $: isSectionFocused = $project.focusedSectionId == 'sidebar'
 
-  $: isHighlighted = (isSelected && isWindowFocused && isSectionFocused && !isWindowDraggedOver) || isDragTarget
-  $: isHighlightedInBg = (isSelected && isWindowFocused && !isSectionFocused) || (isSelected && !isWindowFocused) || (isSelected && isWindowDraggedOver && !isDragTarget)
+  $: isHighlighted = ($isWindowFocused && isSelected && isSectionFocused && !isWindowDraggedOver) || isDragTarget
+  $: isHighlightedInBg = ($isWindowFocused && isSelected && !isSectionFocused) || (isSelected && !$isWindowFocused) || (isSelected && isWindowDraggedOver && !isDragTarget)
+
+  // On drag start, if the dragged file is a doc, set it's id as a dataTransfer item. We use a custom `text/docid`. Per: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/Drag_operations#dragdata
+  function onDragStart(domEvent) {
+    const file = $files.byId[id]
+    if (file.type == 'doc') {
+      domEvent.dataTransfer.setData('text/docid', id);
+    }
+  }
 
 </script>
 
-<style type="text/scss">
+<style type='text/scss'>
   .file {
     contain: strict;
     user-select: none;
@@ -99,7 +108,7 @@
   }
 
   .file.isHighlightedInBg {
-    background-color: var(--unemphasizedSelectedContentBackgroundColor);
+    background-color: rgba(var(--foregroundColor), 0.12);
   }
 
   // File is target of drag operation
@@ -142,22 +151,26 @@
     class:isHighlighted
     class:isHighlightedInBg
     class:isFolder
+    draggable=true
+    on:dragstart={onDragStart}
     on:dragover|preventDefault|stopPropagation
     on:dragleave|preventDefault|stopPropagation
     on:drop|preventDefault|stopPropagation
-    on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds)}
+    on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds, $files)}
+    on:mouseup={(evt) => onMouseup(evt, id, tab, tabId, listIds, $project.panels[$project.focusedPanelIndex], $files)}
     >
       
     {#if isExpandable}
       <DisclosureButton
-        width={14}
-        height={14}
-        padding={6}
+        width={'14px'}
+        height={'14px'}
+        padding={'3px'}
         left={leftOffset + 3}
-        rotation={isFolder ? 90 : 0}
-        tooltip={'Toggle Expanded'}
-        iconColor={isHighlighted ? 'white' : $state.appearance.os.colors.controlTextColor}
-        on:toggle={() => toggleExpanded(id, isFolder, tab, tabId)} />
+        rotation={isFolder ? 0 : -90}
+        opacity={0.85}
+        iconColor={isHighlighted ? 'selectedMenuItemTextColor' : 'controlTextColor'}
+        on:toggle={() => toggleExpanded(id, isFolder, tab, tabId)} 
+      />
 
     {/if}
     <div class="icon" />

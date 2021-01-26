@@ -1,25 +1,28 @@
 <script>
-  import MenuButton from '../ui/MenuButton.svelte'
 	import { sidebar } from '../../StateManager'
   import { getContext } from 'svelte';
+  import IconButton from '../ui/IconButton.svelte';
 
-  // List of options in format:
-
-  export let options
+  // List of menu items
+  export let items = []
 
   const tabId = getContext('tabId')
   $: tab = $sidebar.tabsById[tabId]
 
   function setSorting(evt) {
-    const selected = evt.detail.option
-    options.forEach((i) => {
+    
+    const selected = evt.detail.item
+    
+    if (selected == undefined) return
+    
+    items.forEach((i) => {
       if (i.group == selected.group) {
-        i.isChecked = i.label == selected.label
+        i.checked = i.label == selected.label
       }
     })
 
-    const sortBy = options.find((i) => i.group == 'sortBy' && i.isChecked)?.label
-    const sortOrder = options.find((i) => i.group == 'sortOrder' && i.isChecked)?.label
+    const sortBy = items.find((i) => i.group == 'sortBy' && i.checked)?.label
+    const sortOrder = items.find((i) => i.group == 'sortOrder' && i.checked)?.label
 
     window.api.send('dispatch', {
       type: 'SIDEBAR_SET_SORTING',
@@ -38,5 +41,5 @@
 </style>
 
 <div class="sortMenu">
-<MenuButton tooltip={'Change the sorting criteria and direction'} buttonType={'icon'} icon={'img-arrow-up-arrow-down'} menuType={'pulldown'} menuWidth={105} {options} on:select={setSorting}/>
+  <IconButton compact={true} menuWidth='120px' items={items} icon={'img-arrow-up-arrow-down'} tooltip={'Change the sorting criteria and direction'} on:selectItem={setSorting} />
 </div>

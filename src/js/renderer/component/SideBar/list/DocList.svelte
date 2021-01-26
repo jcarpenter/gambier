@@ -1,5 +1,6 @@
 <script>
 	import { project, sidebar } from '../../../StateManager'
+	import { files } from '../../../FilesManager'
 	import { arrowUpDown} from './interactions'
   import { getContext } from 'svelte';
 	
@@ -9,7 +10,7 @@
   
   const tabId = getContext('tabId')
   $: tab = $sidebar.tabsById[tabId]
-	$: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+	$: isSidebarFocused = $project.focusedSectionId == 'sidebar'
 
 </script>
 
@@ -28,13 +29,13 @@
     case 'ArrowUp':
     case 'ArrowDown':
       evt.preventDefault()
-      arrowUpDown(evt.key, evt.shiftKey, evt.altKey, tab, tabId, listIds)
+      arrowUpDown(evt.key, evt.shiftKey, evt.altKey, tab, tabId, listIds, $files)
       break
   }
 }} />
 
 <div class="list">
 	{#each listIds as id (id)}
-		<svelte:component this={component} {id} {listIds} {showTags} />
+		<svelte:component this={component} {id} {listIds} />
 	{/each}
 </div>

@@ -1,7 +1,7 @@
 <script>
   import { prettySize } from '../../../shared/utils'
-  import { sidebar, files } from '../../StateManager'
-
+  import { sidebar } from '../../StateManager'
+  import { files } from '../../FilesManager'
   import DisclosureButton from '../ui/DisclosureButton.svelte'
   import Header from './Header.svelte'
   import Label from '../ui/Label.svelte'

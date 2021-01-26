@@ -12,9 +12,8 @@ function getId(lineHandle) {
 
 /**
  * Return an array of the block elements in the doc. First, parse `lineHandle.styleClasses.textClass`
- * @param {*} cm 
  */
-function getBlockElements(cm) {
+export function getBlockElements(cm) {
 
   let blockElements = []
 
@@ -128,5 +127,3 @@ function getBlockElements(cm) {
 
   return blockElements
 }
-
-export { getBlockElements }

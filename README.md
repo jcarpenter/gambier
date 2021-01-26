@@ -26,15 +26,14 @@ Bracket closing is enabled by the [closebrackets](https://codemirror.net/doc/man
 
 We want to be a good citizen macOS app! We support the following features
 
-### Dark Mode
+### Theming
 
-* See: [Electron Docs: Supporting macOS Dark Mode](https://www.electronjs.org/docs/tutorial/mojave-dark-mode-guide)
-* User chooses between `Match System`, `Light`, or `Dark` in `View > Appearance`
-* `menuBar.js` dispatches `SET_APPEARANCE` action to reducers, which update store `appearance.userPref` and `appearance.theme` properties.
-* On store change...
-  * Listener in `main.js` sets `nativeTheme.themeSource` accordingly. Per [Electron docs](https://www.electronjs.org/docs/api/native-theme#nativethemethemesource), this tells Electron to render OS UI such as context menus, dev tools, etc in dark or light mode.
-  * Listener in `renderer.js` sets app stylesheet in `index.html` to `state.appearance.theme` value. If theme is `gambier-light`, for example, it sets `<link rel="stylesheet" id="theme-stylesheet" href="styles/themes/gambier-light.css">`.
-  * Listener in `Editor.svelte` sets CodeMirror theme to `state.appearance.theme` value. E.g. `cm.setOption('theme', state.appearance.theme)`. This adds `.cm-s-gambier-light` to the class list of the top-level Editor element.
+Initially, we have just two themes: light and dark. They style both the app UI, and the editor text. In the future we'll hopefully support multiple editor text themes, and possibly (lower priority) app UI themes.
+
+* In `View > Appearance`, user can choose between Match System, Light, or Dark. We track their selection in the `theme.app` store property. When they make a change, we do the following:
+  * Set `nativeTheme.themeSource`: Per [Electron docs](https://www.electronjs.org/docs/api/native-theme#nativethemethemesource), this tells Chromium to render OS UI in dark or light mode (e.g. window frames), and sets [prefers-color-scheme](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-color-scheme). The later is picked up by media queries in our CSS. (AppearanceManager.js)
+  * Get updated OS colors and apply them to the document as CSS variables. (renderer.js)
+  * Get updated editor theme name and set it as stylesheet (StateManager.js) This won't actually change for now, but the code is here with future flexibility in mind.
 
 ### App Icon
 

@@ -1,14 +1,11 @@
 <script>
   import { css } from '../actions';
-
   export let label
-  export let padding = 0
+  export let padding = 8
 </script>
 
 <style type="text/scss">
-  @import '../../../../../styles/_mixins.scss';
   span {
-    --padding: 8;
     position: absolute;
     left: 0;
     top: 50%;

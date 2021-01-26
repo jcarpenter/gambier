@@ -1,7 +1,6 @@
 <script>
   export let cm = null
   export let target = null // An inlineElement
-  export let element = null // DOM element, set with bind:this
   export let editorState = {}
 
   // Per: https://developer.mozilla.org/en-US/docs/Web/API/URL
@@ -24,7 +23,7 @@
   // Setup event listeners once `cm` is populated.
   $: {
     if (cm !== null) {
-      cm.on('editorStateChanged', onEditorStateChange)
+      cm.on('stateChanged', onEditorStateChange)
       validateURL()
     }
   }
@@ -162,7 +161,6 @@
 
 <div
   id="preview"
-  bind:this={element}
   style="left:{leftPos}; top:{topPos}"
   class="below"
   class:error={isError}

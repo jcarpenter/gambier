@@ -1,7 +1,8 @@
 <script>
-	import { project, files, sidebar } from '../../../StateManager'
+	import { project, sidebar } from '../../../StateManager'
+  import { files } from '../../../FilesManager'
 	import Token from '../../ui/Token.svelte'
-  import { onMousedown } from './interactions'
+  import { onMousedown, onMouseup } from './interactions'
   import { getContext } from 'svelte';
 
 	// Optionally pass in file to use for doc. If undefined, we'll get doc from $files
@@ -17,7 +18,7 @@
 	$: tab = $sidebar.tabsById[tabId]
 	$: doc = file ? file : $files.byId[id]
 	$: isSelected = tab.selected.some((id) => id == doc.id)
-	$: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+	$: isSidebarFocused = $project.focusedSectionId == 'sidebar'
 
 </script>
 
@@ -60,6 +61,10 @@
 		word-break: break-word;
 		line-break: auto;
 		line-height: 16px;
+		li {
+			@include list-reset;
+			color: red;
+		}
 	}
 
 	.excerpt :global(.highlight) {
@@ -96,7 +101,8 @@
 	class:showTags
 	class:isSelected
 	class:isSidebarFocused
-	on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds)}
+	on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds, $files)}
+	on:mouseup={(evt) => onMouseup(evt, id, tab, tabId, listIds, $project.panels[$project.focusedPanelIndex], $files)}
 	>
 		<div class="title">{doc.title ? doc.title : doc.name}</div>
 			{#if showTags}

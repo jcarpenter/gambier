@@ -1,5 +1,6 @@
 <script>
-  import { project, sidebar, files } from '../../StateManager'
+  import { project, sidebar } from '../../StateManager'
+  import { files } from '../../FilesManager'
   import produce from 'immer'
   import Header from './Header.svelte'
   import SortMenu from './SortMenu.svelte'
@@ -17,7 +18,7 @@
   setContext('tabId', tabId);
   $: tab = $sidebar.tabsById[tabId]
 
-  $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+  $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
 
   $: sortOptions = [
     { label: 'Ascending', group: 'sortOrder', isChecked: tab.sortOrder == 'Ascending' },

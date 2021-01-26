@@ -1,5 +1,6 @@
 <script>
-  import { project, sidebar, files } from '../../StateManager'
+  import { project, sidebar } from '../../StateManager'
+  import { files } from '../../FilesManager'
   import produce from 'immer'
   import Header from './Header.svelte'
   import SortMenu from './SortMenu.svelte'
@@ -23,7 +24,7 @@
     { label: 'Descending', group: 'sortOrder', isChecked: tab.sortOrder == 'Descending' },
   ]
 
-  // $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+  // $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
 
   let allTags = []
   $: selectedTags = tab.selectedTags

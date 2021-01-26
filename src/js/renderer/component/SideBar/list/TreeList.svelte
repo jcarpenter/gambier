@@ -1,6 +1,7 @@
 <script>
-	import { project, sidebar, files } from '../../../StateManager'
-	import {onMousedown, arrowLeftRight, arrowUpDown} from './interactions'
+	import { project, sidebar } from '../../../StateManager'
+  import { files } from '../../../FilesManager'
+	import { arrowLeftRight, arrowUpDown} from './interactions'
   import Folder from './Folder.svelte';
   import { getContext } from 'svelte';
 
@@ -9,13 +10,13 @@
   
   const tabId = getContext('tabId')
   $: tab = $sidebar.tabsById[tabId]
-  $: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+  $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
   
 </script>
 
 <style type="text/scss">
 	.list {
-    padding: 10px;
+    padding: 10px 10px 0 10px;
     flex-grow: 1;
     overflow-y: scroll;
     position: relative;
@@ -33,7 +34,7 @@
     case 'ArrowUp':
     case 'ArrowDown':
       evt.preventDefault()
-      arrowUpDown(evt.key, evt.shiftKey, evt.altKey, tab, tabId, listIds)
+      arrowUpDown(evt.key, evt.shiftKey, evt.altKey, tab, tabId, listIds, $files)
       break
   }
 }} />

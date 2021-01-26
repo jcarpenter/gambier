@@ -1,402 +1,98 @@
 <script>
-  // import * as editor from '../editor/editor.js'
-  import { state, project, files } from '../../StateManager'
+  import { state, project } from '../../StateManager'
+  import { files } from '../../FilesManager'
   import { onMount, createEventDispatcher } from 'svelte'
-  import { createEditor } from '../../editor/createEditor'
-  import {
-    clearLineMarks,
-    focusEditor,
-    loadFileByPath,
-    mapDoc,
-    markDoc,
-    markLine,
-    remapInlineElementsForLine,
-    saveFile,
-    toggleSource,
-  } from '../../editor/index.js'
+  import { makeEditor } from '../../editor/editor2';
 
   import Wizard from './wizard/Wizard.svelte'
   import Autocomplete from './Autocomplete.svelte'
   import Preview from './Preview.svelte'
+  import { clearDocMarks, markDoc } from '../../editor/mark';
+  import { saveDoc } from '../../editor/editor-utils';
 
-  export let focused
-  export let visible
-  export let state = {}
-  export let oldState = {}
-
-  let cm = null
-  let showAutocomplete = false // TODO
-
-  // Event dispatcher
-  const dispatch = createEventDispatcher()
+  export let panel = {}
+  export let doc = {}
+  export let isFocusedPanel = false // 1/18: Not using these yet
+  export let visible = false
 
   // Bindings
-  let editor
-  let wizard
-  let autocomplete
-  let preview
+  let cm // CodeMirror (Editor) instance
+  let el // This element
 
-  // ------------ STATE ------------ //
 
-  // Define `editorState` properties
-  let editorState = {
-    isMetaKeyDown: false,
-    sourceMode: false,
-    lastChanges: {},
-    openDoc: {},
-    widget: {
-      hovered: null,
-      selected: null,
-      target: null,
-      isHovered: false,
-      isSelected: false,
-    },
-    selections: [],
-    blockElements: [],
-    inlineElements: [],
-  }
-
-  // Set state
-  function setEditorState(action) {
-    // console.log('setEditorState', action)
-    switch (action.type) {
-      case 'loadDoc':
-        // Save outgoing file
-        if (editorState.openDoc.path) {
-          saveFile(cm, editorState.openDoc.path)
-        }
-        // Update editorState
-        editorState.openDoc = state.openDoc
-        // Load new file
-        loadFileByPath(cm, state.openDoc.path)
-        break
-      case 'setMetaKey':
-        editorState.isMetaKeyDown = action.isMetaKeyDown
-        cm.getScrollerElement().setAttribute(
-          'data-metakeydown',
-          action.isMetaKeyDown
-        )
-        CodeMirror.signal(this, 'editorStateChanged', 'metaKey')
-        break
-
-      case 'changes':
-        editorState.lastChanges = action.changes
-        CodeMirror.signal(this, 'editorStateChanged', 'lastChanges')
-        break
-
-      case 'setSourceMode':
-        editorState.sourceMode = action.boolean
-        CodeMirror.signal(this, 'editorStateChanged', 'sourceMode')
-        break
-
-      case 'setSelections':
-        editorState.selections = cm.getDoc().listSelections()
-        CodeMirror.signal(this, 'editorStateChanged', 'selections')
-        break
-
-      case 'hoverWidget':
-        editorState.widget.hovered = action.target
-        CodeMirror.signal(this, 'editorStateChanged', ['widget', 'hovered'])
-        break
-
-      case 'selectWidget':
-        cm.setSelection(
-          { line: action.target.line, ch: action.target.start },
-          { line: action.target.line, ch: action.target.end }
-        )
-        editorState.selections = cm.getDoc().listSelections()
-        editorState.widget.selected = action.target
-        CodeMirror.signal(this, 'editorStateChanged', ['widget', 'selected'])
-        break
-
-      case 'deSelectWidget':
-        editorState.widget.selected = null
-        CodeMirror.signal(this, 'editorStateChanged', ['widget', 'selected'])
-        break
-    }
-    // console.log(editorState)
-  }
-
-  // ------------ EVENTS ------------ //
+  $: panel, onPanelChange()
 
   /**
-   * "This event is fired before a change is applied, and its handler may choose to modify or cancel the change" — https://codemirror.net/doc/manual.html#event_beforeChange
-   * Handle paste operations. If URL, generate link; else, if HTML, convert to markdown.
+   * Handle panel changes. Determine what changed, and make the appropriate updates/
    */
-  async function onBeforeChange(cm, change) {
-    // console.log('onBeforeChange', change)
+  function onPanelChange() {
+    if (!cm) return
 
-    // If a new doc was loaded, and we don't want to run these operations.
-    if (change.origin === 'setValue') {
-      return
+    // If doc has changed, load new one
+    const docHasChanged = cm.state.panel.docId !== panel.docId
+    if (docHasChanged) {
+      cm.dispatch({ type: 'loadDoc', doc })
     }
 
-    // Handle paste operations
-    if (change.origin === 'paste') {
-      const selection = cm.getSelection()
-      const isURL = isUrl(change.text)
-
-      if (isURL) {
-        if (selection) {
-          const text = selection
-          const url = change.text
-          const newText = change.text.map(
-            (line) => (line = `[${text}](${url})`)
-          )
-          change.update(null, null, newText)
-        }
-      } else {
-        change.cancel()
-        const formats = await window.api.invoke('getFormatOfClipboard')
-        if (formats.length === 1 && formats[0] === 'text/plain') {
-          cm.replaceSelection(change.text.join('\n'))
-        } else if (formats.includes('text/html')) {
-          const html = await window.api.invoke('getHTMLFromClipboard')
-          const markdown = turndownService.turndown(html)
-          cm.replaceSelection(markdown)
-        }
-      }
-    }
-  }
-
-  /**
-   * "Fires every time the content of the editor is changed. This event is fired before the end of an operation, before the DOM updates happen." — https://codemirror.net/doc/manual.html#event_change
-   */
-  // function onChange(cm, change) {
-  //   console.log('onChange: ', change)
-  // }
-
-  /**
-   * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
-   * @param {*} cm
-   * @param {*} changes
-   */
-  // function onChanges(cm, changes) {
-  //   editorState.blockElements = mapBlockElements(cm)
-  //   editorState.inlineElements = mapInlineElements(cm, editorState)
-  //   markDoc(cm, editorState)
-  // }
-
-  /**
-   * "Will be fired when the cursor or selection moves, or any change is made to the editor content." - https://codemirror.net/doc/manual.html#event_cursorActivity
-   */
-  function onCursorActivity(e) {
-    // Update editorState.selections
-    cm.setEditorState({ type: 'setSelections' })
-  }
-
-  /**
-   * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
-   */
-  function onChanges(cm, changes) {
-    // console.trace('onChanges()', changes)
-
-    // Checks
-    const hasMultipleLinesChanged = changes.some((change) => {
-      return (
-        change.from.line !== change.to.line || change.origin === '+swapLine'
-      )
-    })
-    const isSingleEdit = changes.length == 1
-    const isUndo = changes.some((change) => change.origin == 'undo')
-
-    // Set cursor, if `cm.setCursorAfterChanges` !== null. We use this when want to place the cursor at a specific position _after_ we've changed the text.
-
-    // if (cm.setCursorAfterChanges !== null) {
-    //   cm.setCursor(cm.setCursorAfterChanges)
-    //   // Reset
-    //   cm.setCursorAfterChanges = null
-    // }
-
-    // Remap elements and re-mark:
-    // * Everything, if multiple lines have changed.
-    // * Else, one line only
-
-    if (hasMultipleLinesChanged) {
-      mapDoc(cm)
-      markDoc(cm)
-    } else {
-      // We assume only one line has changed...
-
-      const lineNo = changes[0].from.line
-      const lineHandle = cm.getLineHandle(lineNo)
-
-      // Autocomplete: Determine if we need to open it or not
-      if (showAutocomplete && isSingleEdit && !isUndo) {
-        // If preceding character was `^`, user is trying to create an inline footnote, so we don't open the autocomplete UI. We just make sure the wizard opens after the widget is created.
-
-        const changeText = changes[0].text[0]
-        const emptyBrackets = changeText == '[]'
-        const bracketsAroundSingleSelection =
-          !emptyBrackets &&
-          changeText.charAt(0) == '[' &&
-          changeText.charAt(changeText.length - 1) == ']'
-
-        if (emptyBrackets || bracketsAroundSingleSelection) {
-          markAutocomplete(cm, changeText)
-          showAutocomplete = false
-        }
-      } else {
-        // Remap everything if line changed had block styles. We do this because blockElements can contain reference definitions. And if reference definitions change, lineElements also need to be remapped (because they incorporate data from reference definitions).
-
-        const hasBlockElementChanged = lineHandle.styleClasses !== undefined
-        if (hasBlockElementChanged) {
-          mapDoc(cm)
-          markDoc(cm)
-        } else {
-          // Remap lineElements, redo line marks, and finish
-          remapInlineElementsForLine(cm, lineHandle)
-          clearLineMarks(cm, lineHandle)
-          markLine(cm, lineHandle)
-        }
+    // If save status has changed, and it's now "no unsaved changes", mark the doc clea
+    // Per: https://codemirror.net/doc/manual.html#markClean
+    const saveStatusHasChanged = cm.state.panel.unsavedChanges !== panel.unsavedChanges
+    if (saveStatusHasChanged) {
+      if (!panel.unsavedChanges) {
+        cm.doc.markClean()
       }
     }
 
-    cm.setEditorState({ type: 'changes', changes: changes })
-
-    // Focus widget, if `cm.focusWidgetAfterChanges` !== null. We use this when we want to focus a widget after making changes (e.g. creating it in Autocomplete).
-
-    // if (cm.focusWidgetAfterChanges !== null) {
-    //   const from = cm.focusWidgetAfterChanges.from
-    //   const to = cm.focusWidgetAfterChanges.to
-    //   const element = editorState.inlineElements.find(
-    //     (e) =>
-    //       from.line == e.line &&
-    //       from.ch <= e.start &&
-    //       to.ch >= e.end &&
-    //       e.widget &&
-    //       e.widget.editable
-    //   )
-    //   if (element) element.widget.tabInto()
-
-    //   // Reset
-    //   cm.focusWidgetAfterChanges = null
-    // }
-
-    // isChangesPending = false
+    // Set cm.state.panel to a copy of panel, when panel changes.
+    cm.dispatch({ type: 'panelChanged', panel: panel })
   }
 
+
+  $: sourceMode = $state.sourceMode
+  $: sourceMode, toggleSource()
+  
   /**
-   * Forward click events to parent `Layout` component. It dispatches focus changes to main, to help track which section of the UI is focused.
+   * When sourceMode changes, if false, create marks.
    */
-  function forwardClick(evt) {
-    dispatch('click', evt)
+  function toggleSource() {
+    if (!cm) return
+    // Clear current marks, regardless of sourceMode true/false.
+    clearDocMarks(cm)
+    if (!sourceMode) { markDoc(cm) }
   }
 
-  /**
-   * TODO
-   */
-  // function onFocus() {
-  //   // console.log('onFocus')
-  //   if (cm.setCursorAfterChanges !== null) {
-  //     cm.setCursor(cm.setCursorAfterChanges)
-  //     cm.setCursorAfterChanges = null
-  //   }
-  // }
 
-  // ------------ SETUP ------------ //
+
+  // Focused panel - Can't remember where we use this
 
   onMount(async () => {
 
-    // Set initial values
-    editorState.sourceMode = state.sourceMode
+    // ------ CREATE EDITOR INSTANCE ------ //
 
-    // Create the editor
-    cm = createEditor(editor, state.appearance.theme, editorState)
+    cm = makeEditor(el)
+    cm.dispatch({ type: 'loadDoc', doc })
 
-    // Setup listeners
-    // cm.on('beforeChange', onBeforeChange)
-    // cm.on('change', onChange)
-    cm.on('changes', onChanges)
+    // ------ CREATE LISTENERS ------ //
 
-    // cm.on('blur', () => { console.log("onBlur") })
-    // cm.on('scrollCursorIntoView', (cm, evt) => {
-    //   console.log('scrollCursorIntoView', evt)
-    // })
-    // cm.on('cursorActivity', () => {
-    //   console.log('cursorActivity')
-    // })
-    // cm.on('scroll', () => {
-    //   console.log('scroll')
-    // })
-
-    cm.on('cursorActivity', onCursorActivity)
-
-    // cm.on("focus", onFocus)
-
-    // Setup method properties on `cm`
-    cm.setEditorState = setEditorState
-    cm.getEditorState = () => {
-      return editorState
-    }
-
-    // Move wizard and autocomplete menus inside CodeMirror's scroller element. If we do not, and leave them as defined below in the markup, they will be siblings of the editor (which is added to the #editor div), and therefore NOT scroll when the CodeMirror editor scrolls.
-    cm.getScrollerElement().append(wizard.element)
-    cm.getScrollerElement().append(autocomplete.element)
-    cm.getScrollerElement().append(preview.element)
-
-    // Pass `cm` to components
-    wizard.cm = cm
-    autocomplete.cm = cm
-    preview.cm = cm
-
-    // Add `data-metakeydown` attribute to `sizer` element while meta key is pressed. We use this in various CSS :hover styles to cue to user that clicking will trigger a different action (e.g. jump to reference definition) than normal clicking.
-    window.addEventListener('keydown', (evt) => {
-      if (evt.key == 'Meta') {
-        cm.setEditorState({ type: 'setMetaKey', isMetaKeyDown: true })
+    // Save open doc when main requests (e.g. user clicks File > Save)
+    window.api.receive('mainRequestsSaveFocusedPanel', () => {
+      if (isFocusedPanel && panel.unsavedChanges) {
+        saveDoc(cm, doc)
       }
     })
 
-    window.addEventListener('keyup', (evt) => {
-      if (evt.key == 'Meta') {
-        cm.setEditorState({ type: 'setMetaKey', isMetaKeyDown: false })
+    // Save open doc when main requests (e.g. user clicks File > Save)
+    window.api.receive('mainRequestsSaveAll', () => {
+      if (panel.unsavedChanges) {
+        saveDoc(cm, doc)
       }
-    })
-
-    // Reset to false when window is focused. This prevents a bug wherein the value can get stuck on `true` when we switch away from the app window while holding down the metaKey (which is easy to do, when we MetaKey-Tab to invoke the app switcher).
-    window.addEventListener('focus', (evt) => {
-      cm.getScrollerElement().setAttribute('data-metakeydown', false)
-    })
-
-    // Set initial value
-    cm.getScrollerElement().setAttribute('data-metakeydown', false)
-
-    // Setup app `stateChanged` listeners
-    window.api.receive('stateChanged', async (newState, oldState) => {
-      state = newState
-
-      if (state.changed.includes('openDoc')) {
-        if (state.openDoc.path) {
-          cm.setEditorState({ type: 'loadDoc', target: state.openDoc })
-        }
-      }
-
-      if (state.changed.includes('focusedLayoutSection')) {
-        if (state.focusedLayoutSection == 'editor') {
-          focusEditor(cm)
-        }
-      }
-
-      if (state.changed.includes('sourceMode')) {
-        cm.setEditorState({ type: 'setSourceMode', boolean: state.sourceMode })
-        toggleSource(cm)
-      }
-
-      if (state.changed.includes('appearance')) {
-        cm.setOption('theme', newState.appearance.theme)
-      }
-    })
-
-    // Save open doc when main requests (e.g. user clicks File > Save.)
-    window.api.receive('mainRequestsSaveFile', () => {
-      saveFile(cm, editorState.openDoc.path)
     })
 
     // Save open doc when app quits
     window.api.receive('mainWantsToCloseWindow', async () => {
       window.api.send(
         'saveFileThenCloseWindow',
-        editorState.openDoc.path,
+        editorState.doc.path,
         cm.getValue()
       )
     })
@@ -405,68 +101,99 @@
     window.api.receive('mainWantsToQuitApp', async () => {
       window.api.send(
         'saveFileThenQuitApp',
-        editorState.openDoc.path,
+        editorState.doc.path,
         cm.getValue()
       )
     })
 
-    // Load the openDoc
-    if (state.openDoc.path) {
-      cm.setEditorState({ type: 'loadDoc', target: state.openDoc })
-    }
+    // ------ CREATE COMPONENTS ------ //
 
-    // ------- TEMP ------- //
+    // Add wizard, autocomplete and preview components to CodeMirror's scroller element. If we don't, and instead were to define them as components here, in Editor.svelte,they would be siblings of the top-level CodeMirror element (which is added to the `el` div), and therefore NOT scroll with the editor.
 
-    // Fire event (TEMP: Testing handlers)
-    // setTimeout(() => {
-    //   cm.setState({ type: 'selectWidget', id: 'timothy' })
-    // }, 100)
+    // const wizard = new Wizard({
+    //   target: cm.getScrollerElement(),
+    //   props: {
+    //     cm: cm
+    //   }
+    // })
+
+    // const autocomplete = new Autocomplete({
+    //   target: cm.getScrollerElement(),
+    //   props: {
+    //     cm: cm
+    //   }
+    // })
+
+    // const preview = new Preview({
+    //   target: cm.getScrollerElement(),
+    //   props: {
+    //     cm: cm
+    //   }
+    // })
   })
+
+
 </script>
 
 <style type="text/scss">
-  #editor {
+
+  .editor {
     width: 100%;
     height: 100%;
     position: relative;
     overflow: hidden;
   }
 
+  .testing {
+    @include label-normal-small;
+    background: pink;
+    padding: 1em;
+  }
+
   // Docs: https://codemirror.net/doc/manual.html#styling
 
   // ".CodeMirror: The outer element of the editor. This should be used for the editor width, height, borders and positioning. Can also be used to set styles that should hold for everything inside the editor (such as font and font size), or to set a background. Setting this class' height style to auto will make the editor resize to fit its content (it is recommended to also set the viewportMargin option to Infinity when doing this."
-  .CodeMirror {
+  .editor > :global(.CodeMirror) {
       width: 100%;
       height: 100%;
       overflow: hidden;
       font-family: -apple-system, "BlinkMacSystemFont", sans-serif;
-      font-size: var(--font-sml-1); // TODO: Replace these
-      line-height: var(--baseLineHeight);
+      font-size: 1rem; // TODO: Replace these
+      line-height: 1.4rem;
+      // font-size: var(--font-sml-1); // OLD approach, with variables
+      // line-height: var(--baseLineHeight);
+      background: transparent;
+  }
 
-      // "The visible lines. This is where you specify vertical padding for the editor content."
-      .CodeMirror-lines {
-          // We want the white space on the left and right of each line to be a selectable.
-          // thereby increasing the hit target for selections. Hence the large margin.
-          // The margin `auto` width value also automatically centers the content.
-          margin: var(--grid) auto;
-          min-width: 30em;
-          max-width: 48em;
+  // "The visible lines. This is where you specify vertical padding for the editor content."
+  :global(.CodeMirror .CodeMirror-lines) {
+    background: transparent;
+    // We want the white space on the left and right of each line to be a selectable.
+    // thereby increasing the hit target for selections. Hence the large margin.
+    // The margin `auto` width value also automatically centers the content.
+    margin: 1em auto;
+    min-width: 24em;
+    max-width: 40em;
 
-          // Add padding to bottom of doc, so that when we're at bottom of
-          // scroll, there's padding before edge of editor.
-          padding: 0 3em 18em;
-      }
+    // Add padding to bottom of doc, so that when we're at bottom of
+    // scroll, there's padding before edge of editor.
+    padding: 0 1em 18em;
   }
 
 </style>
 
+<!-- <div class="testing">
+  {panel.id}<br>
+  {panel.docId}<br>
+  {panel.width}<br>
+  {panel.unsavedChanges}<br>
+</div> -->
+
 <div
-  bind:this={editor}
-  id="editor"
-  on:click={forwardClick}
-  class:focused
-  class:visible>
-  <Wizard bind:this={wizard} {editorState} />
-  <Autocomplete bind:this={autocomplete} />
-  <Preview bind:this={preview} {editorState} />
+  bind:this={el}
+  class="editor"
+  class:isFocusedPanel
+  class:visible
+  on:click
+>
 </div>

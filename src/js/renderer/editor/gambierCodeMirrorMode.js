@@ -30,137 +30,137 @@ const yamlOverlay = {
   }
 }
 
-const markdownOverlayOLD = {
-  startState: () => {
-    return {
-      frontMatter: false,
-      list_ul: false,
-      emphasis: false
-    }
-  },
-  token: (stream, state) => {
+// const markdownOverlayOLD = {
+//   startState: () => {
+//     return {
+//       frontMatter: false,
+//       list_ul: false,
+//       emphasis: false
+//     }
+//   },
+//   token: (stream, state) => {
 
-    // state.combineTokens = null
+//     // state.combineTokens = null
 
-    // if (!state.emphasis) {
-    //   state.emphasis = true
-    // } else if (stream.sol() && state.emphasis) {
-    //   state.combineTokens = true
-    //   return 'line-emphasis'
-    // }
+//     // if (!state.emphasis) {
+//     //   state.emphasis = true
+//     // } else if (stream.sol() && state.emphasis) {
+//     //   state.combineTokens = true
+//     //   return 'line-emphasis'
+//     // }
 
-    // let ch
+//     // let ch
 
-    // if (stream.sol() && state.emphasis) {
-    // }
+//     // if (stream.sol() && state.emphasis) {
+//     // }
 
-    // Demo: https://regex101.com/r/1MR7Tg/1
-    // if (stream.sol()) {
-    //   if (stream.match(/^(-|\*|\+)\s/)) {
-    //     // state.combineTokens = true
-    //     state.list_ul = true
-    //     // return "line-list1"
-    //     // } else if (stream.match(/^(-|\*|\+)\s/)) {
-    //     // state.list_ul = true
-    //     return "line-list1"
-    //   } else if (stream.match(/^\s{2,3}(-|\*|\+)\s/)) {
-    //     state.combineTokens = true
-    //     return "line-list2"
-    //   } else if (stream.match(/^\s{4,5}(-|\*|\+)\s/)) {
-    //     state.combineTokens = true
-    //     return "line-list3"
-    //   } else if (stream.match(/^\s{6, 7}(-|\*|\+)\s/)) {
-    //     state.combineTokens = true
-    //     return "line-list4"
-    //   }
-    // }
+//     // Demo: https://regex101.com/r/1MR7Tg/1
+//     // if (stream.sol()) {
+//     //   if (stream.match(/^(-|\*|\+)\s/)) {
+//     //     // state.combineTokens = true
+//     //     state.list_ul = true
+//     //     // return "line-list1"
+//     //     // } else if (stream.match(/^(-|\*|\+)\s/)) {
+//     //     // state.list_ul = true
+//     //     return "line-list1"
+//     //   } else if (stream.match(/^\s{2,3}(-|\*|\+)\s/)) {
+//     //     state.combineTokens = true
+//     //     return "line-list2"
+//     //   } else if (stream.match(/^\s{4,5}(-|\*|\+)\s/)) {
+//     //     state.combineTokens = true
+//     //     return "line-list3"
+//     //   } else if (stream.match(/^\s{6, 7}(-|\*|\+)\s/)) {
+//     //     state.combineTokens = true
+//     //     return "line-list4"
+//     //   }
+//     // }
 
-    // Blockquote 
-    // if (stream.sol() && stream.match(/^>\s/)) {
-    //   // stream.skipToEnd()
-    //   stream.next()
-    //   return "line-blockquote"
-    // }
+//     // Blockquote 
+//     // if (stream.sol() && stream.match(/^>\s/)) {
+//     //   // stream.skipToEnd()
+//     //   stream.next()
+//     //   return "line-blockquote"
+//     // }
 
-    // // Strong - Flanking ** characters
-    // if (stream.match('**')) {
-    //   state.combineTokens = true
-    //   return 'flank'
-    // }
+//     // // Strong - Flanking ** characters
+//     // if (stream.match('**')) {
+//     //   state.combineTokens = true
+//     //   return 'flank'
+//     // }
 
-    // // Emphasis - Flanking _ characters
-    // if (stream.match(' _') || stream.match('_ ')) {
-    //   state.combineTokens = true
-    //   return 'flank'
-    // }
+//     // // Emphasis - Flanking _ characters
+//     // if (stream.match(' _') || stream.match('_ ')) {
+//     //   state.combineTokens = true
+//     //   return 'flank'
+//     // }
 
-    // // Code - Flanking ` characters
-    // if (stream.match('`')) {
-    //   state.combineTokens = true
-    //   return 'flank'
-    // }
+//     // // Code - Flanking ` characters
+//     // if (stream.match('`')) {
+//     //   state.combineTokens = true
+//     //   return 'flank'
+//     // }
 
-    // // Header (hash tags)
-    // if (stream.sol() && stream.match(/^#{1,5}/)) {
-    //   state.combineTokens = true
-    //   return "header-hash"
-    // }
+//     // // Header (hash tags)
+//     // if (stream.sol() && stream.match(/^#{1,5}/)) {
+//     //   state.combineTokens = true
+//     //   return "header-hash"
+//     // }
 
-    // Cite keys
-    if (stream.match("[@")) {
-      while ((ch = stream.next()) != null)
-        if (ch == "]") {
-          state.combineTokens = false
-          return "citation"
-        }
-    }
+//     // Cite keys
+//     if (stream.match("[@")) {
+//       while ((ch = stream.next()) != null)
+//         if (ch == "]") {
+//           state.combineTokens = false
+//           return "citation"
+//         }
+//     }
 
-    // Wiki links
-    // if (stream.match("[[")) {
-    //   while ((ch = stream.next()) != null)
-    //     if (ch == "]" && stream.next() == "]") {
-    //       stream.eat("]")
-    //       state.combineTokens = true
-    //       return "wikilink"
-    //     }
-    // }
+//     // Wiki links
+//     // if (stream.match("[[")) {
+//     //   while ((ch = stream.next()) != null)
+//     //     if (ch == "]" && stream.next() == "]") {
+//     //       stream.eat("]")
+//     //       state.combineTokens = true
+//     //       return "wikilink"
+//     //     }
+//     // }
 
-    // Figures
-    if (stream.match("![")) {
-      stream.skipToEnd()
-      return "figure"
-    }
+//     // Figures
+//     if (stream.match("![")) {
+//       stream.skipToEnd()
+//       return "figure"
+//     }
 
-    // Links
-    // if (stream.match("[")) {
-    //   while ((ch = stream.next()) != null)
-    //     console.log(stream.baseToken())
-    //   if (ch == ")") {
-    //     // state.combineTokens = true
-    //     return "linkwrapper "
-    //   }
-    // }
+//     // Links
+//     // if (stream.match("[")) {
+//     //   while ((ch = stream.next()) != null)
+//     //     console.log(stream.baseToken())
+//     //   if (ch == ")") {
+//     //     // state.combineTokens = true
+//     //     return "linkwrapper "
+//     //   }
+//     // }
 
-    while (
-      stream.next() != null
-      // Line
-      && !stream.match(">", false)
-      && !stream.match("#", false)
-      // Inline
-      && !stream.match("**", false)
-      && !stream.match(" _", false)
-      && !stream.match("_ ", false)
-      && !stream.match("`", false)
-      && !stream.match("[@", false)
-      && !stream.match("![", false)
-      && !stream.match("[[", false)
-      // && !stream.match("[", false)
-    ) { }
+//     while (
+//       stream.next() != null
+//       // Line
+//       && !stream.match(">", false)
+//       && !stream.match("#", false)
+//       // Inline
+//       && !stream.match("**", false)
+//       && !stream.match(" _", false)
+//       && !stream.match("_ ", false)
+//       && !stream.match("`", false)
+//       && !stream.match("[@", false)
+//       && !stream.match("![", false)
+//       && !stream.match("[[", false)
+//       // && !stream.match("[", false)
+//     ) { }
 
-    // If we don't do any of the above, return null (token does not need to be styled)
-    return null
-  }
-}
+//     // If we don't do any of the above, return null (token does not need to be styled)
+//     return null
+//   }
+// }
 
 const markdownOverlay = {
 
@@ -247,9 +247,10 @@ const markdownOverlay = {
 
 
 /**
- * Define custom mode to be used with CodeMirror.
+ * Define custom "Gambier" mode to be used with CodeMirror.
+ * Per: https://codemirror.net/doc/manual.html#modeapi
  */
-function defineGambierMode() {
+export function defineGambierMode() {
   CodeMirror.defineMode("gambier", (config, parsegrConfig) => {
 
     const START = 0, FRONTMATTER = 1, BODY = 2
@@ -318,10 +319,3 @@ function defineGambierMode() {
     }
   })
 }
-
-
-/**
- * Define "Gambier" mode.
- * Per CodeMirror docs: https://codemirror.net/doc/manual.html#modeapi.
- */
-export default defineGambierMode

@@ -4,12 +4,13 @@ import path from 'path'
 
 // Bundled dependencies
 import { Store } from './Store'
-import { AppearanceManager } from './AppearanceManager'
+import * as AppearanceManager from './AppearanceManager'
 import { DbManager } from './DbManager'
-import { DiskManager } from './DiskManager'
-import { IpcManager } from './IpcManager'
-import { MenuBarManager } from './MenuBarManager'
-import { WindowManager } from './WindowManager'
+import * as IpcManager from './IpcManager'
+import * as MenuBarManager from './MenuBarManager'
+import * as ProjectManager from './ProjectManager'
+import * as PreferencesManager from './PreferencesManager'
+import { propHasChangedTo } from '../shared/utils'
 
 
 // -------- Process variables -------- //
@@ -18,6 +19,9 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = true
 
 
 // -------- Reload (Development-only) -------- //
+
+app.commandLine.appendSwitch('inspect=5858')
+app.commandLine.appendSwitch('enable-transparent-visuals')
 
 if (!app.isPackaged) {
 
@@ -41,8 +45,8 @@ if (!app.isPackaged) {
     //   pollInterval: 50
     // },
     electron: path.join(__dirname, '../node_modules', '.bin', 'electron'),
-    hardResetMethod: 'exit'
-    // argv: ['--inspect=5858'],
+    // hardResetMethod: 'exit',
+    argv: ['--inspect=5858', '--enable-transparent-visuals'],
   })
 
   console.log('// - - - - - - - - - - - - - - -')
@@ -78,41 +82,42 @@ if (!app.isPackaged) {
 
 // -------- SETUP -------- //
 
+// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
+app.allowRendererProcessReuse = true
+
 // Create store (and global variables for store and state)
 global.store = new Store()
 global.state = () => global.store.store
 global.patches = [] // Most recent patches from Immer
-
-// Create managers
-const appearanceManager = new AppearanceManager()
-const diskManager = new DiskManager()
-const ipcManager = new IpcManager()
-const menuBarManager = new MenuBarManager()
-const windowManager = new WindowManager()
+global.watchers = [] // Watchers. Are populdated by ProjectManager
 
 // Create Sqlite databaase (happens in the constructor). 
 // Class instance has useful functions for interacting w/ the db.
 // E.g. Insert new row, update, etc.
 global.db = new DbManager()
 
-// One more global variable for watchers
-global.watchers = diskManager.watchers
-
-// Set this to shut up console warnings re: deprecated default. If not set, it defaults to `false`, and console then warns us it will default `true` as of Electron 9. Per: https://github.com/electron/electron/issues/18397
-app.allowRendererProcessReuse = true
-
 // Start app
 app.whenReady()
   .then(async () => {
 
+    // Create IPC listeners/handlers
+    IpcManager.init()
+
+    // Setup preferences manager
+    PreferencesManager.init()
+
+    // Setup menu bar
+    MenuBarManager.init()
+
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' })
-    // Get system appearance settings
-    appearanceManager.startup()
-    // Create a window for each project
-    await windowManager.startup()
-    // Create a Watcher instance for each project
-    await diskManager.startup()
+
+    // Get initial system appearance values
+    AppearanceManager.init()
+
+    // Create windows and watchers for projects
+    ProjectManager.init()
+    
     // App startup complete!
     await global.store.dispatch({ type: 'FINISH_COLD_START' })
   })
@@ -120,28 +125,45 @@ app.whenReady()
 
 // -------- LISTENERS -------- //
 
-// Quit app: Start by setting appStatus to 'safeToQuit', if it is not yet so. This triggers windows to close. Once all of them have closed, update appStatus to 'safeToQuit', and then trigger `app.quit` again. This time it will go through.
+// Start to quit app: Set appStatus to 'safeToQuit'. This triggers windows to close. Once all of them have safely closed (e.g. open docs are saved), appStatus is updated to 'safeToQuit', and we call `app.quit` again. This time it will go through.
 
 app.on('before-quit', async (evt) => {
-  if (global.state().appStatus !== 'safeToQuit') {
+  if (global.state().appStatus == 'open') {
     evt.preventDefault()
     await global.store.dispatch({
       type: 'START_TO_QUIT'
     })
+  } else if (global.state().appStatus == 'wantsToQuit') {
+    // Prevent quitting while quit is already in progress
+    evt.preventDefault()
   }
 })
 
-global.store.onDidAnyChange(async (state) => {
-  if (state.appStatus == 'wantsToQuit') {
-    const isAllWindowsSafelyClosed = state.projects.every((p) => p.window.status == 'safeToClose')
-    if (isAllWindowsSafelyClosed) {
-      await global.store.dispatch({ type: 'CAN_SAFELY_QUIT' })
-      app.quit()
-    }
+/**
+ * Quit app when appStatus changes to 'safeToQuit'
+ */
+global.store.onDidAnyChange(async (state, oldState) => {
+
+  const canSafelyQuit = propHasChangedTo('appStatus', 'canSafelyQuit', state, oldState)
+
+  if (canSafelyQuit) {
+    app.quit()
   }
+  
+  // if (state.appStatus == 'wantsToQuit') {
+  //   const allWindowsAreSafeToClose = state.projects.allIds.every((id) => {
+  //     const project = state.projects.byId[id]
+  //     return project.status == 'safeToClose'
+  //   })
+
+  //   if (allWindowsAreSafeToClose) {
+  //     // await global.store.dispatch({ type: 'CAN_SAFELY_QUIT' });
+  //     electron.app.quit();
+  //   }
+  // }
 })
 
-// All windows closed
+// On all windows closed, do nothing. Leave app open.
 app.on('window-all-closed', () => {
   // "On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q" — https://www.geeksforgeeks.org/save-files-in-electronjs/
   if (process.platform !== 'darwin') {

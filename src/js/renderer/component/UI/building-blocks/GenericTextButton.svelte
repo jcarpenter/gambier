@@ -1,4 +1,5 @@
 <script>
+  import { isWindowFocused } from '../../../StateManager';
   import { setSize } from '../actions';
 
   export let isActive = false
@@ -6,7 +7,8 @@
   export let margin = '0'
   export let label = 'Label'
   export let type = 'push' // push, pulldown, or popup
-  export let isCompact = false
+  export let disabled = false
+  export let compact = false
     
 </script>
 
@@ -15,7 +17,7 @@
   // We need to break the menu out any parent overflow:hidden elements (e.g. a sidebar tab), so we set position relative on the top div, and position fixed on the menu div. Per this tip: https://github.com/w3c/csswg-drafts/issues/4092#issuecomment-595247838
 
   // Compact
-  .button.isCompact {
+  .button.compact {
     @include label-normal-small;
     height: 18px;
     border-radius: 5px;
@@ -34,19 +36,26 @@
   // Button
   .button {
     @include label-normal;
-    height: 22px;
+    height: 20px;
     user-select: none;
     position: relative;
-    background-color: var(--controlBackgroundColor);
-    border-radius: 6px;
-    box-shadow: 
-      0 0 0 0.5px rgba(var(--foregroundColor), 0.2) inset, 
-      0 0.5px 0 0 rgba(var(--foregroundColor), 0.15),
-      0 1px 1px 0 rgba(var(--foregroundColor), 0.1);
-
+    border-radius: 5px;
     display: flex;
     align-items: center;
-  
+    @include dark {
+      background: #5B5B5B;
+      box-shadow: 
+        inset 0 0.5px 0 0 white(0.25),
+        $dark-outline;
+    }
+    @include light {
+      background-color: var(--controlBackgroundColor);
+      box-shadow: 
+        0 0 0 0.5px rgba(var(--foregroundColor), 0.2) inset, 
+        0 0.5px 0 0 rgba(var(--foregroundColor), 0.15),
+        0 1px 1px 0 rgba(var(--foregroundColor), 0.1);
+    }
+
     // On press, tint whole button dark or light (depending on the mode)
     &.isActive {
       filter: brightness(0.95);
@@ -80,14 +89,22 @@
   // And icon inside a blue square
   .icon {
     position: absolute;
-    background: 
-        linear-gradient(rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0)),
-        linear-gradient(var(--controlAccentColor), var(--controlAccentColor));
-    right: 3px;
-    top: 3px;
+    right: 2px;
+    top: 2px;
     width: 16px;
     height: 16px;
     border-radius: 4px;
+    @include dark {
+      background: 
+          linear-gradient(white(0.15), white(0)),
+          linear-gradient(var(--controlAccentColor), var(--controlAccentColor));
+      box-shadow: 
+        inset 0 0.5px 0 0 white(0.6),
+        0 0 0 0.5px black(0.25);
+    }
+    @include light {
+      // TODO
+    }
 
     .img {
       @include centered_mask_image;
@@ -106,12 +123,31 @@
     -webkit-mask-image: var(--img-chevron-down-bold);
     -webkit-mask-size: 8px;
   }
+
+  // ------ Window not focused ------ //
+  .button:not(.isWindowFocused) .icon {
+    @include dark { 
+      background: none;
+      box-shadow: none;
+    }
+  }
+
+  // ------ Layout: Normal ------ //
+  // ------ Layout: Compact ------ //
+  // ------ Default ------ //
+  // ------ Focused ------ //
+  // ------ Active ------ //
+  // ------ Disabled ------ //
+  // ------ Window not focused ------ //
+
+  
 </style>
 
 <div 
   class="button {type}" 
   class:isActive
-  class:isCompact
+  class:compact
+  class:isWindowFocused={$isWindowFocused}
   use:setSize={{width, margin}} 
   on:mousedown 
   >

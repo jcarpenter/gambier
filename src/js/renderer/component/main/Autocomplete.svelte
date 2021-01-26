@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
 
-  export let element
+  export let cm
   export let visible = false
   export let selectedOptionIndex = 0
 
@@ -21,7 +21,6 @@
 
 <div
   class:visible
-  bind:this={element}
   id="autocompleteMenu"
   tabindex="0"
   on:click={forwardClick}>

@@ -1,11 +1,10 @@
 /*
-tab
-tabId
+A collection of common list interactions. These are shared across DocLists, TreeLists, etc.
 */
 
 // -------- MOUSE DOWN -------- //
 
-export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds) {
+export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files) {
 
   // Shift-click: Select range of items in list
   // Click while not selected: Make this the only selected item
@@ -55,18 +54,38 @@ export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds) {
     selected = Array.from(new Set(selected))
   }
 
+  // Update selection
   window.api.send('dispatch', {
     type: 'SIDEBAR_SET_SELECTED',
     tabId: tabId,
     lastSelected: id,
     selected: selected,
   })
-} 
+}
+
+/**
+ * Open the file `id` in the focused panel, if it's a doc, and only one file is selected.
+ */
+export function onMouseup(domEvent, fileId, tab, tabId, listIds, focusedPanelIndex, files) {
+    
+  // Open doc
+  const isDoc = files.byId[fileId].type == 'doc'
+  const isNotAlreadyOpen = fileId !== focusedPanelIndex.docId
+  const oneFileSelected = tab.selected.length == 1
+
+  // Load doc
+  if (oneFileSelected && isDoc && isNotAlreadyOpen) {
+    window.api.send('dispatch', {
+      type: 'OPEN_DOC_IN_FOCUSED_PANEL',
+      docId: fileId,
+    })
+  }
+}
 
 // -------- LEFT/RIGHT -------- //
 
-export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds) {
-    
+export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files) {
+
   let id = '' // of newly-selected item
   let selected = []
 
@@ -79,11 +98,11 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds) 
   // Determine next file
   if (!isLastSelectedStillVisible) {
     // If last selected file is no longer visible (e.g. parent folder has since closed), select first or last file in list. On arrow up, select last file. Do oppposite for arrow down. Shift or alt have no effect.
-    id = key == 'ArrowUp' ? listIds[listIds.length-1] : listIds[0]
+    id = key == 'ArrowUp' ? listIds[listIds.length - 1] : listIds[0]
     selected = [id]
   } else if (altPressed) {
     // If alt is pressed, jump to top or bottom of list.
-    id = key == 'ArrowUp' ? listIds[0] : listIds[listIds.length-1]
+    id = key == 'ArrowUp' ? listIds[0] : listIds[listIds.length - 1]
     // If shift pressed, include all items between lastSelected and top/bottom
     // and add to the existing selection.
     if (shiftPressed) {
@@ -108,7 +127,7 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds) 
     // If arrowing up and already at top...
     if (tab.selected.length > 1) {
       // If there are multiple items selected...
-      if (!shiftPressed){
+      if (!shiftPressed) {
         // If shift key is not pressed, clear, and select only first item.
         id = listIds[0]
         selected = [id]
@@ -125,7 +144,7 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds) 
     // If arrowing down and already at bottom...
     if (tab.selected.length > 1) {
       // If there are multiple items selected...
-      if (!shiftPressed){
+      if (!shiftPressed) {
         // If shift key is not pressed, clear, and select only last item.
         id = listIds[listIds.length - 1]
         selected = [id]
@@ -143,10 +162,10 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds) 
     // Are we shift-arrowing into an existing selection?
     // Get selected id. Then check if it's already selected
     // If yes, deselect lastSelected (thereby shrinking the selectiub)
-    
+
     id = key == 'ArrowUp' ? listIds[lastSelectedIndex - 1] : listIds[lastSelectedIndex + 1]
     const isAlreadySelected = tab.selected.includes(id)
-    
+
     if (isAlreadySelected) {
       const indexOfLastSelectedInSelected = tab.selected.indexOf(tab.lastSelected)
       selected = [...tab.selected]
@@ -174,18 +193,29 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds) 
     lastSelected: id,
     selected: selected,
   })
+
+  // Open doc
+  const isDoc = files.byId[id].type == 'doc'
+  const oneFileSelected = selected.length == 1
+
+  if (oneFileSelected && isDoc) {
+    window.api.send('dispatch', {
+      type: 'OPEN_DOC_IN_FOCUSED_PANEL',
+      docId: id,
+    })
+  }
 }
 
 // -------- TREE-LIST FUNCTIONS -------- //
-    
+
 export function arrowLeftRight(key, tab, tabId, listIds, files) {
 
   const isMultipleSelected = tab.selected.length > 1
 
   if (isMultipleSelected) {
 
-    const selectedFolders = files.allIds.filter((id) => 
-      tab.selected.includes(id) && 
+    const selectedFolders = files.allIds.filter((id) =>
+      tab.selected.includes(id) &&
       files.byId[id].type == 'folder')
 
     let expanded = [...tab.expanded]
@@ -222,21 +252,21 @@ export function arrowLeftRight(key, tab, tabId, listIds, files) {
       } else {
         selectParentFolder(file.id, tabId, listIds, files)
       }
-    } else if (key == 'ArrowRight'){
+    } else if (key == 'ArrowRight') {
       if (isFolder && !isExpanded) {
         toggleExpanded(file.id, isExpanded, tab, tabId)
       }
-    } 
+    }
   }
 }
 
 function selectParentFolder(childId, tabId, listIds, files) {
   const parentId = files.byId[childId].parentId
-  
+
   // If `listIds` does not include parent ID, we're at the top-level.
   // There's no visible parent to select, so return.
   if (!listIds.includes(parentId)) return
-  
+
   window.api.send('dispatch', {
     type: 'SIDEBAR_SET_SELECTED',
     tabId: tabId,
@@ -255,7 +285,7 @@ export function toggleExpanded(id, isExpanded, tab, tabId) {
     case false:
       expanded.push(id)
       break
-  } 
+  }
   window.api.send('dispatch', {
     type: 'SIDEBAR_SET_EXPANDED',
     tabId: tabId,

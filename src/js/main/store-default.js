@@ -9,7 +9,7 @@ function makeProject() {
     // User specified path to CSL-JSON file containing their citatons
     citations: '',
 
-    focusedLayoutSection: 'navigation',
+    focusedSectionId: 'navigation',
 
     // A copy of the object of the document currently visible in the editor.
     openDoc: {},

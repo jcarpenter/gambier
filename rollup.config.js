@@ -7,7 +7,7 @@ const production = !process.env.ROLLUP_WATCH
 
 export default [
 
-  // Electron | Main
+  // Main
   {
     input: 'src/js/main/main.js',
     output: {
@@ -18,7 +18,7 @@ export default [
     external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff', 'xml-js', 'immer', 'image-size', 'debounce', 'better-sqlite3'],
   },
 
-  // Electron | Preload
+  // Preload
   {
     input: 'src/js/main/preload.js',
     output: {
@@ -29,7 +29,7 @@ export default [
     external: ['electron'],
   },
 
-  // Electron | Renderer
+  // Renderer
   {
     input: 'src/js/renderer/renderer.js',
     output: {
@@ -75,5 +75,36 @@ export default [
       './third-party/fuse/fuse.esm.js',
       './third-party/turndown/turndown.es.js'
     ]
-  }
+  },
+
+  // Preferences
+  {
+    input: 'src/js/renderer/preferences.js',
+    output: {
+      sourcemap: true,
+      format: 'es',
+      file: 'app/js/preferences.js',
+      banner: '// WORKAROUND for immer.js esm (see https://github.com/immerjs/immer/issues/557)\nwindow.process = { env: { NODE_ENV: "production" } };',
+    },
+    plugins: [
+      svelte({
+        preprocess: sveltePreprocess({
+          defaults: {
+            style: 'scss'
+          },
+          scss: {
+            // Prepend our mixins, since we use them everywhere. This saves us having to manually include them in each component's styles. — https://github.com/sveltejs/svelte-preprocess/blob/main/docs/getting-started.md
+            prependData: `@import 'src/styles/_mixins.scss';`
+          }
+        }),
+
+        // See `renderer` config above for explaination of these options
+        generate: 'dom',
+        dev: !production,
+        
+      }),
+      resolve(),
+      commonjs()
+    ]
+  },
 ]

@@ -73,22 +73,22 @@ async function reducers(action, windowId = undefined) {
       break
     }
 
-    case 'OPENED_WINDOW': {
+    case 'OPENED_PROJECT_WINDOW': {
       // Update window status
-      // console.log('OPENED_WINDOW. windowId: ', windowId)
-      // console.log('OPENED_WINDOW. project: ', newState.projects[action.projectIndex])
+      // console.log('OPENED_PROJECT_WINDOW. windowId: ', windowId)
+      // console.log('OPENED_PROJECT_WINDOW. project: ', newState.projects[action.projectIndex])
       const project = newState.projects[action.projectIndex]
       project.window.status = 'open'
       project.window.id = windowId
       break
     }
 
-    case 'START_TO_CLOSE_WINDOW': {
+    case 'START_TO_CLOSE_PROJECT_WINDOW': {
       project.window.status = 'wantsToClose'
       break
     }
 
-    case 'CAN_SAFELY_CLOSE_WINDOW': {
+    case 'CAN_SAFELY_CLOSE_PROJECT_WINDOW': {
       project.window.status = 'safeToClose'
       break
     }

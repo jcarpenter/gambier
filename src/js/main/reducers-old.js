@@ -299,13 +299,13 @@ async function reducers(action, windowId = undefined) {
       break
     }
 
-    case 'START_TO_CLOSE_WINDOW': {
+    case 'START_TO_CLOSE_PROJECT_WINDOW': {
       project.window.status = 'wantsToClose'
       newState.changed.push('projects', 'window.status')
       break
     }
 
-    case 'CAN_SAFELY_CLOSE_WINDOW': {
+    case 'CAN_SAFELY_CLOSE_PROJECT_WINDOW': {
       project.window.status = 'safeToClose'
       newState.changed.push('projects', 'window.status')
       break

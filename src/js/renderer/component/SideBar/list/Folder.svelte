@@ -1,6 +1,7 @@
 <script>
 	import File from './File.svelte'
-	import { state, files, sidebar } from '../../../StateManager.js'
+	import { state, sidebar } from '../../../StateManager.js'
+  import { files } from '../../../FilesManager'
 	import { flip } from 'svelte/animate';
 	import { css } from '../../ui/actions'
 	import { standardEase } from '../../ui/easing'
@@ -33,8 +34,7 @@
 	}
 
 	$: folder = $files.byId[subtree.id]
-	$: isExpanded = folder.numChildren > 0 && 
-									$sidebar.tabsById.project.expanded.includes(folder.id)
+	$: isExpanded = isRoot || folder.numChildren > 0 && $sidebar.tabsById.project.expanded.includes(folder.id)
 
 	function isFolder(id) {
 		return $files.byId[id].type == 'folder'
@@ -80,7 +80,6 @@
 			box-shadow 1ms 50ms; 
 		
 		&.isRoot {
-			height: 100%;
 			// We set `position: relative` on root folder, 
 			// so `width: 100%` fits the parent div correctly.
 			position: relative;
@@ -123,7 +122,7 @@
 
 <!-- <svelte:options immutable={false} /> -->
 
-<!-- If it's not the root folder, show a File -->
+<!-- If it's NOT the root folder, render a File that can be interacted with. -->
 {#if !isRoot}
 	<File 
 		id={folder.id} {listIds} nestDepth={nestDepth-1} {isDragTarget} 

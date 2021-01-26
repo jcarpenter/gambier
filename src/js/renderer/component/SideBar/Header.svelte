@@ -10,13 +10,13 @@
     position: relative;
     flex-direction: row;
     align-items: center;
-    min-height: 30px;
+    height: 30px;
+    flex: none;
     user-select: none;
 
     h1 {
-      @include label-normal;
+      @include label-normal-bold;
       color: var(--labelColor);
-      font-weight: bold;
       flex-grow: 1;
       margin: 0;
       padding: 0;

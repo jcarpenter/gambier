@@ -5,10 +5,6 @@
   export let title = 'Title'
   export let maxExpandedHeight = 100
   export let isOpen = true
-  
-  function todo() {
-    isOpen = !isOpen
-  }
 
 </script>
 
@@ -62,13 +58,13 @@
 <div class="expandable" class:isOpen use:css={{ maxExpandedHeight }}>
   <header>
     <DisclosureButton
-      width={12}
-      height={12}
-      padding={5}
+      width='12px'
+      height='12px'
+      padding='2.5px'
       left={8}
-      rotation={isOpen ? 90 : 0}
-      tooltip={'Toggle Expanded'}
-      on:toggle={todo} />
+      opacity={0.6}
+      rotation={isOpen ? 0 : -90}
+      on:toggle />
     <h1>{title}</h1>
   </header>
   <div class="content">

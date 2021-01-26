@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Preferences</title>
+
+        <!-- Security: https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src * ;style-src 'unsafe-inline' 'self'">
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="./styles/app.css">
+        <link rel="stylesheet" id="theme-stylesheet" href="">
+
+        <!-- Dark mode -->
+        <meta name="color-scheme" content="dark light">
+    </head>
+    <body>
+        <div id="layout"></div>        
+        <script src="./js/preferences.js" type="module"></script>
+    </body>
+</html>

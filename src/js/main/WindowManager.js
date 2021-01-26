@@ -1,144 +1,15 @@
 import { debounce } from 'debounce'
 import { app, BrowserWindow, screen } from 'electron'
 import path from 'path'
-import url from 'url'
-import { hasChangedTo } from '../shared/utils'
-
-export class WindowManager {
-
-  constructor() {
-
-    // Listen for state changes
-    global.store.onDidAnyChange((state, oldState) => {
-      if (state.appStatus !== 'open') return
-      if (state.projects.length > oldState.projects.length) {
-        const newProjectIndex = state.projects.length - 1
-        const newProject = state.projects[newProjectIndex]
-        this.createWindow(newProjectIndex, newProject)
-      }
-      // const isStartingUp = hasChangedTo('appStatus', 'coldStarting', state, oldState)
-      // if (isStartingUp) {
-      //   state.projects.forEach(async (p, index) => {
-      //     this.createWindow(index, p.window.bounds)
-      //   })
-      // } else if (state.projects.length > oldState.projects.length) {
-      //   this.createWindow(state.projects.length - 1)
-      // }
-    })
-  }
-
-  /**
-   * On startup, create a BrowserWindow for each project.
-   */
-  async startup() {
-    let index = 0
-    for (const project of global.state().projects) {
-      await this.createWindow(index, project)
-      index++
-    }
-  }
-
-  async createWindow(projectIndex, project) {
-
-    const win = new BrowserWindow(browserWindowConfig)
-    const isFirstRun = project.directory == ''
-
-    // Set size. If project directory is empty, it's first run, and we set window centered, and filling most of the primary screen. Else we restore the previous window size and position (stored in `bounds` property)/
-    // Else, create a new window centered on screen.
-    if (isFirstRun) {
-      const menuBarHeight = 24
-      const { width, height } = screen.getPrimaryDisplay().workAreaSize
-      const padding = 200
-      win.setBounds({
-        x: padding,
-        y: padding,
-        width: width - padding * 2,
-        height: height - padding * 2
-      }, false)
-    } else {
-      win.setBounds(project.window.bounds, false)
-    }
-
-    // Load index.html
-    await win.loadFile(path.join(__dirname, 'index.html'), {
-      query: {
-        id: win.id
-      },
-    })
-
-    // Have to manually set this to 1.0. That should be the default, but I've had problem where something was setting it to 0.91, resulting in the UI being slightly too-small.
-    win.webContents.zoomFactor = 1.0
-
-    // Listen for close action. Is triggered by pressing close button on window, or close menu item, or app quit. Prevent default, and update state.
-    win.on('close', async (evt) => {
-      const state = global.state()
-      const project = state.projects.find((p) => p.window.id == win.id)
-
-      switch (project.window.status) {
-        case 'open':
-          evt.preventDefault()
-          await global.store.dispatch({ type: 'START_TO_CLOSE_WINDOW' }, win.id)
-          break
-        case 'safeToClose':
-          // Remove project from `state.projects` if window closing was NOT triggered by app quiting. When quiting, the user expects the project to still be there when the app is re-opened. 
-          const shouldRemoveProject = state.appStatus !== 'wantsToQuit'
-          if (shouldRemoveProject) {
-            global.store.dispatch({ type: 'REMOVE_PROJECT' }, win.id)
-          }
-          break
-      }
-    })
-
-    // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
-    win.on('resize', debounce(() => { saveWindowBoundsToState(win) }, 1000))
-    win.on('move', debounce(() => { saveWindowBoundsToState(win) }, 1000))
-    
-    // On focus/blur, update project state
-    win.on('focus', () => global.store.dispatch({ type: 'WINDOW_FOCUSED' }, win.id))
-    win.on('blur', () => global.store.dispatch({ type: 'WINDOW_BLURRED' }, win.id))
-
-    // Listen for app quiting, and start to close window
-    global.store.onDidAnyChange(async (state, oldState) => {
-      const appWantsToQuit = hasChangedTo('appStatus', 'wantsToQuit', state, oldState)
-      if (appWantsToQuit) {
-        await global.store.dispatch({ type: 'START_TO_CLOSE_WINDOW' }, win.id)
-      } else {
-        const project = state.projects.find((p) => p.window.id == win.id)
-        const oldProject = oldState.projects.find((p) => p.window.id == win.id)
-        const isSafeToCloseThisWindow = hasChangedTo('window.status', 'safeToClose', project, oldProject)
-        if (isSafeToCloseThisWindow) {
-          win.close()
-        }
-      }
-    })
-
-    // Open DevTools
-    if (!app.isPackaged) win.webContents.openDevTools();
-
-    global.store.dispatch({
-      type: 'OPENED_WINDOW',
-      projectIndex: projectIndex,
-    }, win.id)
-
-    return win
-  }
-}
-
-/**
- * Save window bounds to state, so we can restore after restart.
- */
-function saveWindowBoundsToState(win) {
-  global.store.dispatch({ type: 'SAVE_WINDOW_BOUNDS', windowBounds: win.getBounds() }, win.id)
-}
-
+import { wait } from '../shared/utils'
+import { getSystemColors } from './AppearanceManager'
 
 const browserWindowConfig = {
   show: false,
-  width: 200, 
-  height: 200,
-  zoomFactor: 1.0,
-  vibrancy: 'sidebar',
-  transparent: true,
+  width: 700,
+  height: 500,
+  // vibrancy: 'sidebar', // Turning off due to poor performance.
+  // transparent: true,
   titleBarStyle: 'hiddenInset',
   webPreferences: {
     scrollBounce: false,
@@ -157,4 +28,126 @@ const browserWindowConfig = {
     // Preload
     preload: path.join(__dirname, 'js/preload.js')
   }
+}
+
+
+export async function createWindow(id, project) {
+
+  const win = new BrowserWindow(browserWindowConfig)
+  win.projectId = id
+
+  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
+  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
+  const backgroundColor = getSystemColors().windowBackgroundColor.slice(0, -2)
+  win.setBackgroundColor(backgroundColor)
+
+  const isNewProject = project.directory == ''
+
+  // Set size. If project directory is empty, it's a new project, and we manually set starting values. Else we restore the previous window size and position (stored in `bounds` property)/
+  // Else, create a new window centered on screen.
+  if (isNewProject) {
+    const menuBarHeight = 24
+    const padding = 200
+    const displayWidth = screen.getPrimaryDisplay().workAreaSize.width
+    const displayHeight = screen.getPrimaryDisplay().workAreaSize.height
+    let winWidth = displayWidth - (padding * 2)
+    let winHeight = displayHeight - (padding * 2)
+    winWidth = winWidth > 1600 ? 1600 : winWidth
+    winHeight = winHeight > 1200 ? 1200 : winHeight
+    const offset = win.id * 20
+    const centeredX = Math.round((displayWidth - winWidth) / 2 + offset)
+    const centeredY = Math.round((displayHeight - winHeight) / 2 + offset)
+    win.setBounds({
+      x: centeredX,
+      y: centeredY,
+      width: winWidth,
+      height: winHeight
+    }, false)
+  } else {
+    win.setBounds(project.window.bounds, false)
+
+  }
+
+  // Have to manually set this to 1.0. That should be the default, but I've had problem where something was setting it to 0.91, resulting in the UI being slightly too-small.
+  // win.webContents.zoomFactor = 1.0
+
+  // Listen for 'close' action. Can be triggered by either 1) manually closing individual window, (e.g. click close button on window, or type Cmd-W), or 2) quitting the app. 
+
+  // If closed manually, this event is triggered twice: the first time, we prevent the default, and tell webContents to save open documents. That process results in window.status being set to `safeToClose`. ProjectManager catches that state change, and tells this window to close again.
+  win.on('close', async (evt) => {
+
+    const userManuallyClosedWindow = global.state().appStatus !== 'canSafelyQuit'
+    const winIsSafeToClose = global.state().projects.byId[id].window.status == 'safeToClose'
+
+    // If window is closing because user manually closed it (e.g. typed Cmd-W), then check if it's safe to close yet. If not, begin that process. ProjectManager will call close again once the window is safe to close, and this time, 
+    if (userManuallyClosedWindow && !winIsSafeToClose) {
+      // Tell window to close
+      evt.preventDefault()
+      win.webContents.send('mainWantsToCloseWindow')
+    }
+  })
+
+  // If app is NOT quiting, we remove the project from store after closing the window. Because if the user manually closes a window, they mean to close the project. But if they quit the app, they want to their open projects to reopen, next session.
+  win.on('closed', async (evt) => {
+    
+    const appIsNotQuiting = global.state().appStatus == 'open'
+    if (appIsNotQuiting) {
+      await global.store.dispatch({ type: 'REMOVE_PROJECT' }, win)
+    }
+    
+    // If there are no other windows open, clear `focusedWindowId`
+    const otherWindowsAreOpen = BrowserWindow.getAllWindows().length
+    if (!otherWindowsAreOpen) {
+      global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' })
+    }
+  })
+
+  // On resize or move, save bounds to state (wait 1 second to avoid unnecessary spamming). Using `debounce` package: https://www.npmjs.com/package/debounce
+  win.on('resize', debounce(() => { saveWindowBoundsToState(win) }, 1000))
+  win.on('move', debounce(() => { saveWindowBoundsToState(win) }, 1000))
+
+  // On focus, set `focusedWindowId` to win.id
+  win.on('focus', () => {
+    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
+  })
+
+  /*
+  On blur, wait a beat. If the user has clicked on another Gambier window it will fire `FOCUSED_WINDOW` and set itself as the `focusedWindowId`. In which case we don't want to do anything. But if the user has clicked outside the app, `focusedWindowId` will still equal this win.projectId after the beat. In which case, set `focusedWindowId` to zero, which we take to mean that the app is in the background.
+  */
+  win.on('blur', async () => {
+    await wait(50)
+    if (global.state().focusedWindowId == win.projectId) {
+      global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' })
+    }
+  })
+
+  // Open DevTools
+  if (!app.isPackaged) win.webContents.openDevTools();
+
+  // Load index.html
+  await win.loadFile(path.join(__dirname, 'index.html'), {
+    query: {
+      id: win.projectId
+    },
+  })
+
+  // Save window bounds
+  saveWindowBoundsToState(win)
+
+  // Set project window status to 'open'
+  global.store.dispatch({
+    type: 'OPENED_PROJECT_WINDOW',
+  }, win)
+
+  return win
+}
+
+/**
+ * Save window bounds to state, so we can restore after restart.
+ */
+function saveWindowBoundsToState(win) {
+  global.store.dispatch({
+    type: 'SAVE_PROJECT_WINDOW_BOUNDS',
+    windowBounds: win.getBounds()
+  }, win)
 }

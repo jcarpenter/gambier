@@ -1,6 +1,6 @@
 <script>
   import { sidebar } from '../../StateManager'
-  import { setTooltip } from '../ui/actions'
+  import { setTooltip } from '../../TooltipManager'
 
   export let id
   
@@ -85,5 +85,5 @@
     })}
   class:isActive
   class={id} 
-  use:setTooltip={`Show ${tab.title}`}
+  use:setTooltip={{text: `Show ${tab.title}`, enabled: true}} 
 />

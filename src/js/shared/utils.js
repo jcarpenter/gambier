@@ -1,6 +1,32 @@
 import deepEql from 'deep-eql'
 
 /**
+ * Returns true if arrays have same items in same order
+ * From: https://gomakethings.com/how-to-check-if-two-arrays-are-equal-with-vanilla-js/
+ */
+export function arraysEqual (arr1, arr2) {
+
+	// Check if the arrays are the same length
+	if (arr1.length !== arr2.length) return false
+
+	// Check if all items exist and are in the same order
+	for (var i = 0; i < arr1.length; i++) {
+		if (arr1[i] !== arr2[i]) return false
+  }
+  
+  return true
+}
+
+/**
+ * Get the diff between two arrays
+ * For [1, 2, 3] and [1, 2], it will return [3]
+ * From: https://stackoverflow.com/a/33034768
+ */
+export function getArrayDiff(arr1, arr2) {
+  return arr1.filter(x => !arr2.includes(x));
+}
+
+/**
  * Get file size in KB, MB, GB, or TB (whatever is closest), from bytes.
  * From: https://gist.github.com/lanqy/5193417#gistcomment-3240729
  * @param {*} bytes
@@ -85,29 +111,15 @@ export function stringify(value) {
   return JSON.stringify(value, null, '\t')
 }
 
-function extractKeysFromString(keyAsString) {
-	// Convert propAddress string to array of keys
-  // Before: "projects[5].window"
-  // After: ["projects", 5, "window"]
-  const regex = /[^\.\[\]]+?(?=\.|\[|\]|$)/g
-  const keys = keyAsString.match(regex)
-  if (keys && keys.length) {
-    keys.forEach((p, index, thisArray) => {
-      // Find strings that are just integers, and convert to integers
-      if (/\d/.test(p)) {
-        thisArray[index] = parseInt(p, 10)
-      }
-    })
-  }
-  return keys
-}
+
+// -------- COMPARE PATCHES -------- //
 
 /**
- * Check Immer patches to see if a property has changed, and (optionally) if it equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
+ * Check if state property has changed by comparing Immer patches. And (optionally) if property now equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
  * @param {*} props - Either a string, or an array (for more precision).
  * @param {*} [toValue] - Optional value to check prop against
  */
-export function propHasChanged(patches, props, toValue = '') {
+export function stateHasChanged(patches, props, toValue = '') {
 	return patches.some((patch) => {
 
   	const pathAsString = patch.path.toString()
@@ -129,34 +141,49 @@ export function propHasChanged(patches, props, toValue = '') {
 }
 
 
+// -------- COMPARE OBJECTS -------- //
 
-
-const getNestedObject = (nestedObj, pathArr) => {
-	return pathArr.reduce((obj, key) =>
-		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+/**
+ * Compare two objects and return `true` if they differ.
+ * @param {*} objA 
+ * @param {*} objB 
+ */
+export function objHasChanged(objA, objB) {
+  return !deepEql(objA, objB)
 }
 
-export function hasChanged(keysAsString = undefined, objA, objB) {
-  if (keysAsString && keysAsString !== '*') {
-    const keys = extractKeysFromString(keysAsString)
-    const objAVal = getNestedObject(objA, keys)
-    const objBVal = getNestedObject(objB, keys)
-    if (objAVal == undefined || objBVal == undefined) {
-      // If either is undefined, return undefined
-      return undefined
-    } else if (typeof objAVal == 'object' && typeof objBVal == 'object') {
-      // If both are objects, do a deep object comparison
-      return !deepEql(objAVal, objBVal)
-    } else {
-      // Else, compare values
-      return objAVal !== objBVal
-    }
+/**
+ * Check if an object property has changed, 
+ * by comparing two versions of the object.
+ * @param {*} keysAsString - Path of property to check. E.g. 'colors.systemBlue'
+ * @param {*} objA - Old version of object
+ * @param {*} objB - New version of object
+ */
+export function propHasChanged(keysAsString, objA, objB) {
+  const keys = extractKeysFromString(keysAsString)
+  const objAVal = getNestedObject(objA, keys)
+  const objBVal = getNestedObject(objB, keys)
+  if (objAVal == undefined || objBVal == undefined) {
+    // If either is undefined, return undefined
+    return undefined
+  } else if (typeof objAVal == 'object' && typeof objBVal == 'object') {
+    // If both are objects, do a deep object comparison
+    return !deepEql(objAVal, objBVal)
   } else {
-    return !deepEql(objA, objB)
+    // Else, compare values
+    return objAVal !== objBVal
   }
 }
 
-export function hasChangedTo(keysAsString, value, objTo, objFrom) {
+/**
+ * Check if an object property has changed to a specific value,
+ * by comparing old and new versions of the object.
+ * @param {*} keysAsString 
+ * @param {*} value 
+ * @param {*} objTo 
+ * @param {*} objFrom 
+ */
+export function propHasChangedTo(keysAsString, value, objTo, objFrom) {
   if (!keysAsString || !value ) {
     // If either required arguments are missing or empty, return undefined
     return undefined
@@ -178,4 +205,33 @@ export function hasChangedTo(keysAsString, value, objTo, objFrom) {
   }
 }
 
+/**
+ * Utility function for hasChanged. 
+ * Convert propAddress string to array of keys.
+ * Before: "projects[5].window"
+ * After: ["projects", 5, "window"]
+ * @param {*} keyAsString 
+ */
+function extractKeysFromString(keyAsString) {
+  const regex = /[^\.\[\]]+?(?=\.|\[|\]|$)/g
+  const keys = keyAsString.match(regex)
+  if (keys && keys.length) {
+    keys.forEach((p, index, thisArray) => {
+      // Find strings that are just integers, and convert to integers
+      if (/\d/.test(p)) {
+        thisArray[index] = parseInt(p, 10)
+      }
+    })
+  }
+  return keys
+}
 
+/**
+ * Utility function for `hasChanged`. 
+ * @param {*} nestedObj 
+ * @param {*} pathArr 
+ */
+const getNestedObject = (nestedObj, pathArr) => {
+	return pathArr.reduce((obj, key) =>
+		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+}

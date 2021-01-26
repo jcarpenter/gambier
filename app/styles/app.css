@@ -1,33 +1,41 @@
 :root {
+  --dark-outline: 0 0 0 4px black(1);
   /* -------------- Easing -------------- */
   --standardEase: cubic-bezier(0.4, 0, 0.2, 1);
   --decelerateEase: cubic-bezier(0, 0, 0.2, 1);
   /* -------------- Images -------------- */
-  --img-arrow-up-arrow-down: url(styles/themes/gambier-light/img/arrow.up.arrow.down.svg);
-  --img-checkmark-heavy: url(styles/themes/gambier-light/img/checkmark.heavy.svg);
-  --img-checkmark: url(styles/themes/gambier-light/img/checkmark.svg);
-  --img-chevron-right: url(styles/themes/gambier-light/img/chevron.right.svg);
-  --img-chevron-down-bold: url(styles/themes/gambier-light/img/chevron.down.bold.svg);
-  --img-chevron-down-heavy: url(styles/themes/gambier-light/img/chevron.down.heavy.svg);
-  --img-chevron-up-down: url(styles/themes/gambier-light/img/chevron.up.down.svg);
-  --img-clock-fill: url(styles/themes/gambier-light/img/clock.fill.svg);
-  --img-clock: url(styles/themes/gambier-light/img/clock.svg);
-  --img-doc-on-doc-fill: url(styles/themes/gambier-light/img/doc.on.doc.fill.svg);
-  --img-doc-on-doc: url(styles/themes/gambier-light/img/doc.on.doc.svg);
-  --img-doc-text: url(styles/themes/gambier-light/img/doc.text.svg);
-  --img-folder-fill: url(styles/themes/gambier-light/img/folder.fill.svg);
-  --img-folder: url(styles/themes/gambier-light/img/folder.svg);
-  --img-magnifyingglass: url(styles/themes/gambier-light/img/magnifyingglass.svg);
-  --img-photo-fill: url(styles/themes/gambier-light/img/photo.fill.svg);
-  --img-photo: url(styles/themes/gambier-light/img/photo.svg);
-  --img-play-rectangle-fill: url(styles/themes/gambier-light/img/play.rectangle.fill.svg);
-  --img-play-rectangle: url(styles/themes/gambier-light/img/play.rectangle.svg);
-  --img-quote-bubble-fill: url(styles/themes/gambier-light/img/quote.bubble.fill.svg);
-  --img-quote-bubble: url(styles/themes/gambier-light/img/quote.bubble.svg);
-  --img-rectangle-grid-2x2: url(styles/themes/gambier-light/img/rectangle.grid.2x2.svg);
-  --img-sidebar-left: url(styles/themes/gambier-light/img/sidebar.left.svg);
-  --img-tag-fill: url(styles/themes/gambier-light/img/tag.fill.svg);
-  --img-tag: url(styles/themes/gambier-light/img/tag.svg);
+  --img-arrow-up-arrow-down: url(img/ui/arrow.up.arrow.down.svg);
+  --img-checkmark-heavy: url(img/ui/checkmark.heavy.svg);
+  --img-checkmark: url(img/ui/checkmark.svg);
+  --img-chevron-right: url(img/ui/chevron.right.svg);
+  --img-chevron-down-bold: url(img/ui/chevron.down.bold.svg);
+  --img-chevron-down-heavy: url(img/ui/chevron.down.heavy.svg);
+  --img-chevron-up-down: url(img/ui/chevron.up.down.svg);
+  --img-clock-fill: url(img/ui/clock.fill.svg);
+  --img-clock: url(img/ui/clock.svg);
+  --img-doc-on-doc-fill: url(img/ui/doc.on.doc.fill.svg);
+  --img-doc-on-doc: url(img/ui/doc.on.doc.svg);
+  --img-doc-text: url(img/ui/doc.text.svg);
+  --img-folder-fill: url(img/ui/folder.fill.svg);
+  --img-folder: url(img/ui/folder.svg);
+  --img-gearshape: url(img/ui/gearshape.svg);
+  --img-magnifyingglass: url(img/ui/magnifyingglass.svg);
+  --img-paintpalette-medium-regular: url(img/ui/paintpalette.medium.regular.svg);
+  --img-photo-fill: url(img/ui/photo.fill.svg);
+  --img-photo: url(img/ui/photo.svg);
+  --img-photo-medium-regular: url(img/ui/photo.medium.regular.svg);
+  --img-play-rectangle-fill: url(img/ui/play.rectangle.fill.svg);
+  --img-play-rectangle: url(img/ui/play.rectangle.svg);
+  --img-quote-bubble-fill: url(img/ui/quote.bubble.fill.svg);
+  --img-quote-bubble: url(img/ui/quote.bubble.svg);
+  --img-quote-bubble-medium-regular: url(img/ui/quote.bubble.medium.regular.svg);
+  --img-rectangle-grid-2x2: url(img/ui/rectangle.grid.2x2.svg);
+  --img-sidebar-left: url(img/ui/sidebar.left.svg);
+  --img-square-split-2x1-medium-regular: url(img/ui/square.split.2x1.medium.regular.svg);
+  --img-tag-fill: url(img/ui/tag.fill.svg);
+  --img-tag: url(img/ui/tag.svg);
+  --img-textformat-medium-regular: url(img/ui/textformat.medium.regular.svg);
+  --img-xmark-medium-regular: url(img/ui/xmark.medium.regular.svg);
 }
 
 * {
@@ -49,40 +57,9 @@ body {
   height: 100%;
 }
 
-.flexContainerRow {
-  display: flex;
-  flex-direction: horizontal;
-  width: 100%;
-  height: 100%;
-}
-
-.flexContainerColumn {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-}
-
-.flexPanel {
-  height: 100%;
-  overflow-x: hidden;
-  position: relative;
-  display: none;
-}
-
-.flexPanel.visible {
-  display: block;
-}
-
-.flexPanel .divider {
-  position: absolute;
-  top: 0;
-  right: 0;
-  transform: translate(50%, 0);
-  width: 8px;
-  height: 100%;
-  z-index: 200;
-  cursor: ew-resize;
+.blockquote,
+.highlight {
+  background-color: red;
 }
 
 /*# sourceMappingURL=app.css.map */

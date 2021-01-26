@@ -137,7 +137,7 @@ export default function markText(cm, lineNo, elements, type) {
 
     // -------- STATE CHANGES -------- //
 
-    cm.on('editorStateChanged', (changed) => {
+    cm.on('stateChanged', (changed) => {
       if (changed.includes('widget')) {
         if (editorState.widget.target == e && editorState.widget.isSelected) {
           highlight()
@@ -235,11 +235,11 @@ export default function markText(cm, lineNo, elements, type) {
     // -------- EVENT LISTENERS: SHARED -------- //
 
     wrapper.addEventListener('mouseenter', (evt) => {
-      cm.setEditorState({ type: 'hoverWidget', target: e })
+      cm.dispatch({ type: 'hoverWidget', target: e })
     })
 
     wrapper.addEventListener('mouseleave', (evt) => {
-      cm.setEditorState({ type: 'hoverWidget', target: null })
+      cm.dispatch({ type: 'hoverWidget', target: null })
     })
 
     // Double click: prevent double-clicks from triggering a second mouse down action.
@@ -260,7 +260,7 @@ export default function markText(cm, lineNo, elements, type) {
             openURL()
           }
         } else {
-          cm.setEditorState({ type: 'selectWidget', target: e })
+          cm.dispatch({ type: 'selectWidget', target: e })
         }
       })
     }
@@ -287,7 +287,7 @@ export default function markText(cm, lineNo, elements, type) {
       // Double-click
       wrapper.addEventListener('dblclick', (evt) => {
         if (!evt.metaKey) {
-          cm.setEditorState({ type: 'selectWidget', target: e })
+          cm.dispatch({ type: 'selectWidget', target: e })
         }
       })
 

@@ -12,44 +12,49 @@ import { debounce } from 'debounce'
 
 enablePatches()
 
+/**
+ * Chokidar docs: https://www.npmjs.com/package/chokidar
+ */
+const chokidarConfig = {
+  ignored: /(^|[\/\\])\../, // Ignore dotfiles
+  ignoreInitial: true,
+  persistent: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 400,
+    pollInterval: 200
+  }
+}
+
 export class Watcher {
-  constructor(project) {
-    this.id = project.window.id
+  constructor(id, project, window) {
+    
+    this.id = id
     this.directory = project.directory
-    this.files = {}
-
-    // Start listening for directory value changes. Once user selects a project directory (e.g. in the first run experience), catch it 
-
-    // Create listener for directory changes
-    global.store.onDidAnyChange((state, oldState) => {
-
-      const directory = state.projects.find((p) => p.window.id == this.id).directory
-      const directoryIsDefined = directory !== ''
-      const directoryWasEmpty = this.directory == ''
-      const directoryHasChanged = directory !== this.directory
-
-      if (directoryIsDefined) {
-        if (directoryWasEmpty) {
-          this.directory = directory
-          this.start()
-        } else if (directoryHasChanged) {
-          this.update()
-        }
-      }
-    })
-
+    this.window = window
+    
+    // If directory is populated, create the watcher
     if (this.directory) {
       this.start()
     }
   }
 
+  // ------ VARIABLES ------ //
+
+  id = ''
+  directory = ''
+  window = undefined
+  
+  files = {}
   chokidarInstance = undefined
   pendingChanges = []
   changeTimer = undefined
-  directory = ''
-  files = {}
-  id = 0
 
+
+  // ------ METHODS ------ //
+
+  /**
+   * Start the chokidar instance. Called once `this.directory` is first defined.
+   */
   async start() {
 
     // Start watcher
@@ -67,17 +72,27 @@ export class Watcher {
     this.files = await mapProject(this.directory)
 
     // Send initial files to browser window
-    const win = BrowserWindow.fromId(this.id)
-    win.webContents.send('initialFilesFromMain', this.files)
+    this.window.webContents.send('initialFilesFromMain', this.files)
 
     // Index files into DB
     insertAllDocsIntoDb(this.files)
-
   }
 
+  changeDirectories(newDirectory) {
+    this.chokidarInstance.unwatch(this.directory)
+    this.directory = newDirectory
+    this.start()
+  }
+
+
+  /**
+   * Stop the chokidar instance. Called when project is closed.
+   */
   stop() {
-    // await watcher.close()
+    // TODO: Stop watcher when project is closed
+    this.chokidarInstance.close()
   }
+
 
   /**
    * Create a tally of changes as they occur, and once things settle down, evaluate them. We do this because on directory changes in particular, chokidar lists each file modified, _and_ the directory modified. We don't want to trigger a bunch of file change handlers in this scenario, so we need to batch changes, so we can figure out they include directories.
@@ -101,6 +116,7 @@ export class Watcher {
     this.debounceFunc()
   }
 
+
   /**
    * Take batched changes and update `files`, then send patches to associated BrowserWindow. If a directory was added or removede, remap everything.
    * @param {*} changes 
@@ -117,8 +133,7 @@ export class Watcher {
       this.files = await mapProject(this.directory)
 
       // Send files to browser window
-      const win = BrowserWindow.fromId(this.id)
-      win.webContents.send('initialFilesFromMain', this.files)
+      this.window.webContents.send('initialFilesFromMain', this.files)
 
       // Index files into DB
       insertAllDocsIntoDb(this.files)
@@ -204,14 +219,16 @@ export class Watcher {
 
         }
       }, (patches, inversePatches) => {
-        const win = BrowserWindow.fromId(this.id)
-        // console.log(patches)
-        win.webContents.send('filesPatchesFromMain', patches)
+        this.window.webContents.send('filesPatchesFromMain', patches)
       })
     }
   }
-
 }
+
+
+
+
+// ------ UTILITY FUNCTIONS ------ //
 
 /**
  * For each doc found in files, add it to the sqlite database. Most important is the document body, which we need for full text search. We get it as plain text by 1) loading the doc using gray-matter, which returns `content` for us, without front matter, and 2) removing markdown formatting.
@@ -254,18 +271,5 @@ function getDbReadyFile(file) {
     title: file.title,
     path: file.path,
     body: content
-  }
-}
-
-/**
- * Chokidar docs: https://www.npmjs.com/package/chokidar
- */
-const chokidarConfig = {
-  ignored: /(^|[\/\\])\../, // Ignore dotfiles
-  ignoreInitial: true,
-  persistent: true,
-  awaitWriteFinish: {
-    stabilityThreshold: 400,
-    pollInterval: 200
   }
 }

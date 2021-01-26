@@ -1,5 +1,6 @@
 import { remove } from 'fs-extra'
 
+// 1/25: TODO: Can probably delete. Moved this into MenuBarManager
 export default async function(path) {
   try {
 		await remove(path)

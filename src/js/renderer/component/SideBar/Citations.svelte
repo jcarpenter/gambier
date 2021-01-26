@@ -1,5 +1,6 @@
 <script>
-  import { project, sidebar, files } from '../../StateManager'
+  import { project, sidebar } from '../../StateManager'
+  import { files } from '../../FilesManager'
   import Header from './Header.svelte'
   import Separator from '../ui/Separator.svelte'
   import SearchField from '../ui/SearchField.svelte'

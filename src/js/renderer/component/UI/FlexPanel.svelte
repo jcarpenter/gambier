@@ -47,6 +47,27 @@
 </script>
 
 <style type="text/scss">
+  .flexPanel {
+    height: 100%;
+    overflow-x: hidden;
+    position: relative;
+    display: none;
+
+    &.visible {
+        display: block;
+    }
+
+    .divider {
+        position: absolute;
+        top: 0;
+        right: 0;
+        transform: translate(50%, 0);
+        width: 8px;
+        height: 100%;
+        z-index: 200;
+        cursor: ew-resize;
+    }
+}
 </style>
 
 <div on:click class:visible class="flexPanel" bind:this={refs.container} style="flex: 0 0 {width}px;">

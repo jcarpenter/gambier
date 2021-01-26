@@ -63,7 +63,7 @@ function makeMenuItems() {
     mI.moveToTrash = new MenuItem({
       label: 'Move to Trash',
       accelerator: 'CmdOrCtrl+Backspace',
-      enabled: state.focusedLayoutSection == 'navigation',
+      enabled: state.focusedSectionId == 'navigation',
       click(item, focusedWindow) {
         focusedWindow.webContents.send('mainRequestsDeleteFile')
       }
@@ -156,7 +156,7 @@ function makeMenuItems() {
   //   checked: state.appearance.userPref == 'match-system',
   //   click(item, focusedWindow) {
   //     store.dispatch({
-  //       type: 'SET_APPEARANCE',
+  //       type: 'SET_APP_THEME',
   //       userPref: 'match-system',
   //       theme: nativeTheme.shouldUseDarkColors ? 'gambier-dark' : 'gambier-light'
   //     })
@@ -169,7 +169,7 @@ function makeMenuItems() {
   //   checked: state.appearance.userPref == 'light',
   //   click() {
   //     store.dispatch({
-  //       type: 'SET_APPEARANCE',
+  //       type: 'SET_APP_THEME',
   //       userPref: 'light',
   //       theme: 'gambier-light'
   //     })
@@ -182,7 +182,7 @@ function makeMenuItems() {
   //   checked: state.appearance.userPref == 'dark',
   //   click(item, focusedWindow) {
   //     store.dispatch({
-  //       type: 'SET_APPEARANCE',
+  //       type: 'SET_APP_THEME',
   //       userPref: 'dark',
   //       theme: 'gambier-dark'
   //     })
@@ -348,8 +348,8 @@ function setup(testStore) {
   //   source_mode.checked = state.sourceMode
   // })
 
-  // store.onDidChange('focusedLayoutSection', () => {
-  //   moveToTrash.enabled = state.focusedLayoutSection == 'navigation'
+  // store.onDidChange('focusedSectionId', () => {
+  //   moveToTrash.enabled = state.focusedSectionId == 'navigation'
   // })
 
   // store.onDidChange('appearance', () => {

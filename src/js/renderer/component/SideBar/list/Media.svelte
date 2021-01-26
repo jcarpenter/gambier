@@ -1,7 +1,8 @@
 <script>
   import { prettySize } from '../../../../shared/utils'
 	import { createEventDispatcher, afterUpdate } from 'svelte'
-	import { state, project, files, sidebar } from '../../../StateManager'
+	import { state, project, sidebar } from '../../../StateManager'
+  import { files } from '../../../FilesManager'
   import { onMousedown } from './interactions'
   import { getContext } from 'svelte';
   import Label from '../../ui/Label.svelte'
@@ -15,7 +16,7 @@
 	$: tab = $sidebar.tabsById[tabId]
 	$: file = $files.byId[id]
 	$: isSelected = tab.selected.some((id) => id == file.id)
-	$: isSidebarFocused = $project.focusedLayoutSection == 'sidebar'
+	$: isSidebarFocused = $project.focusedSectionId == 'sidebar'
 
 </script>
 
@@ -107,7 +108,7 @@
 	class="media"
 	class:isSelected
 	class:isSidebarFocused
-	on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds)}
+	on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds, $files)}
   >
     <div class="thumb">
       <img src={file.path} />

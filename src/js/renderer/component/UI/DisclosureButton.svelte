@@ -1,71 +1,48 @@
 <script>
+  import { css, setSize } from '../ui/actions'
   import { createEventDispatcher } from 'svelte'
-  import { css } from '../ui/actions'
-  import { state } from '../../StateManager'
-
   const dispatch = createEventDispatcher()
 
-  export let width = 34
-  export let height = 28
-  export let padding = 4
+  export let width = '34px'
+  export let height = '28px'
+  export let margin = '0'
+  export let padding = '4px'
   export let left = 4
   export let rotation = 0
-
-  export let iconColor = $state.appearance.os.colors.controlTextColor
-  export let iconImage = 'img-chevron-right'
-  export let label = null
-  export let tooltip = null
-
-  $: image = `var(--${iconImage})`
+  export let opacity = 1.0
+  export let iconColor = 'controlTextColor'
 
 </script>
 
-<style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
+<style type='text/scss'>
 
-  .disclosure {
-    --width: 0;
-    --height: 0;
-    --padding: 0;
-    --left: 0;
-    --rotation: 0;
-    --iconColor: '';
-    --image: '';
+  button {
     @include absolute-vertical-center;
     position: absolute;
-    width: calc(var(--width) * 1px);
-    height: calc(var(--height) * 1px);
     left: calc(var(--left) * 1px);
-    // &:hover {
-    //   background-color: var(--disabledControlTextColor);
-    // }
-    // outline: 2px solid pink;
+    border: none;
+    outline: none;
+    background: none;
+    opacity: var(--opacity);
   }
 
   .icon {
     @include centered_mask_image;
-    width: calc(100% - calc(var(--padding) * 1px));
-    height: calc(100% - calc(var(--padding) * 1px));
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotateZ(calc(var(--rotation) * 1deg));
-    background-color: var(--iconColor);
-    -webkit-mask-image: var(--image);
-
+    width: 100%;
+    height: 100%;
+    transform: rotateZ(calc(var(--rotation) * 1deg));
+    -webkit-mask-image: var(--img-chevron-down-bold);
   }
 </style>
 
-<div
-  class="disclosure"
-  use:css={{ width, height, left, padding, rotation, iconColor, image }}
+<button
+  class='disclosure'
+  use:css={{ left, rotation, opacity }}
+  use:setSize={{width, height, margin, padding}}
   on:mousedown|stopPropagation={() => dispatch('toggle')}
-  role="button">
-  <div class="icon" />
-  {#if label}
-    <div class="label">{label}</div>
-  {/if}
-  {#if tooltip}
-    <!-- <div class="tooltip">{tooltip}</div> -->
-  {/if}
-</div>
+>
+  <div 
+    class='icon' 
+    style={`background-color: var(--${iconColor});`}
+  />
+</button>

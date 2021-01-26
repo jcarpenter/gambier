@@ -746,8 +746,8 @@ async function setup(textarea, initialState) {
       toggleSource()
     }
 
-    if (state.changed.includes('focusedLayoutSection')) {
-      if (state.focusedLayoutSection == 'editor') {
+    if (state.changed.includes('focusedSectionId')) {
+      if (state.focusedSectionId == 'editor') {
         focusEditor()
       }
     }
@@ -755,7 +755,7 @@ async function setup(textarea, initialState) {
 
   window.api.receive('mainRequestsSaveFile', () => {
     window.api.send('dispatch', {
-      type: 'SAVE_FILE',
+      type: 'SAVE_DOC',
       path: state.openDoc.path,
       data: cm.getValue()
     })

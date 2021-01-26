@@ -64,7 +64,7 @@ export function tabToPrevElement(cm) {
   // Find the closest tabbable element before the cursor.
   if (element) {
     // cm.setSelection({ line: element.line, ch: element.start }, { line: element.line, ch: element.end }, { scroll: true })
-    cm.setEditorState({ type: 'selectWidget', target: element })
+    cm.dispatch({ type: 'selectWidget', target: element })
   }
 }
 
@@ -101,7 +101,7 @@ export function tabToNextElement(cm) {
   // Select and focus the element
   if (element) {
     // cm.setSelection({ line: element.line, ch: element.start }, { line: element.line, ch: element.end }, { scroll: true })
-    cm.setEditorState({ type: 'selectWidget', target: element })
+    cm.dispatch({ type: 'selectWidget', target: element })
   }
 }
 

@@ -17,14 +17,14 @@
   // Setup event listeners once `cm` is populated.
   $: {
     if (cm !== null) {
-      cm.on('editorStateChanged', onEditorStateChange)
+      cm.on('stateChanged', onEditorStateChange)
     }
   }
 
   // ------- EVENT HANDLERS ------ //
 
   /*
-  Wizard changes write immediately, per keystroke. On every input, `replaceRanges` writes the change`. This triggers the `onChanges` function in Editor.svelte. We: save changes object to `editorWidget.lastChanges` via `cm.setEditorState(...)` and fire `editorStateChanged` event. Wizard gets event and changes. If it’s open, if checks if the span it’s editing is affected. If yes, it gets the new inline element, and sets it as target.
+  Wizard changes write immediately, per keystroke. On every input, `replaceRanges` writes the change`. This triggers the `onChanges` function in Editor.svelte. We: save changes object to `editorWidget.lastChanges` via `cm.dispatch(...)` and fire `stateChanged` event. Wizard gets event and changes. If it’s open, if checks if the span it’s editing is affected. If yes, it gets the new inline element, and sets it as target.
   */
 
   /**
@@ -61,7 +61,7 @@
 
   function onFocusout(evt) {
     if (!element.contains(evt.relatedTarget)) {
-      cm.setEditorState({ type: 'deSelectWidget' })
+      cm.dispatch({ type: 'deSelectWidget' })
     }
   }
 
@@ -128,7 +128,7 @@
   //   console.log('onForwardedInteraction')
   //   if (evt.detail.type == 'keydown' && evt.detail.key == 'Enter') {
   //     evt.detail.preventDefault()
-  //     cm.setEditorState({ type: 'deSelectWidget' })
+  //     cm.dispatch({ type: 'deSelectWidget' })
   //   }
   // }
 
