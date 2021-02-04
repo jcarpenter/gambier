@@ -61,7 +61,7 @@
 
   function onFocusout(evt) {
     if (!element.contains(evt.relatedTarget)) {
-      cm.dispatch({ type: 'deSelectWidget' })
+      cm.dispatch({ type: 'deSelectMark' })
     }
   }
 
@@ -128,7 +128,7 @@
   //   console.log('onForwardedInteraction')
   //   if (evt.detail.type == 'keydown' && evt.detail.key == 'Enter') {
   //     evt.detail.preventDefault()
-  //     cm.dispatch({ type: 'deSelectWidget' })
+  //     cm.dispatch({ type: 'deSelectMark' })
   //   }
   // }
 

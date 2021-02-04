@@ -1,7 +1,7 @@
-/* -------------- Light & Dark mode -------------- */
+// -------------- Light & Dark mode -------------- //
 
 // More compact media queries for dark and light mode
-// Use like: `@include dark { ... }`
+// Usage: `@include dark { ... }`
 
 @mixin dark {
     @media (prefers-color-scheme: dark) {
@@ -15,8 +15,18 @@
     }
 }
 
-// Short-hand functions for black and white with alpha
+
+// -------------- Color functions -------------- //
+// Short-hand concise functions for colors.
 // Use like: `background-color: white(0.2);`
+
+@function foregroundColor($alpha) {
+    @return rgba(var(--foregroundColor), $alpha);
+}
+
+@function backgroundColor($alpha) {
+    @return rgba(var(--backgroundColor), $alpha);
+}
 
 @function white($alpha) {
     @return rgba(255, 255, 255, $alpha);
@@ -30,25 +40,11 @@
     @return hsla(0, 0%, $lightness, $alpha);
 }
 
-/* -------------- Set focus -------------- */
 
-@mixin setFocus {
-    opacity: 0.5;
-    animation-fill-mode: forwards;
-    animation-name: selectField;
-    animation-duration: 0.3s;
-}
-
-@keyframes selectField {
-    from {
-        box-shadow: 0 0 0 20px transparent;
-    }
-    to {
-        box-shadow: 0 0 0 3.5px var(--controlAccentColor);
-    }
-}
-
-/* -------------- Common UI element styles -------------- */
+// -------------- UI style variables -------------- //
+// Variables for common styles in UI elements. 
+// E.g. gradient backgrounds for buttons.
+// Useful because 1) they're concise, and 2) make re-use easy.
 
 // Slight white gradient over `darkerControlAccentColor`
 $btn-accent-bg: 
@@ -57,33 +53,33 @@ $btn-accent-bg:
 
 // STANDARD BUTTONS: Push, popup, pulldown, etc.
 
-$dark-btn-bg: #5B5B5B;
+$dark-btn-bg: var(--buttonBackgroundColor);
 $dark-btn-outline: 
     inset 0 0.5px 0 0 white(0.25), // Top bevel
     0 0 0 0.5px black(0.15), // Outline
     0 1px 1px 0 black(0.15); // Drop shadow
 
-$light-btn-bg: white;
+$light-btn-bg: var(--buttonBackgroundColor);
+// was 'white'
 $light-btn-outline: 
     0 0 0 0.5px black(0.08), // Outline
     0 0.5px 1px 0.5px black(0.1); // Drop shadow
 
 // INSET BUTTONS: Radio, checkbox, etc.
 
-$dark-inset-btn-bg: linear-gradient(hsl(0, 0%, 27%), hsl(0, 0%, 38%));
+$dark-inset-btn-bg: 
+    linear-gradient(hsla(0, 0%, 100%, 0.27), hsla(0, 0%, 100%, 0.38)),
+    var(--buttonBackgroundColor);
 $dark-inset-btn-outline: 
     inset 0 1px 0 0 white(0.15), // Top bevel
     0 0 0 0.5px black(0.15); // Outline
 
-$light-inset-btn-bg: white;
+$light-inset-btn-bg: var(--buttonBackgroundColor);
+// was 'white'
 $light-inset-btn-outline: 
     inset 0 1.5px 1px 0 black(0.1), // Top inner shadow,
     inset 0 0 0 0.5px black(0.2); // Outline
  
-
-// `box-shadow` for dark UI components, e.g. radio buttons.
-$dark-outline: 0 0 0 0.5px black(0.1);
-
 // BORDER-RADIUS
 
 $border-radius-normal: 5.5px;
@@ -91,7 +87,16 @@ $border-radius-compact: 4px;
 
 
 
-/* -------------- Layout -------------- */
+// -------------- Layout mixins -------------- //
+
+@mixin background_layout {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    position: absolute;
+    z-index: -1;
+}
 
 @mixin centered_mask_image {
     -webkit-mask-size: contain;
@@ -105,22 +110,56 @@ $border-radius-compact: 4px;
     transform: translate(0, -50%);
 }
 
-@mixin absolute_centered {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+// @mixin absolute_centered {
+//     position: absolute;
+//     left: 50%;
+//     top: 50%;
+//     transform: translate(-50%, -50%);
+// }
+
+
+// -------------- Set focus on field -------------- //
+// Helpers for focus animations on field UI elements
+
+@mixin focusFieldAnimation {
+    animation-fill-mode: forwards;
+    animation-name: selectField;
+    animation-duration: 0.3s;
 }
 
-/* -------------- Reset -------------- */
+// The white(0.25) is there to lighten the controlAccentColor,
+// which is too dark, compared to the macOS native field-focused 
+// color. The actual macOS color is not part of the official 
+// color set, so they must be manipulating controlAccentColor
+// behind the scenes (boosting brightness + saturation).
 
-@mixin button-reset {
-    background-color: transparent;
-    border: none;
-    outline: none;
-    padding: 0;
-    margin: 0;
+// My solution is imperfect. It needs saturation boost to be
+// closer to the macOS equivalent. But OTOH, it matches the
+// accent color better.
+
+@keyframes selectField {
+    from {
+        box-shadow:
+            0 0 0 20px transparent,
+            0 0 0 20px transparent;
+    }
+    to {
+        box-shadow: 
+            0 0 0 4px white(0.25),
+            0 0 0 4px var(--controlAccentColor);
+    }
 }
+
+
+// -------------- Resets -------------- //
+
+// @mixin button-reset {
+//     background-color: transparent;
+//     border: none;
+//     outline: none;
+//     padding: 0;
+//     margin: 0;
+// }
 
 @mixin list-reset {
     margin: 0;
@@ -129,18 +168,18 @@ $border-radius-compact: 4px;
     list-style-type: none;
 }
 
-/* -------------- Materials -------------- */
+// -------------- Materials -------------- //
 
 // These are CSS equivalents to Apple's macOS materials. Materials "...define the amounts of translucency, blurring, and vibrancy applied to your interface.". Basically they are recipes of other macOS settings, e.g. degree of blurring, color, etc.
 // UI docs: https://developer.apple.com/design/human-interface-guidelines/macos/visual-design/translucency/
 // List of macOS materials: https://developer.apple.com/documentation/appkit/nsvisualeffectview/material
 
-@mixin material-menu {
-    backdrop-filter: blur(8px);
-    background-color: var(--menuMaterialColor);
-}
+// @mixin material-menu {
+//     backdrop-filter: blur(8px);
+//     background-color: var(--menuMaterialColor);
+// }
 
-/* -------------- Patterns -------------- */
+// -------------- Patterns -------------- //
 
 // From: https://gist.github.com/dfrankland/f6fed3e3ccc42e3de482b324126f9542
 @mixin bg-checkerboard {
@@ -151,7 +190,7 @@ $border-radius-compact: 4px;
     background-position: 0 0, 5px 0, 5px -5px, 0px 5px; /* Must be half of one side of the square */
 }
 
-/* -------------- Typography -------------- */
+// -------------- Typography -------------- //
 
 // Labels - Normal
 
@@ -206,3 +245,84 @@ $border-radius-compact: 4px;
     line-height: 16px;
     letter-spacing: -0.07px;
 }
+
+
+// UNUSED
+
+// // Used for the content of controls
+// @mixin controlContentFont {
+//     font: caption;
+//     font-size: 12px;
+//     line-height: 14.1px;
+// }
+
+// // Used for standard interface labels
+// @mixin labelFont {
+//     font: caption;
+//     font-size: 10px;
+//     line-height: 11.8px;
+// }
+
+// // Used for menu items
+// @mixin menuFont {
+//     font: caption;
+//     font-size: 10px;
+//     line-height: 11.8px;
+// }
+
+// // Used for menu bar items
+// @mixin menuBarFont {
+//     font: caption;
+//     font-size: 14px;
+//     line-height: 16.5px;
+// }
+
+// // Used for standard interface items, such as button labels and menu items
+// @mixin messageFont {
+//     font: caption;
+//     font-size: 13px;
+//     line-height: 15.3px;
+// }
+
+// // Used for window title bars
+// @mixin titleBarFont {
+//     font: caption;
+//     font-size: 13px;
+//     line-height: 15.3px;
+// }
+
+// // Used for tool tips labels
+// @mixin toolTipsFont {
+//     font: caption;
+//     font-size: 11px;
+//     line-height: 13px;
+// }
+
+// // Used for default for documents and other text under the user’s control (that is, text whose font the user can normally change).
+// @mixin userFont {
+//     font-family: 'Helvetica';
+//     font-size: 12px;
+//     line-height: 12px;
+// }
+
+// // Used by default for documents and other text under the user’s control (that is, text whose font the user can normally change), when that font should be fixed-pitch.
+// @mixin userFixedPitchFont {
+//     font-family: 'Menlo-Regular';
+//     font-size: 11px;
+//     line-height: 12.8px;
+// }
+
+// // The standard system font in boldface type
+// @mixin boldSystemFont {
+//     font: caption;
+//     font-weight: bold;
+//     font-size: 13.0px;
+//     line-height: 15.3px;
+// }
+
+// // The standard system font
+// @mixin systemFont {
+//     font: caption;
+//     font-size: 13.0px;
+//     line-height: 15.3px;
+// }

@@ -5,28 +5,36 @@ import { onBeforeChange } from './onBeforeChange'
 import { onChanges } from './onChanges'
 import { onCursorActivity } from './onCursorActivity'
 
-// CodeMirror editor instance
-let cm = null
-
-
-export function makeEditor(parentElement, initialTheme) {
+export function makeEditor(parentElement) {
 
   // ------ CREATE ------ //
 
-  cm = CodeMirror(parentElement, {
+  const cm = CodeMirror(parentElement, {
     mode: 'gambier',
     lineWrapping: true,
     lineNumbers: false,
+    
+    // "How many spaces a block (whatever that means in the edited 
+    // language) should be indented. The default is 2."
+    indentUnit: 4,
+
+    // "The width of a tab character. Defaults to 4."
+    tabSize: 4,
+
+    // "Whether, when indenting, the first N*tabSize spaces should be 
+    // replaced by N tabs. Default is false."
     indentWithTabs: false,
-    // We use closebracket.js for character-closing behaviour.
+    
+    // We use `closebracket.js` addon for character-closing behaviour.
     // https://codemirror.net/doc/manual.html#addon_closebrackets
     // We add support for `**` and `__` by copying the default config object from closebrackets.js, and adding `**__` to the pairs property.
     autoCloseBrackets: {
-      pairs: '**__()[]{}\'\'""',
+      pairs: '**__()[]{}\'\'""``',
       closeBefore: ')]}\'":;>',
       triples: '',
       explode: '[]{}',
     },
+
     // cursorScrollMargin: 20,
     // Turning on `keyMap: 'sublime'` activates -all- sublime keymaps. We instead want to pick and choose, using `extraKeys`
     // keyMap: 'sublime',
@@ -55,7 +63,7 @@ export function makeEditor(parentElement, initialTheme) {
         const cursor = cm.getCursor()
         const previousChar = getCharAt(cm, cursor.line, cursor.ch - 1)
         if (!previousChar == '^') {
-          // showAutocomplete = true
+          cm.dispatch({ type: 'setAutoComplete', value: true })
           // TODO
         }
         return CodeMirror.Pass
@@ -67,56 +75,21 @@ export function makeEditor(parentElement, initialTheme) {
 
   // ------ SET PROPERTIES ------ //
 
-  // Set theme
-  cm.setOption('theme', 'gambier')
+  // Set initial editor theme
+  cm.setOption('theme', window.state.theme.editorTheme)
 
   // Add our custom state properties to `cm.state`
   cm.state = {...cm.state, ...editorState}
-  // cm.appState = stateAsObject
 
   // Set `dispatch` as method on `cm` object (for convenience)
   cm.dispatch = dispatch
 
-  // TODO: Remove this. No longer needede.
-  cm.getEditorState = () => { return cm.state }
-
 
   // ------ CREATE LISTENERS ------ //
 
-  // cm.on('beforeChange', onBeforeChange)
+  // cm.on('beforeChange', onBeforeChange) // This is commented out of editor2-old...
   cm.on('changes', onChanges)
   cm.on('cursorActivity', onCursorActivity)
-
-  // TODO: 
-
-  // window.api.receive('mainRequestsSaveFile', () => {
-  //   saveFile(cm, editorState.doc.path)
-  // })
-
-  // // Save open doc when app quits
-  // window.api.receive('mainWantsToCloseWindow', async () => {
-  //   window.api.send(
-  //     'saveFileThenCloseWindow',
-  //     editorState.doc.path,
-  //     cm.getValue()
-  //   )
-  // })
-
-  // // Save open doc when app quits
-  // window.api.receive('mainWantsToQuitApp', async () => {
-  //   window.api.send(
-  //     'saveFileThenQuitApp',
-  //     editorState.doc.path,
-  //     cm.getValue()
-  //   )
-  // })
-
-
-
-  // Load initial doc
-  // if (initialDocId) {
-  //   cm.dispatch({ type: 'loadDoc', docId: initialDocId })
-  // }
 
   return cm
 }

@@ -3,7 +3,10 @@
  * Mark all lines in the document
  */
 export function markDoc(cm) {
+  if (window.state.sourceMode) return
+  // Clear existing marks
   cm.getAllMarks().forEach((mark) => mark.clear())
+  // Create new marks
   cm.operation(() => {
     cm.eachLine((lineHandle) => markLine(cm, lineHandle))
   })
@@ -15,14 +18,16 @@ export function markDoc(cm) {
  */
 export function markLine(cm, lineHandle) {
 
-  const editorState = cm.getEditorState()
+  if (window.state.sourceMode) return
+
   const lineNo = lineHandle.lineNo()
 
   let links = []
   let images = []
   let footnotes = []
+  let citations = []
 
-  editorState.inlineElements.forEach((e) => {
+  cm.state.inlineElements.forEach((e) => {
     if (e.line !== lineNo) return
     if (e.type.includes('link') && !e.type.includes('image')) {
       links.push(e)
@@ -30,6 +35,8 @@ export function markLine(cm, lineHandle) {
       images.push(e)
     } else if (e.type.includes('footnote')) {
       footnotes.push(e)
+    } else if (e.type.includes('citation')) {
+      citations.push(e)
     }
   })
 
@@ -43,6 +50,10 @@ export function markLine(cm, lineHandle) {
 
   if (footnotes.length) {
     markText(cm, lineNo, footnotes, 'footnotes')
+  }
+
+  if (citations.length) {
+    markText(cm, lineNo, citations, 'citations')
   }
 }
 
@@ -59,28 +70,18 @@ export function clearLineMarks(cm, lineHandle) {
 
 
 /**
- * Clear all marks from the document
- */
-export function clearDocMarks(cm) {
-  cm.getAllMarks().forEach((m) => m.clear())
-}
-
-
-/**
  * Create TextMarkers 
  */
 export function markText(cm, lineNo, elements, type) {
 
   const cursor = cm.getCursor()
-  const editorState = cm.getEditorState()
 
   elements.forEach((e) => {
-
 
     // -------- PROPERTIES -------- //
 
     // Shared
-    e.widget = {
+    e.mark = {
       editable: false,
       displayedString: '',
       element: undefined,
@@ -90,77 +91,77 @@ export function markText(cm, lineNo, elements, type) {
     // Set `editable`
     switch (type) {
       case 'links':
-        e.widget.editable = true
-        e.widget.arrowInto = arrowedInto // Method
+        e.mark.editable = true
+        e.mark.arrowInto = arrowedInto // Method
         break
       case 'images':
       case 'footnotes':
       case 'citations':
-        e.widget.editable = false
+        e.mark.editable = false
         break
     }
 
     // Set `content` and `displayedString`
-    if (!e.widget.editable) {
+    if (!e.mark.editable) {
 
       switch (type) {
         case 'images':
-          e.widget.displayedString = 'i'
+          e.mark.displayedString = 'i'
           break
         case 'footnotes':
-          e.widget.displayedString = ''
+          e.mark.displayedString = ''
           break
         case 'citations':
-          e.widget.displayedString = 'c'
+          e.mark.displayedString = 'c'
           break
       }
 
     } else {
 
-      // The `e.widget.content` property is a reference to the property from the original link that we display and edit. In the case of inline and full reference links, it is the `text` property. For collapsed and shortcut reference links, it is the `label`.
+      // The `e.mark.content` property is a reference to the property from the original link that we display and edit. In the case of inline and full reference links, it is the `text` property. For collapsed and shortcut reference links, it is the `label`.
       if (e.type.includes('inline') || e.type.includes('reference-full')) {
-        e.widget.content = e.text
+        e.mark.content = e.text
       } else if (e.type.includes('reference-collapsed') || e.type.includes('reference-shortcut')) {
-        e.widget.content = e.label
+        e.mark.content = e.label
       }
 
-      e.widget.displayedString = e.widget.content.string
+      e.mark.displayedString = e.mark.content.string
 
     }
 
     // Set classes
     switch (type) {
       case 'links':
-        e.widget.classes.push('cm-link', 'widget')
-        e.widget.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
+        e.mark.classes.push('cm-link', 'mark')
+        e.mark.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
         break
       case 'images':
-        e.widget.classes.push('cm-image', 'widget')
-        e.widget.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
+        e.mark.classes.push('cm-image', 'mark')
+        e.mark.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
         break
       case 'footnotes':
-        e.widget.classes.push('cm-footnote', 'widget')
-        e.widget.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
+        e.mark.classes.push('cm-footnote', 'mark')
+        e.mark.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
         break
       case 'citations':
-        e.widget.classes.push('cm-citation', 'widget')
+        e.mark.classes.push('cm-citation', 'mark')
         break
     }
 
-    if (e.widget.editable) e.widget.classes.push('editable')
-    if (e.error) e.widget.classes.push('error')
+    if (e.mark.editable) e.mark.classes.push('editable')
+    if (e.error) e.mark.classes.push('error')
 
 
-    // -------- CREATE TEXTMARKER -------- //
+    // -------- CREATE MARK -------- //
 
     const frag = document.createDocumentFragment();
-    const wrapper = e.widget.element = document.createElement('span');
-    e.widget.classes.forEach((c) => wrapper.classList.add(c))
-    wrapper.innerText = `${e.widget.displayedString}`
+    const wrapper = e.mark.element = document.createElement('span');
+    e.mark.classes.forEach((c) => wrapper.classList.add(c))
+    wrapper.innerText = `${e.mark.displayedString}`
     wrapper.setAttribute('tabindex', -1)
     frag.append(wrapper)
 
-    if (e.widget.editable) {
+    if (e.mark.editable) {
       wrapper.setAttribute('contenteditable', true)
     }
 
@@ -180,8 +181,8 @@ export function markText(cm, lineNo, elements, type) {
 
     // -------- POSITION CURSOR -------- //
 
-    // Position cursor inside `contenteditable` at same position, if the widget is editable, and cursor was inside the new widget's start/stop values.
-    if (e.widget.editable) {
+    // Position cursor inside `contenteditable` at same position, if the mark is editable, and cursor was inside the new mark's start/stop values.
+    if (e.mark.editable) {
       const cursorPosWasInsideNewInputRange = cursor.line == lineNo && cursor.ch > e.start && cursor.ch < (e.start + wrapper.innerText.length + 2)
 
       if (cursorPosWasInsideNewInputRange) {
@@ -198,15 +199,15 @@ export function markText(cm, lineNo, elements, type) {
     }
 
 
-    // -------- UPDATE STATE -------- //
+    // -------- CREATE LISTENER: EDITOR STATE CHANGES -------- //
 
     cm.on('stateChanged', (changed) => {
-      if (changed.includes('widget')) {
-        if (editorState.widget.target == e && editorState.widget.isSelected) {
+      if (changed.includes('mark')) {
+        if (cm.state.mark.target == e && cm.state.mark.isSelected) {
           highlight()
         }
       } else if (changed.includes('selections')) {
-        editorState.selections.forEach((s) => {
+        cm.state.selections.forEach((s) => {
 
           let from, to
 
@@ -286,24 +287,25 @@ export function markText(cm, lineNo, elements, type) {
     }
 
     function exitAndWriteChanges(evt) {
-      if (wrapper.innerText !== e.widget.content.string) {
+      if (wrapper.innerText !== e.mark.content.string) {
         cm.replaceRange(
           wrapper.innerText,
-          { line: e.line, ch: e.widget.content.start },
-          { line: e.line, ch: e.widget.content.end }
+          { line: e.line, ch: e.mark.content.start },
+          { line: e.line, ch: e.mark.content.end }
         )
       }
     }
 
     // -------- EVENT LISTENERS: SHARED -------- //
 
-    wrapper.addEventListener('mouseenter', (evt) => {
-      cm.dispatch({ type: 'hoverWidget', target: e })
-    })
+    // TEMP: Commenting out so I can focus on clicks. Feb 3.
+    // wrapper.addEventListener('mouseenter', (evt) => {
+    //   cm.dispatch({ type: 'hoverMark', target: e })
+    // })
 
-    wrapper.addEventListener('mouseleave', (evt) => {
-      cm.dispatch({ type: 'hoverWidget', target: null })
-    })
+    // wrapper.addEventListener('mouseleave', (evt) => {
+    //   cm.dispatch({ type: 'hoverMark', target: null })
+    // })
 
     // Double click: prevent double-clicks from triggering a second mouse down action.
     wrapper.addEventListener('mousedown', (evt) => {
@@ -313,7 +315,7 @@ export function markText(cm, lineNo, elements, type) {
 
     // -------- EVENT LISTENERS: NON-EDITABLE MARKS -------- //
 
-    if (!e.widget.editable) {
+    if (!e.mark.editable) {
 
       // Click
       wrapper.addEventListener('click', (evt) => {
@@ -323,7 +325,7 @@ export function markText(cm, lineNo, elements, type) {
             openURL()
           }
         } else {
-          cm.dispatch({ type: 'selectWidget', target: e })
+          cm.dispatch({ type: 'selectMark', target: e })
         }
       })
     }
@@ -331,7 +333,7 @@ export function markText(cm, lineNo, elements, type) {
 
     // -------- EVENT LISTENERS: EDITABLE MARKS -------- //
 
-    if (e.widget.editable) {
+    if (e.mark.editable) {
 
       // Click
       wrapper.addEventListener('click', (evt) => {
@@ -350,7 +352,7 @@ export function markText(cm, lineNo, elements, type) {
       // Double-click
       wrapper.addEventListener('dblclick', (evt) => {
         if (!evt.metaKey) {
-          cm.dispatch({ type: 'selectWidget', target: e })
+          cm.dispatch({ type: 'selectMark', target: e })
         }
       })
 

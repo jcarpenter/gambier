@@ -1,35 +1,15 @@
+import { mapDoc, remapInlineElementsForLine } from "./map"
+import { clearLineMarks, markDoc, markLine } from "./mark"
+
 /**
  * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
  */
 export function onChanges(cm, changes) {
-  // console.trace('onChanges()', changes)
-  console.log('onChanges')
+
+  // Update `unsavedChanges` value on the parent panel.
+  updateUnsavedChanges(cm)
  
-  // On change, update unsavedChanges value on the panel.
-  // Avoid spamming by first checking if there's a mismatch
-  // between current state value and `cm.doc.isClean()`
-  const docIsNowClean = cm.doc.isClean()
-  const prevStateHadUnsavedChanges = cm.state.panel.unsavedChanges
-
-  if (docIsNowClean && prevStateHadUnsavedChanges) {
-    // Need to update panel state: The doc is now clean.
-    window.api.send('dispatch', {
-      type: 'SET_UNSAVED_CHANGES',
-      panelIndex: cm.state.panel.index,
-      value: false
-    })
-  } else if (!prevStateHadUnsavedChanges) {
-    // Need to update panel state: The doc now has unsaved changes.
-    window.api.send('dispatch', {
-      type: 'SET_UNSAVED_CHANGES',
-      panelIndex: cm.state.panel.index,
-      value: true
-    })
-  }
-
-  return
-
-  // Checks
+  // Check if multiple lines have changed
   const hasMultipleLinesChanged = changes.some((change) => {
     return (
       change.from.line !== change.to.line || change.origin === '+swapLine'
@@ -47,20 +27,19 @@ export function onChanges(cm, changes) {
   // }
 
   // Remap elements and re-mark:
-  // * Everything, if multiple lines have changed.
-  // * Else, one line only
+  // - ...everything, if multiple lines have changed.
+  // - ...one line only, if only one line has changed
 
   if (hasMultipleLinesChanged) {
     mapDoc(cm)
     markDoc(cm)
   } else {
-    // We assume only one line has changed...
 
     const lineNo = changes[0].from.line
     const lineHandle = cm.getLineHandle(lineNo)
 
     // Autocomplete: Determine if we need to open it or not
-    if (showAutocomplete && isSingleEdit && !isUndo) {
+    if (cm.state.showAutocomplete && isSingleEdit && !isUndo) {
       // If preceding character was `^`, user is trying to create an inline footnote, so we don't open the autocomplete UI. We just make sure the wizard opens after the widget is created.
 
       const changeText = changes[0].text[0]
@@ -72,7 +51,8 @@ export function onChanges(cm, changes) {
 
       if (emptyBrackets || bracketsAroundSingleSelection) {
         markAutocomplete(cm, changeText)
-        showAutocomplete = false
+        cm.dispatch({ type: 'setAutoComplete', value: false })
+        // showAutocomplete = false
       }
     } else {
       // Remap everything if line changed had block styles. We do this because blockElements can contain reference definitions. And if reference definitions change, lineElements also need to be remapped (because they incorporate data from reference definitions).
@@ -112,4 +92,31 @@ export function onChanges(cm, changes) {
   // }
 
   // isChangesPending = false
+}
+
+
+/**
+ * On change, update `unsavedChanges` value on the parent panel.
+ * Avoid spamming by first checking if there's a mismatch
+ * between current state value and `cm.doc.isClean()`.
+ */
+function updateUnsavedChanges(cm) {
+  const docIsNowClean = cm.doc.isClean()
+  const prevStateHadUnsavedChanges = cm.state.panel.unsavedChanges
+
+  if (docIsNowClean && prevStateHadUnsavedChanges) {
+    // Need to update panel state: The doc is now clean.
+    window.api.send('dispatch', {
+      type: 'SET_UNSAVED_CHANGES',
+      panelIndex: cm.state.panel.index,
+      value: false
+    })
+  } else if (!prevStateHadUnsavedChanges) {
+    // Need to update panel state: The doc now has unsaved changes.
+    window.api.send('dispatch', {
+      type: 'SET_UNSAVED_CHANGES',
+      panelIndex: cm.state.panel.index,
+      value: true
+    })
+  }
 }

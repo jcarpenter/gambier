@@ -2,6 +2,7 @@ import { app, Menu, MenuItem, nativeTheme } from 'electron'
 import { stateHasChanged } from '../shared/utils.js'
 import { selectProjectDirectoryFromDialog } from './actions/index.js'
 import { remove } from 'fs-extra'
+import { themes } from './Themes.js'
 
 /*
 Main instantiates new MenuBarManager instance. 
@@ -96,6 +97,7 @@ function getMenuItems() {
   const state = global.state()
   const project = getFocusedProject()
   const panel = getFocusedPanel()
+  const prefsIsFocused = state.focusedWindowId == 'preferences'
 
   const items = {
     topLevel: []
@@ -107,19 +109,30 @@ function getMenuItems() {
 
   // -------- App (Mac-only) -------- //
 
+  const preferences = new MenuItem({
+    label: 'Preferences',
+    accelerator: 'CmdOrCtrl+,',
+    async click() {
+      const state = global.state()
+      const prefsIsAlreadyOpen = state.prefs.isOpen
+      const prefsIsNotFocused = state.focusedWindowId !== 'preferences'
+      if (prefsIsAlreadyOpen) {
+        if (prefsIsNotFocused) {
+          global.store.dispatch({ type: 'FOCUS_PREFERENCES_WINDOW' })
+        }
+      } else {
+        global.store.dispatch({ type: 'OPEN_PREFERENCES' })
+      }
+    }
+  })
+
   if (isMac) {
     items.topLevel.push(new MenuItem({
       label: app.name,
       submenu: [
         { role: 'about' },
         _______________,
-        new MenuItem({
-          label: 'Preferences',
-          accelerator: 'CmdOrCtrl+,',
-          async click() {
-            global.store.dispatch({ type: 'OPEN_PREFERENCES' })
-          }
-        }),
+        preferences,
         _______________,
         { role: 'services', submenu: [] },
         _______________,
@@ -160,8 +173,8 @@ function getMenuItems() {
 
     items.closeWindow = new MenuItem({
       label: 'Close Window',
-      accelerator: 'CmdOrCtrl+Shift+W',
-      enabled: panel !== undefined,
+      accelerator: prefsIsFocused ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Shift+W',
+      enabled: prefsIsFocused || project !== undefined,
       click(item, focusedWindow) {
         focusedWindow.close()
       }
@@ -189,15 +202,13 @@ function getMenuItems() {
           const filepath = watcher.files.byId[id]?.path
           filePathsToDelete.push(filepath)
         })
-        
+
         // Delete
         await Promise.all(
           filePathsToDelete.map(async (filepath) => {
             await remove(filepath)
           })
         )
-
-        // focusedWindow.webContents.send('mainRequestsDeleteFile')
       }
     })
 
@@ -338,40 +349,93 @@ function getMenuItems() {
 
   // -------- View -------- //
 
-  items.themeDark = new MenuItem({
-    label: 'Dark',
-    type: 'checkbox',
-    checked: state.theme.app == 'dark',
-    click() {
-      store.dispatch({
-        type: 'SET_APP_THEME',
-        theme: 'dark',
+  const name = new MenuItem({
+    label: 'App Theme',
+    submenu: themes.allIds.map((id) => {
+      const theme = themes.byId[id]
+      return new MenuItem({
+        label: theme.name,
+        type: 'checkbox',
+        checked: state.theme.id == id,
+        click() {
+          global.store.dispatch({ type: 'SET_APP_THEME', id })
+        }
       })
-    }
+    })
   })
 
-  items.themeLight = new MenuItem({
-    label: 'Light',
-    type: 'checkbox',
-    checked: state.theme.app == 'light',
-    click() {
-      store.dispatch({
-        type: 'SET_APP_THEME',
-        theme: 'light',
-      })
-    }
+  const accentColor = new MenuItem({
+    label: 'Accent Color',
+    submenu: [
+      new MenuItem({
+        label: 'Match System',
+        type: 'checkbox',
+        checked: state.theme.accentColor == 'match-system',
+        click() {
+          global.store.dispatch({ type: 'SET_ACCENT_COLOR', name: 'match-system', })
+        }
+      }),
+      _______________,
+    ]
   })
 
-  items.themeMatchSystem = new MenuItem({
-    label: 'Match System',
-    type: 'checkbox',
-    checked: state.theme.app == 'match-system',
-    click() {
-      store.dispatch({
-        type: 'SET_APP_THEME',
-        theme: 'match-system',
+  const background = new MenuItem({
+    label: 'Background',
+    submenu: [
+      new MenuItem({
+        label: 'Placeholder',
+        type: 'checkbox',
+        checked: state.theme.background == 'placeholder',
+        click() {
+          global.store.dispatch({ type: 'SET_BACKGROUND', name: 'placeholder', })
+        }
+      }),
+    ]
+  })
+
+  const darkMode = new MenuItem({
+    label: 'Dark Mode',
+    submenu: [
+      new MenuItem({
+        label: 'Match System',
+        type: 'checkbox',
+        checked: state.darkMode == 'match-system',
+        click() {
+          global.store.dispatch({ type: 'SET_DARK_MODE', value: 'match-system', })
+        }
+      }),
+      _______________,
+      new MenuItem({
+        label: 'Dark',
+        type: 'checkbox',
+        checked: state.darkMode == 'dark',
+        click() {
+          global.store.dispatch({ type: 'SET_DARK_MODE', value: 'dark' })
+        }
+      }),
+      new MenuItem({
+        label: 'Light',
+        type: 'checkbox',
+        checked: state.darkMode == 'light',
+        click() {
+          global.store.dispatch({ type: 'SET_DARK_MODE', value: 'light' })
+        }
       })
-    }
+    ]
+  })
+
+  const editorTheme = new MenuItem({
+    label: 'Editor Theme',
+    submenu: [
+      new MenuItem({
+        label: 'Placeholder',
+        type: 'checkbox',
+        checked: state.theme.editorTheme == 'placeholder',
+        click() {
+          global.store.dispatch({ type: 'SET_EDITOR_THEME', name: 'placeholder' })
+        }
+      }),
+    ]
   })
 
   items.sourceMode = new MenuItem({
@@ -389,36 +453,36 @@ function getMenuItems() {
     }
   })
 
-  items.toggleDevTools = new MenuItem({
-    label: 'Toggle Developer Tools',
-    accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-    role: 'toggleDevTools',
-  })
-
-  items.reload = new MenuItem({
-    label: 'Reload',
-    accelerator: 'CmdOrCtrl+R',
-    role: 'reload'
+  const developer = new MenuItem({
+    label: 'Developer',
+    submenu: [
+      new MenuItem({
+        label: 'Toggle Developer Tools',
+        accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+        role: 'toggleDevTools',
+      }),
+      new MenuItem({
+        label: 'Reload',
+        accelerator: 'CmdOrCtrl+R',
+        role: 'reload'
+      })
+    ]
   })
 
   items.topLevel.push(new MenuItem({
     label: 'View',
     submenu: [
-      {
-        label: 'Appearance',
-        submenu: [
-          items.themeMatchSystem,
-          _______________,
-          items.themeLight,
-          items.themeDark
-        ]
-      },
+      name,
+      _______________,
+      accentColor,
+      background,
+      darkMode,
+      editorTheme,
       _______________,
       items.sourceMode,
       ...app.isPackaged ? [] : [
         _______________,
-        items.toggleDevTools, 
-        items.reload
+        developer
       ],
     ]
   }))

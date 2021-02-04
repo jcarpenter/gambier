@@ -1,98 +1,136 @@
 <script>
+import { onMount } from 'svelte';
+
   import { stringify } from '../../../shared/utils'
   import { state } from '../../StateManager'
   import SwatchTable from './SwatchTable.svelte'
+  import SwatchLarge from './SwatchLarge.svelte'
 
-  $: colors = $state.colors
+  let colors = {}
+  let overriddenVariables = []
+  let unusedColors = []
 
-  $: systemColors = {
-    systemBlue: colors.systemBlue,
-    systemBrown: colors.systemBrown,
-    systemGray: colors.systemGray,
-    systemGreen: colors.systemGreen,
-    systemIndigo: colors.systemIndigo,
-    systemOrange: colors.systemOrange,
-    systemPink: colors.systemPink,
-    systemPurple: colors.systemPurple,
-    systemRed: colors.systemRed,
-    systemTeal: colors.systemTeal,
-    systemYellow: colors.systemYellow,
-  }
+  onMount(async () => {
+
+    // Setup listener for updated colors
+    window.api.receive('updatedSystemColors', (newColors, newOverriddenVariables) => {
+      colors = newColors
+      overriddenVariables = newOverriddenVariables
+    })
+
+    // Get initial colors
+    const initialValues = await window.api.invoke('getColors')
+    colors = initialValues.colors
+    overriddenVariables = initialValues.overriddenVariables
+
+    unusedColors = [
+      'controlBackgroundColor', 
+      'quaternaryLabelColor', 
+      'alternateSelectedControlTextColor', 
+      'findHighlightColor', 
+      'gridColor', 
+      'headerTextColor', 
+      'highlightColor', 
+      'linkColor', 
+      'selectedControlTextColor', 
+      'selectedTextColor', 
+      'textBackgroundColor', 
+      'unemphasizedSelectedContentBackgroundColor', 
+      'unemphasizedSelectedTextBackgroundColor', 
+      'unemphasizedSelectedTextColor', 
+      'windowFrameTextColor', 
+    ]
+
+  })
+
+  // $: systemColors = {
+  //   systemBlue: colors.systemBlue,
+  //   systemBrown: colors.systemBrown,
+  //   systemGray: colors.systemGray,
+  //   systemGreen: colors.systemGreen,
+  //   systemIndigo: colors.systemIndigo,
+  //   systemOrange: colors.systemOrange,
+  //   systemPink: colors.systemPink,
+  //   systemPurple: colors.systemPurple,
+  //   systemRed: colors.systemRed,
+  //   systemTeal: colors.systemTeal,
+  //   systemYellow: colors.systemYellow,
+  // }
   
-  $: accentInfluencedColors = {
-    controlAccentColor: colors.controlAccentColor,
-    keyboardFocusIndicatorColor: colors.keyboardFocusIndicatorColor,
-    selectedContentBackgroundColor: colors.selectedContentBackgroundColor,
-    selectedControlColor: colors.selectedControlColor,
-    selectedTextBackgroundColor: colors.selectedTextBackgroundColor,
-  }
+  // $: accentInfluencedColors = {
+  //   controlAccentColor: colors.controlAccentColor,
+  //   darkerControlAccentColor: colors.darkerControlAccentColor,
+  //   keyboardFocusIndicatorColor: colors.keyboardFocusIndicatorColor,
+  //   selectedContentBackgroundColor: colors.selectedContentBackgroundColor,
+  //   selectedControlColor: colors.selectedControlColor,
+  //   selectedTextBackgroundColor: colors.selectedTextBackgroundColor,
+  // }
   
 
-  $: labelColors = {
-    labelColor: colors.labelColor,
-    secondaryLabelColor: colors.secondaryLabelColor,
-    tertiaryLabelColor: colors.tertiaryLabelColor,
-    quaternaryLabelColor: colors.quaternaryLabelColor,
-  }
+  // $: labelColors = {
+  //   labelColor: colors.labelColor,
+  //   secondaryLabelColor: colors.secondaryLabelColor,
+  //   tertiaryLabelColor: colors.tertiaryLabelColor,
+  //   quaternaryLabelColor: colors.quaternaryLabelColor,
+  // }
 
-  $: textColors = {
-    textColor: colors.textColor,
-    placeholderTextColor: colors.placeholderTextColor,
-    selectedTextColor: colors.selectedTextColor,
-    textBackgroundColor: colors.textBackgroundColor,
-    selectedTextBackgroundColor: colors.selectedTextBackgroundColor,
-    keyboardFocusIndicatorColor: colors.keyboardFocusIndicatorColor,
-    unemphasizedSelectedTextColor: colors.unemphasizedSelectedTextColor,
-    unemphasizedSelectedTextBackgroundColor: colors.unemphasizedSelectedTextBackgroundColor,
-  }
+  // $: textColors = {
+  //   textColor: colors.textColor,
+  //   placeholderTextColor: colors.placeholderTextColor,
+  //   selectedTextColor: colors.selectedTextColor,
+  //   textBackgroundColor: colors.textBackgroundColor,
+  //   selectedTextBackgroundColor: colors.selectedTextBackgroundColor,
+  //   keyboardFocusIndicatorColor: colors.keyboardFocusIndicatorColor,
+  //   unemphasizedSelectedTextColor: colors.unemphasizedSelectedTextColor,
+  //   unemphasizedSelectedTextBackgroundColor: colors.unemphasizedSelectedTextBackgroundColor,
+  // }
 
-  $: contentColors = {
-    linkColor: colors.linkColor,
-    separatorColor: colors.separatorColor,
-    selectedContentBackgroundColor: colors.selectedContentBackgroundColor,
-    unemphasizedSelectedContentBackgroundColor: colors.unemphasizedSelectedContentBackgroundColor,
-  }
+  // $: contentColors = {
+  //   linkColor: colors.linkColor,
+  //   separatorColor: colors.separatorColor,
+  //   selectedContentBackgroundColor: colors.selectedContentBackgroundColor,
+  //   unemphasizedSelectedContentBackgroundColor: colors.unemphasizedSelectedContentBackgroundColor,
+  // }
 
-  $: menuColors = {
-    selectedMenuItemTextColor: colors.selectedMenuItemTextColor,
-  }
+  // $: menuColors = {
+  //   selectedMenuItemTextColor: colors.selectedMenuItemTextColor,
+  // }
 
-  $: tableColors = {
-    gridColor: colors.gridColor,
-    headerTextColor: colors.headerTextColor
-  }
+  // $: tableColors = {
+  //   gridColor: colors.gridColor,
+  //   headerTextColor: colors.headerTextColor
+  // }
 
-  $: controlColors = {
-    controlAccentColor: colors.controlAccentColor,
-    controlColor: colors.controlColor,
-    controlBackgroundColor: colors.controlBackgroundColor,
-    controlTextColor: colors.controlTextColor,
-    disabledControlTextColor: colors.disabledControlTextColor,
-    selectedControlColor: colors.selectedControlColor,
-    selectedControlTextColor: colors.selectedControlTextColor,
-    alternateSelectedControlTextColor: colors.alternateSelectedControlTextColor,
-  }
+  // $: controlColors = {
+  //   controlAccentColor: colors.controlAccentColor,
+  //   controlColor: colors.controlColor,
+  //   controlBackgroundColor: colors.controlBackgroundColor,
+  //   controlTextColor: colors.controlTextColor,
+  //   disabledControlTextColor: colors.disabledControlTextColor,
+  //   selectedControlColor: colors.selectedControlColor,
+  //   selectedControlTextColor: colors.selectedControlTextColor,
+  //   alternateSelectedControlTextColor: colors.alternateSelectedControlTextColor,
+  // }
 
-  $: windowColors = {
-    windowBackgroundColor: colors.windowBackgroundColor,
-    windowFrameTextColor: colors.windowFrameTextColor,
-  }
+  // $: windowColors = {
+  //   windowBackgroundColor: colors.windowBackgroundColor,
+  //   windowFrameTextColor: colors.windowFrameTextColor,
+  // }
 
-  $: highlightColors = {
-    findHighlightColor: colors.findHighlightColor,
-    highlightColor: colors.highlightColor,
-    shadowColor: colors.shadowColor,
-  }
+  // $: highlightColors = {
+  //   findHighlightColor: colors.findHighlightColor,
+  //   highlightColor: colors.highlightColor,
+  //   shadowColor: colors.shadowColor,
+  // }
 
-  function darken(startingColor) {
-    const color = Color(startingColor).darken(0.2).hex()
-    return color
-  }
+  // function darken(startingColor) {
+  //   const color = Color(startingColor).darken(0.2).hex()
+  //   return color
+  // }
 
-  function blacken(startingColor) {
-    return chroma.blend(startingColor, '#C2C2C2', 'burn').desaturate(0.6);
-    // return chroma.mix(startingColor, 'black', 0.08, 'lch');
-  }
+  // function blacken(startingColor) {
+  //   return chroma.blend(startingColor, '#C2C2C2', 'burn').desaturate(0.6);
+  // }
 
 </script>
 
@@ -108,111 +146,151 @@
   }
 
   h2 {
-    @include label-normal;
-    color: var(--secondaryLabelColor);
+    @include label-normal-bold;
+    color: var(--labelColor);
+    margin: 0;
+    width: 6em; 
+    display: inline;
+    float: left;
   }
 
-  .stateTable {
-    border: 1px solid var(--tertiaryLabelColor);
-    border-radius: 4px;
-    padding: 0.4em 0.4em;
-    margin-bottom: 1em;
-
-    h2 {
-      color: var(--labelColor);
-      display: block;
-      padding: 0;
-      @include label-normal-small-bold;
-      margin: 0 0 1em;
-    }
-  }
-
-  .property {
+  .swatches {
     display: flex;
-    direction: column;
-    padding: 0.2em 0;
-    // padding: 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-
-    div {
-      display: inline-block;
-      // padding-bottom: 0.5em;
-      white-space: pre-wrap;
-    //   max-height: 30em;
-      overflow: scroll;
-    }
-
-    .key {
-      @include label-normal-small;
-      text-align: right;
-    //   flex-basis: 6em;
-      color: var(--labelColor);
-      padding-right: 1em;
-    }
-
-    .val {
-      @include label-normal-small;
-      flex: 1 1 auto;
-      color: var(--secondaryLabelColor);
-    }
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1em;
+    margin: 0 0 1em;
   }
 
-  .swatch {
-    display: inline-block;
-    width: 80px;
-    height: 40px;
-    margin: 0 -2px;
-
+  .overriddenValues {
+    @include label-normal;
   }
 
-  .row { display: flex; }
-
-  .swatch { 
-    @include label-normal-small;
-    color: white;
+  hr {
+    margin: 2em 0;
   }
-
-  .controlAccentColor { background: var(--controlAccentColor) }
-  .darkerControlAccentColor { background: var(--darkerControlAccentColor) }
-  
-  .pink.targetColor { background: #EB1D98; }
-  .blue.targetColor { background: #145ECC; }
-  .yellow.targetColor { background: #EEBA00; }
 
 </style>
 
 <section>
+
+  <hr>
+
   <h1>Colors</h1>
 
-  <!-- <div class="stateTable colors">
-    <h2>Testing Colors</h2>
-    <div class="row">
-      <span class="swatch controlAccentColor"></span>
-      <span class="swatch darkerControlAccentColor"></span>
-      <span class="swatch targetColor yellow"></span>
-    </div>
+  <!-- <div class="overriddenValues">
+    {#each overriddenVariables as variableName}
+      {variableName}, 
+    {/each}
   </div> -->
 
-  <div class="stateTable colors">
-    <h2>System Colors</h2>
-    <SwatchTable colors={systemColors} />    
+  <div>
+    <h2>Accent</h2>
+    <div class="swatches">
+      <SwatchLarge name={'iconAccentColor'} {colors} {overriddenVariables}> 
+        Icons backgrounds.
+      </SwatchLarge>
+      <SwatchLarge name={'controlAccentColor'} {colors} {overriddenVariables}> 
+        Hovered menu items. Button accents (in it's `darker` variation).
+      </SwatchLarge>
+      <SwatchLarge name={'darkerControlAccentColor'} {colors} {overriddenVariables}> 
+        Used in button accents (via the `$btn-accent-bg` mixin). Darker variation of `controlAccentColor`, created by getColors().
+      </SwatchLarge>
+      <SwatchLarge name={'selectedContentBackgroundColor'} {colors} {overriddenVariables}> 
+        Selected list item backgrounds.
+      </SwatchLarge>
+      <SwatchLarge name={'keyboardFocusIndicatorColor'} {colors} {overriddenVariables}> 
+        Drag highlights. E.g. Drag doc into panel.
+      </SwatchLarge>
+    </div>
   </div>
 
-  <div class="stateTable colors">
-    <h2>Accent-influenced dynamic colors</h2>
-    <SwatchTable colors={accentInfluencedColors} />    
+
+  <div>
+    <h2>Label</h2>
+    <div class="swatches">
+      <SwatchLarge name={'labelColor'} {colors} {overriddenVariables}>  
+        Button text. Background in a few places. Most-used variable.
+      </SwatchLarge>
+      <SwatchLarge name={'secondaryLabelColor'} {colors} {overriddenVariables}> 
+        Same as labelColor. Second-most used variable.
+      </SwatchLarge>
+      <SwatchLarge name={'tertiaryLabelColor'} {colors} {overriddenVariables}> 
+        Used for unimportant info (e.g. counters on list items).
+      </SwatchLarge>
+    </div>
   </div>
-  
-  <div class="stateTable colors">
-    <h2>All dynamic colors</h2>
-    <SwatchTable title={'Labels'} colors={labelColors} />    
-    <SwatchTable title={'Text'} colors={textColors} />    
-    <SwatchTable title={'Content'} colors={contentColors} />
-    <SwatchTable title={'Menus'} colors={menuColors} />
-    <SwatchTable title={'Tables'} colors={tableColors} />
-    <SwatchTable title={'Controls'} colors={controlColors} />
-    <SwatchTable title={'Windows'} colors={windowColors} />
-    <SwatchTable title={'Highlights & Shadows'} colors={highlightColors} />
+
+
+  <div>
+    <h2>Text</h2>
+    <div class="swatches">
+        <SwatchLarge name={'textColor'} {colors} {overriddenVariables}> 
+        Input text (e.g. search field). And eventually also editor text.
+      </SwatchLarge>
+      <SwatchLarge name={'placeholderTextColor'} {colors} {overriddenVariables}> 
+        Input placeholder text (e.g. search field).
+      </SwatchLarge>
+      <SwatchLarge name={'selectedMenuItemTextColor'} {colors} {overriddenVariables}> 
+        Color of selected menu items. Although I'm not completely consistent about using it.
+      </SwatchLarge>
+    </div>
   </div>
-  
+
+
+  <div>
+    <h2>Controls</h2>
+    <div class="swatches">
+        <SwatchLarge name={'buttonBackgroundColor'} {colors} {overriddenVariables}> 
+        Button backgrounds. Hovered menu. Has `darker` mixin.
+      </SwatchLarge>
+      <SwatchLarge name={'controlColor'} {colors} {overriddenVariables}> 
+        Bright in both dark and light modes. Slightly dimmer in dark.
+      </SwatchLarge>
+      <SwatchLarge name={'controlTextColor'} {colors} {overriddenVariables}> 
+        Background color for some UI elements / icons.
+      </SwatchLarge>
+      <SwatchLarge name={'disabledControlTextColor'} {colors} {overriddenVariables}> 
+        Unfocused list element backgrounds (Media and Doc).
+      </SwatchLarge>
+    </div>
+  </div>
+
+
+  <div>
+    <h2>Windows</h2>
+    <div class="swatches">
+      <SwatchLarge name={'separatorColor'} {colors} {overriddenVariables}> 
+        Lines between sections in layouts.
+      </SwatchLarge>
+      <SwatchLarge name={'windowBackgroundColor'} {colors} {overriddenVariables}> 
+        Window backgrounds.
+      </SwatchLarge>
+      <SwatchLarge name={'shadowColor'} {colors} {overriddenVariables}> 
+        Can be an alternative to separatorColor, for dark separations.
+      </SwatchLarge>
+    </div>
+  </div>
+
+  <!-- <h2>Custom (non-macOS)</h2>
+  <div class="large-swatches">
+    <SwatchLarge name={'foregroundColor'} {colors} {overriddenVariables}> 
+      White if dark mode. Black if light mode.
+    </SwatchLarge>
+    <SwatchLarge name={'backgroundColor'} {colors} {overriddenVariables}> 
+      Opposite of foregroundColor.
+    </SwatchLarge>
+  </div> -->
+
+  <hr>
+
+  <div>
+    <h2>Unused</h2>
+    <div class="swatches">
+      {#each unusedColors as name }
+        <SwatchLarge {name} {colors} {overriddenVariables} />
+      {/each}
+    </div>
+  </div>
+
 </section>

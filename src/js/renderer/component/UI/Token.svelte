@@ -8,7 +8,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   .token {
     @include label-normal;

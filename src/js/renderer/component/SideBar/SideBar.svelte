@@ -1,5 +1,5 @@
 <script>
-  import { project, sidebar } from '../../StateManager'
+  import { state, project, sidebar } from '../../StateManager'
   import Tab from './Tab.svelte'
   import Separator from '../ui/Separator.svelte'
   import Project from './Project.svelte'
@@ -12,14 +12,14 @@
   import Preview from './Preview.svelte'
   import { setLayoutFocus } from '../ui/actions';
 
-  // $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
+  $: monoColors = $state.theme.accentColor == 'mono'
 
 </script>
 
 <style type="text/scss">
   #sidebar {
     --state-sideBarWidth: 100px;
-    background-color: var(--windowBackgroundColor);
+    // background-color: var(--windowBackgroundColor);
     // background-color: transparent;
     // backdrop-filter: blur(8px);
     width: var(--state-sideBarWidth);
@@ -33,6 +33,10 @@
     & > div {
       max-height: 100%;
     }
+  }
+
+  .monoColors {
+    // filter: saturate(0%);
   }
 
   #top-area {
@@ -71,6 +75,7 @@
 <div 
   id ="sidebar" 
   style="--state-sideBarWidth: 250px" 
+  class:monoColors
   use:setLayoutFocus={{current: $project.focusedSectionId, setTo: 'sidebar'}}
 >
   

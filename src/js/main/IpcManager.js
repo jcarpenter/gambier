@@ -2,7 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, systemPreference
 import { readFile, writeFile, renameSync, copyFileSync, existsSync, readdirSync } from 'fs-extra'
 import path from 'path'
 import { saveDoc, deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
-import { getSystemColors } from './AppearanceManager.js'
+import { getColors } from './AppearanceManager.js'
 
 export function init() {
 
@@ -167,8 +167,8 @@ export function init() {
   })
 
   // Get system colors and return
-  ipcMain.handle('getSystemColors', () => {
-    return getSystemColors()
+  ipcMain.handle('getColors', (evt, observeThemeValues = true) => {
+    return getColors(observeThemeValues)
   })
 }
 

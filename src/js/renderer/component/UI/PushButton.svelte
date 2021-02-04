@@ -52,7 +52,7 @@
       box-shadow: $dark-btn-outline;
     }
 
-    @include light { 
+  @include light { 
       background: $light-btn-bg;
       box-shadow: $light-btn-outline;
     }

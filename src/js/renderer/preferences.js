@@ -1,4 +1,4 @@
-import { StateManager } from './StateManager';
+import * as StateManager from './StateManager'
 import Preferences from './component/preferences/Preferences.svelte'
 
 // Going to need to read and set state
@@ -8,10 +8,11 @@ async function init() {
 
   // Get initial state and files
   const initialState = await window.api.invoke('getState')
-  // const initialFiles = await window.api.invoke('getFiles')
+  const initialColors = await window.api.invoke('getColors', false)
 
-  // Create managers
-  const stateManager = new StateManager(initialState)
+  // Set initial values
+  StateManager.init(initialState)
+  ThemeManager.init(initialState, initialColors)
 
   // Create layout
   const layout = new Preferences({

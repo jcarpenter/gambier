@@ -1,0 +1,27 @@
+// From: https://github.com/codemirror/CodeMirror/blob/master/lib/codemirror.css#L25
+// Modified. Some lines commented out
+
+.CodeMirror-gutters {
+    // border-right: 1px solid #ddd;
+    // background-color: #f7f7f7;
+    white-space: nowrap;
+}
+
+.CodeMirror-linenumbers {
+}
+
+.CodeMirror-linenumber {
+    padding: 0 3px 0 5px;
+    min-width: 20px;
+    text-align: right;
+    //   color: #999;
+    white-space: nowrap;
+}
+
+.CodeMirror-guttermarker {
+    // color: black;
+}
+
+.CodeMirror-guttermarker-subtle {
+    // color: #999;
+}

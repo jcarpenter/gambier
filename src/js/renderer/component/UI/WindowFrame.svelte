@@ -10,33 +10,15 @@
     user-select: none;
     border-width: 0 0 1px;
     border-style: solid;
+    background-color: var(--windowBackgroundColor);
     @include dark { border-color: var(--shadowColor); }
     @include light { border-color: var(--separatorColor); }
   }
 
-  .window-frame.isWindowFocused {
-    @include dark { 
-      background-color: var(--windowBackgroundColor);
-    }
-    @include light {
-      background: 
-        linear-gradient(white(0.1), white(0.1)),
-        var(--windowBackgroundColor);
-    }
-
-  }
-
+  // Darken when not focused
   .window-frame:not(.isWindowFocused) {
-    @include dark { 
-      background: 
-        linear-gradient(black(0.25), black(0.25)),
-        var(--windowBackgroundColor);
-    }
-    @include light {
-      background: 
-        linear-gradient(black(0.02), black(0.02)),
-        var(--windowBackgroundColor);
-    }
+    @include dark { filter: brightness(0.75); }
+    @include light { filter: brightness(0.98); }
   }
 </style>
 

@@ -125,7 +125,7 @@
     border: none;
     @include dark {
       color: var(--textColor);
-      background: white(0.07);
+      background: foregroundColor(0.07);
       // border: 1px solid white(0.1);
       // box-shadow: inset 0 0 0 1px white(0.1);
       box-shadow: 
@@ -135,7 +135,7 @@
     }
 
     @include light {
-      background: white;
+      background: foregroundColor(1);
       box-shadow: 
         inset 0 -1px 0 0 black(0.15), // Bottom shadow
         inset 0 0 0 0.5px black(0.15); // Border
@@ -148,7 +148,7 @@
 
   button { 
     @include dark {
-      background: #595959;
+      background: var(--buttonBackgroundColor);
       &::before { background: white; }
       &::after { box-shadow: inset 0 -0.5px 0 0 black(0.16); }
     }
@@ -157,7 +157,7 @@
       // Light is white, with subtle shadow gradient at base.
       background: 
         linear-gradient(black(0) 75%, black(0.08) 99%), // Shadow gradient
-        white;
+        var(--buttonBackgroundColor);
       box-shadow: 
         inset 0 0.5px 0 0.5px black(0.1),
         inset 0 0 0 0.5px black(0.2);
@@ -179,7 +179,7 @@
   .input:focus-within {
     border-radius: 1px;
     &::after {
-      @include setFocus; 
+      @include focusFieldAnimation; 
     }
   }
 

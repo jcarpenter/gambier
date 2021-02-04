@@ -65,9 +65,12 @@ export function init() {
       windowsToClose.forEach((window) => window.close())
     }
 
-    // If app is quitting, initiate closing procedure for all windows
+    // If app is quitting, start to close all windows
     if (appIsQuitting) {
-      startToCloseAllWindows()
+      const windows = BrowserWindow.getAllWindows()
+      if (windows.length) {
+        windows.forEach((win) => win.close())
+      }
     }
   })
 
@@ -97,7 +100,7 @@ async function createWindowAndWatcher(state, id) {
   const watcher = new Watcher(id, project, window)
   global.watchers.push(watcher)
 }
- 
+
 
 /**
  * Get projects whose directories have changed
@@ -130,12 +133,3 @@ function getWindowsThatAreSafeToClose(state, oldState) {
   return windows
 }
 
-/**
- * Called when appStatus changes to `wantsToQuit`.
- */
-function startToCloseAllWindows() {
-  const windows = BrowserWindow.getAllWindows()
-  if (windows.length) {
-    windows.forEach((win) => win.webContents.send('mainWantsToCloseWindow'))
-  }
-}

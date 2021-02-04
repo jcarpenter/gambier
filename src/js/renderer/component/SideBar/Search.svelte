@@ -212,7 +212,7 @@
     case 'ArrowUp':
     case 'ArrowDown':
       evt.preventDefault()
-      arrowUpDown(evt.key, evt.shiftKey, evt.altKey, tab, tabId, resultIds, $files)
+      arrowUpDown(evt.key, evt.shiftKey, evt.altKey, tab, tabId, resultIds, $files, $project)
       break
   }
 }} />

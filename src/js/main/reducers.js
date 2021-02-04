@@ -5,18 +5,10 @@ import { accessSync, renameSync, existsSync, readdirSync } from 'fs-extra'
 import fs from 'fs'
 import path from 'path'
 import { nanoid } from 'nanoid/non-secure'
+import { themes } from './Themes.js'
+
 
 enablePatches()
-
-function isDirectoryAccessible(directory) {
-  try {
-    accessSync(directory, fs.constants.W_OK)
-    return true
-  } catch (err) {
-    return false
-  }
-}
-
 
 export const update = (state, action, window) =>
   produce(state, (draft) => {
@@ -48,6 +40,10 @@ export const update = (state, action, window) =>
             }
           })
 
+          // Re-apply theme values (they may change, during development)
+          // If theme has not yet been define, use the default.
+          applyTheme(draft, draft.theme.id)
+
           // Update `allIds` to match `byId`
           draft.projects.allIds = Object.keys(draft.projects.byId)
         }
@@ -59,8 +55,13 @@ export const update = (state, action, window) =>
           draft.projects.allIds.push(id)
         }
 
-        // Close preferences
+        // Make sure preferences are closed
         draft.prefs.isOpen = false
+
+        // Reset cursor position histories
+        // The first time each session that we open a doc, we want the 
+        // cursor to start at the top.
+        draft.cursorPositionHistory = {}
 
         break
       }
@@ -75,10 +76,10 @@ export const update = (state, action, window) =>
         break
       }
 
-      // case 'CAN_SAFELY_QUIT': {
-      //   draft.appStatus = 'canSafelyQuit'
-      //   break
-      // }
+      case 'CAN_SAFELY_QUIT': {
+        draft.appStatus = 'safeToQuit'
+        break
+      }
 
       // FOCUSED/UNFOCUSED WINDOW
 
@@ -99,28 +100,57 @@ export const update = (state, action, window) =>
         break
       }
 
+      case 'FOCUS_PREFERENCES_WINDOW': {
+        const prefsWindow = BrowserWindow.getAllWindows().find(({ projectId }) => projectId == 'preferences')
+        prefsWindow.focus()
+        // draft.focusedWindowId = 'preferences'
+        break
+      }
+
       case 'CLOSE_PREFERENCES': {
         draft.prefs.isOpen = false
         break
       }
 
-      // APPEARANCE
+      // THEME
 
-      case 'SET_APP_THEME': {
-        draft.theme.app = action.theme
+      case 'SET_ACCENT_COLOR': {
+        draft.theme.accentColor = action.name
         break
       }
+
+      case 'SET_OVERRIDES': {
+        // `action.overrides` is an array of objects.
+        draft.theme.overrides = action.overrides
+        break
+      }
+
+      case 'SET_APP_THEME': {
+        applyTheme(draft, action.id)
+        break
+      }
+
+      case 'SET_BACKGROUND': {
+        draft.theme.background = action.name
+        break
+      }
+
+      case 'SET_EDITOR_THEME': {
+        draft.theme.editorTheme = action.name
+        break
+      }
+
+      case 'SET_DARK_MODE': {
+        draft.darkMode = action.value
+        break
+      }
+
+      // CHROMIUM VALUES
 
       case 'SAVE_CHROMIUM_VALUES': {
         draft.chromium = action.values
         break
       }
-
-      case 'SAVE_COLORS': {
-        draft.colors = action.colors
-        break
-      }
-
 
 
 
@@ -182,31 +212,46 @@ export const update = (state, action, window) =>
         break
       }
 
+      // If window is already safe to close, do it
+      // Else, start to close window by setting 'wantsToClose'
+      // Editor instances in the window catch this store change
+      // and if the have unsaved changes, save them.
+      // As each save is mode, 'SAVE_DOC_SUCCESS' is dispatched
+      // If app wants
+
       case 'START_TO_CLOSE_PROJECT_WINDOW': {
-        project.window.status = 'wantsToClose'
-        break
-      }
-
-      case 'CAN_SAFELY_CLOSE_PROJECT_WINDOW': {
-
-        project.window.status = 'safeToClose'
-
-        // Every time a window marks itself 'safeToClose', check if the app is quitting. If true, check if all windows are 'safeToClose' yet. If true, we can safely quit the app.
-
-        if (draft.appStatus == 'wantsToQuit') {
-
-          const allWindowsAreSafeToClose = draft.projects.allIds.every((id) => {
-            const windowStatus = draft.projects.byId[id].window.status
-            return windowStatus == 'safeToClose'
-          })
-
-          if (allWindowsAreSafeToClose) {
-            draft.appStatus = 'canSafelyQuit'
-          }
+        const allPanelsAreSafeToClose = project.panels.every((p) => !p.unsavedChanges)
+        if (allPanelsAreSafeToClose) {
+          // Close the window by setting 'safeToClose'. 
+          // ProjectManager catches this, and closes the window.
+          project.window.status = 'safeToClose'
+        } else {
+          // Start closing the window
+          project.window.status = 'wantsToClose'
         }
-
         break
       }
+
+      // case 'CAN_SAFELY_CLOSE_PROJECT_WINDOW': {
+
+      //   project.window.status = 'safeToClose'
+
+      //   // Every time a window marks itself 'safeToClose', check if the app is quitting. If true, check if all windows are 'safeToClose' yet. If true, we can safely quit the app.
+
+      //   if (draft.appStatus == 'wantsToQuit') {
+
+      //     const allWindowsAreSafeToClose = draft.projects.allIds.every((id) => {
+      //       const windowStatus = draft.projects.byId[id].window.status
+      //       return windowStatus == 'safeToClose'
+      //     })
+
+      //     if (allWindowsAreSafeToClose) {
+      //       draft.appStatus = 'canSafelyQuit'
+      //     }
+      //   }
+
+      //   break
+      // }
 
       // Save window bounds to state, so we can restore later
       case 'SAVE_PROJECT_WINDOW_BOUNDS': {
@@ -297,15 +342,17 @@ export const update = (state, action, window) =>
 
       case 'OPEN_DOC_IN_PANEL': {
         const panel = project.panels[action.panelIndex]
-        panel.docId = action.docId
-        panel.unsavedChanges = false
-        break
-      }
+        
+        // If panel has unsaved changes, prompt panel to save them.
+        // We'll open the selected doc once that's done.
+        if (panel.unsavedChanges) {
+          panel.status = 'userWantsToLoadDoc'
+          panel.pendingDocIdToLoad = action.docId
+        } else {
+          panel.docId = action.docId
+          panel.unsavedChanges = false
+        }
 
-      case 'OPEN_DOC_IN_FOCUSED_PANEL': {
-        const focusedPanel = project.panels[project.focusedPanelIndex]
-        focusedPanel.docId = action.docId
-        focusedPanel.unsavedChanges = false
         break
       }
 
@@ -350,35 +397,15 @@ export const update = (state, action, window) =>
       }
 
       case 'CLOSE_PANEL': {
-        project.panels.splice(action.panelIndex, 1)
-
-        // Set all panels to equal percentage of total
-        const panelWidth = (100 / project.panels.length).toFixed(1)
-        project.panels.forEach((p) => p.width = panelWidth)
-
-        // Update focusedPanel:
-        // If there is only one panel left, focus it. Else...
-        // * If it was to LEFT of the closed panel, the value is unchanged.
-        // * If it WAS closed the closed panel, the value is unchanged (this will focus the adjacent panel).
-        // * ...unless it was the panel furthest right, in which case we focus the new last panel.
-        // * If it was to RIGHT of the closed panel, decrement the value by one.
-
-        if (project.panels.length == 1) {
-          project.focusedPanelIndex = 0
+        const panel = project.panels[action.panelIndex]
+        
+        // If panel has unsaved changes, prompt panel to save them.
+        // We'll close the panel once the changes are saved.
+        if (panel.unsavedChanges) {
+          panel.status = 'userWantsToClosePanel'
         } else {
-          const closedPanelWasLeftOfFocusedPanel = action.panelIndex < project.focusedPanelIndex
-          const closedPanelWasFocusedAndFurthestRight = action.panelIndex == project.focusedPanelIndex && action.panelIndex == project.panels.length
-
-          if (closedPanelWasLeftOfFocusedPanel) {
-            project.focusedPanelIndex = project.focusedPanelIndex - 1
-          } else if (closedPanelWasFocusedAndFurthestRight) {
-            project.focusedPanelIndex = project.panels.length - 1
-          }
+          closePanel(project, action.panelIndex)
         }
-
-        // Update panel indexes
-        project.panels.forEach((p, i) => p.index = i)
-
         break
       }
 
@@ -388,8 +415,8 @@ export const update = (state, action, window) =>
       //   const panelToRight = project.panels[action.panelIndex + 1]
 
       //   break
+      
       // }
-
       case 'SET_PANEL_WIDTHS': {
         project.panels.forEach((panel, i) => panel.width = action.widths[i])
         break
@@ -414,8 +441,44 @@ export const update = (state, action, window) =>
       }
 
       case 'SAVE_DOC_SUCCESS': {
+
         const panel = project.panels[action.panelIndex]
         panel.unsavedChanges = false
+
+        // Several app processes gate on unsavedChanges being saved.
+        // As changes are saved, we check the following.
+        
+        if (project.window.status == 'wantsToClose') {
+
+          // If window wantsToClose, and there are no unsavedChanges,
+          // mark it 'safeToClose`
+          const allDocsHaveSaved = project.panels.every((p) => !p.unsavedChanges)
+          if (allDocsHaveSaved) {
+            project.window.status = 'safeToClose'
+          }
+
+        } else if (panel.status == 'userWantsToLoadDoc') {
+
+          // If panel was waiting to open new doc, open it
+          panel.docId = panel.pendingDocIdToLoad
+          panel.pendingDocIdToLoad = ''
+          panel.status = ''
+
+        } else if (panel.status == 'userWantsToClosePanel') {
+
+          // If panel was waiting to close, close it.
+          closePanel(project, action.panelIndex)
+          panel.status = ''
+
+        }
+        break
+      }
+
+      case 'SAVE_CURSOR_POSITION': {
+        draft.cursorPositionHistory[action.docId] = { 
+          line: action.line, 
+          ch: action.ch
+        }
         break
       }
 
@@ -428,6 +491,53 @@ export const update = (state, action, window) =>
   }
   )
 
+/**
+ * Remove panel from the `panels` index of the selected project.
+ * Then update index of other panels as needed.
+ */
+function closePanel(project, panelIndex) {
+  project.panels.splice(panelIndex, 1)
+
+  // Set all panels to equal percentage of total
+  const panelWidth = (100 / project.panels.length).toFixed(1)
+  project.panels.forEach((p) => p.width = panelWidth)
+
+  // Update focusedPanel:
+  // If there is only one panel left, focus it. Else...
+  // * If it was to LEFT of the closed panel, the value is unchanged.
+  // * If it WAS closed the closed panel, the value is unchanged (this will focus the adjacent panel).
+  // * ...unless it was the panel furthest right, in which case we focus the new last panel.
+  // * If it was to RIGHT of the closed panel, decrement the value by one.
+
+  if (project.panels.length == 1) {
+    project.focusedPanelIndex = 0
+  } else {
+    const closedPanelWasLeftOfFocusedPanel = panelIndex < project.focusedPanelIndex
+    const closedPanelWasFocusedAndFurthestRight = panelIndex == project.focusedPanelIndex && panelIndex == project.panels.length
+
+    if (closedPanelWasLeftOfFocusedPanel) {
+      project.focusedPanelIndex = project.focusedPanelIndex - 1
+    } else if (closedPanelWasFocusedAndFurthestRight) {
+      project.focusedPanelIndex = project.panels.length - 1
+    }
+  }
+
+  // Update panel indexes
+  project.panels.forEach((p, i) => p.index = i)
+}
+
+/**
+ * Get current theme and copy values to draft.theme properties.
+ */
+function applyTheme(draft, id) {
+  console.log(id)
+  const { backgroundComponent, baseColorScheme, colorOverrides, editorTheme } = themes.byId[id]
+  draft.theme.id = id
+  draft.theme.baseColorScheme = baseColorScheme
+  draft.theme.backgroundComponent = backgroundComponent
+  draft.theme.colorOverrides = colorOverrides
+  draft.theme.editorTheme = editorTheme
+}
 
 /**
 * Each project needs to store the ID of the window it's associated with. The BrowserWindow hasn't been created yet for this project (that's handled by WindowManager), but we know what ID the window will be: BrowserWindow ids start at 1 and go up. And removed BrowserWindows do not release their IDs back into the available set. So the next BrowserWindow id is always +1 of the highest existing.
@@ -451,3 +561,15 @@ function createNewProject() {
   return project
 }
 
+/**
+ * Check that directory exists, and we can write to it.
+ * @param {} directory - System path to check
+ */
+function isDirectoryAccessible(directory) {
+  try {
+    accessSync(directory, fs.constants.W_OK)
+    return true
+  } catch (err) {
+    return false
+  }
+}

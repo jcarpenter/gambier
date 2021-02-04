@@ -15,15 +15,17 @@ export function init() {
   //    is 'system', so Chromium accepts the change.
   nativeTheme.on('updated', () => {
     saveChromiumValues()
-    sendUpdatedColorsToRenderProcess()
+    // sendUpdatedColorsToRenderProcess()
   })
 
-  // When `theme.app` changes, update Chrome nativeTheme.themeSource.
+  // When `theme.darkMode` changes, update Chrome nativeTheme.themeSource.
   global.store.onDidAnyChange((state, oldState) => {
-    const appThemeChanged = stateHasChanged(global.patches, ["theme", "app"])
-    if (appThemeChanged) {
+
+    const darkModeChanged = stateHasChanged(global.patches, "darkMode")
+
+    if (darkModeChanged) {
       setNativeTheme(false)
-    }
+    } 
   })
 
   // Set native UI to theme value in store
@@ -36,8 +38,8 @@ export function init() {
  * Per: https://www.electronjs.org/docs/api/native-theme
  */
 function setNativeTheme(isFirstRun) {
-  const appTheme = global.state().theme.app
-  switch (appTheme) {
+  const darkMode = global.state().darkMode
+  switch (darkMode) {
     case 'match-system':
       nativeTheme.themeSource = 'system'
       break
@@ -77,20 +79,18 @@ function saveChromiumValues() {
 }
 
 /** 
- * When nativeTheme changes, we assume system colors have changed, 
- * get the new values, and send them to render process. Which then
- * applies them as css variables.
-*/
-function sendUpdatedColorsToRenderProcess() {
-  webContents.getAllWebContents().forEach((contents) => {
-    contents.send('updatedSystemColors', getSystemColors())
-  })
-}
-
-
-
-
-
+ * Send update colors to webContents. 
+ * Use colorOverrides, except for preferences window 
+ * (it should always match the system / default app look).
+// */
+// function sendUpdatedColorsToRenderProcess() {
+//   BrowserWindow.getAllWindows().forEach((win) => {
+//     const useColorOverrides = win.projectId == 'preferences' ? false : true
+//     console.log(win.projectId, useColorOverrides)
+//     const { colors, overriddenVariables } = getColors(useColorOverrides)
+//     win.webContents.send('updatedSystemColors', colors, overriddenVariables)
+//   })
+// }
 
 
 
@@ -99,106 +99,183 @@ function sendUpdatedColorsToRenderProcess() {
 
 // -------- COLORS -------- //
 
-export function getSystemColors() {
+/**
+ * Return an object with list of named colors. 
+ * These are turned into CSS variables by the render process.
+ * Colors start off taken from the operating system, and (optionally)
+ * overrides are applied by the loaded theme.
+ * @param {*} observeThemeValues - If true, adhere to theme overrides.
+ */
+export function getColors(observeThemeValues = true) {
 
-  const isDarkMode = nativeTheme.shouldUseDarkColors
+  let colors = {}
+  let overriddenVariables = []
+  const state = global.state()
+  const theme = state.theme
 
-  if (isDarkMode) {
-    return {
-      // System colors
-      systemBlue: '#0A84FFFF',
-      systemBrown: '#AC8E68FF',
-      systemGray: '#98989DFF',
-      systemGreen: '#32D74BFF',
-      systemIndigo: '#5E5CE6FF',
-      systemOrange: '#FF9F0AFF',
-      systemPink: '#FF375FFF',
-      systemPurple: '#BF5AF2FF',
-      systemRed: '#FF453AFF',
-      systemTeal: '#64D2FFFF',
-      systemYellow: '#FFD60AFF',
-      // Accent-influenced dynamic colors
-      ...getAccentColors(isDarkMode),
-      // All other dynamic dystem colors
-      alternateSelectedControlTextColor: '#FFFFFFFF',
-      controlBackgroundColor: '#1E1E1EFF',
-      controlColor: '#FFFFFF3F',
-      controlTextColor: '#FFFFFFD8',
-      disabledControlTextColor: '#FFFFFF3F',
-      findHighlightColor: '#FFFF00FF',
-      gridColor: '#FFFFFF19',
-      headerTextColor: '#FFFFFFFF',
-      highlightColor: '#B4B4B4FF',
-      labelColor: '#FFFFFFD8',
-      linkColor: '#419CFFFF',
-      placeholderTextColor: '#FFFFFF3F',
-      quaternaryLabelColor: '#FFFFFF19',
-      secondaryLabelColor: '#FFFFFF8C',
-      selectedControlTextColor: '#FFFFFFD8',
-      selectedMenuItemTextColor: '#FFFFFFFF',
-      selectedTextColor: '#FFFFFFFF',
-      separatorColor: '#FFFFFF19',
-      shadowColor: '#000000FF',
-      tertiaryLabelColor: '#FFFFFF3F',
-      textBackgroundColor: '#1E1E1EFF',
-      textColor: '#FFFFFFFF',
-      unemphasizedSelectedContentBackgroundColor: '#464646FF',
-      unemphasizedSelectedTextBackgroundColor: '#464646FF',
-      unemphasizedSelectedTextColor: '#FFFFFFFF',
-      windowBackgroundColor: '#323232FF',
-      windowFrameTextColor: '#FFFFFFD8',
-      // Gambier-specific colors.
-      foregroundColor: '255, 255, 255',
-      backgroundColor: '0, 0, 0',
-    }
+  // Get initial colors. By default, we match what Chromium's state.
+  // E.g. If Chromium isDarkMode is true, we return dark colors.
+  // Themes can override this with `theme.baseColorScheme` value.
+  // If `observeThemeValues` is true, we use this value.
+  if (!observeThemeValues) {
+    colors = state.chromium.isDarkMode ? getDarkColors() : getLightColors()
   } else {
-    return {
-      //System colors
-      systemBlue: '#007AFFFF',
-      systemBrown: '#A2845EFF',
-      systemGray: '#8E8E93FF',
-      systemGreen: '#28CD41FF',
-      systemIndigo: '#5856D6FF',
-      systemOrange: '#FF9500FF',
-      systemPink: '#FF2D55FF',
-      systemPurple: '#AF52DEFF',
-      systemRed: '#FF3B30FF',
-      systemTeal: '#55BEF0FF',
-      systemYellow: '#FFCC00FF',
-      // Accent-influenced dynamic colors
-      ...getAccentColors(isDarkMode),
-      // All other dynamic dystem colors
-      alternateSelectedControlTextColor: '#FFFFFFFF',
-      controlBackgroundColor: '#FFFFFFFF',
-      controlColor: '#FFFFFFFF',
-      controlTextColor: '#000000D8',
-      disabledControlTextColor: '#0000003F',
-      findHighlightColor: '#FFFF00FF',
-      gridColor: '#E6E6E6FF',
-      headerTextColor: '#000000D8',
-      highlightColor: '#FFFFFFFF',
-      labelColor: '#000000D8',
-      linkColor: '#0068DAFF',
-      placeholderTextColor: '#0000003F',
-      quaternaryLabelColor: '#00000019',
-      secondaryLabelColor: '#0000007F',
-      selectedControlTextColor: '#000000D8',
-      selectedMenuItemTextColor: '#FFFFFFFF',
-      selectedTextColor: '#000000FF',
-      separatorColor: '#00000019',
-      shadowColor: '#000000FF',
-      tertiaryLabelColor: '#00000042',
-      textBackgroundColor: '#FFFFFFFF',
-      textColor: '#000000FF',
-      unemphasizedSelectedContentBackgroundColor: '#DCDCDCFF',
-      unemphasizedSelectedTextBackgroundColor: '#DCDCDCFF',
-      unemphasizedSelectedTextColor: '#000000FF',
-      windowBackgroundColor: '#ECECECFF',
-      windowFrameTextColor: '#000000D8',
-      // Gambier-specific colors
-      foregroundColor: '0, 0, 0',
-      backgroundColor: '255, 255, 255',
+    switch (theme.baseColorScheme) {
+      case 'match-app':
+        if (state.chromium.isDarkMode) {
+          colors = getDarkColors()
+        } else {
+          colors = getLightColors()
+        }
+        break
+      case 'dark':
+        colors = getDarkColors()
+        break
+      case 'light':
+        colors = getLightColors()
+        break
     }
+  }
+    
+
+  // Apply color overrides. Themes can specify overrides for
+  // individual color variables. `withMode` specifies when they
+  // apply. Always, or only when app is in light or dark mode.
+  if (observeThemeValues) {
+    theme.colorOverrides.forEach(({ variable, newValue, withMode }) => {
+
+      const appliesToCurrentMode =
+        withMode == 'always' ||
+        withMode == 'dark' && state.chromium.isDarkMode ||
+        withMode == 'light' && !state.chromium.isDarkMode
+
+      if (appliesToCurrentMode) {
+        colors[variable] = newValue
+        overriddenVariables.push(variable)
+        // If overrides sets `controlAccentColor` variable (and only it), 
+        // we need to also generate the darker variation.
+        if (variable == 'controlAccentColor') {
+          colors.darkerControlAccentColor = getDarkerAccentColor(colors.controlAccentColor)
+        }
+      }
+    })
+  }
+
+  return {
+    colors,
+    overriddenVariables
+  }
+}
+
+function getDarkColors() {
+  return {
+
+    // Gambier-specific colors
+    foregroundColor: '255, 255, 255',
+    backgroundColor: '0, 0, 0',
+    buttonBackgroundColor: '#5B5B5BFF',
+    menuBackgroundColor: 'hsla(0, 0%, 17%, 0.9)',
+
+    // macOS "Dynamic colors":
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
+    ...getAccentColors(true),
+    alternateSelectedControlTextColor: '#FFFFFFFF',
+    controlBackgroundColor: '#1E1E1EFF',
+    controlColor: '#FFFFFF3F',
+    controlTextColor: '#FFFFFFD8',
+    disabledControlTextColor: '#FFFFFF3F',
+    findHighlightColor: '#FFFF00FF',
+    gridColor: '#FFFFFF19',
+    headerTextColor: '#FFFFFFFF',
+    highlightColor: '#B4B4B4FF',
+    labelColor: '#FFFFFFD8',
+    linkColor: '#419CFFFF',
+    placeholderTextColor: '#FFFFFF3F',
+    quaternaryLabelColor: '#FFFFFF19',
+    secondaryLabelColor: '#FFFFFF8C',
+    selectedControlTextColor: '#FFFFFFD8',
+    selectedMenuItemTextColor: '#FFFFFFFF',
+    selectedTextColor: '#FFFFFFFF',
+    separatorColor: '#FFFFFF19',
+    shadowColor: '#000000FF',
+    tertiaryLabelColor: '#FFFFFF3F',
+    textBackgroundColor: '#1E1E1EFF',
+    textColor: '#FFFFFFFF',
+    unemphasizedSelectedContentBackgroundColor: '#464646FF',
+    unemphasizedSelectedTextBackgroundColor: '#464646FF',
+    unemphasizedSelectedTextColor: '#FFFFFFFF',
+    windowBackgroundColor: '#323232FF',
+    windowFrameTextColor: '#FFFFFFD8',
+
+    // macOS "System colors:
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#system-colors
+    // systemBlue: '#0A84FFFF',
+    // systemBrown: '#AC8E68FF',
+    // systemGray: '#98989DFF',
+    // systemGreen: '#32D74BFF',
+    // systemIndigo: '#5E5CE6FF',
+    // systemOrange: '#FF9F0AFF',
+    // systemPink: '#FF375FFF',
+    // systemPurple: '#BF5AF2FF',
+    // systemRed: '#FF453AFF',
+    // systemTeal: '#64D2FFFF',
+    // systemYellow: '#FFD60AFF',
+  }
+}
+
+function getLightColors() {
+  return {
+
+    // Gambier-specific colors
+    foregroundColor: '0, 0, 0',
+    backgroundColor: '255, 255, 255',
+    buttonBackgroundColor: '#FFFFFFFF',
+    menuBackgroundColor: 'hsla(0, 0%, 95%, 0.8)',
+
+    // macOS "Dynamic colors":
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
+    ...getAccentColors(false),
+    alternateSelectedControlTextColor: '#FFFFFFFF',
+    controlBackgroundColor: '#FFFFFFFF',
+    controlColor: '#FFFFFFFF',
+    controlTextColor: '#000000D8',
+    disabledControlTextColor: '#0000003F',
+    findHighlightColor: '#FFFF00FF',
+    gridColor: '#E6E6E6FF',
+    headerTextColor: '#000000D8',
+    highlightColor: '#FFFFFFFF',
+    labelColor: '#000000D8',
+    linkColor: '#0068DAFF',
+    placeholderTextColor: '#0000003F',
+    quaternaryLabelColor: '#00000019',
+    secondaryLabelColor: '#0000007F',
+    selectedControlTextColor: '#000000D8',
+    selectedMenuItemTextColor: '#FFFFFFFF',
+    selectedTextColor: '#000000FF',
+    separatorColor: '#00000019',
+    shadowColor: '#000000FF',
+    tertiaryLabelColor: '#00000042',
+    textBackgroundColor: '#FFFFFFFF',
+    textColor: '#000000FF',
+    unemphasizedSelectedContentBackgroundColor: '#DCDCDCFF',
+    unemphasizedSelectedTextBackgroundColor: '#DCDCDCFF',
+    unemphasizedSelectedTextColor: '#000000FF',
+    windowBackgroundColor: '#ECECECFF',
+    windowFrameTextColor: '#000000D8',
+
+    // macOS "System colors:
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#system-colors
+    // systemBlue: '#007AFFFF',
+    // systemBrown: '#A2845EFF',
+    // systemGray: '#8E8E93FF',
+    // systemGreen: '#28CD41FF',
+    // systemIndigo: '#5856D6FF',
+    // systemOrange: '#FF9500FF',
+    // systemPink: '#FF2D55FF',
+    // systemPurple: '#AF52DEFF',
+    // systemRed: '#FF3B30FF',
+    // systemTeal: '#55BEF0FF',
+    // systemYellow: '#FFCC00FF',
   }
 }
 
@@ -215,6 +292,7 @@ function getAccentColors(isDarkMode) {
     case '#0A5FFFFF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#007AFFFF',
           controlAccentColor: '#007AFFFF',
           darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
           keyboardFocusIndicatorColor: '#1AA9FF4C',
@@ -224,6 +302,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#007AFFFF',
           controlAccentColor: '#007AFFFF',
           darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
           keyboardFocusIndicatorColor: '#0067F43F',
@@ -236,6 +315,7 @@ function getAccentColors(isDarkMode) {
     // ------------ PURPLE ------------ //
     case '#923796FF': // Dark
       return {
+        iconAccentColor: '#A550A7FF',
         controlAccentColor: '#A550A7FF',
         darkerControlAccentColor: getDarkerAccentColor('#A550A7FF'),
         keyboardFocusIndicatorColor: '#DB78DE4C',
@@ -245,6 +325,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#812684FF': // Light
       return {
+        iconAccentColor: '#953D96FF',
         controlAccentColor: '#953D96FF',
         darkerControlAccentColor: getDarkerAccentColor('#953D96FF'),
         keyboardFocusIndicatorColor: '#8326843F',
@@ -257,6 +338,7 @@ function getAccentColors(isDarkMode) {
     case '#F2318DFF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#F74F9EFF',
           controlAccentColor: '#F74F9EFF',
           darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
           keyboardFocusIndicatorColor: '#FF76D34C',
@@ -266,6 +348,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#F74F9EFF',
           controlAccentColor: '#F74F9EFF',
           darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
           keyboardFocusIndicatorColor: '#EB398D3F',
@@ -278,6 +361,7 @@ function getAccentColors(isDarkMode) {
     // ------------ RED ------------ //
     case '#FC3845FF': // Dark
       return {
+        iconAccentColor: '#FF5257FF',
         controlAccentColor: '#FF5257FF',
         darkerControlAccentColor: getDarkerAccentColor('#FF5257FF'),
         keyboardFocusIndicatorColor: '#FF7A804C',
@@ -287,6 +371,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#D62130FF': // Light
       return {
+        iconAccentColor: '#E0383EFF',
         controlAccentColor: '#E0383EFF',
         darkerControlAccentColor: getDarkerAccentColor('#E0383EFF'),
         keyboardFocusIndicatorColor: '#D320273F',
@@ -300,6 +385,7 @@ function getAccentColors(isDarkMode) {
     case '#F36D16FF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#F7821BFF',
           controlAccentColor: '#F7821BFF',
           darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
           keyboardFocusIndicatorColor: '#FFB2394C',
@@ -309,6 +395,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#F7821BFF',
           controlAccentColor: '#F7821BFF',
           darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
           keyboardFocusIndicatorColor: '#EB6F023F',
@@ -321,6 +408,7 @@ function getAccentColors(isDarkMode) {
     // ------------ YELLOW ------------ //
     case '#FEBC09FF': // Dark
       return {
+        iconAccentColor: '#FFC600FF',
         controlAccentColor: '#FFC600FF',
         darkerControlAccentColor: getDarkerAccentColor('#FFC600FF'),
         keyboardFocusIndicatorColor: '#FFFF1A4C',
@@ -330,6 +418,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#FEBD1EFF': // Light
       return {
+        iconAccentColor: '#FFC726FF',
         controlAccentColor: '#FFC726FF',
         darkerControlAccentColor: getDarkerAccentColor('#FFC726FF'),
         keyboardFocusIndicatorColor: '#F4B80D3F',
@@ -342,6 +431,7 @@ function getAccentColors(isDarkMode) {
     case '#53B036FF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#62BA46FF',
           controlAccentColor: '#62BA46FF',
           darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
           keyboardFocusIndicatorColor: '#8DF46C4C',
@@ -351,6 +441,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#62BA46FF',
           controlAccentColor: '#62BA46FF',
           darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
           keyboardFocusIndicatorColor: '#4DAB2F3F',
@@ -363,6 +454,7 @@ function getAccentColors(isDarkMode) {
     // ------------ GRAPHITE ------------ //
     case '#797979FF': // Dark
       return {
+        iconAccentColor: '#8C8C8CFF',
         controlAccentColor: '#8C8C8CFF',
         darkerControlAccentColor: getDarkerAccentColor('#8C8C8CFF'),
         keyboardFocusIndicatorColor: '#C3C3C37F',
@@ -372,6 +464,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#868686FF': // Light
       return {
+        iconAccentColor: '#989898FF',
         controlAccentColor: '#989898FF',
         darkerControlAccentColor: getDarkerAccentColor('#989898FF'),
         controlAccentColor: '#989898FF',
@@ -383,7 +476,11 @@ function getAccentColors(isDarkMode) {
   }
 }
 
-
+/**
+ * Create slightly darker and more saturated version of `controlAccentColor` 
+ * by using chroma library.
+ * @param {*} accentColor 
+ */
 function getDarkerAccentColor(accentColor) {
   return chroma.blend(accentColor, '#EEEEEE', 'burn').desaturate(0).hex();
 }

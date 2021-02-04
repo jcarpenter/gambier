@@ -111,13 +111,21 @@ app.whenReady()
 
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' })
+    
+    // const appThemeIsNotDefined = !global.state().theme.id
+    // if (appThemeIsNotDefined) {
+    //   await global.store.dispatch({ 
+    //     type: 'SET_APP_THEME', 
+    //     id: AppearanceManager.themes.defaultId
+    //   })
+    // }
 
     // Get initial system appearance values
     AppearanceManager.init()
 
     // Create windows and watchers for projects
     ProjectManager.init()
-    
+
     // App startup complete!
     await global.store.dispatch({ type: 'FINISH_COLD_START' })
   })
@@ -128,14 +136,31 @@ app.whenReady()
 // Start to quit app: Set appStatus to 'safeToQuit'. This triggers windows to close. Once all of them have safely closed (e.g. open docs are saved), appStatus is updated to 'safeToQuit', and we call `app.quit` again. This time it will go through.
 
 app.on('before-quit', async (evt) => {
-  if (global.state().appStatus == 'open') {
-    evt.preventDefault()
-    await global.store.dispatch({
-      type: 'START_TO_QUIT'
-    })
-  } else if (global.state().appStatus == 'wantsToQuit') {
-    // Prevent quitting while quit is already in progress
-    evt.preventDefault()
+  const appStatus = global.state().appStatus
+  switch (appStatus) {
+
+    // If app is open, preventDefault, and update appStatus state
+    // via reducer. 
+    case 'open': {
+      evt.preventDefault()
+      await global.store.dispatch({
+        type: 'START_TO_QUIT'
+      })
+      break
+    }
+
+    // If quit has already started, preventDefault.
+    case 'wantsToQuit': {
+      evt.preventDefault()
+      break
+    }
+
+    // If app is safe to quit, do nothing; allow it to quit.
+    case 'safeToQuit': {
+      console.log("Quitting app!")
+      // Do nothing
+      break
+    }
   }
 })
 
@@ -144,29 +169,24 @@ app.on('before-quit', async (evt) => {
  */
 global.store.onDidAnyChange(async (state, oldState) => {
 
-  const canSafelyQuit = propHasChangedTo('appStatus', 'canSafelyQuit', state, oldState)
+  const canSafelyQuit = propHasChangedTo('appStatus', 'safeToQuit', state, oldState)
 
   if (canSafelyQuit) {
     app.quit()
   }
-  
-  // if (state.appStatus == 'wantsToQuit') {
-  //   const allWindowsAreSafeToClose = state.projects.allIds.every((id) => {
-  //     const project = state.projects.byId[id]
-  //     return project.status == 'safeToClose'
-  //   })
-
-  //   if (allWindowsAreSafeToClose) {
-  //     // await global.store.dispatch({ type: 'CAN_SAFELY_QUIT' });
-  //     electron.app.quit();
-  //   }
-  // }
 })
 
-// On all windows closed, do nothing. Leave app open.
-app.on('window-all-closed', () => {
+// On all windows closed, if app is quitting, set `safeToQuit` on appStatus
+// via 'CAN_SAFELY_QUIT' reducer. Else, do nothing.
+app.on('window-all-closed', async () => {
+
+  const appWantsToQuit = global.state().appStatus == 'wantsToQuit'
+  const isNotMacApp = process.platform !== 'darwin'
+  
   // "On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q" — https://www.geeksforgeeks.org/save-files-in-electronjs/
-  if (process.platform !== 'darwin') {
-    app.quit()
+  if (appWantsToQuit || isNotMacApp) {
+    await global.store.dispatch({
+      type: 'CAN_SAFELY_QUIT'
+    })
   }
 })

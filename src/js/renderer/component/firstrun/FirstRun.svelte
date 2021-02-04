@@ -17,7 +17,7 @@ function drop(evt) {
 <style type="text/scss">
   #firstrun {
     padding: 4rem;
-    background-color: var(--windowBackgroundColor);
+    // background-color: var(--windowBackgroundColor);
     overflow: scroll;
     height: 100%;
   }

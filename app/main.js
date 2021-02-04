@@ -7,8 +7,8 @@ var produce = require('immer');
 var fsExtra = require('fs-extra');
 var fs = require('fs');
 var nonSecure = require('nanoid/non-secure');
-require('colors');
 var chroma = require('chroma-js');
+require('colors');
 require('deep-eql');
 var Database = require('better-sqlite3');
 var chokidar = require('chokidar');
@@ -30,17 +30,72 @@ var matter__default = /*#__PURE__*/_interopDefaultLegacy(matter);
 var removeMd__default = /*#__PURE__*/_interopDefaultLegacy(removeMd);
 var sizeOf__default = /*#__PURE__*/_interopDefaultLegacy(sizeOf);
 
+const themes = {
+  default: 'gibsons',
+  
+  allIds: ['gibsons', 'sechelt'],
+  
+  byId: {
+
+    //------ GIBSONS ------//
+
+    gibsons: {
+      name: 'Gibsons',
+      backgroundComponent: { name: 'SystemWindow', options: {} },
+      baseColorScheme: 'match-app',
+      colorOverrides: [],
+      editorTheme: 'gambier',
+    },
+    
+    //------ SECHELT ------//
+
+    sechelt: {
+      name: 'Sechelt',
+      backgroundComponent: { name: 'Midnight', options: {} },
+      baseColorScheme: 'dark',
+      colorOverrides: [
+        { 
+          variable: 'buttonBackgroundColor', 
+          newValue: '#FFFFFF40',
+          withMode: 'always',
+        },
+        { 
+          variable: 'controlAccentColor',
+          newValue: '#3E85F5',
+          withMode: 'always',
+        },
+        { 
+          variable: 'iconAccentColor',
+          newValue: '#FFF',
+          withMode: 'always',
+        },
+        { 
+          variable: 'menuBackgroundColor',
+          newValue: 'hsla(218, 69%, 20%, 0.95)',
+          withMode: 'always',
+        },
+        { 
+          variable: 'placeholderTextColor',
+          newValue: 'hsla(0, 0%, 100%, 0.4)',
+          withMode: 'always',
+        },
+        { 
+          variable: 'selectedContentBackgroundColor',
+          newValue: chroma__default['default']('#3E85F5').darken().hex(),
+          withMode: 'always',
+        },
+        // { // TODO
+        //   variable: 'selectedTextBackgroundColor',
+        //   newValue: chroma('#3E85F5').darken().hex(),
+        //   withMode: 'always',
+        // },
+      ],
+      editorTheme: 'gambier',
+    }
+  },
+};
+
 produce.enablePatches();
-
-function isDirectoryAccessible(directory) {
-  try {
-    fsExtra.accessSync(directory, fs__default['default'].constants.W_OK);
-    return true
-  } catch (err) {
-    return false
-  }
-}
-
 
 const update = (state, action, window) =>
   produce__default['default'](state, (draft) => {
@@ -72,6 +127,10 @@ const update = (state, action, window) =>
             }
           });
 
+          // Re-apply theme values (they may change, during development)
+          // If theme has not yet been define, use the default.
+          applyTheme(draft, draft.theme.id);
+
           // Update `allIds` to match `byId`
           draft.projects.allIds = Object.keys(draft.projects.byId);
         }
@@ -83,8 +142,13 @@ const update = (state, action, window) =>
           draft.projects.allIds.push(id);
         }
 
-        // Close preferences
+        // Make sure preferences are closed
         draft.prefs.isOpen = false;
+
+        // Reset cursor position histories
+        // The first time each session that we open a doc, we want the 
+        // cursor to start at the top.
+        draft.cursorPositionHistory = {};
 
         break
       }
@@ -99,10 +163,10 @@ const update = (state, action, window) =>
         break
       }
 
-      // case 'CAN_SAFELY_QUIT': {
-      //   draft.appStatus = 'canSafelyQuit'
-      //   break
-      // }
+      case 'CAN_SAFELY_QUIT': {
+        draft.appStatus = 'safeToQuit';
+        break
+      }
 
       // FOCUSED/UNFOCUSED WINDOW
 
@@ -123,28 +187,57 @@ const update = (state, action, window) =>
         break
       }
 
+      case 'FOCUS_PREFERENCES_WINDOW': {
+        const prefsWindow = electron.BrowserWindow.getAllWindows().find(({ projectId }) => projectId == 'preferences');
+        prefsWindow.focus();
+        // draft.focusedWindowId = 'preferences'
+        break
+      }
+
       case 'CLOSE_PREFERENCES': {
         draft.prefs.isOpen = false;
         break
       }
 
-      // APPEARANCE
+      // THEME
 
-      case 'SET_APP_THEME': {
-        draft.theme.app = action.theme;
+      case 'SET_ACCENT_COLOR': {
+        draft.theme.accentColor = action.name;
         break
       }
+
+      case 'SET_OVERRIDES': {
+        // `action.overrides` is an array of objects.
+        draft.theme.overrides = action.overrides;
+        break
+      }
+
+      case 'SET_APP_THEME': {
+        applyTheme(draft, action.id);
+        break
+      }
+
+      case 'SET_BACKGROUND': {
+        draft.theme.background = action.name;
+        break
+      }
+
+      case 'SET_EDITOR_THEME': {
+        draft.theme.editorTheme = action.name;
+        break
+      }
+
+      case 'SET_DARK_MODE': {
+        draft.darkMode = action.value;
+        break
+      }
+
+      // CHROMIUM VALUES
 
       case 'SAVE_CHROMIUM_VALUES': {
         draft.chromium = action.values;
         break
       }
-
-      case 'SAVE_COLORS': {
-        draft.colors = action.colors;
-        break
-      }
-
 
 
 
@@ -204,31 +297,46 @@ const update = (state, action, window) =>
         break
       }
 
+      // If window is already safe to close, do it
+      // Else, start to close window by setting 'wantsToClose'
+      // Editor instances in the window catch this store change
+      // and if the have unsaved changes, save them.
+      // As each save is mode, 'SAVE_DOC_SUCCESS' is dispatched
+      // If app wants
+
       case 'START_TO_CLOSE_PROJECT_WINDOW': {
-        project.window.status = 'wantsToClose';
-        break
-      }
-
-      case 'CAN_SAFELY_CLOSE_PROJECT_WINDOW': {
-
-        project.window.status = 'safeToClose';
-
-        // Every time a window marks itself 'safeToClose', check if the app is quitting. If true, check if all windows are 'safeToClose' yet. If true, we can safely quit the app.
-
-        if (draft.appStatus == 'wantsToQuit') {
-
-          const allWindowsAreSafeToClose = draft.projects.allIds.every((id) => {
-            const windowStatus = draft.projects.byId[id].window.status;
-            return windowStatus == 'safeToClose'
-          });
-
-          if (allWindowsAreSafeToClose) {
-            draft.appStatus = 'canSafelyQuit';
-          }
+        const allPanelsAreSafeToClose = project.panels.every((p) => !p.unsavedChanges);
+        if (allPanelsAreSafeToClose) {
+          // Close the window by setting 'safeToClose'. 
+          // ProjectManager catches this, and closes the window.
+          project.window.status = 'safeToClose';
+        } else {
+          // Start closing the window
+          project.window.status = 'wantsToClose';
         }
-
         break
       }
+
+      // case 'CAN_SAFELY_CLOSE_PROJECT_WINDOW': {
+
+      //   project.window.status = 'safeToClose'
+
+      //   // Every time a window marks itself 'safeToClose', check if the app is quitting. If true, check if all windows are 'safeToClose' yet. If true, we can safely quit the app.
+
+      //   if (draft.appStatus == 'wantsToQuit') {
+
+      //     const allWindowsAreSafeToClose = draft.projects.allIds.every((id) => {
+      //       const windowStatus = draft.projects.byId[id].window.status
+      //       return windowStatus == 'safeToClose'
+      //     })
+
+      //     if (allWindowsAreSafeToClose) {
+      //       draft.appStatus = 'canSafelyQuit'
+      //     }
+      //   }
+
+      //   break
+      // }
 
       // Save window bounds to state, so we can restore later
       case 'SAVE_PROJECT_WINDOW_BOUNDS': {
@@ -319,15 +427,17 @@ const update = (state, action, window) =>
 
       case 'OPEN_DOC_IN_PANEL': {
         const panel = project.panels[action.panelIndex];
-        panel.docId = action.docId;
-        panel.unsavedChanges = false;
-        break
-      }
+        
+        // If panel has unsaved changes, prompt panel to save them.
+        // We'll open the selected doc once that's done.
+        if (panel.unsavedChanges) {
+          panel.status = 'userWantsToLoadDoc';
+          panel.pendingDocIdToLoad = action.docId;
+        } else {
+          panel.docId = action.docId;
+          panel.unsavedChanges = false;
+        }
 
-      case 'OPEN_DOC_IN_FOCUSED_PANEL': {
-        const focusedPanel = project.panels[project.focusedPanelIndex];
-        focusedPanel.docId = action.docId;
-        focusedPanel.unsavedChanges = false;
         break
       }
 
@@ -372,35 +482,15 @@ const update = (state, action, window) =>
       }
 
       case 'CLOSE_PANEL': {
-        project.panels.splice(action.panelIndex, 1);
-
-        // Set all panels to equal percentage of total
-        const panelWidth = (100 / project.panels.length).toFixed(1);
-        project.panels.forEach((p) => p.width = panelWidth);
-
-        // Update focusedPanel:
-        // If there is only one panel left, focus it. Else...
-        // * If it was to LEFT of the closed panel, the value is unchanged.
-        // * If it WAS closed the closed panel, the value is unchanged (this will focus the adjacent panel).
-        // * ...unless it was the panel furthest right, in which case we focus the new last panel.
-        // * If it was to RIGHT of the closed panel, decrement the value by one.
-
-        if (project.panels.length == 1) {
-          project.focusedPanelIndex = 0;
+        const panel = project.panels[action.panelIndex];
+        
+        // If panel has unsaved changes, prompt panel to save them.
+        // We'll close the panel once the changes are saved.
+        if (panel.unsavedChanges) {
+          panel.status = 'userWantsToClosePanel';
         } else {
-          const closedPanelWasLeftOfFocusedPanel = action.panelIndex < project.focusedPanelIndex;
-          const closedPanelWasFocusedAndFurthestRight = action.panelIndex == project.focusedPanelIndex && action.panelIndex == project.panels.length;
-
-          if (closedPanelWasLeftOfFocusedPanel) {
-            project.focusedPanelIndex = project.focusedPanelIndex - 1;
-          } else if (closedPanelWasFocusedAndFurthestRight) {
-            project.focusedPanelIndex = project.panels.length - 1;
-          }
+          closePanel(project, action.panelIndex);
         }
-
-        // Update panel indexes
-        project.panels.forEach((p, i) => p.index = i);
-
         break
       }
 
@@ -410,8 +500,8 @@ const update = (state, action, window) =>
       //   const panelToRight = project.panels[action.panelIndex + 1]
 
       //   break
+      
       // }
-
       case 'SET_PANEL_WIDTHS': {
         project.panels.forEach((panel, i) => panel.width = action.widths[i]);
         break
@@ -436,8 +526,44 @@ const update = (state, action, window) =>
       }
 
       case 'SAVE_DOC_SUCCESS': {
+
         const panel = project.panels[action.panelIndex];
         panel.unsavedChanges = false;
+
+        // Several app processes gate on unsavedChanges being saved.
+        // As changes are saved, we check the following.
+        
+        if (project.window.status == 'wantsToClose') {
+
+          // If window wantsToClose, and there are no unsavedChanges,
+          // mark it 'safeToClose`
+          const allDocsHaveSaved = project.panels.every((p) => !p.unsavedChanges);
+          if (allDocsHaveSaved) {
+            project.window.status = 'safeToClose';
+          }
+
+        } else if (panel.status == 'userWantsToLoadDoc') {
+
+          // If panel was waiting to open new doc, open it
+          panel.docId = panel.pendingDocIdToLoad;
+          panel.pendingDocIdToLoad = '';
+          panel.status = '';
+
+        } else if (panel.status == 'userWantsToClosePanel') {
+
+          // If panel was waiting to close, close it.
+          closePanel(project, action.panelIndex);
+          panel.status = '';
+
+        }
+        break
+      }
+
+      case 'SAVE_CURSOR_POSITION': {
+        draft.cursorPositionHistory[action.docId] = { 
+          line: action.line, 
+          ch: action.ch
+        };
         break
       }
 
@@ -449,6 +575,67 @@ const update = (state, action, window) =>
     global.patches = patches;
   }
   );
+
+/**
+ * Remove panel from the `panels` index of the selected project.
+ * Then update index of other panels as needed.
+ */
+function closePanel(project, panelIndex) {
+  project.panels.splice(panelIndex, 1);
+
+  // Set all panels to equal percentage of total
+  const panelWidth = (100 / project.panels.length).toFixed(1);
+  project.panels.forEach((p) => p.width = panelWidth);
+
+  // Update focusedPanel:
+  // If there is only one panel left, focus it. Else...
+  // * If it was to LEFT of the closed panel, the value is unchanged.
+  // * If it WAS closed the closed panel, the value is unchanged (this will focus the adjacent panel).
+  // * ...unless it was the panel furthest right, in which case we focus the new last panel.
+  // * If it was to RIGHT of the closed panel, decrement the value by one.
+
+  if (project.panels.length == 1) {
+    project.focusedPanelIndex = 0;
+  } else {
+    const closedPanelWasLeftOfFocusedPanel = panelIndex < project.focusedPanelIndex;
+    const closedPanelWasFocusedAndFurthestRight = panelIndex == project.focusedPanelIndex && panelIndex == project.panels.length;
+
+    if (closedPanelWasLeftOfFocusedPanel) {
+      project.focusedPanelIndex = project.focusedPanelIndex - 1;
+    } else if (closedPanelWasFocusedAndFurthestRight) {
+      project.focusedPanelIndex = project.panels.length - 1;
+    }
+  }
+
+  // Update panel indexes
+  project.panels.forEach((p, i) => p.index = i);
+}
+
+/**
+ * Get current theme and copy values to draft.theme properties.
+ */
+function applyTheme(draft, id) {
+  console.log(id);
+  const { backgroundComponent, baseColorScheme, colorOverrides, editorTheme } = themes.byId[id];
+  draft.theme.id = id;
+  draft.theme.baseColorScheme = baseColorScheme;
+  draft.theme.backgroundComponent = backgroundComponent;
+  draft.theme.colorOverrides = colorOverrides;
+  draft.theme.editorTheme = editorTheme;
+}
+
+/**
+ * Check that directory exists, and we can write to it.
+ * @param {} directory - System path to check
+ */
+function isDirectoryAccessible(directory) {
+  try {
+    fsExtra.accessSync(directory, fs__default['default'].constants.W_OK);
+    return true
+  } catch (err) {
+    return false
+  }
+}
 
 class Store extends ElectronStore__default['default'] {
   constructor() {
@@ -495,9 +682,15 @@ const storeDefault = {
 
   appStatus: 'open',
 
+  darkMode: 'match-system',
+
+  // See Theme.js for how themes are define
   theme: {
-    app: 'match-system',
-    editor: 'gambier'
+    id: 'gibsons',
+    baseColorScheme: 'match-app', // 'dark', 'light', or 'match-app'
+    colorOverrides: [],
+    backgroundComponent: {},
+    editorTheme: ''
   },
 
   chromium: {
@@ -520,6 +713,10 @@ const storeDefault = {
     treeListFolder: 300,
   },
 
+  // Set of objects where key is doc id, and cursor position is 
+  // recorded in `line` and `ch` properties.
+  cursorPositionHistory: { },
+
   // ----------- PROJECTS ----------- //
 
   projects: {
@@ -532,6 +729,7 @@ const storeDefault = {
 };
 
 const newPanel = {
+  status: '', // E.g. 'userWantsToLoadDoc'
   index: 0,
   id: '', // Generate with nanoid
   docId: '',
@@ -806,15 +1004,17 @@ function init() {
   //    is 'system', so Chromium accepts the change.
   electron.nativeTheme.on('updated', () => {
     saveChromiumValues();
-    sendUpdatedColorsToRenderProcess();
+    // sendUpdatedColorsToRenderProcess()
   });
 
-  // When `theme.app` changes, update Chrome nativeTheme.themeSource.
+  // When `theme.darkMode` changes, update Chrome nativeTheme.themeSource.
   global.store.onDidAnyChange((state, oldState) => {
-    const appThemeChanged = stateHasChanged(global.patches, ["theme", "app"]);
-    if (appThemeChanged) {
+
+    const darkModeChanged = stateHasChanged(global.patches, "darkMode");
+
+    if (darkModeChanged) {
       setNativeTheme(false);
-    }
+    } 
   });
 
   // Set native UI to theme value in store
@@ -827,8 +1027,8 @@ function init() {
  * Per: https://www.electronjs.org/docs/api/native-theme
  */
 function setNativeTheme(isFirstRun) {
-  const appTheme = global.state().theme.app;
-  switch (appTheme) {
+  const darkMode = global.state().darkMode;
+  switch (darkMode) {
     case 'match-system':
       electron.nativeTheme.themeSource = 'system';
       break
@@ -868,20 +1068,18 @@ function saveChromiumValues() {
 }
 
 /** 
- * When nativeTheme changes, we assume system colors have changed, 
- * get the new values, and send them to render process. Which then
- * applies them as css variables.
-*/
-function sendUpdatedColorsToRenderProcess() {
-  electron.webContents.getAllWebContents().forEach((contents) => {
-    contents.send('updatedSystemColors', getSystemColors());
-  });
-}
-
-
-
-
-
+ * Send update colors to webContents. 
+ * Use colorOverrides, except for preferences window 
+ * (it should always match the system / default app look).
+// */
+// function sendUpdatedColorsToRenderProcess() {
+//   BrowserWindow.getAllWindows().forEach((win) => {
+//     const useColorOverrides = win.projectId == 'preferences' ? false : true
+//     console.log(win.projectId, useColorOverrides)
+//     const { colors, overriddenVariables } = getColors(useColorOverrides)
+//     win.webContents.send('updatedSystemColors', colors, overriddenVariables)
+//   })
+// }
 
 
 
@@ -890,106 +1088,183 @@ function sendUpdatedColorsToRenderProcess() {
 
 // -------- COLORS -------- //
 
-function getSystemColors() {
+/**
+ * Return an object with list of named colors. 
+ * These are turned into CSS variables by the render process.
+ * Colors start off taken from the operating system, and (optionally)
+ * overrides are applied by the loaded theme.
+ * @param {*} observeThemeValues - If true, adhere to theme overrides.
+ */
+function getColors(observeThemeValues = true) {
 
-  const isDarkMode = electron.nativeTheme.shouldUseDarkColors;
+  let colors = {};
+  let overriddenVariables = [];
+  const state = global.state();
+  const theme = state.theme;
 
-  if (isDarkMode) {
-    return {
-      // System colors
-      systemBlue: '#0A84FFFF',
-      systemBrown: '#AC8E68FF',
-      systemGray: '#98989DFF',
-      systemGreen: '#32D74BFF',
-      systemIndigo: '#5E5CE6FF',
-      systemOrange: '#FF9F0AFF',
-      systemPink: '#FF375FFF',
-      systemPurple: '#BF5AF2FF',
-      systemRed: '#FF453AFF',
-      systemTeal: '#64D2FFFF',
-      systemYellow: '#FFD60AFF',
-      // Accent-influenced dynamic colors
-      ...getAccentColors(isDarkMode),
-      // All other dynamic dystem colors
-      alternateSelectedControlTextColor: '#FFFFFFFF',
-      controlBackgroundColor: '#1E1E1EFF',
-      controlColor: '#FFFFFF3F',
-      controlTextColor: '#FFFFFFD8',
-      disabledControlTextColor: '#FFFFFF3F',
-      findHighlightColor: '#FFFF00FF',
-      gridColor: '#FFFFFF19',
-      headerTextColor: '#FFFFFFFF',
-      highlightColor: '#B4B4B4FF',
-      labelColor: '#FFFFFFD8',
-      linkColor: '#419CFFFF',
-      placeholderTextColor: '#FFFFFF3F',
-      quaternaryLabelColor: '#FFFFFF19',
-      secondaryLabelColor: '#FFFFFF8C',
-      selectedControlTextColor: '#FFFFFFD8',
-      selectedMenuItemTextColor: '#FFFFFFFF',
-      selectedTextColor: '#FFFFFFFF',
-      separatorColor: '#FFFFFF19',
-      shadowColor: '#000000FF',
-      tertiaryLabelColor: '#FFFFFF3F',
-      textBackgroundColor: '#1E1E1EFF',
-      textColor: '#FFFFFFFF',
-      unemphasizedSelectedContentBackgroundColor: '#464646FF',
-      unemphasizedSelectedTextBackgroundColor: '#464646FF',
-      unemphasizedSelectedTextColor: '#FFFFFFFF',
-      windowBackgroundColor: '#323232FF',
-      windowFrameTextColor: '#FFFFFFD8',
-      // Gambier-specific colors.
-      foregroundColor: '255, 255, 255',
-      backgroundColor: '0, 0, 0',
-    }
+  // Get initial colors. By default, we match what Chromium's state.
+  // E.g. If Chromium isDarkMode is true, we return dark colors.
+  // Themes can override this with `theme.baseColorScheme` value.
+  // If `observeThemeValues` is true, we use this value.
+  if (!observeThemeValues) {
+    colors = state.chromium.isDarkMode ? getDarkColors() : getLightColors();
   } else {
-    return {
-      //System colors
-      systemBlue: '#007AFFFF',
-      systemBrown: '#A2845EFF',
-      systemGray: '#8E8E93FF',
-      systemGreen: '#28CD41FF',
-      systemIndigo: '#5856D6FF',
-      systemOrange: '#FF9500FF',
-      systemPink: '#FF2D55FF',
-      systemPurple: '#AF52DEFF',
-      systemRed: '#FF3B30FF',
-      systemTeal: '#55BEF0FF',
-      systemYellow: '#FFCC00FF',
-      // Accent-influenced dynamic colors
-      ...getAccentColors(isDarkMode),
-      // All other dynamic dystem colors
-      alternateSelectedControlTextColor: '#FFFFFFFF',
-      controlBackgroundColor: '#FFFFFFFF',
-      controlColor: '#FFFFFFFF',
-      controlTextColor: '#000000D8',
-      disabledControlTextColor: '#0000003F',
-      findHighlightColor: '#FFFF00FF',
-      gridColor: '#E6E6E6FF',
-      headerTextColor: '#000000D8',
-      highlightColor: '#FFFFFFFF',
-      labelColor: '#000000D8',
-      linkColor: '#0068DAFF',
-      placeholderTextColor: '#0000003F',
-      quaternaryLabelColor: '#00000019',
-      secondaryLabelColor: '#0000007F',
-      selectedControlTextColor: '#000000D8',
-      selectedMenuItemTextColor: '#FFFFFFFF',
-      selectedTextColor: '#000000FF',
-      separatorColor: '#00000019',
-      shadowColor: '#000000FF',
-      tertiaryLabelColor: '#00000042',
-      textBackgroundColor: '#FFFFFFFF',
-      textColor: '#000000FF',
-      unemphasizedSelectedContentBackgroundColor: '#DCDCDCFF',
-      unemphasizedSelectedTextBackgroundColor: '#DCDCDCFF',
-      unemphasizedSelectedTextColor: '#000000FF',
-      windowBackgroundColor: '#ECECECFF',
-      windowFrameTextColor: '#000000D8',
-      // Gambier-specific colors
-      foregroundColor: '0, 0, 0',
-      backgroundColor: '255, 255, 255',
+    switch (theme.baseColorScheme) {
+      case 'match-app':
+        if (state.chromium.isDarkMode) {
+          colors = getDarkColors();
+        } else {
+          colors = getLightColors();
+        }
+        break
+      case 'dark':
+        colors = getDarkColors();
+        break
+      case 'light':
+        colors = getLightColors();
+        break
     }
+  }
+    
+
+  // Apply color overrides. Themes can specify overrides for
+  // individual color variables. `withMode` specifies when they
+  // apply. Always, or only when app is in light or dark mode.
+  if (observeThemeValues) {
+    theme.colorOverrides.forEach(({ variable, newValue, withMode }) => {
+
+      const appliesToCurrentMode =
+        withMode == 'always' ||
+        withMode == 'dark' && state.chromium.isDarkMode ||
+        withMode == 'light' && !state.chromium.isDarkMode;
+
+      if (appliesToCurrentMode) {
+        colors[variable] = newValue;
+        overriddenVariables.push(variable);
+        // If overrides sets `controlAccentColor` variable (and only it), 
+        // we need to also generate the darker variation.
+        if (variable == 'controlAccentColor') {
+          colors.darkerControlAccentColor = getDarkerAccentColor(colors.controlAccentColor);
+        }
+      }
+    });
+  }
+
+  return {
+    colors,
+    overriddenVariables
+  }
+}
+
+function getDarkColors() {
+  return {
+
+    // Gambier-specific colors
+    foregroundColor: '255, 255, 255',
+    backgroundColor: '0, 0, 0',
+    buttonBackgroundColor: '#5B5B5BFF',
+    menuBackgroundColor: 'hsla(0, 0%, 17%, 0.9)',
+
+    // macOS "Dynamic colors":
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
+    ...getAccentColors(true),
+    alternateSelectedControlTextColor: '#FFFFFFFF',
+    controlBackgroundColor: '#1E1E1EFF',
+    controlColor: '#FFFFFF3F',
+    controlTextColor: '#FFFFFFD8',
+    disabledControlTextColor: '#FFFFFF3F',
+    findHighlightColor: '#FFFF00FF',
+    gridColor: '#FFFFFF19',
+    headerTextColor: '#FFFFFFFF',
+    highlightColor: '#B4B4B4FF',
+    labelColor: '#FFFFFFD8',
+    linkColor: '#419CFFFF',
+    placeholderTextColor: '#FFFFFF3F',
+    quaternaryLabelColor: '#FFFFFF19',
+    secondaryLabelColor: '#FFFFFF8C',
+    selectedControlTextColor: '#FFFFFFD8',
+    selectedMenuItemTextColor: '#FFFFFFFF',
+    selectedTextColor: '#FFFFFFFF',
+    separatorColor: '#FFFFFF19',
+    shadowColor: '#000000FF',
+    tertiaryLabelColor: '#FFFFFF3F',
+    textBackgroundColor: '#1E1E1EFF',
+    textColor: '#FFFFFFFF',
+    unemphasizedSelectedContentBackgroundColor: '#464646FF',
+    unemphasizedSelectedTextBackgroundColor: '#464646FF',
+    unemphasizedSelectedTextColor: '#FFFFFFFF',
+    windowBackgroundColor: '#323232FF',
+    windowFrameTextColor: '#FFFFFFD8',
+
+    // macOS "System colors:
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#system-colors
+    // systemBlue: '#0A84FFFF',
+    // systemBrown: '#AC8E68FF',
+    // systemGray: '#98989DFF',
+    // systemGreen: '#32D74BFF',
+    // systemIndigo: '#5E5CE6FF',
+    // systemOrange: '#FF9F0AFF',
+    // systemPink: '#FF375FFF',
+    // systemPurple: '#BF5AF2FF',
+    // systemRed: '#FF453AFF',
+    // systemTeal: '#64D2FFFF',
+    // systemYellow: '#FFD60AFF',
+  }
+}
+
+function getLightColors() {
+  return {
+
+    // Gambier-specific colors
+    foregroundColor: '0, 0, 0',
+    backgroundColor: '255, 255, 255',
+    buttonBackgroundColor: '#FFFFFFFF',
+    menuBackgroundColor: 'hsla(0, 0%, 95%, 0.8)',
+
+    // macOS "Dynamic colors":
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
+    ...getAccentColors(false),
+    alternateSelectedControlTextColor: '#FFFFFFFF',
+    controlBackgroundColor: '#FFFFFFFF',
+    controlColor: '#FFFFFFFF',
+    controlTextColor: '#000000D8',
+    disabledControlTextColor: '#0000003F',
+    findHighlightColor: '#FFFF00FF',
+    gridColor: '#E6E6E6FF',
+    headerTextColor: '#000000D8',
+    highlightColor: '#FFFFFFFF',
+    labelColor: '#000000D8',
+    linkColor: '#0068DAFF',
+    placeholderTextColor: '#0000003F',
+    quaternaryLabelColor: '#00000019',
+    secondaryLabelColor: '#0000007F',
+    selectedControlTextColor: '#000000D8',
+    selectedMenuItemTextColor: '#FFFFFFFF',
+    selectedTextColor: '#000000FF',
+    separatorColor: '#00000019',
+    shadowColor: '#000000FF',
+    tertiaryLabelColor: '#00000042',
+    textBackgroundColor: '#FFFFFFFF',
+    textColor: '#000000FF',
+    unemphasizedSelectedContentBackgroundColor: '#DCDCDCFF',
+    unemphasizedSelectedTextBackgroundColor: '#DCDCDCFF',
+    unemphasizedSelectedTextColor: '#000000FF',
+    windowBackgroundColor: '#ECECECFF',
+    windowFrameTextColor: '#000000D8',
+
+    // macOS "System colors:
+    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#system-colors
+    // systemBlue: '#007AFFFF',
+    // systemBrown: '#A2845EFF',
+    // systemGray: '#8E8E93FF',
+    // systemGreen: '#28CD41FF',
+    // systemIndigo: '#5856D6FF',
+    // systemOrange: '#FF9500FF',
+    // systemPink: '#FF2D55FF',
+    // systemPurple: '#AF52DEFF',
+    // systemRed: '#FF3B30FF',
+    // systemTeal: '#55BEF0FF',
+    // systemYellow: '#FFCC00FF',
   }
 }
 
@@ -1006,6 +1281,7 @@ function getAccentColors(isDarkMode) {
     case '#0A5FFFFF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#007AFFFF',
           controlAccentColor: '#007AFFFF',
           darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
           keyboardFocusIndicatorColor: '#1AA9FF4C',
@@ -1015,6 +1291,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#007AFFFF',
           controlAccentColor: '#007AFFFF',
           darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
           keyboardFocusIndicatorColor: '#0067F43F',
@@ -1027,6 +1304,7 @@ function getAccentColors(isDarkMode) {
     // ------------ PURPLE ------------ //
     case '#923796FF': // Dark
       return {
+        iconAccentColor: '#A550A7FF',
         controlAccentColor: '#A550A7FF',
         darkerControlAccentColor: getDarkerAccentColor('#A550A7FF'),
         keyboardFocusIndicatorColor: '#DB78DE4C',
@@ -1036,6 +1314,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#812684FF': // Light
       return {
+        iconAccentColor: '#953D96FF',
         controlAccentColor: '#953D96FF',
         darkerControlAccentColor: getDarkerAccentColor('#953D96FF'),
         keyboardFocusIndicatorColor: '#8326843F',
@@ -1048,6 +1327,7 @@ function getAccentColors(isDarkMode) {
     case '#F2318DFF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#F74F9EFF',
           controlAccentColor: '#F74F9EFF',
           darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
           keyboardFocusIndicatorColor: '#FF76D34C',
@@ -1057,6 +1337,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#F74F9EFF',
           controlAccentColor: '#F74F9EFF',
           darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
           keyboardFocusIndicatorColor: '#EB398D3F',
@@ -1069,6 +1350,7 @@ function getAccentColors(isDarkMode) {
     // ------------ RED ------------ //
     case '#FC3845FF': // Dark
       return {
+        iconAccentColor: '#FF5257FF',
         controlAccentColor: '#FF5257FF',
         darkerControlAccentColor: getDarkerAccentColor('#FF5257FF'),
         keyboardFocusIndicatorColor: '#FF7A804C',
@@ -1078,6 +1360,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#D62130FF': // Light
       return {
+        iconAccentColor: '#E0383EFF',
         controlAccentColor: '#E0383EFF',
         darkerControlAccentColor: getDarkerAccentColor('#E0383EFF'),
         keyboardFocusIndicatorColor: '#D320273F',
@@ -1091,6 +1374,7 @@ function getAccentColors(isDarkMode) {
     case '#F36D16FF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#F7821BFF',
           controlAccentColor: '#F7821BFF',
           darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
           keyboardFocusIndicatorColor: '#FFB2394C',
@@ -1100,6 +1384,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#F7821BFF',
           controlAccentColor: '#F7821BFF',
           darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
           keyboardFocusIndicatorColor: '#EB6F023F',
@@ -1112,6 +1397,7 @@ function getAccentColors(isDarkMode) {
     // ------------ YELLOW ------------ //
     case '#FEBC09FF': // Dark
       return {
+        iconAccentColor: '#FFC600FF',
         controlAccentColor: '#FFC600FF',
         darkerControlAccentColor: getDarkerAccentColor('#FFC600FF'),
         keyboardFocusIndicatorColor: '#FFFF1A4C',
@@ -1121,6 +1407,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#FEBD1EFF': // Light
       return {
+        iconAccentColor: '#FFC726FF',
         controlAccentColor: '#FFC726FF',
         darkerControlAccentColor: getDarkerAccentColor('#FFC726FF'),
         keyboardFocusIndicatorColor: '#F4B80D3F',
@@ -1133,6 +1420,7 @@ function getAccentColors(isDarkMode) {
     case '#53B036FF':
       if (isDarkMode) {
         return {
+          iconAccentColor: '#62BA46FF',
           controlAccentColor: '#62BA46FF',
           darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
           keyboardFocusIndicatorColor: '#8DF46C4C',
@@ -1142,6 +1430,7 @@ function getAccentColors(isDarkMode) {
         }
       } else {
         return {
+          iconAccentColor: '#62BA46FF',
           controlAccentColor: '#62BA46FF',
           darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
           keyboardFocusIndicatorColor: '#4DAB2F3F',
@@ -1154,6 +1443,7 @@ function getAccentColors(isDarkMode) {
     // ------------ GRAPHITE ------------ //
     case '#797979FF': // Dark
       return {
+        iconAccentColor: '#8C8C8CFF',
         controlAccentColor: '#8C8C8CFF',
         darkerControlAccentColor: getDarkerAccentColor('#8C8C8CFF'),
         keyboardFocusIndicatorColor: '#C3C3C37F',
@@ -1163,6 +1453,7 @@ function getAccentColors(isDarkMode) {
       }
     case '#868686FF': // Light
       return {
+        iconAccentColor: '#989898FF',
         controlAccentColor: '#989898FF',
         darkerControlAccentColor: getDarkerAccentColor('#989898FF'),
         controlAccentColor: '#989898FF',
@@ -1174,7 +1465,11 @@ function getAccentColors(isDarkMode) {
   }
 }
 
-
+/**
+ * Create slightly darker and more saturated version of `controlAccentColor` 
+ * by using chroma library.
+ * @param {*} accentColor 
+ */
 function getDarkerAccentColor(accentColor) {
   return chroma__default['default'].blend(accentColor, '#EEEEEE', 'burn').desaturate(0).hex();
 }
@@ -1345,7 +1640,6 @@ async function deleteFiles(paths) {
 
 async function saveDoc (doc, data, panelIndex) {
 	try {
-		console.log(doc, panelIndex);
 		await fsExtra.writeFile(doc.path, data, 'utf8');
 		return {
 			type: 'SAVE_DOC_SUCCESS',
@@ -1559,8 +1853,8 @@ function init$1() {
   });
 
   // Get system colors and return
-  electron.ipcMain.handle('getSystemColors', () => {
-    return getSystemColors()
+  electron.ipcMain.handle('getColors', (evt, observeThemeValues = true) => {
+    return getColors(observeThemeValues)
   });
 }
 
@@ -1813,6 +2107,7 @@ function getMenuItems() {
   const state = global.state();
   const project = getFocusedProject();
   const panel = getFocusedPanel();
+  const prefsIsFocused = state.focusedWindowId == 'preferences';
 
   const items = {
     topLevel: []
@@ -1824,19 +2119,30 @@ function getMenuItems() {
 
   // -------- App (Mac-only) -------- //
 
+  const preferences = new electron.MenuItem({
+    label: 'Preferences',
+    accelerator: 'CmdOrCtrl+,',
+    async click() {
+      const state = global.state();
+      const prefsIsAlreadyOpen = state.prefs.isOpen;
+      const prefsIsNotFocused = state.focusedWindowId !== 'preferences';
+      if (prefsIsAlreadyOpen) {
+        if (prefsIsNotFocused) {
+          global.store.dispatch({ type: 'FOCUS_PREFERENCES_WINDOW' });
+        }
+      } else {
+        global.store.dispatch({ type: 'OPEN_PREFERENCES' });
+      }
+    }
+  });
+
   if (isMac) {
     items.topLevel.push(new electron.MenuItem({
       label: electron.app.name,
       submenu: [
         { role: 'about' },
         _______________,
-        new electron.MenuItem({
-          label: 'Preferences',
-          accelerator: 'CmdOrCtrl+,',
-          async click() {
-            global.store.dispatch({ type: 'OPEN_PREFERENCES' });
-          }
-        }),
+        preferences,
         _______________,
         { role: 'services', submenu: [] },
         _______________,
@@ -1877,8 +2183,8 @@ function getMenuItems() {
 
     items.closeWindow = new electron.MenuItem({
       label: 'Close Window',
-      accelerator: 'CmdOrCtrl+Shift+W',
-      enabled: panel !== undefined,
+      accelerator: prefsIsFocused ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Shift+W',
+      enabled: prefsIsFocused || project !== undefined,
       click(item, focusedWindow) {
         focusedWindow.close();
       }
@@ -1906,15 +2212,13 @@ function getMenuItems() {
           const filepath = watcher.files.byId[id]?.path;
           filePathsToDelete.push(filepath);
         });
-        
+
         // Delete
         await Promise.all(
           filePathsToDelete.map(async (filepath) => {
             await fsExtra.remove(filepath);
           })
         );
-
-        // focusedWindow.webContents.send('mainRequestsDeleteFile')
       }
     });
 
@@ -2055,40 +2359,93 @@ function getMenuItems() {
 
   // -------- View -------- //
 
-  items.themeDark = new electron.MenuItem({
-    label: 'Dark',
-    type: 'checkbox',
-    checked: state.theme.app == 'dark',
-    click() {
-      store.dispatch({
-        type: 'SET_APP_THEME',
-        theme: 'dark',
-      });
-    }
+  const name = new electron.MenuItem({
+    label: 'App Theme',
+    submenu: themes.allIds.map((id) => {
+      const theme = themes.byId[id];
+      return new electron.MenuItem({
+        label: theme.name,
+        type: 'checkbox',
+        checked: state.theme.id == id,
+        click() {
+          global.store.dispatch({ type: 'SET_APP_THEME', id });
+        }
+      })
+    })
   });
 
-  items.themeLight = new electron.MenuItem({
-    label: 'Light',
-    type: 'checkbox',
-    checked: state.theme.app == 'light',
-    click() {
-      store.dispatch({
-        type: 'SET_APP_THEME',
-        theme: 'light',
-      });
-    }
+  const accentColor = new electron.MenuItem({
+    label: 'Accent Color',
+    submenu: [
+      new electron.MenuItem({
+        label: 'Match System',
+        type: 'checkbox',
+        checked: state.theme.accentColor == 'match-system',
+        click() {
+          global.store.dispatch({ type: 'SET_ACCENT_COLOR', name: 'match-system', });
+        }
+      }),
+      _______________,
+    ]
   });
 
-  items.themeMatchSystem = new electron.MenuItem({
-    label: 'Match System',
-    type: 'checkbox',
-    checked: state.theme.app == 'match-system',
-    click() {
-      store.dispatch({
-        type: 'SET_APP_THEME',
-        theme: 'match-system',
-      });
-    }
+  const background = new electron.MenuItem({
+    label: 'Background',
+    submenu: [
+      new electron.MenuItem({
+        label: 'Placeholder',
+        type: 'checkbox',
+        checked: state.theme.background == 'placeholder',
+        click() {
+          global.store.dispatch({ type: 'SET_BACKGROUND', name: 'placeholder', });
+        }
+      }),
+    ]
+  });
+
+  const darkMode = new electron.MenuItem({
+    label: 'Dark Mode',
+    submenu: [
+      new electron.MenuItem({
+        label: 'Match System',
+        type: 'checkbox',
+        checked: state.darkMode == 'match-system',
+        click() {
+          global.store.dispatch({ type: 'SET_DARK_MODE', value: 'match-system', });
+        }
+      }),
+      _______________,
+      new electron.MenuItem({
+        label: 'Dark',
+        type: 'checkbox',
+        checked: state.darkMode == 'dark',
+        click() {
+          global.store.dispatch({ type: 'SET_DARK_MODE', value: 'dark' });
+        }
+      }),
+      new electron.MenuItem({
+        label: 'Light',
+        type: 'checkbox',
+        checked: state.darkMode == 'light',
+        click() {
+          global.store.dispatch({ type: 'SET_DARK_MODE', value: 'light' });
+        }
+      })
+    ]
+  });
+
+  const editorTheme = new electron.MenuItem({
+    label: 'Editor Theme',
+    submenu: [
+      new electron.MenuItem({
+        label: 'Placeholder',
+        type: 'checkbox',
+        checked: state.theme.editorTheme == 'placeholder',
+        click() {
+          global.store.dispatch({ type: 'SET_EDITOR_THEME', name: 'placeholder' });
+        }
+      }),
+    ]
   });
 
   items.sourceMode = new electron.MenuItem({
@@ -2106,36 +2463,36 @@ function getMenuItems() {
     }
   });
 
-  items.toggleDevTools = new electron.MenuItem({
-    label: 'Toggle Developer Tools',
-    accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-    role: 'toggleDevTools',
-  });
-
-  items.reload = new electron.MenuItem({
-    label: 'Reload',
-    accelerator: 'CmdOrCtrl+R',
-    role: 'reload'
+  const developer = new electron.MenuItem({
+    label: 'Developer',
+    submenu: [
+      new electron.MenuItem({
+        label: 'Toggle Developer Tools',
+        accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+        role: 'toggleDevTools',
+      }),
+      new electron.MenuItem({
+        label: 'Reload',
+        accelerator: 'CmdOrCtrl+R',
+        role: 'reload'
+      })
+    ]
   });
 
   items.topLevel.push(new electron.MenuItem({
     label: 'View',
     submenu: [
-      {
-        label: 'Appearance',
-        submenu: [
-          items.themeMatchSystem,
-          _______________,
-          items.themeLight,
-          items.themeDark
-        ]
-      },
+      name,
+      _______________,
+      accentColor,
+      background,
+      darkMode,
+      editorTheme,
       _______________,
       items.sourceMode,
       ...electron.app.isPackaged ? [] : [
         _______________,
-        items.toggleDevTools, 
-        items.reload
+        developer
       ],
     ]
   }));
@@ -2553,7 +2910,17 @@ class Watcher {
 
     } else {
 
+      // Do not proceed if app is quitting. At this point, `this.files` is destroyed, 
+      // and Immer will throw error if we try to proceed.
+      // if (!this.files) return
+      console.log(global.state().appStatus);
+      if (global.state().appStatus == 'wantsToQuit') return
+      // console.log(this.window)
+      // if (!this.window) return
+      
+
       // Update `files` using Immer.
+
       this.files = await produce__default['default'](this.files, async (draft) => {
         for (const c of changes) {
           const ext = path__default['default'].extname(c.path);
@@ -2721,7 +3088,7 @@ async function createWindow(id, project) {
 
   // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
   // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
-  const backgroundColor = getSystemColors().windowBackgroundColor.slice(0, -2);
+  const backgroundColor = getColors().colors.windowBackgroundColor.slice(0, -2);
   win.setBackgroundColor(backgroundColor);
 
   const isNewProject = project.directory == '';
@@ -2755,17 +3122,21 @@ async function createWindow(id, project) {
 
   // Listen for 'close' action. Can be triggered by either 1) manually closing individual window, (e.g. click close button on window, or type Cmd-W), or 2) quitting the app. 
 
-  // If closed manually, this event is triggered twice: the first time, we prevent the default, and tell webContents to save open documents. That process results in window.status being set to `safeToClose`. ProjectManager catches that state change, and tells this window to close again.
+  // If closed manually, this event is triggered twice. The first time, we prevent the default and tell webContents to save open documents. That process results in window.status being set to `safeToClose`. ProjectManager catches that state change, and tells this window to close again.
   win.on('close', async (evt) => {
 
     const userManuallyClosedWindow = global.state().appStatus !== 'canSafelyQuit';
-    const winIsSafeToClose = global.state().projects.byId[id].window.status == 'safeToClose';
+    const winStatus = global.state().projects.byId[id].window.status;
+    const winWantsToClose = winStatus == 'wantsToClose';
+    const winIsSafeToClose = winStatus == 'safeToClose';
 
-    // If window is closing because user manually closed it (e.g. typed Cmd-W), then check if it's safe to close yet. If not, begin that process. ProjectManager will call close again once the window is safe to close, and this time, 
+    // If window is closing because user manually closed it (e.g. typed Cmd-W), then check if it's safe to close yet. If not, begin that process. ProjectManager will call close again once the window is safe to close, and this time, we won't preventDefault, and the window will close.
     if (userManuallyClosedWindow && !winIsSafeToClose) {
       // Tell window to close
       evt.preventDefault();
-      win.webContents.send('mainWantsToCloseWindow');
+      if (!winWantsToClose) {
+        global.store.dispatch({ type: 'START_TO_CLOSE_PROJECT_WINDOW' }, win);
+      }
     }
   });
 
@@ -2778,8 +3149,10 @@ async function createWindow(id, project) {
     }
     
     // If there are no other windows open, clear `focusedWindowId`
+    // Unless app is quitting, in which case it's too late to modify state.
+    // (Immer will throw a bug re: the object having been destroyed).
     const otherWindowsAreOpen = electron.BrowserWindow.getAllWindows().length;
-    if (!otherWindowsAreOpen) {
+    if (!otherWindowsAreOpen && appIsNotQuiting) {
       global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' });
     }
   });
@@ -2895,9 +3268,12 @@ function init$3() {
       windowsToClose.forEach((window) => window.close());
     }
 
-    // If app is quitting, initiate closing procedure for all windows
+    // If app is quitting, start to close all windows
     if (appIsQuitting) {
-      startToCloseAllWindows();
+      const windows = electron.BrowserWindow.getAllWindows();
+      if (windows.length) {
+        windows.forEach((win) => win.close());
+      }
     }
   });
 
@@ -2927,7 +3303,7 @@ async function createWindowAndWatcher(state, id) {
   const watcher = new Watcher(id, project, window);
   global.watchers.push(watcher);
 }
- 
+
 
 /**
  * Get projects whose directories have changed
@@ -2958,16 +3334,6 @@ function getWindowsThatAreSafeToClose(state, oldState) {
     }
   });
   return windows
-}
-
-/**
- * Called when appStatus changes to `wantsToQuit`.
- */
-function startToCloseAllWindows() {
-  const windows = electron.BrowserWindow.getAllWindows();
-  if (windows.length) {
-    windows.forEach((win) => win.webContents.send('mainWantsToCloseWindow'));
-  }
 }
 
 const preferencesWindowConfig = {
@@ -3002,7 +3368,8 @@ function init$4() {
 
   // Did `prefs: isOpen` change?
   global.store.onDidAnyChange((state, oldState) => {
-    if (state.prefs.isOpen !== oldState.prefs.isOpen && state.prefs.isOpen) {
+    const shouldOpenPrefs = stateHasChanged(global.patches, ["prefs", "isOpen"], true);
+    if (shouldOpenPrefs) {
       open();
     }
   });
@@ -3011,6 +3378,11 @@ function init$4() {
 async function open() {
 
   const win = new electron.BrowserWindow(preferencesWindowConfig);
+
+  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
+  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
+  const backgroundColor = getColors(false).colors.windowBackgroundColor.slice(0, -2);
+  win.setBackgroundColor(backgroundColor);
 
   win.once('ready-to-show', () => {
     win.show();
@@ -3038,10 +3410,10 @@ async function open() {
     global.store.dispatch({ type: 'CLOSE_PREFERENCES' });
   });
 
-  // if (!app.isPackaged) {
-  //   win.webContents.openDevTools();
-  //   win.setBounds({ width: 1060 })
-  // }
+  if (!electron.app.isPackaged) {
+    win.webContents.openDevTools();
+    win.setBounds({ width: 1060 });
+  }
 
   // Load index.html
   await win.loadFile(path__default['default'].join(__dirname, 'preferences.html'), {
@@ -3152,13 +3524,21 @@ electron.app.whenReady()
 
     // Prep state as necessary. E.g. Prune projects with bad directories.
     await global.store.dispatch({ type: 'START_COLD_START' });
+    
+    // const appThemeIsNotDefined = !global.state().theme.id
+    // if (appThemeIsNotDefined) {
+    //   await global.store.dispatch({ 
+    //     type: 'SET_APP_THEME', 
+    //     id: AppearanceManager.themes.defaultId
+    //   })
+    // }
 
     // Get initial system appearance values
     init();
 
     // Create windows and watchers for projects
     init$3();
-    
+
     // App startup complete!
     await global.store.dispatch({ type: 'FINISH_COLD_START' });
   });
@@ -3169,14 +3549,31 @@ electron.app.whenReady()
 // Start to quit app: Set appStatus to 'safeToQuit'. This triggers windows to close. Once all of them have safely closed (e.g. open docs are saved), appStatus is updated to 'safeToQuit', and we call `app.quit` again. This time it will go through.
 
 electron.app.on('before-quit', async (evt) => {
-  if (global.state().appStatus == 'open') {
-    evt.preventDefault();
-    await global.store.dispatch({
-      type: 'START_TO_QUIT'
-    });
-  } else if (global.state().appStatus == 'wantsToQuit') {
-    // Prevent quitting while quit is already in progress
-    evt.preventDefault();
+  const appStatus = global.state().appStatus;
+  switch (appStatus) {
+
+    // If app is open, preventDefault, and update appStatus state
+    // via reducer. 
+    case 'open': {
+      evt.preventDefault();
+      await global.store.dispatch({
+        type: 'START_TO_QUIT'
+      });
+      break
+    }
+
+    // If quit has already started, preventDefault.
+    case 'wantsToQuit': {
+      evt.preventDefault();
+      break
+    }
+
+    // If app is safe to quit, do nothing; allow it to quit.
+    case 'safeToQuit': {
+      console.log("Quitting app!");
+      // Do nothing
+      break
+    }
   }
 });
 
@@ -3185,30 +3582,25 @@ electron.app.on('before-quit', async (evt) => {
  */
 global.store.onDidAnyChange(async (state, oldState) => {
 
-  const canSafelyQuit = propHasChangedTo('appStatus', 'canSafelyQuit', state, oldState);
+  const canSafelyQuit = propHasChangedTo('appStatus', 'safeToQuit', state, oldState);
 
   if (canSafelyQuit) {
     electron.app.quit();
   }
-  
-  // if (state.appStatus == 'wantsToQuit') {
-  //   const allWindowsAreSafeToClose = state.projects.allIds.every((id) => {
-  //     const project = state.projects.byId[id]
-  //     return project.status == 'safeToClose'
-  //   })
-
-  //   if (allWindowsAreSafeToClose) {
-  //     // await global.store.dispatch({ type: 'CAN_SAFELY_QUIT' });
-  //     electron.app.quit();
-  //   }
-  // }
 });
 
-// On all windows closed, do nothing. Leave app open.
-electron.app.on('window-all-closed', () => {
+// On all windows closed, if app is quitting, set `safeToQuit` on appStatus
+// via 'CAN_SAFELY_QUIT' reducer. Else, do nothing.
+electron.app.on('window-all-closed', async () => {
+
+  const appWantsToQuit = global.state().appStatus == 'wantsToQuit';
+  const isNotMacApp = process.platform !== 'darwin';
+  
   // "On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q" — https://www.geeksforgeeks.org/save-files-in-electronjs/
-  if (process.platform !== 'darwin') {
-    electron.app.quit();
+  if (appWantsToQuit || isNotMacApp) {
+    await global.store.dispatch({
+      type: 'CAN_SAFELY_QUIT'
+    });
   }
 });
 //# sourceMappingURL=main.js.map

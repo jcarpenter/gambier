@@ -7,15 +7,14 @@ import { getLineStyles } from './getLineStyles'
 export function getInlineElementsForLine(cm, lineHandle) {
 
   const doc = cm.getDoc()
-  const blockElements = cm.getEditorState().blockElements
+  const blockElements = cm.state.blockElements
   const lineNo = lineHandle.lineNo()
 
 
   // ---------- 0. Check if line has entities ---------- //
 
-  let elements = []
-
-  // If line is blank, or has no styles, return empty array
+  // We'll return this at the end
+  let inlineElements = []
 
   const blockStyles = lineHandle.styleClasses ? lineHandle.styleClasses.textClass : ''
   const lineHasBlockStyles = blockStyles !== ''
@@ -23,14 +22,13 @@ export function getInlineElementsForLine(cm, lineHandle) {
 
   const lineIsBlank = !lineHasInlineStyles
 
+  // If line is blank or has no styles, return empty array
   if (lineIsBlank) return []
 
 
   // ---------- 1. Create array of styles ---------- //
 
   let styles = getLineStyles(doc, lineHandle)
-
-  // console.log(styles)
 
   // If styles are empty, return empty array
   if (styles === []) return []
@@ -52,7 +50,7 @@ export function getInlineElementsForLine(cm, lineHandle) {
           end: 0,
           children: []
         }
-        elements.push(element)
+        inlineElements.push(element)
         // entities.citations.push(newEntity)
       } else if (s.classes.includes('md') && s.text == ']') {
         element.end = s.end
@@ -84,8 +82,6 @@ export function getInlineElementsForLine(cm, lineHandle) {
   styles.forEach((s) => {
     if (s.classes.includes('footnote') && s.classes.includes('inline')) {
 
-      // console.log(s)
-
       // Footnote: Inline
 
       if (s.text == '^[]' && s.classes.includes('malformed')) {
@@ -98,7 +94,7 @@ export function getInlineElementsForLine(cm, lineHandle) {
           children: [],
           error: 'empty'
         }
-        elements.push(element)
+        inlineElements.push(element)
       } else {
         if (s.text == '^[') {
           element = {
@@ -110,7 +106,7 @@ export function getInlineElementsForLine(cm, lineHandle) {
             children: [],
             error: false
           }
-          elements.push(element)
+          inlineElements.push(element)
         } else if (s.classes.includes('content')) {
           element.content = {
             string: getTextFromRange(doc, lineNo, s.start, s.end),
@@ -140,7 +136,7 @@ export function getInlineElementsForLine(cm, lineHandle) {
           children: [],
           error: false
         }
-        elements.push(element)
+        inlineElements.push(element)
       } else if (s.classes.includes('label')) {
         element.label = {
           string: getTextFromRange(doc, lineNo, s.start, s.end),
@@ -194,7 +190,7 @@ export function getInlineElementsForLine(cm, lineHandle) {
           error: false
         }
 
-        elements.push(element)
+        inlineElements.push(element)
       }
 
       if (s.classes.includes('text')) {
@@ -284,16 +280,13 @@ export function getInlineElementsForLine(cm, lineHandle) {
           element.title = { string: '', start: element.end - 1, end: element.end - 1 }
         }
       }
-
-      element.children.push(s)
-
+      
+      element?.children.push(s)
     }
   })
 
-  // console.log(elements)
-
   // Sort entites by start value
-  elements.sort((a, b) => a.start - b.start)
+  inlineElements.sort((a, b) => a.start - b.start)
 
-  return elements
+  return inlineElements
 }

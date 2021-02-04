@@ -2,7 +2,7 @@ import { debounce } from 'debounce'
 import { app, BrowserWindow, screen } from 'electron'
 import path from 'path'
 import { wait } from '../shared/utils'
-import { getSystemColors } from './AppearanceManager'
+import { getColors } from './AppearanceManager'
 
 const browserWindowConfig = {
   show: false,
@@ -38,7 +38,7 @@ export async function createWindow(id, project) {
 
   // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
   // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
-  const backgroundColor = getSystemColors().windowBackgroundColor.slice(0, -2)
+  const backgroundColor = getColors().colors.windowBackgroundColor.slice(0, -2)
   win.setBackgroundColor(backgroundColor)
 
   const isNewProject = project.directory == ''
@@ -73,17 +73,21 @@ export async function createWindow(id, project) {
 
   // Listen for 'close' action. Can be triggered by either 1) manually closing individual window, (e.g. click close button on window, or type Cmd-W), or 2) quitting the app. 
 
-  // If closed manually, this event is triggered twice: the first time, we prevent the default, and tell webContents to save open documents. That process results in window.status being set to `safeToClose`. ProjectManager catches that state change, and tells this window to close again.
+  // If closed manually, this event is triggered twice. The first time, we prevent the default and tell webContents to save open documents. That process results in window.status being set to `safeToClose`. ProjectManager catches that state change, and tells this window to close again.
   win.on('close', async (evt) => {
 
     const userManuallyClosedWindow = global.state().appStatus !== 'canSafelyQuit'
-    const winIsSafeToClose = global.state().projects.byId[id].window.status == 'safeToClose'
+    const winStatus = global.state().projects.byId[id].window.status
+    const winWantsToClose = winStatus == 'wantsToClose'
+    const winIsSafeToClose = winStatus == 'safeToClose'
 
-    // If window is closing because user manually closed it (e.g. typed Cmd-W), then check if it's safe to close yet. If not, begin that process. ProjectManager will call close again once the window is safe to close, and this time, 
+    // If window is closing because user manually closed it (e.g. typed Cmd-W), then check if it's safe to close yet. If not, begin that process. ProjectManager will call close again once the window is safe to close, and this time, we won't preventDefault, and the window will close.
     if (userManuallyClosedWindow && !winIsSafeToClose) {
       // Tell window to close
       evt.preventDefault()
-      win.webContents.send('mainWantsToCloseWindow')
+      if (!winWantsToClose) {
+        global.store.dispatch({ type: 'START_TO_CLOSE_PROJECT_WINDOW' }, win)
+      }
     }
   })
 
@@ -96,8 +100,10 @@ export async function createWindow(id, project) {
     }
     
     // If there are no other windows open, clear `focusedWindowId`
+    // Unless app is quitting, in which case it's too late to modify state.
+    // (Immer will throw a bug re: the object having been destroyed).
     const otherWindowsAreOpen = BrowserWindow.getAllWindows().length
-    if (!otherWindowsAreOpen) {
+    if (!otherWindowsAreOpen && appIsNotQuiting) {
       global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' })
     }
   })

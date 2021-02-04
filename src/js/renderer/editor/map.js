@@ -2,25 +2,23 @@ import { getBlockElements } from "./getBlockElements"
 import { getInlineElementsForLine } from "./getInlineElementsForLine"
 
 /**
- * Find each element in the loaded document, and save their information into block and inline element arrays, in editorState. We use these arrays to then mark the document, help drive interactions, etc.
+ * Find each element in the loaded document, and save their information into block and inline element arrays, in editorcm.State. We use these arrays to then mark the document, help drive interactions, etc.
  * 
  */
 export function mapDoc(cm) {
 
-  const state = cm.getEditorState()
-
   // Map block elements
-  state.blockElements = getBlockElements(cm)
+  cm.state.blockElements = getBlockElements(cm)
 
   // Map inline elements
-  state.inlineElements = []
+  cm.state.inlineElements = []
   cm.operation(() => {
     cm.eachLine((lineHandle) => {
       // Find elements in line
       const lineElements = getInlineElementsForLine(cm, lineHandle)
-      // Add them (concat) to `state.inlineElements`
+      // Add them (concat) to `cm.state.inlineElements`
       if (lineElements.length) {
-        state.inlineElements = state.inlineElements.concat(lineElements)
+        cm.state.inlineElements = cm.state.inlineElements.concat(lineElements)
       }
     })
   })
@@ -32,14 +30,13 @@ export function mapDoc(cm) {
  */
 export function remapInlineElementsForLine(cm, lineHandle) {
 
-  const state = cm.getEditorState()
-  const inlineElements = state.inlineElements
+  const inlineElements = cm.state.inlineElements
   const lineNo = lineHandle.lineNo()
 
   let fromIndex = null
   let toIndex = null
 
-  // Find the `from` and `to` index values of existing elements (in `state.inlineElements`) of the same line. We use these index values to remove them, below.
+  // Find the `from` and `to` index values of existing elements (in `cm.state.inlineElements`) of the same line. We use these index values to remove them, below.
   inlineElements.forEach((il, index) => {
     if (il.line == lineNo) {
       if (fromIndex == null) {

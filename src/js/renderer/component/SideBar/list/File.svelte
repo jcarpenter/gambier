@@ -48,7 +48,7 @@
     .icon {
       @include centered_mask_image;
       @include absolute-vertical-center;
-      background-color: var(--controlAccentColor);
+      background-color: var(--iconAccentColor);
       left: calc(calc(var(--leftOffset) * 1px) + 20px);
       width: 14px;
       height: 14px;

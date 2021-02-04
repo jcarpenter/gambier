@@ -33,13 +33,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 // Whitelist channels
 
 // Renderer "receives" from Main
-let validReceiveChannels = ['mainWantsToCloseWindow', 'mainWantsToQuitApp', 'mainRequestsSaveFocusedPanel', 'mainRequestsSaveAll', 'mainRequestsDeleteFile', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain', 'updatedSystemColors']
+let validReceiveChannels = ['mainRequestsSaveFocusedPanel', 'mainRequestsSaveAll', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain']
 
 // Renderer "sends" to Main
 let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'saveFileThenCloseWindow', 'saveFileThenQuitApp', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch', 'moveOrCopyIntoFolder', 'replaceAll']
 
 // Round trip: Renderer --> Main --> Renderer
-let validInvokeChannels = ['getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb', 'getSystemColors']
+let validInvokeChannels = ['getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb', 'getColors']
 
 // Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
 contextBridge.exposeInMainWorld(

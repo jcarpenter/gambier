@@ -1,6 +1,7 @@
 <script>
   import { project } from '../StateManager'
   import { files } from '../FilesManager'
+  import Background from './backgrounds/Background.svelte'
   import EditorPanels from './main/EditorPanels.svelte'
   import FirstRun from './firstrun/FirstRun.svelte'
   import FunctionalTests from './dev/FunctionalTests.svelte';
@@ -14,7 +15,7 @@
   import Files from './dev/Files.svelte'
   import State from './dev/State.svelte'
   import { setLayoutFocus } from './ui/actions';
-  
+
   $: directoryIsSet = $project.directory
   $: filesPopulated = $files.tree
   $: isWindowDraggedOver = $project.window.isDraggedOver
@@ -45,7 +46,7 @@
 
 <style type="text/scss">
   #main {
-    background-color: var(--windowBackgroundColor);
+    // background-color: var(--windowBackgroundColor);
     transform: translate(250px, 0);
     position: absolute;
     display: flex;
@@ -84,12 +85,14 @@
       <Toolbar />
       <Separator />
       <div id="content">
-        <!-- <Colors /> -->
+        <EditorPanels />
         <!-- <UIElements /> -->
+        <!-- <Colors /> -->
         <!-- <State /> -->
         <!-- <Files /> -->
-        <EditorPanels />
       </div>
     </div>
   {/if}
 {/if}
+
+<Background />

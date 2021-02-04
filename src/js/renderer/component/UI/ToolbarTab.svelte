@@ -86,12 +86,12 @@
       @include light { background: black(0.05); }
 
       .icon {
-        background-color: var(--controlAccentColor);
+        background-color: var(--iconAccentColor);
         @include dark { filter: brightness(1.6); }
         // @include light { }
       }
       .label {
-        color: var(--controlAccentColor);
+        color: var(--iconAccentColor);
         @include dark { filter: brightness(1.6); }
         // @include light { }
       }

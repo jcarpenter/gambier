@@ -10,7 +10,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   li {
     @include centered_mask_image;
@@ -22,7 +21,7 @@
     height: 14px;
     opacity: 70%;
     &.isActive {
-      background-color: var(--controlAccentColor);
+      background-color: var(--iconAccentColor);
       opacity: 100%;
     }
   }

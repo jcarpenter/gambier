@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import path from 'path'
-import { wait } from '../shared/utils'
+import { stateHasChanged, wait } from '../shared/utils'
+import { getColors } from './AppearanceManager'
 
 const preferencesWindowConfig = {
   show: false,
@@ -34,7 +35,8 @@ export function init() {
 
   // Did `prefs: isOpen` change?
   global.store.onDidAnyChange((state, oldState) => {
-    if (state.prefs.isOpen !== oldState.prefs.isOpen && state.prefs.isOpen) {
+    const shouldOpenPrefs = stateHasChanged(global.patches, ["prefs", "isOpen"], true)
+    if (shouldOpenPrefs) {
       open()
     }
   })
@@ -43,6 +45,11 @@ export function init() {
 async function open() {
 
   const win = new BrowserWindow(preferencesWindowConfig)
+
+  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
+  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
+  const backgroundColor = getColors(false).colors.windowBackgroundColor.slice(0, -2)
+  win.setBackgroundColor(backgroundColor)
 
   win.once('ready-to-show', () => {
     win.show()
@@ -70,10 +77,10 @@ async function open() {
     global.store.dispatch({ type: 'CLOSE_PREFERENCES' })
   })
 
-  // if (!app.isPackaged) {
-  //   win.webContents.openDevTools();
-  //   win.setBounds({ width: 1060 })
-  // }
+  if (!app.isPackaged) {
+    win.webContents.openDevTools();
+    win.setBounds({ width: 1060 })
+  }
 
   // Load index.html
   await win.loadFile(path.join(__dirname, 'preferences.html'), {

@@ -43,19 +43,7 @@
     align-items: center;
 
     &:focus-within {
-      animation-fill-mode: forwards;
-      animation-name: selectField;
-      animation-duration: 0.3s;
-    }
-  }
-
-  @keyframes selectField {
-    from {
-      box-shadow: 0 0 0 10px transparent;
-    }
-
-    to {
-      box-shadow: 0 0 0 3.5px rgba(59, 153, 252, 0.5);
+      @include focusFieldAnimation
     }
   }
 
@@ -133,7 +121,7 @@
   .searchfield.sidebar,
   .searchfield.inline {
     @include dark {
-      background-color: white(0.05);
+      background-color: foregroundColor(0.05);
       box-shadow: 
         inset 0 1.5px 1px 0 black(0.1), // Top inner shadow
         // inset 0 -1px 0.5px 0 white(0.15), // Bottom bevel
@@ -141,7 +129,7 @@
     }
 
     @include light {
-      background-color: black(0.05);
+      background-color: foregroundColor(0.05);
       box-shadow: 
         inset 0 0 0 0.5px black(0.1); // Outline
     }
@@ -155,7 +143,7 @@
   // -------- STYLE: 'TOOLBAR' -------- //
 
   .searchfield.toolbar {
-    border: 1px solid rgba(var(--foregroundColor), 0.05);
+    border: 1px solid foregroundColor(0.05);
     .icon {
       opacity: 0.5;
     }

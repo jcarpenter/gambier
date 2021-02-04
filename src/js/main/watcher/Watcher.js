@@ -140,7 +140,17 @@ export class Watcher {
 
     } else {
 
+      // Do not proceed if app is quitting. At this point, `this.files` is destroyed, 
+      // and Immer will throw error if we try to proceed.
+      // if (!this.files) return
+      console.log(global.state().appStatus)
+      if (global.state().appStatus == 'wantsToQuit') return
+      // console.log(this.window)
+      // if (!this.window) return
+      
+
       // Update `files` using Immer.
+
       this.files = await produce(this.files, async (draft) => {
         for (const c of changes) {
           const ext = path.extname(c.path)

@@ -1,4 +1,4 @@
-import { saveDoc, loadDoc } from "./editor-utils"
+import { create_bidirectional_transition } from "svelte/internal"
 
 // Editor state object. We update this in `dispatch`
 export let editorState = {
@@ -7,8 +7,9 @@ export let editorState = {
   unsavedChanges: false,
   sourceMode: false,
   lastChanges: {},
+  showAutocomplete: false,
   doc: {},
-  widget: {
+  mark: {
     hovered: null,
     selected: null,
     target: null,
@@ -25,7 +26,7 @@ export let editorState = {
  * @param {*} action 
  */
 export function dispatch(action) {
-  
+
   // `cm = this` because `dispatch` is set as a method on the `cm` object.
   // This is for convenience's sake. We could just as easily keep dispatch
   // as a separate utility method, and pass in `cm` instance as argument.
@@ -35,26 +36,9 @@ export function dispatch(action) {
 
   // Start with a copy of the current state.
   let newState = { ...cm.state }
+  let changes = [] // array of changes as strings
 
   switch (action.type) {
-
-    case 'panelChanged':
-      newState.panel = { ...action.panel }
-      break
-
-    case 'loadDoc':
-      
-      // Save outgoing doc (if one is open)
-      if (newState.doc && newState.panel.unsavedChanges) {
-        saveDoc(cm, newState.doc)
-      }
-      
-      // Create copy of doc to reduce risk of accidentally mutating original.
-      newState.doc = { ...action.doc }
-      
-      // Load new doc
-      loadDoc(cm, action.doc)
-      break
 
     case 'setMetaKey':
       newState.isMetaKeyDown = action.isMetaKeyDown
@@ -62,45 +46,53 @@ export function dispatch(action) {
         'data-metakeydown',
         action.isMetaKeyDown
       )
-      CodeMirror.signal(this, 'stateChanged', 'metaKey')
+      changes.push('metaKey')
       break
 
     case 'changes':
       newState.lastChanges = action.changes
-      CodeMirror.signal(this, 'stateChanged', 'lastChanges')
+      changes.push('lastChanges')
       break
 
-    case 'setSourceMode':
-      newState.sourceMode = action.boolean
-      CodeMirror.signal(this, 'stateChanged', 'sourceMode')
+    case 'setAutoComplete':
+      newState.showAutocomplete = action.value
+      changes.push('showAutoComplete')
       break
+
+    // case 'setSourceMode':
+    //   newState.sourceMode = action.boolean
+    //   CodeMirror.signal(this, 'stateChanged', 'sourceMode')
+    //   break
 
     case 'setSelections':
       newState.selections = cm.getDoc().listSelections()
-      CodeMirror.signal(this, 'stateChanged', 'selections')
+      changes.push('selections')
       break
 
-    case 'hoverWidget':
-      newState.widget.hovered = action.target
-      CodeMirror.signal(this, 'stateChanged', ['widget', 'hovered'])
+    case 'hoverMark':
+      newState.mark.hovered = action.target
+      changes.push('mark', 'hovered')
       break
 
-    case 'selectWidget':
+    case 'selectMark':
       cm.setSelection(
         { line: action.target.line, ch: action.target.start },
         { line: action.target.line, ch: action.target.end }
       )
       newState.selections = cm.getDoc().listSelections()
-      newState.widget.selected = action.target
-      CodeMirror.signal(this, 'stateChanged', ['widget', 'selected'])
+      newState.mark.selected = action.target
+      changes.push('mark', 'selected')
       break
 
-    case 'deSelectWidget':
-      newState.widget.selected = null
-      CodeMirror.signal(this, 'stateChanged', ['widget', 'selected'])
+    case 'deSelectMark':
+      newState.mark.selected = null
+      changes.push('mark', 'selected')
       break
   }
-  
-  // Apply newState to state
+
+  // Update cm.state to newState
   cm.state = newState
+
+  // Emit `stateChanged` event
+  CodeMirror.signal(this, 'stateChanged', [...changes])
 }

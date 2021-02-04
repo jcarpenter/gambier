@@ -2,7 +2,6 @@ import { writeFile } from 'fs-extra'
 
 export default async function (doc, data, panelIndex) {
 	try {
-		console.log(doc, panelIndex)
 		await writeFile(doc.path, data, 'utf8')
 		return {
 			type: 'SAVE_DOC_SUCCESS',

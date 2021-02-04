@@ -66,17 +66,18 @@ export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files
 /**
  * Open the file `id` in the focused panel, if it's a doc, and only one file is selected.
  */
-export function onMouseup(domEvent, fileId, tab, tabId, listIds, focusedPanelIndex, files) {
+export function onMouseup(domEvent, fileId, tab, tabId, listIds, panel, files) {
     
   // Open doc
   const isDoc = files.byId[fileId].type == 'doc'
-  const isNotAlreadyOpen = fileId !== focusedPanelIndex.docId
+  const isNotAlreadyOpen = fileId !== panel.docId
   const oneFileSelected = tab.selected.length == 1
 
   // Load doc
   if (oneFileSelected && isDoc && isNotAlreadyOpen) {
     window.api.send('dispatch', {
-      type: 'OPEN_DOC_IN_FOCUSED_PANEL',
+      type: 'OPEN_DOC_IN_PANEL',
+      panelIndex: panel.index,
       docId: fileId,
     })
   }
@@ -84,7 +85,7 @@ export function onMouseup(domEvent, fileId, tab, tabId, listIds, focusedPanelInd
 
 // -------- LEFT/RIGHT -------- //
 
-export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files) {
+export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files, project) {
 
   let id = '' // of newly-selected item
   let selected = []
@@ -200,7 +201,8 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
 
   if (oneFileSelected && isDoc) {
     window.api.send('dispatch', {
-      type: 'OPEN_DOC_IN_FOCUSED_PANEL',
+      type: 'OPEN_DOC_IN_PANEL',
+      panelIndex: project.focusedPanelIndex,
       docId: id,
     })
   }

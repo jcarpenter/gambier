@@ -11,31 +11,33 @@
     align-items: center;
     margin: 0;
     height: 28px;
-    @media (prefers-color-scheme: dark) { 
+    @include dark {
       color: var(--secondaryLabelColor);
     }
-    @media (prefers-color-scheme: light) {
+    @include light {
       color: var(--labelColor);
     }
   }
 
   header.isWindowFocused {
-    @media (prefers-color-scheme: dark) { 
+    @include dark {
       opacity: 1;
     }
-    @media (prefers-color-scheme: light) {
+    @include light {
       opacity: 0.85;
     }
   }
 
   header:not(.isWindowFocused) {
-    @media (prefers-color-scheme: dark) { 
+    @include dark {
       opacity: 0.5;
     }
-    @media (prefers-color-scheme: light) {
+    @include light {
       opacity: 0.35;
     }
   }
 </style>
 
-<header class:isWindowFocused={$isWindowFocused}>{title}</header>
+<header class:isWindowFocused={$isWindowFocused}>
+  {title}
+</header>

@@ -50,9 +50,15 @@ const storeDefault = {
 
   appStatus: 'open',
 
+  darkMode: 'match-system',
+
+  // See Theme.js for how themes are define
   theme: {
-    app: 'match-system',
-    editor: 'gambier'
+    id: 'gibsons',
+    baseColorScheme: 'match-app', // 'dark', 'light', or 'match-app'
+    colorOverrides: [],
+    backgroundComponent: {},
+    editorTheme: ''
   },
 
   chromium: {
@@ -75,6 +81,10 @@ const storeDefault = {
     treeListFolder: 300,
   },
 
+  // Set of objects where key is doc id, and cursor position is 
+  // recorded in `line` and `ch` properties.
+  cursorPositionHistory: { },
+
   // ----------- PROJECTS ----------- //
 
   projects: {
@@ -87,6 +97,7 @@ const storeDefault = {
 }
 
 export const newPanel = {
+  status: '', // E.g. 'userWantsToLoadDoc'
   index: 0,
   id: '', // Generate with nanoid
   docId: '',

@@ -307,7 +307,7 @@
 
   h1 {
     @include label-normal;
-    color: var(--secondarylabelColor);
+    color: var(--secondaryLabelColor);
     margin: 0;
     padding: 0;
     white-space: nowrap;
@@ -319,7 +319,7 @@
     @include label-large-bold;
     color: var(--secondaryLabelColor);
     margin-left: 2px;
-  }
+  } 
 
   .header:not(:hover) .tab .close {
     display: none;
@@ -420,6 +420,5 @@
   </div>
 
   <Editor {panel} {doc} {isFocusedPanel} />
-  <!-- <EditorNext focused={isFocusedPanel} docId={panel.docId} /> -->
 
 </div>

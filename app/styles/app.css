@@ -1,5 +1,4 @@
 :root {
-  --dark-outline: 0 0 0 4px black(1);
   /* -------------- Easing -------------- */
   --standardEase: cubic-bezier(0.4, 0, 0.2, 1);
   --decelerateEase: cubic-bezier(0, 0, 0.2, 1);
@@ -56,10 +55,3 @@ body {
 #layout {
   height: 100%;
 }
-
-.blockquote,
-.highlight {
-  background-color: red;
-}
-
-/*# sourceMappingURL=app.css.map */

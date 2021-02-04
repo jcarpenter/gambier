@@ -4,8 +4,8 @@
   import WindowFrame from '../ui/WindowFrame.svelte';
   import WindowTitleBar from '../ui/WindowTitleBar.svelte'; 
 
+  
   let activeTab = 'general'
-
   let tabs = [
     {
       id: 'general',
@@ -34,6 +34,8 @@
     },
   ]
 
+  $: windowTitle = tabs.find(({ id }) => id == activeTab).title
+
 </script>
 
 <style type="text/scss">
@@ -61,8 +63,11 @@
     overflow-x: hidden;
     overflow-y: scroll;
 
+    // For dark mode, we want the background to be a darker 
+    // shade the usual windowBackgroundColor.
     @include dark { 
-      background: var(--controlBackgroundColor);
+      filter: brightness(0.6);
+      background: var(--windowBackgroundColor);
     }
     @include light {
       background: var(--windowBackgroundColor);
@@ -98,7 +103,7 @@
    <!---------- FRAME ---------->
 
   <WindowFrame>
-    <WindowTitleBar title={tabs.find((t) => t.id == activeTab).title} />
+    <WindowTitleBar title={windowTitle} />
     <div class="toolbar">
       {#each tabs as {id, title, icon}}
         <ToolbarTab label={title} icon={icon} isSelected={id == activeTab} on:mouseup={() => activeTab = id}/>
