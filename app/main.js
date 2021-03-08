@@ -127,13 +127,13 @@ const update = (state, action, window) =>
             }
           });
 
-          // Re-apply theme values (they may change, during development)
-          // If theme has not yet been define, use the default.
-          applyTheme(draft, draft.theme.id);
-
           // Update `allIds` to match `byId`
           draft.projects.allIds = Object.keys(draft.projects.byId);
         }
+
+        // Re-apply theme values (they may change, during development)
+        // If theme has not yet been define, use the default.
+        applyTheme(draft, draft.theme.id);
 
         // If there are no projects, create a new empty one.
         if (!draft.projects.allIds.length) {
@@ -232,12 +232,40 @@ const update = (state, action, window) =>
         break
       }
 
+      case 'SET_TABBABLES': {
+        if (action.blockquote) draft.tabbables.blockquote = action.blockquote;
+        if (action.citation) draft.tabbables.citation = action.citation;
+        if (action.code) draft.tabbables.code = action.code;
+        if (action.emphasis) draft.tabbables.emphasis = action.emphasis;
+        if (action.fencedcodeblock) draft.tabbables.fencedcodeblock = action.fencedcodeblock;
+        if (action.footnote) draft.tabbables.footnote = action.footnote;
+        if (action.header) draft.tabbables.header = action.header;
+        if (action.hr) draft.tabbables.hr = action.hr;
+        if (action.image) draft.tabbables.image = action.image;
+        if (action.link) draft.tabbables.link = action.link;
+        if (action.list) draft.tabbables.list = action.list;
+        if (action.math) draft.tabbables.math = action.math;
+        if (action.strikethrough) draft.tabbables.strikethrough = action.strikethrough;
+        if (action.strong) draft.tabbables.strong = action.strong;
+        if (action.taskList) draft.tabbables.taskList = action.taskList;
+        break
+      }
+
       // CHROMIUM VALUES
 
       case 'SAVE_CHROMIUM_VALUES': {
         draft.chromium = action.values;
         break
       }
+
+      // ------------------------ MARKDOWN ------------------------ //
+
+      case 'SET_MARKDOWN_OPTIONS': {
+        draft.markdown = action.markdownOptions;
+        break
+      }
+
+
 
 
 
@@ -271,8 +299,68 @@ const update = (state, action, window) =>
         }
 
         // Reset panels
+        // Tell panel to load first file in project
         project.focusedPanelIndex = 0;
         project.panels = [{ ...newPanel, id: nonSecure.nanoid() }];
+
+        break
+      }
+
+      case 'PROJECT_FILES_MAPPED': {
+        // If project directory contains docs, select the first one.
+        if (action.firstDocId) {
+          
+          // Load doc in editor
+          project.panels[0].docId = action.firstDocId;
+
+          // Select doc in sidebar 
+          project.sidebar.tabsById.project.selected = [action.firstDocId];
+        }
+        break
+      }
+
+      case 'PROJECT_FILES_UPDATED': {
+        // Called whenever a Watcher instance catches a change
+        // and updates files (note: does not fire when a directory)
+        // is added or removed.
+
+        // Are any of the project panels waiting for a file?
+        const aPanelIsWaitingForAFile = project.panels.some((p) => {
+          return p.status == 'justSavedAsAndWaitingToLoadTheNewFile'
+        });
+
+        // If yes, check if the file exists yet
+        if (aPanelIsWaitingForAFile) {
+
+          // Get watcher
+          const watcher = global.watchers.find((w) => {
+            return w.id == window.projectId
+          });
+
+          // For each panel that is waiting for a new file, 
+          // check files from watcher to see if it exists yet.
+          // If yes, `panel.docId` to the file's id.
+          // This will load it in the editor.
+          project.panels.forEach((panel) => {
+            if (panel.status == 'justSavedAsAndWaitingToLoadTheNewFile') {
+              const newDocId = watcher.files.allIds.find((id) => {
+                const file = watcher.files.byId[id];
+                return file.path == panel.pendingFilePathToLoad
+              });
+              if (newDocId) {
+                panel.docId = newDocId;
+                panel.status = '';
+                delete panel.pendingFilePathToLoad;
+                
+                // Select doc in sidebar
+                const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId];
+                activeTab.selected = [newDocId];
+              }
+            }
+          });
+        }
+        
+
         break
       }
 
@@ -425,17 +513,41 @@ const update = (state, action, window) =>
 
       // PANEL
 
+      case 'CREATE_NEW_DOC': {
+        // Tell panel to load a new (empty) doc 
+        const panel = project.panels[project.focusedPanelIndex];
+        panel.docId = 'newDoc';
+        // Focus the editor
+        project.focusedSectionId = 'main';
+        // Deselect everything in active sidebar tab
+        const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId];
+        activeTab.selected = [];
+        break
+      }
+
       case 'OPEN_DOC_IN_PANEL': {
-        const panel = project.panels[action.panelIndex];
         
+        const panel = project.panels[action.panelIndex];
+        panel.docId = action.doc.id;
+        panel.unsavedChanges = false;
+
         // If panel has unsaved changes, prompt panel to save them.
         // We'll open the selected doc once that's done.
-        if (panel.unsavedChanges) {
-          panel.status = 'userWantsToLoadDoc';
-          panel.pendingDocIdToLoad = action.docId;
-        } else {
-          panel.docId = action.docId;
-          panel.unsavedChanges = false;
+        // if (panel.unsavedChanges) {
+        //   panel.status = 'userWantsToLoadDoc'
+        //   panel.pendingDocIdToLoad = action.docId
+        // } else {
+        //   panel.docId = action.docId
+        //   panel.unsavedChanges = false
+        // }
+
+        // console.log(action.docId, action.selectInSideBar)
+
+        // Select doc in sidebar 
+        if (action.selectInSideBar) {
+          const tab = project.sidebar.tabsById[project.sidebar.activeTabId];
+          tab.lastSelected = action.doc.id;
+          tab.selected = [action.doc.id];
         }
 
         break
@@ -483,14 +595,15 @@ const update = (state, action, window) =>
 
       case 'CLOSE_PANEL': {
         const panel = project.panels[action.panelIndex];
-        
+        closePanel(project, action.panelIndex);
+
         // If panel has unsaved changes, prompt panel to save them.
         // We'll close the panel once the changes are saved.
-        if (panel.unsavedChanges) {
-          panel.status = 'userWantsToClosePanel';
-        } else {
-          closePanel(project, action.panelIndex);
-        }
+        // if (panel.unsavedChanges) {
+        //   panel.status = 'userWantsToClosePanel'
+        // } else {
+        //   closePanel(project, action.panelIndex)
+        // }
         break
       }
 
@@ -500,7 +613,7 @@ const update = (state, action, window) =>
       //   const panelToRight = project.panels[action.panelIndex + 1]
 
       //   break
-      
+
       // }
       case 'SET_PANEL_WIDTHS': {
         project.panels.forEach((panel, i) => panel.width = action.widths[i]);
@@ -525,6 +638,17 @@ const update = (state, action, window) =>
         break
       }
 
+      case 'SAVE_AS_SUCCESS': {
+        const panel = project.panels[action.panelIndex];
+        panel.unsavedChanges = false;
+        
+        // Tell panel to load the new file, once it's available
+        panel.unsavedChanges = false;
+        panel.status = 'justSavedAsAndWaitingToLoadTheNewFile';
+        panel.pendingFilePathToLoad = action.filePath;
+        break
+      }
+
       case 'SAVE_DOC_SUCCESS': {
 
         const panel = project.panels[action.panelIndex];
@@ -532,7 +656,7 @@ const update = (state, action, window) =>
 
         // Several app processes gate on unsavedChanges being saved.
         // As changes are saved, we check the following.
-        
+
         if (project.window.status == 'wantsToClose') {
 
           // If window wantsToClose, and there are no unsavedChanges,
@@ -544,7 +668,7 @@ const update = (state, action, window) =>
 
         } else if (panel.status == 'userWantsToLoadDoc') {
 
-          // If panel was waiting to open new doc, open it
+          // If panel was waiting to open a doc, open it now
           panel.docId = panel.pendingDocIdToLoad;
           panel.pendingDocIdToLoad = '';
           panel.status = '';
@@ -559,16 +683,31 @@ const update = (state, action, window) =>
         break
       }
 
+      case 'SAVE_DOC_CANCELLED': {
+        console.log('Save process cancelled');
+        // TODO
+        break
+      }
+
       case 'SAVE_CURSOR_POSITION': {
-        draft.cursorPositionHistory[action.docId] = { 
-          line: action.line, 
+        draft.cursorPositionHistory[action.docId] = {
+          line: action.line,
           ch: action.ch
         };
         break
       }
 
+      // WIZARD
 
+      case 'TOGGLE_WIZARD_OPTIONAL_LINK_FIELDS': {
+        draft.wizard.showOptionalLinkFields = action.value;
+        break
+      }
 
+      case 'TOGGLE_WIZARD_OPTIONAL_IMAGE_FIELDS': {
+        draft.wizard.showOptionalImageFields = action.value;
+        break
+      }
     }
   }, (patches) => {
     // Update `global.patches`
@@ -701,6 +840,11 @@ const storeDefault = {
     isReducedMotion: false,
   },
 
+  wizard: {
+    showOptionalLinkFields: false,
+    showOptionalImageFields: false
+  },
+
   sourceMode: false,
 
   focusedWindowId: 0,
@@ -711,6 +855,30 @@ const storeDefault = {
 
   timing: {
     treeListFolder: 300,
+  },
+
+  markdown: {
+    implicitFigures: false,
+  },
+
+  // When tabbing through document, we can control which elements are tabbable
+  tabbables: {
+    blockquote: false,
+    citation: true,
+    code: false,
+    emphasis: false,
+    fencedcodeblock: false,
+    footnote: true,
+    // frontmatter: false // TODO
+    header: false,
+    hr: false,
+    image: true,
+    link: true,
+    list: false,
+    math: false,
+    strikethrough: false,
+    strong: false,
+    taskList: false,
   },
 
   // Set of objects where key is doc id, and cursor position is 
@@ -840,6 +1008,41 @@ const newProject = {
     tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
   }
 };
+
+/**
+ * Return true if array has ALL of the items
+ * @param  {...any} items - One or more strings
+ */
+Array.prototype.hasAll = function(...items) {
+  return items.every((i) => this.includes(i))
+};
+
+/**
+ * Return true if array has ANY of the items
+ * @param  {...any} items - One or more strings
+ */
+Array.prototype.hasAny = function(...items) {
+  return items.some((i) => this.includes(i))
+};
+
+/**
+ * Return true if string includes any of the items.
+ * E.g. Returns true if item is `-span` and string is `text-span`
+ * @param  {...any} items - One or more strings
+ */
+String.prototype.includesAny = function(...items) {
+  return items.some((i) => this.includes(i))
+};
+
+/**
+ * Return true if string equals any of the items.
+ * E.g. Returns true if item is `-span` and string is `text-span`
+ * @param  {...any} items - One or more strings
+ */
+String.prototype.equalsAny = function(...items) {
+  return items.some((i) => this === i)
+};
+
 
 /**
  * Get the diff between two arrays
@@ -1653,6 +1856,55 @@ async function saveDoc (doc, data, panelIndex) {
 	}
 }
 
+async function saveDocAs (doc, data, isNewDoc, panelIndex, window) {
+
+  const project = global.state().projects.byId[window.projectId];
+
+  let defaultPath = isNewDoc ? 
+    `${project.directory}/Untitled.md` : 
+    doc.path;
+
+  const { filePath, canceled } = await electron.dialog.showSaveDialog(window, {
+    defaultPath: defaultPath
+  });
+
+  if (canceled) {
+    return {
+      type: 'SAVE_DOC_CANCELLED',
+      panelIndex: panelIndex,
+    }
+  } else {
+
+    try {
+      await fsExtra.writeFile(filePath, data, 'utf8');
+      return {
+        type: 'SAVE_AS_SUCCESS',
+        filePath,
+        panelIndex: panelIndex,
+      }
+    } catch (err) {
+      return {
+        type: 'SAVE_DOC_FAIL',
+        err: err
+      }
+    }
+  }
+
+
+  // try {
+  // 	await writeFile(doc.path, data, 'utf8')
+  // 	return {
+  // 		type: 'SAVE_DOC_SUCCESS',
+  // 		panelIndex: panelIndex,
+  // 	}
+  // } catch (err) {
+  // 	return {
+  // 		type: 'SAVE_DOC_FAIL',
+  // 		err: err
+  // 	}
+  // }
+}
+
 async function selectProjectDirectoryFromDialog () {
 
   const win = electron.BrowserWindow.getFocusedWindow();
@@ -1709,18 +1961,9 @@ function init$1() {
     win.show();
   });
 
-  // Commented this out Jan 14. Isn't being used at the moment.
-  // Need to investigate how to safely close windows, tho. 
-  // E.g. What happens when we click the red close button?
-  // ipcMain.on('safelyCloseWindow', async (evt) => {
-  //   const win = BrowserWindow.fromWebContents(evt.sender)
-  //   if (!global.state().areQuiting) {
-  //     await global.store.dispatch({
-  //       type: 'REMOVE_PROJECT'
-  //     }, win.id)
-  //   }
-  //   win.destroy()
-  // })
+  electron.ipcMain.on('openUrlInDefaultBrowser', (evt, url) => {
+    electron.shell.openExternal(url);
+  });
 
   electron.ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths, isMatchCase, isMatchExactPhrase, isMetaKeyPressed) => {
 
@@ -1806,16 +2049,117 @@ function init$1() {
 
 
   electron.ipcMain.on('dispatch', async (evt, action) => {
+
     const win = electron.BrowserWindow.fromWebContents(evt.sender);
+
     switch (action.type) {
+
       case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
         store.dispatch(await selectCitationsFileFromDialog(), win);
         break
+
       case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
         store.dispatch(await selectProjectDirectoryFromDialog(), win);
         break
+
+      case ('CLOSE_PANEL'):
+      case ('OPEN_DOC_IN_PANEL'):
+
+        const project = global.state().projects.byId[win.projectId];
+        const panel = project.panels[action.panelIndex];
+
+        // If there are unsaved changes, prompt user to save.
+        if (panel.unsavedChanges) {
+
+          const outgoingDocIsNewDoc = action.outgoingDoc.id == 'newDoc';
+          const message = outgoingDocIsNewDoc ?
+            'Do you want to save the changes you made to the new document?' :
+            `Do you want to save the changes you made to ${action.outgoingDoc.path.slice(action.outgoingDoc.path.lastIndexOf('/') + 1)}?`;
+
+          const { response } = await electron.dialog.showMessageBox(win, {
+            message,
+            detail: "Your changes will be lost if you don't save them.",
+            type: "warning",
+            buttons: ["Save", "Don't Save", "Cancel"],
+            defaultId: 0,
+          });
+
+          switch (response) {
+            
+            // "Save"
+            case 0: {
+              if (outgoingDocIsNewDoc) {
+
+                // "Save As" prompt
+
+                const { filePath, canceled } = await electron.dialog.showSaveDialog(window, {
+                  defaultPath: `${project.directory}/Untitled.md`
+                });
+
+                if (canceled) ; else {
+
+                  // Save file
+                  await fsExtra.writeFile(filePath, action.outgoingDocData, 'utf8');
+
+                  // Then forward the original action
+                  store.dispatch(action, win);
+                }
+
+              } else {
+
+                // "Save" prompt
+                await fsExtra.writeFile(action.outgoingDoc.path, action.outgoingDocData, 'utf8');
+
+                // Then forward the original action
+                store.dispatch(action, win);
+              }
+              break
+            }
+            
+            // "Don't Save": Just forward the original action.
+            case 1: {
+              store.dispatch(action, win);
+              break
+            }
+          }
+
+        } else {
+
+          // If there are no unsaved changes,
+          // just forward the original action.
+          store.dispatch(action, win);
+        }
+
+        break
+
+      case ('PROMPT_TO_SAVE_DOC'):
+
+        // const project = global.state().projects.byId[window.projectId]
+
+        // let defaultPath = isNewDoc ? 
+        //   `${project.directory}/Untitled.md` : 
+        //   doc.path
+
+        const filename = action.doc.path.slice(action.doc.path.lastIndexOf('/'));
+
+        const { response } = await electron.dialog.showMessageBox(win, {
+          message: `Do you want to save the changes you made to ${filename}?`,
+          detail: "Your changes will be lost if you don't save them.",
+          type: "warning",
+          buttons: ["Save", "Don't Save", "Cancel"],
+          defaultId: 0,
+        });
+
+        console.log(response);
+
+
+        // store.dispatch(await promptToSaveDoc(action.doc, action.data, action.isNewDoc, action.panelIndex), win)
+        break
       case ('SAVE_DOC'):
         store.dispatch(await saveDoc(action.doc, action.data, action.panelIndex), win);
+        break
+      case ('SAVE_DOC_AS'):
+        store.dispatch(await saveDocAs(action.doc, action.data, action.isNewDoc, action.panelIndex, win), win);
         break
       case ('DELETE_FILE'):
         store.dispatch(await deleteFile(action.path), win);
@@ -1847,7 +2191,7 @@ function init$1() {
   });
 
   // Load file and return text
-  electron.ipcMain.handle('getFileByPath', async (event, filePath, encoding = 'utf8') => {
+  electron.ipcMain.handle('getFileByPath', async (evt, filePath, encoding = 'utf8') => {
     let file = await fsExtra.readFile(filePath, encoding);
     return file
   });
@@ -1855,6 +2199,14 @@ function init$1() {
   // Get system colors and return
   electron.ipcMain.handle('getColors', (evt, observeThemeValues = true) => {
     return getColors(observeThemeValues)
+  });
+
+  electron.ipcMain.handle('getHTMLFromClipboard', (evt) => {
+    return electron.clipboard.readHTML()
+  });
+
+  electron.ipcMain.handle('getFormatOfClipboard', (evt) => {
+    return electron.clipboard.availableFormats()
   });
 }
 
@@ -1881,10 +2233,6 @@ function init$1() {
 // //   await writeFile(path, data, 'utf8')
 // //   canQuitAppSafely = true
 // //   app.quit()
-// // })
-
-// // ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
-// //   shell.openExternal(url)
 // // })
 
 
@@ -1963,14 +2311,6 @@ function init$1() {
 
 // // ipcMain.handle('pathJoin', async (event, path1, path2) => {
 // //   return path.join(path1, path2)
-// // })
-
-// // ipcMain.handle('getHTMLFromClipboard', (event) => {
-// //   return clipboard.readHTML()
-// // })
-
-// // ipcMain.handle('getFormatOfClipboard', (event) => {
-// //   return clipboard.availableFormats()
 // // })
 
 
@@ -2228,7 +2568,7 @@ function getMenuItems() {
       enabled: project !== undefined,
       async click(item, focusedWindow) {
         // TODO
-        // global.store.dispatch(await newFile(state))
+        global.store.dispatch({ type: 'CREATE_NEW_DOC'}, focusedWindow);
       }
     });
 
@@ -2274,6 +2614,15 @@ function getMenuItems() {
       }
     });
 
+    items.saveAs = new electron.MenuItem({
+      label: 'Save As',
+      accelerator: 'CmdOrCtrl+Shift+S',
+      enabled: project !== undefined,
+      click(item, focusedWindow) {
+        focusedWindow.webContents.send('mainRequestsSaveAsFocusedPanel');
+      }
+    });
+
     items.saveAll = new electron.MenuItem({
       label: 'Save All',
       accelerator: 'CmdOrCtrl+Alt+S',
@@ -2293,6 +2642,7 @@ function getMenuItems() {
         items.openProject,
         _______________,
         items.save,
+        items.saveAs,
         items.saveAll,
         items.moveToTrash,
         _______________,
@@ -2797,11 +3147,11 @@ const chokidarConfig = {
 
 class Watcher {
   constructor(id, project, window) {
-    
+
     this.id = id;
     this.directory = project.directory;
     this.window = window;
-    
+
     // If directory is populated, create the watcher
     if (this.directory) {
       this.start();
@@ -2813,7 +3163,7 @@ class Watcher {
   id = ''
   directory = ''
   window = undefined
-  
+
   files = {}
   chokidarInstance = undefined
   pendingChanges = []
@@ -2843,6 +3193,19 @@ class Watcher {
 
     // Send initial files to browser window
     this.window.webContents.send('initialFilesFromMain', this.files);
+
+    // Tell reducers when first project map is complete, 
+    // and pass along first file. Reducer then sets this as
+    // file that the focused panel should display.
+    const firstDocId = this.files.allIds.find((id) => {
+      const file = this.files.byId[id];
+      return file.type == 'doc'
+    });
+
+    global.store.dispatch({
+      type: 'PROJECT_FILES_MAPPED',
+      firstDocId
+    }, this.window);
 
     // Index files into DB
     insertAllDocsIntoDb(this.files);
@@ -2899,27 +3262,41 @@ class Watcher {
 
     if (directoryWasAddedOrRemoved) {
 
+      /* 
+      NOTE: This code is identical to what we do in start()
+      If making changes, make sure to make them in both places.
+      Could abstract into one function, but I don't know what
+      to call it. `mapProject` is most logical, but already used.
+      */
+
       // Map project
       this.files = await mapProject(this.directory);
 
-      // Send files to browser window
+      // Send initial files to browser window
       this.window.webContents.send('initialFilesFromMain', this.files);
+
+      // Tell reducers when first project map is complete, 
+      // and pass along first file. Reducer then sets this as
+      // file that the focused panel should display.
+      const firstDocId = this.files.allIds.find((id) => {
+        const file = this.files.byId[id];
+        return file.type == 'doc'
+      });
+
+      global.store.dispatch({
+        type: 'PROJECT_FILES_MAPPED',
+        firstDocId
+      }, this.window);
 
       // Index files into DB
       insertAllDocsIntoDb(this.files);
 
     } else {
 
-      // Do not proceed if app is quitting. At this point, `this.files` is destroyed, 
-      // and Immer will throw error if we try to proceed.
-      // if (!this.files) return
-      console.log(global.state().appStatus);
+      // Do not proceed if app is quitting. At this point, `this.files` is destroyed, and Immer will throw error if we try to proceed.
       if (global.state().appStatus == 'wantsToQuit') return
-      // console.log(this.window)
-      // if (!this.window) return
-      
 
-      // Update `files` using Immer.
+      // Update `files` using Immer: 
 
       this.files = await produce__default['default'](this.files, async (draft) => {
         for (const c of changes) {
@@ -3001,6 +3378,8 @@ class Watcher {
       }, (patches, inversePatches) => {
         this.window.webContents.send('filesPatchesFromMain', patches);
       });
+
+      global.store.dispatch({ type: 'PROJECT_FILES_UPDATED' }, this.window);
     }
   }
 }
@@ -3289,10 +3668,6 @@ function init$3() {
 }
 
 
-
-
-
-
 /**
  * Create a window and watcher for a project
  * @param {*} id - Of the project
@@ -3412,7 +3787,7 @@ async function open() {
 
   if (!electron.app.isPackaged) {
     win.webContents.openDevTools();
-    win.setBounds({ width: 1060 });
+    win.setBounds({ width: 800 });
   }
 
   // Load index.html

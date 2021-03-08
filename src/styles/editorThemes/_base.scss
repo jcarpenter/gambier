@@ -87,6 +87,10 @@
         --link-source-md:               #{color.adjust($link, $alpha: -0.4)};
         --link-ref-definition-bg:       #{color.adjust($link, $alpha: -0.9)};
 
+        $list: #0d67dc;
+        --list-indentation:             1em;
+        --list-md:                      #{color.adjust($list, $alpha: -0.2)};
+
         --texmath-inline:               rgba(214, 214, 214, 0.5);
         --texmath-display:              rgba(214, 214, 214, 0.5);
 
@@ -95,11 +99,18 @@
         --strikethrough-md:             #{color.adjust($strikethrough, $alpha: -0.2)};
 
         $strong: #0d67dc;
-        --strong:                     #{$strong};
-        --strong-md:                  #{color.adjust($strong, $alpha: -0.6)};
+        --strong:                       #{$strong};
+        --strong-md:                    #{color.adjust($strong, $alpha: -0.6)};
 
-        $list: #0d67dc;
-        --list-indentation:           1em;
-        --list-md:                    #{color.adjust($list, $alpha: -0.2)};
+        // Applies to url-in-brackets and email-in-brackets
+        $in-brackets: #0d67dc;
+        --in-brackets:                  #{$in-brackets};
+        --in-brackets-md:               #{color.adjust($in-brackets, $alpha: -0.6)};
+
+        // $strong: #0d67dc;
+        --wizard-error:               rgba(255, 0, 0, 0.5);
+        --wizard-border-color:          var(--separatorColor);
+        --wizard-border-thickness:      1px;
+        --wizard-border-radius:         4px;
     }
 }

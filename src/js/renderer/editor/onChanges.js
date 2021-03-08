@@ -1,5 +1,5 @@
 import { mapDoc, remapInlineElementsForLine } from "./map"
-import { clearLineMarks, markDoc, markLine } from "./mark"
+import { clearLineMarks, markDoc, markDoc2, markLine2 } from "./mark"
 
 /**
  * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
@@ -31,8 +31,9 @@ export function onChanges(cm, changes) {
   // - ...one line only, if only one line has changed
 
   if (hasMultipleLinesChanged) {
-    mapDoc(cm)
-    markDoc(cm)
+    // mapDoc(cm)
+    // markDoc(cm)
+    markDoc2(cm)
   } else {
 
     const lineNo = changes[0].from.line
@@ -59,18 +60,20 @@ export function onChanges(cm, changes) {
 
       const hasBlockElementChanged = lineHandle.styleClasses !== undefined
       if (hasBlockElementChanged) {
-        mapDoc(cm)
-        markDoc(cm)
+        // mapDoc(cm)
+        // markDoc(cm)
+        markDoc2(cm)
       } else {
         // Remap lineElements, redo line marks, and finish
-        remapInlineElementsForLine(cm, lineHandle)
+        // remapInlineElementsForLine(cm, lineHandle)
         clearLineMarks(cm, lineHandle)
-        markLine(cm, lineHandle)
+        // markLine(cm, lineHandle)
+        markLine2(cm, lineHandle)
       }
     }
   }
 
-  cm.dispatch({ type: 'changes', changes: changes })
+  // cm.dispatch({ type: 'changes', changes: changes })
 
   // Focus widget, if `cm.focusWidgetAfterChanges` !== null. We use this when we want to focus a widget after making changes (e.g. creating it in Autocomplete).
 

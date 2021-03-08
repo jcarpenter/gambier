@@ -60,6 +60,11 @@
       $files,
       (draft) => {
 
+        // If the project is just a single empty folder, return.
+        // This handles first-run scenarios.
+        const isSingleEmptyFolder = draft.allIds.length == 1
+        if (isSingleEmptyFolder) return
+
         // If query is empty, render list as tree, and show all files.
         // Else, render list as DocList, and only show files that match query criteria.
         if (query == '') {
@@ -97,19 +102,23 @@
           delete draft.byId
         }
 
-        // Set selection. First try to maintain the current selection. But if none of the search results are already selected, then select the first result.
-        let noResultsAreSelected = !tab.selected.some((selectedId) => {
-          return draft.allIds.some((id) => id == selectedId)
-        })
-        
-        if (noResultsAreSelected) {
-          const firstResultId = draft.allIds[0]
-          window.api.send('dispatch', {
-            type: 'SIDEBAR_SET_SELECTED',
-            tabId: 'project',
-            lastSelected: firstResultId,
-            selected: [firstResultId],
+        // While searching, set selection. First try to maintain the current selection. But if none of the search results are already selected, then select the first result.
+        if (query) {
+
+          let noResultsAreSelected = !tab.selected.some((selectedId) => {
+            return draft.allIds.some((id) => id == selectedId)
           })
+          
+          if (noResultsAreSelected) {
+            const firstResultId = draft.allIds[0]
+            window.api.send('dispatch', {
+              type: 'SIDEBAR_SET_SELECTED',
+              tabId: 'project',
+              lastSelected: firstResultId,
+              selected: [firstResultId],
+            })
+          }
+
         }
       }
     )

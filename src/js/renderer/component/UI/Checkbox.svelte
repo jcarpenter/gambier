@@ -1,7 +1,6 @@
 <script>
   import { isWindowFocused } from "../../StateManager";
   import { setSize } from "./actions";
-
   export let label = 'Label'
   export let compact = false
   export let checked = false
@@ -10,7 +9,6 @@
 </script>
 
 <style type="text/scss">
-
 
   // ------ Layout: Normal ------ //
 
@@ -149,6 +147,7 @@
     @include dark { filter: brightness(1.25); }
     @include light { filter: brightness(0.95); }
   }
+
 
   // Active and checked:
   .checkbox:not(.disabled).checked input:active + .control {

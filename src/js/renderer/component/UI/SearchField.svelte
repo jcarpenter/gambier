@@ -13,19 +13,19 @@
 
   let input = null
 
-  function handleKeydown(evt) {
-    if (!focused) return
+  // function handleKeydown(evt) {
+  //   if (!focused) return
     
-    // Focus on Cmd-F
-    if (evt.key == 'f' && evt.metaKey) {
-      input.select()
-    }
+  //   // Focus on Cmd-F
+  //   if (evt.key == 'f' && evt.metaKey) {
+  //     input.select()
+  //   }
 
-    // Select all
-    if (evt.metaKey && evt.key == 'a') {
-      input.select()
-    }
-  }
+  //   // Select all
+  //   if (evt.metaKey && evt.key == 'a') {
+  //     input.select()
+  //   }
+  // }
 </script>
 
 <style type="text/scss">
@@ -157,7 +157,7 @@
 
 </style>
 
-<svelte:window on:keydown={handleKeydown} />
+<!-- <svelte:window on:keydown={handleKeydown} /> -->
 
 <div 
   class="searchfield {style}" 

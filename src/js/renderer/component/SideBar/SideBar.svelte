@@ -63,12 +63,12 @@
   }
 
   // We use :global to apply this to each `.section` child, to keep things DRY
-  #sidebar :global(.section){
+  #sidebar > :global(.section){
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
     overflow-y: hidden;
     overflow-x: visible;
-    flex-grow: 1;
   }
 </style>
 

@@ -18,6 +18,41 @@ export function arraysEqual (arr1, arr2) {
 }
 
 /**
+ * Return true if array has ALL of the items
+ * @param  {...any} items - One or more strings
+ */
+Array.prototype.hasAll = function(...items) {
+  return items.every((i) => this.includes(i))
+}
+
+/**
+ * Return true if array has ANY of the items
+ * @param  {...any} items - One or more strings
+ */
+Array.prototype.hasAny = function(...items) {
+  return items.some((i) => this.includes(i))
+}
+
+/**
+ * Return true if string includes any of the items.
+ * E.g. Returns true if item is `-span` and string is `text-span`
+ * @param  {...any} items - One or more strings
+ */
+String.prototype.includesAny = function(...items) {
+  return items.some((i) => this.includes(i))
+}
+
+/**
+ * Return true if string equals any of the items.
+ * E.g. Returns true if item is `-span` and string is `text-span`
+ * @param  {...any} items - One or more strings
+ */
+String.prototype.equalsAny = function(...items) {
+  return items.some((i) => this === i)
+}
+
+
+/**
  * Get the diff between two arrays
  * For [1, 2, 3] and [1, 2], it will return [3]
  * From: https://stackoverflow.com/a/33034768

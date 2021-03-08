@@ -1,10 +1,16 @@
 <script>
-  import { css } from '../ui/actions'
+  import { css, setSize } from '../ui/actions'
   import DisclosureButton from './DisclosureButton.svelte';
 
   export let title = 'Title'
-  export let maxExpandedHeight = 100
   export let isOpen = true
+  export let margin = '0';
+  export let padding = '0';
+
+  // Expanded mode will automatically fit height of slot content
+  // If we want to set a max height and clip (for whatever reason)
+  // we can set this value lower.
+  export let maxExpandedHeight = 1000
 
 </script>
 
@@ -14,22 +20,23 @@
     display: flex;
     flex-shrink: 0;
     flex-direction: column;
-    transition: flex 250ms ease-out;
-    // max-height: 215px;
+    transition: max-height 250ms ease-out;
     overflow: hidden;
-    // border: 1px solid red;
+
+    // Animate height to fit content. Technique from:
+    // https://dev.to/sarah_chima/using-css-transitions-on-the-height-property-al0
 
     &.isOpen {
-      flex-basis: calc(var(--maxExpandedHeight) * 1px);
+      max-height: calc(var(--maxExpandedHeight) * 1px);
     }
 
     &:not(.isOpen) {
-      flex-basis: 20px;
+      max-height: 20px;
     }
   }
 
   header {
-    padding: 0 10px;
+    padding: 0;
     display: flex;
     position: relative;
     flex-direction: row;
@@ -46,28 +53,30 @@
       margin: 0;
       padding: 0;
       position: absolute;
-      left: 22px;
+      left: 14px;
     }
   }
-
-
 </style>
 
 <svelte:options immutable={true} />
 
-<div class="expandable" class:isOpen use:css={{ maxExpandedHeight }}>
-  <header>
+<div 
+  class="expandable" 
+  class:isOpen 
+  use:css={{ maxExpandedHeight }}
+>
+  <header use:setSize={{margin}}>
     <DisclosureButton
       width='12px'
       height='12px'
       padding='2.5px'
-      left={8}
+      left={-2}
       opacity={0.6}
       rotation={isOpen ? 0 : -90}
       on:toggle />
     <h1>{title}</h1>
   </header>
-  <div class="content">
+  <div class="content" use:setSize={{padding}}>
     <slot />
   </div>
 </div>

@@ -6,7 +6,7 @@ import { getInlineElementsForLine } from "./getInlineElementsForLine"
  * 
  */
 export function mapDoc(cm) {
-
+  console.trace()
   // Map block elements
   cm.state.blockElements = getBlockElements(cm)
 
@@ -22,6 +22,8 @@ export function mapDoc(cm) {
       }
     })
   })
+
+  // console.log(cm.state.inlineElements)
 }
 
 

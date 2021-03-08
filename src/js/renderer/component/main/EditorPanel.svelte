@@ -5,6 +5,8 @@
   import Editor from './Editor.svelte';
   import IconButton from '../ui/IconButton.svelte';
   import { createEventDispatcher } from 'svelte'
+import AddressBar from './AddressBar.svelte';
+import { getCmDataByPanelId } from '../../editor/editor-utils';
   const dispatch = createEventDispatcher()
 
   export let index = 0
@@ -195,10 +197,13 @@
   }
 
   function closeThisPanel() {
+
     window.api.send('dispatch', {
       type: 'CLOSE_PANEL',
-      docId: panel.docId,
-      panelIndex: index
+      panelIndex: index,
+      outgoingDoc: doc,
+      outgoingDocData: panel.unsavedChanges ? 
+        getCmDataByPanelId(panel.id) : ''
     })
   }
 
@@ -209,8 +214,6 @@
       panelIndex: index
     })
   }
-
-
 
 </script>
 
@@ -390,21 +393,23 @@
         <span class="hasUnsavedChanges">•</span>
       {/if}
 
-      <!-- Close -->
-      <span class="close">
-        <IconButton 
-          on:mousedown={(domEvent) => {
-            // Stop propogation so we don't trigger `on:mousedown={focusPanel}` on parent div when clicking this button to close the panel. 
-            domEvent.stopPropagation()
-          }}
-          on:mouseup={closeThisPanel} 
-          tooltip='Save changes and close editor' 
-          compact={true} 
-          icon='img-xmark-medium-regular' 
-          padding='0' 
-          iconScale={0.6} 
-        />
-      </span>
+      <!-- Close button. Only show this if there are multiple panels. -->
+      {#if $project.panels.length > 1}
+        <span class="close">
+          <IconButton 
+            on:mousedown={(domEvent) => {
+              // Stop propogation so we don't trigger `on:mousedown={focusPanel}` on parent div when clicking this button to close the panel. 
+              domEvent.stopPropagation()
+            }}
+            on:mouseup={closeThisPanel} 
+            tooltip='Save changes and close editor' 
+            compact={true} 
+            icon='img-xmark-medium-regular' 
+            padding='0' 
+            iconScale={0.6} 
+          />
+        </span>
+      {/if}
 
     </span>
 

@@ -86,10 +86,6 @@ export function init() {
 }
 
 
-
-
-
-
 /**
  * Create a window and watcher for a project
  * @param {*} id - Of the project

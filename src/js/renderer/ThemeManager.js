@@ -20,7 +20,6 @@ export async function updateTheme(newState, patches) {
     const observeThemeOverrides = window.id !== 'preferences'
     const { colors } = await window.api.invoke('getColors', observeThemeOverrides)
     setCSSVariables(colors)
-    console.log(colors)
   }
 
   if (themeChanged) {

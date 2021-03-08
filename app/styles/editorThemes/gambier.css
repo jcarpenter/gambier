@@ -10,6 +10,20 @@
   outline: none;
 }
 
+.mark:not(:focus)::selection {
+  background-color: transparent;
+}
+
+.mark:not(.editable) {
+  cursor: initial;
+}
+.mark:not(.editable)::before {
+  justify-content: center;
+  display: inline-flex;
+  width: 1em;
+  overflow: hidden;
+}
+
 .CodeMirror-line.quote {
   color: var(--blockquote);
   font-style: italic;
@@ -21,15 +35,17 @@
   opacity: 0.6;
 }
 
-.mark.cm-citation {
+.mark.citation {
   color: var(--citation-mark);
   background-color: var(--citation-mark-bg);
   border: 1px solid var(--citation-mark-border);
   border-radius: var(--mark-borderRadius);
-  padding: 0 0.2em;
   font-weight: normal;
 }
-.mark.cm-citation.highlight {
+.mark.citation:before {
+  content: "c";
+}
+.mark.citation.highlighted {
   color: var(--citation-mark-highlight);
   background-color: var(--citation-mark-highlight-bg);
   border-color: var(--citation-mark-highlight-bg);
@@ -71,18 +87,17 @@
   border-radius: 3px;
 }
 
-.mark.cm-footnote {
+.mark.footnote {
   color: var(--footnote-mark);
   background-color: var(--footnote-mark-bg);
   border: 1px solid var(--footnote-mark-border);
   border-radius: var(--mark-borderRadius);
-  padding: 0 0.2em;
   font-weight: normal;
 }
-.mark.cm-footnote:before {
-  content: "fn";
+.mark.footnote:before {
+  content: "f";
 }
-.mark.cm-footnote.highlight {
+.mark.footnote.highlighted {
   color: var(--footnote-mark-highlight);
   background-color: var(--footnote-mark-highlight-bg);
   border-color: var(--footnote-mark-highlight-bg);
@@ -147,21 +162,19 @@
   background-color: var(--hr-bg);
 }
 
-.mark.cm-image {
+.mark.image {
   color: var(--image-mark);
   background-color: var(--image-mark-bg);
   border: 1px solid var(--image-mark-border);
   border-radius: var(--mark-borderRadius);
-  padding-left: 0.4em;
 }
-.mark.cm-image.highlight {
+.mark.image::before {
+  content: "i";
+}
+.mark.image.highlighted {
   color: var(--image-mark-highlight);
   background-color: var(--image-mark-highlight-bg);
   border-color: var(--image-mark-highlight-bg);
-}
-
-.mark.cm-image:not(.reference) {
-  padding-right: 0.4em;
 }
 
 .cm-image {
@@ -171,6 +184,7 @@
 .cm-image.cm-url {
   color: var(--image-source-url);
   text-decoration: underline;
+  word-break: break-all;
 }
 .cm-image.cm-title {
   color: var(--image-source-title);
@@ -183,15 +197,17 @@
   background-color: rgba(241, 188, 127, 0.2) !important;
 }
 
-.mark.cm-link:not(.select) {
+.mark.link {
   color: var(--link-mark);
   background-color: var(--link-mark-bg);
   border: 1px solid var(--link-mark-border);
   border-radius: var(--mark-borderRadius);
   font-weight: normal;
-  padding: 0 0.2em;
 }
-.mark.cm-link:not(.select).highlight {
+.mark.link::before, .mark.link::after {
+  content: " ";
+}
+.mark.link.highlighted {
   color: var(--link-mark-highlight);
   background-color: var(--link-mark-highlight-bg);
   border-color: var(--link-mark-highlight-bg);
@@ -210,6 +226,7 @@
   color: var(--link-source-url);
   text-decoration: underline;
   opacity: 0.8;
+  word-break: break-all;
 }
 .cm-link.cm-url:hover,
 .cm-autolink-url.cm-url:hover,
@@ -246,11 +263,8 @@
   color: var(--list-md);
 }
 
-.taskOpen .cm-md,
-.taskClosed .cm-md {
-  font-size: 0.9em;
-  font-family: "SFMono-Regular";
-  color: var(--list-md);
+.mark.cm-task {
+  margin: 0 0 5px 0;
 }
 
 .cm-texmath-inline {
@@ -281,6 +295,24 @@
 }
 .cm-strong.cm-md {
   color: var(--strong-md);
+}
+
+.cm-bare-url,
+.cm-email-in-brackets,
+.cm-url-in-brackets {
+  color: var(--in-brackets);
+}
+.cm-bare-url.cm-md,
+.cm-email-in-brackets.cm-md,
+.cm-url-in-brackets.cm-md {
+  color: var(--in-brackets-md);
+}
+
+.metaKeyDown .cm-bare-url:hover,
+.metaKeyDown .cm-email-in-brackets:hover,
+.metaKeyDown .cm-url-in-brackets:hover {
+  border-bottom: 1px solid var(--in-brackets);
+  cursor: pointer;
 }
 
 .cm-atom {
@@ -369,6 +401,7 @@
   line-height: 1.4rem;
   background: transparent;
   direction: ltr;
+  padding-left: 10px;
 }
 
 /* ---------- PADDING ---------- */
@@ -376,7 +409,8 @@
   margin: 1em auto;
   min-width: 24em;
   max-width: 40em;
-  padding: 0 1em 18em;
+  padding: 0 0 10em;
+  overflow: hidden;
 }
 
 .CodeMirror-scrollbar-filler,
@@ -792,13 +826,19 @@ span.CodeMirror-selectedtext {
     --link-source-bg: rgba(13, 103, 220, 0.05);
     --link-source-md: rgba(13, 103, 220, 0.6);
     --link-ref-definition-bg: rgba(13, 103, 220, 0.1);
+    --list-indentation: 1em;
+    --list-md: rgba(13, 103, 220, 0.8);
     --texmath-inline: rgba(214, 214, 214, 0.5);
     --texmath-display: rgba(214, 214, 214, 0.5);
     --strikethrough: rgba(0, 0, 0, 0.45);
     --strikethrough-md: rgba(0, 0, 0, 0.25);
     --strong: #0d67dc;
     --strong-md: rgba(13, 103, 220, 0.4);
-    --list-indentation: 1em;
-    --list-md: rgba(13, 103, 220, 0.8);
+    --in-brackets: #0d67dc;
+    --in-brackets-md: rgba(13, 103, 220, 0.4);
+    --wizard-error: rgba(255, 0, 0, 0.5);
+    --wizard-border-color: var(--separatorColor);
+    --wizard-border-thickness: 1px;
+    --wizard-border-radius: 4px;
   }
 }

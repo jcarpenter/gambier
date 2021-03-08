@@ -18,6 +18,7 @@
     line-height: 1.4rem;
     background: transparent;
     direction: ltr;
+    padding-left: 10px;
 }
 
 
@@ -27,12 +28,13 @@
 // Unmodified
 
 .CodeMirror-lines {
-    //   padding: 4px 0; /* Vertical padding around content */
-    // We want the white space on the left and right of each line to be a selectable. thereby increasing the hit target for selections. Hence the large margin. The margin `auto` width value also automatically centers the content.
+    // Make empty space on sides of the editor selectable by 1) setting width of lines, and 2) centering the lines with horizontal margin `auto`. Crop the text selections (which are too wide), by setting `overflow: hidden`.
+
     margin: 1em auto;
     min-width: 24em;
     max-width: 40em;
-    padding: 0 1em 18em;
+    padding: 0 0 10em; //
+    overflow: hidden;
 }
 
 .CodeMirror pre.CodeMirror-line,
@@ -373,6 +375,8 @@ div.CodeMirror-dragcursors {
 
 .CodeMirror-selected {
     background: #d9d9d9; // TODO
+    // max-width: 100%; // Feb 11: Am attempting to fix issue where .CodeMirror-selected div is too wide, and extends off to right.
+
 }
 .CodeMirror-focused .CodeMirror-selected {
     // background: #d7d4f0;

@@ -157,7 +157,7 @@
     on:dragleave|preventDefault|stopPropagation
     on:drop|preventDefault|stopPropagation
     on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds, $files)}
-    on:mouseup={(evt) => onMouseup(evt, id, tab, tabId, listIds, $project.panels[$project.focusedPanelIndex], $files)}
+    on:mouseup={(evt) => onMouseup(evt, id, tab, tabId, $project.panels[$project.focusedPanelIndex], $files)}
     >
       
     {#if isExpandable}

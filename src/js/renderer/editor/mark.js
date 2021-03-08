@@ -1,16 +1,104 @@
+import { getLineElements, getLineSpans } from "./editor-utils"
+import markTaskList from "./markTaskList"
+import Citation from './marks/Citation.svelte'
+import Footnote from './marks/Footnote.svelte'
+import Link from './marks/Link.svelte'
+import Image from './marks/Image.svelte'
+import Task from './marks/Task.svelte'
+import Mark from './marks/Mark.svelte'
+
 
 /**
- * Mark all lines in the document
+ * For each line of the doc, find and replace elements that 
+ * have `isMarked` true with interactive Svelte components.
  */
-export function markDoc(cm) {
+export function markDoc2(cm) {
+
   if (window.state.sourceMode) return
+
   // Clear existing marks
   cm.getAllMarks().forEach((mark) => mark.clear())
-  // Create new marks
+
   cm.operation(() => {
-    cm.eachLine((lineHandle) => markLine(cm, lineHandle))
+    cm.eachLine((lineHandle) => markLine2(cm, lineHandle))
   })
 }
+
+
+/**
+ * Find the specified line, find and replace elements that 
+ * have `isMarked` true with interactive Svelte components.
+ * Before: `[Apple](https://apple.com "Computers!")`
+ * After:  `Apple`
+ */
+export function markLine2(cm, lineHandle) {
+
+  const elements = getLineElements(cm, lineHandle)
+
+  // Only create elements if sourceMode is off.
+  if (window.state.sourceMode || !elements) return
+
+  for (const [index, element] of elements.entries()) {
+
+    // Ignore elements that are not isMarked true
+    if (!element.isMarked) continue
+
+    const frag = document.createDocumentFragment()
+
+    // Determine what Component to use, for the replacement
+    if (element.type == 'task') {
+      var component = new Task({
+        target: frag,
+        props: { cm, element }
+      })
+    } else if (!element.type.includes('definition')) {
+      var component = new Mark({
+        target: frag,
+        props: { cm, element }
+      })
+    }
+
+    // Create the TextMarker
+    const { line, start, end } = element
+    const mark = cm.markText(
+      { line, ch: start },
+      { line, ch: end },
+      {
+        replacedWith: frag,
+        handleMouseEvents: false,
+      }
+    )
+    mark.component = component
+    mark.replacedWith = mark.widgetNode.firstChild
+
+  }
+}
+
+
+/**
+ * Clear marks from a line
+ */
+export function clearLineMarks(cm, lineHandle) {
+  const lineNo = lineHandle.lineNo()
+  const lineMarks = cm.findMarks(
+    { line: lineNo, ch: 0 },
+    { line: lineNo, ch: lineHandle.text.length }
+  )
+  lineMarks.forEach((m) => m.clear())
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// -------- OLD -------- //
 
 
 /**
@@ -22,50 +110,32 @@ export function markLine(cm, lineHandle) {
 
   const lineNo = lineHandle.lineNo()
 
-  let links = []
-  let images = []
-  let footnotes = []
   let citations = []
+  let footnotes = []
+  let images = []
+  let links = []
+  let tasks = []
 
   cm.state.inlineElements.forEach((e) => {
     if (e.line !== lineNo) return
-    if (e.type.includes('link') && !e.type.includes('image')) {
-      links.push(e)
-    } else if (e.type.includes('image')) {
-      images.push(e)
+    if (e.type.includes('citation')) {
+      citations.push(e)
     } else if (e.type.includes('footnote')) {
       footnotes.push(e)
-    } else if (e.type.includes('citation')) {
-      citations.push(e)
+    } else if (e.type.includes('image')) {
+      images.push(e)
+    } else if (e.type.includes('link') && !e.type.includes('image')) {
+      links.push(e)
+    } else if (e.type.includes('task')) {
+      tasks.push(e)
     }
   })
 
-  if (links.length) {
-    markText(cm, lineNo, links, 'links')
-  }
-
-  if (images.length) {
-    markText(cm, lineNo, images, 'images')
-  }
-
-  if (footnotes.length) {
-    markText(cm, lineNo, footnotes, 'footnotes')
-  }
-
-  if (citations.length) {
-    markText(cm, lineNo, citations, 'citations')
-  }
-}
-
-
-/**
- * Clear marks from a line
- */
-export function clearLineMarks(cm, lineHandle) {
-  const lineNo = lineHandle.lineNo()
-  const lineLength = lineHandle.text.length
-  const lineMarks = cm.findMarks({ line: lineNo, ch: 0 }, { line: lineNo, ch: lineLength })
-  lineMarks.forEach((m) => m.clear())
+  if (citations.length) markText(cm, lineNo, citations, 'citations')
+  if (footnotes.length) markText(cm, lineNo, footnotes, 'footnotes')
+  if (images.length) markText(cm, lineNo, images, 'images')
+  if (links.length) markText(cm, lineNo, links, 'links')
+  if (tasks.length) markText(cm, lineNo, tasks, 'tasks')
 }
 
 
@@ -94,6 +164,7 @@ export function markText(cm, lineNo, elements, type) {
         e.mark.editable = true
         e.mark.arrowInto = arrowedInto // Method
         break
+      case 'tasks':
       case 'images':
       case 'footnotes':
       case 'citations':
@@ -131,20 +202,23 @@ export function markText(cm, lineNo, elements, type) {
 
     // Set classes
     switch (type) {
-      case 'links':
-        e.mark.classes.push('cm-link', 'mark')
+      case 'citations':
+        e.mark.classes.push('cm-citation', 'mark')
+        break
+      case 'footnotes':
+        e.mark.classes.push('cm-footnote', 'mark')
         e.mark.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
         break
       case 'images':
         e.mark.classes.push('cm-image', 'mark')
         e.mark.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
         break
-      case 'footnotes':
-        e.mark.classes.push('cm-footnote', 'mark')
+      case 'links':
+        e.mark.classes.push('cm-link', 'mark')
         e.mark.classes.push(e.type.includes('inline') ? 'inline' : 'reference')
         break
-      case 'citations':
-        e.mark.classes.push('cm-citation', 'mark')
+      case 'tasks':
+        e.mark.classes.push('cm-task', 'mark')
         break
     }
 
@@ -172,11 +246,34 @@ export function markText(cm, lineNo, elements, type) {
       wrapper.append(arrow)
     }
 
-    // Mark text
-    cm.markText({ line: lineNo, ch: e.start }, { line: lineNo, ch: e.end }, {
-      replacedWith: frag,
-      handleMouseEvents: false,
-    })
+    if (type == 'tasks') {
+
+      frag = document.createDocumentFragment()
+      const tasks = new Task({
+        target: frag,
+        props: {
+          cm,
+          classes: e.mark.classes,
+          line: e.line,
+          start: e.start,
+          end: e.end,
+          checked: e.type == 'taskClosed'
+        }
+      })
+
+      // Mark text
+      cm.markText({ line: lineNo, ch: e.start }, { line: lineNo, ch: e.end }, {
+        replacedWith: frag,
+        handleMouseEvents: false,
+      })
+    } else {
+
+      // Mark text
+      cm.markText({ line: lineNo, ch: e.start }, { line: lineNo, ch: e.end }, {
+        replacedWith: frag,
+        handleMouseEvents: false,
+      })
+    }
 
 
     // -------- POSITION CURSOR -------- //

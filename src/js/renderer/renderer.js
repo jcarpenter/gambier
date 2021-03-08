@@ -11,6 +11,7 @@ import Layout from './component/Layout.svelte'
 
 async function init() {
 
+  // Get initial state and files
   const initialState = await window.api.invoke('getState')
   const initialFiles = await window.api.invoke('getFiles')
   const initialColors = await window.api.invoke('getColors', true)
@@ -23,6 +24,12 @@ async function init() {
   // Define CodeMirror "Gambier" mode. We only need to do this once.
   // Individual CodeMirror instances load via `mode: 'gambier'` in their setup configs.
   defineGambierMode()
+
+  // Define an array of CodeMirror instances on window.
+  // We push to these in onMount of Editor components.
+  // We use these when we need to a CM instance's contents
+  // from outside the scope of its parent Editor component.
+  window.cmInstances = []
 
   // Create layout
   const layout = new Layout({

@@ -1,3 +1,11 @@
+// import TurndownService from '../third-party/turndown/turndown.es.js'
+
+import TurndownService from "turndown"
+import { isUrl } from "../utils"
+
+
+const turndownService = new TurndownService()
+
 /**
  * "This event is fired before a change is applied, and its handler may choose to modify or cancel the change" — https://codemirror.net/doc/manual.html#event_beforeChange
  * Handle paste operations. If URL, generate link; else, if HTML, convert to markdown.

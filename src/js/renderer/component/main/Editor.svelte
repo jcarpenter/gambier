@@ -1,17 +1,18 @@
 <script>
-  import { state, project } from '../../StateManager'
+  import { state, project, isMetaKeyDown } from '../../StateManager'
   import { files } from '../../FilesManager'
   import { onMount, createEventDispatcher } from 'svelte'
   import { makeEditor } from '../../editor/editor2';
 
   import Wizard from './wizard/Wizard.svelte'
   import Autocomplete from './Autocomplete.svelte'
-  import Preview from './Preview.svelte'
-  import { markDoc } from '../../editor/mark';
-  import { loadDoc, saveDoc, saveCursorPosition } from '../../editor/editor-utils';
+  import Preview from './preview/Preview.svelte'
+  import { markDoc2 } from '../../editor/mark';
+  import { loadDoc, saveDoc, saveDocAs, saveCursorPosition, loadEmptyDoc, promptToSave } from '../../editor/editor-utils';
+  import { mapDoc } from '../../editor/map';
 
   export let panel = {}
-  export let doc = {}
+  export let doc = undefined
   export let isFocusedPanel = false // 1/18: Not using these yet
   export let visible = false
 
@@ -23,23 +24,36 @@
   $: panel, onPanelChange()
 
   /**
-   * Handle panel changes. Determine what changed, and make the appropriate updates/
+   * Handle panel changes. Determine what changed, and make the appropriate updates.
    */
   function onPanelChange() {
     if (!cm) return
 
     // If status has changed...
     const statusHasChanged = panel.status !== cm.state.panel.status
-    const shouldSaveChanges = statusHasChanged && panel.unsavedChanges && (panel.status == 'userWantsToLoadDoc' || panel.status == 'userWantsToClosePanel')
+
+    const isNewDoc = panel.docId == 'newDoc'
+
+    const shouldSaveChanges = 
+      statusHasChanged && 
+      panel.unsavedChanges && 
+        (panel.status == 'userWantsToLoadDoc' || 
+         panel.status == 'userWantsToClosePanel')
+    
     if (shouldSaveChanges) {
       saveCursorPosition(cm)
-      saveDoc(cm, doc)
+      promptToSave(cm, doc, isNewDoc)
+      // saveDoc(cm, doc)
     }
 
     // If doc has changed, load new one
+    // This will also load initial doc, on Editor creation.
     const noDocIsLoadedYet = panel.docId && !cm.state.panel.docId
     const docHasChanged = panel.docId !== cm.state.panel.docId
-    if (noDocIsLoadedYet || docHasChanged) {
+    if (isNewDoc) {
+      saveCursorPosition(cm)
+      loadEmptyDoc(cm)
+    } else if (noDocIsLoadedYet || docHasChanged) {
       saveCursorPosition(cm)
       loadDoc(cm, doc)
     }
@@ -69,9 +83,12 @@
     if (!cm) return
     // Clear current marks, regardless of sourceMode true/false.
     cm.getAllMarks().forEach((m) => m.clear())
-    if (!sourceMode) { markDoc(cm) }
+    if (!sourceMode) { 
+      // mapDoc(cm)
+      // markDoc(cm) 
+      markDoc2(cm) 
+    }
   }
-
 
   $: windowStatus = $project.window.status
   $: windowStatus, windowStatusChanged()
@@ -82,34 +99,56 @@
   function windowStatusChanged() {
     if (!cm) return
     if (windowStatus == 'wantsToClose' && panel.unsavedChanges) {
-      saveCursorPosition(cm)
-      saveDoc(cm, doc)
+
+      window.api.send('dispatch', {
+        type: 'PROMPT_TO_SAVE_DOC',
+        panelIndex: panel.index,
+        outgoingDoc,
+        outgoingDocData: cm.getValue(),
+      })
     }
+  }
+
+  $: $isMetaKeyDown, toggleMetaKeyClass()
+
+  function toggleMetaKeyClass() {
+    if (!cm) return
+    cm.state.isMetaKeyDown = $isMetaKeyDown
   }
 
   $: editorTheme = $state.theme.editorTheme
   $: editorTheme, setEditorTheme()
 
   function setEditorTheme() {
-
+    // TODO
   }
 
-
-  // Focused panel - Can't remember where we use this
 
   onMount(async () => {
 
     // ------ CREATE EDITOR INSTANCE ------ //
 
     cm = makeEditor(el)
-    // loadDoc(cm, doc)
+    window.cmInstances.push(cm)
 
     // ------ CREATE LISTENERS ------ //
 
     // User has clicked File > Save
     window.api.receive('mainRequestsSaveFocusedPanel', () => {
       if (isFocusedPanel && panel.unsavedChanges) {
-        saveDoc(cm, doc)
+        if (panel.docId == 'newDoc') {
+          saveDocAs(cm, doc, true)
+        } else {
+          saveDoc(cm, doc)
+        }
+      }
+    })
+
+    // User has clicked File > Save As
+    window.api.receive('mainRequestsSaveAsFocusedPanel', () => {
+      if (isFocusedPanel) {
+        const isNewDoc = panel.docId == 'newDoc'
+        saveDocAs(cm, doc, isNewDoc)
       }
     })
 
@@ -124,13 +163,6 @@
 
     // Add wizard, autocomplete and preview components to CodeMirror's scroller element. If we don't, and instead were to define them as components here, in Editor.svelte,they would be siblings of the top-level CodeMirror element (which is added to the `el` div), and therefore NOT scroll with the editor.
 
-    // const wizard = new Wizard({
-    //   target: cm.getScrollerElement(),
-    //   props: {
-    //     cm: cm
-    //   }
-    // })
-
     // const autocomplete = new Autocomplete({
     //   target: cm.getScrollerElement(),
     //   props: {
@@ -138,12 +170,19 @@
     //   }
     // })
 
-    // const preview = new Preview({
-    //   target: cm.getScrollerElement(),
-    //   props: {
-    //     cm: cm
-    //   }
-    // })
+    const preview = new Preview({
+      target: cm.getScrollerElement(),
+      props: { cm }
+    })
+
+    const wizard = new Wizard({
+      target: cm.getScrollerElement(),
+      props: { cm }
+    })
+
+    // Expose as props on `cm`
+    cm.preview = preview
+    cm.wizard = wizard
   })
 
 
@@ -171,6 +210,7 @@
   class="editor"
   class:isFocusedPanel
   class:visible
+  class:metaKeyDown={$isMetaKeyDown}
   on:click
 >
 </div>

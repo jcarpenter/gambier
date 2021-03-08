@@ -46,7 +46,6 @@ export function setSize(node, props) {
 
 export function setPosition(node, params) {
   const { x, y } = params
-  console.log(params)
   node.style.top = y
   node.style.left = x
 }

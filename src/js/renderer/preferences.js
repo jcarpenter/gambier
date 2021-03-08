@@ -1,8 +1,8 @@
 import * as StateManager from './StateManager'
+import * as ThemeManager from './ThemeManager'
 import Preferences from './component/preferences/Preferences.svelte'
 
-// Going to need to read and set state
-// Going to need to get state to Svelte components
+// ------ SETUP ------ //
 
 async function init() {
 

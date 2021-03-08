@@ -1,7 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
 import { readFile, writeFile, renameSync, copyFileSync, existsSync, readdirSync } from 'fs-extra'
 import path from 'path'
-import { saveDoc, deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
+import { saveDoc, saveDocAs, deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
 import { getColors } from './AppearanceManager.js'
 
 export function init() {
@@ -23,18 +23,9 @@ export function init() {
     win.show()
   })
 
-  // Commented this out Jan 14. Isn't being used at the moment.
-  // Need to investigate how to safely close windows, tho. 
-  // E.g. What happens when we click the red close button?
-  // ipcMain.on('safelyCloseWindow', async (evt) => {
-  //   const win = BrowserWindow.fromWebContents(evt.sender)
-  //   if (!global.state().areQuiting) {
-  //     await global.store.dispatch({
-  //       type: 'REMOVE_PROJECT'
-  //     }, win.id)
-  //   }
-  //   win.destroy()
-  // })
+  ipcMain.on('openUrlInDefaultBrowser', (evt, url) => {
+    shell.openExternal(url)
+  })
 
   ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths, isMatchCase, isMatchExactPhrase, isMetaKeyPressed) => {
 
@@ -120,23 +111,41 @@ export function init() {
 
 
   ipcMain.on('dispatch', async (evt, action) => {
+
     const win = BrowserWindow.fromWebContents(evt.sender)
+
     switch (action.type) {
+
       case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
         store.dispatch(await selectCitationsFileFromDialog(), win)
         break
+
       case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
         store.dispatch(await selectProjectDirectoryFromDialog(), win)
         break
+
+      case ('PROMPT_TO_SAVE_DOC'):
+      case ('CLOSE_PANEL'):
+      case ('OPEN_DOC_IN_PANEL'):
+        promptToSaveChangesThenForwardAction(action)
+        break
+
       case ('SAVE_DOC'):
         store.dispatch(await saveDoc(action.doc, action.data, action.panelIndex), win)
         break
+
+      case ('SAVE_DOC_AS'):
+        store.dispatch(await saveDocAs(action.doc, action.data, action.isNewDoc, action.panelIndex, win), win)
+        break
+
       case ('DELETE_FILE'):
         store.dispatch(await deleteFile(action.path), win)
         break
+
       case ('DELETE_FILES'):
         store.dispatch(await deleteFiles(action.paths), win)
         break
+
       default:
         store.dispatch(action, win)
         break
@@ -161,7 +170,7 @@ export function init() {
   })
 
   // Load file and return text
-  ipcMain.handle('getFileByPath', async (event, filePath, encoding = 'utf8') => {
+  ipcMain.handle('getFileByPath', async (evt, filePath, encoding = 'utf8') => {
     let file = await readFile(filePath, encoding)
     return file
   })
@@ -169,6 +178,14 @@ export function init() {
   // Get system colors and return
   ipcMain.handle('getColors', (evt, observeThemeValues = true) => {
     return getColors(observeThemeValues)
+  })
+
+  ipcMain.handle('getHTMLFromClipboard', (evt) => {
+    return clipboard.readHTML()
+  })
+
+  ipcMain.handle('getFormatOfClipboard', (evt) => {
+    return clipboard.availableFormats()
   })
 }
 
@@ -195,10 +212,6 @@ export function init() {
 // //   await writeFile(path, data, 'utf8')
 // //   canQuitAppSafely = true
 // //   app.quit()
-// // })
-
-// // ipcMain.on('openUrlInDefaultBrowser', (event, url) => {
-// //   shell.openExternal(url)
 // // })
 
 
@@ -279,17 +292,116 @@ export function init() {
 // //   return path.join(path1, path2)
 // // })
 
-// // ipcMain.handle('getHTMLFromClipboard', (event) => {
-// //   return clipboard.readHTML()
-// // })
 
-// // ipcMain.handle('getFormatOfClipboard', (event) => {
-// //   return clipboard.availableFormats()
-// // })
+/**
+ * 
+ * @param {*} action - With typee, and assorted optional properties. 
+ */
+function promptToSaveChangesThenForwardAction(action) {
+
+  const project = global.state().projects.byId[win.projectId]
+  const panel = project.panels[action.panelIndex]
+
+  if (!panel.unsavedChanges) {
+
+    // No unsaved changes: We just forward the action.
+
+    store.dispatch({ ...action, saveOutcome: 'noUnsavedChanges' }, win)
+
+  } else {
+
+    // Unsaved changes: We prompt user to save...
+
+    // Prompt's wording depends on whether doc is new...
+    const outgoingDocIsNewDoc = action.outgoingDoc.id == 'newDoc'
+    const message = outgoingDocIsNewDoc ?
+      'Do you want to save the changes you made to the new document?' :
+      `Do you want to save the changes you made to ${action.outgoingDoc.path.slice(action.outgoingDoc.path.lastIndexOf('/') + 1)}?`
+
+    // Show prompt
+    const { response } = await dialog.showMessageBox(win, {
+      message,
+      detail: "Your changes will be lost if you don't save them.",
+      type: "warning",
+      buttons: ["Save", "Don't Save", "Cancel"],
+      defaultId: 0,
+    })
+
+    // What button did the user select?
+    const userSelectedSave = response == 0
+    const userSelectedDontSave = response == 1
+    const userSelectedCancel = response == 2
+
+    if (userSelectedSave) {
+
+      // User selected "Save"...
+
+      // If doc is new, show "Save As" flow
+      // Else just save.
+      if (outgoingDocIsNewDoc) {
+
+        // "Save As" prompt
+
+        const { filePath, canceled } = await dialog.showSaveDialog(window, {
+          defaultPath: `${project.directory}/Untitled.md`
+        })
+
+        if (canceled) {
+
+          // Forward original action, 
+          // with 'cancelled' saveOutcome
+          store.dispatch({ ...action, saveOutcome: "cancelled" }, win)
+
+        } else {
+
+          // Save file
+          await writeFile(filePath, action.outgoingDocData, 'utf8')
+
+          // Then forward the original action, 
+          // along with save outcome
+          store.dispatch({ ...action, saveOutcome: "saved" }, win)
+        }
+
+      } else {
+
+        try {
+
+          // Try to save the doc. 
+          await writeFile(action.outgoingDoc.path, action.outgoingDocData, 'utf8')
+
+          // If save is successful, forward the original action
+          // along with save outcome.
+          store.dispatch({ ...action, saveOutcome: "saved" }, win)
+
+        } catch (err) {
+
+          // If save is unsuccessful, forward the original action
+          // along with save outcome.
+          // This shouldn't happen, but we catch it just in case.
+          store.dispatch({ ...action, saveOutcome: "failed" }, win)
+
+        }
+      }
+
+    } else if (userSelectedDontSave) {
+
+      // User selected "Save"...
+      // Just forward the original action.
+
+      store.dispatch(action, win)
+
+    } else if (userSelectedCancel) {
+
+      // If user selected "Cancel"...
+      // Do nothing...
+
+    }
+  }
+}
 
 
 /**
- * Utility function that returns filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
+ * Return filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
  * Original:      /Users/Susan/Notes/ship.jpg
  * First copy:    /Users/Susan/Notes/ship 2.jpg
  * Second copy:   /Users/Susan/Notes/ship 3.jpg

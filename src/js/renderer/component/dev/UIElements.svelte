@@ -2,14 +2,21 @@
   import { state, project, sidebar, isWindowFocused } from '../../StateManager';
 
   import Checkbox from '../ui/Checkbox.svelte';
+  import Description from '../ui/Description.svelte';
+  import FormRow from '../ui/FormRow.svelte';
   import IconButton from '../ui/IconButton.svelte';
+  import InputText from '../ui/InputText.svelte';
   import PopupButton from '../ui/PopupButton.svelte';
   import PulldownButton from '../ui/PulldownButton.svelte';
   import PushButton from '../ui/PushButton.svelte';
   import RadioButton from '../ui/RadioButton.svelte';
-  import SearchField from '../ui/SearchField.svelte';
   import Separator from '../ui/Separator.svelte';
   import Stepper from '../ui/Stepper.svelte';
+
+  let maxWidth = '700px'
+  let leftColumn = '250px'
+  let gap = '0 10px'
+  let margin = '8px 0'
 
   let popupMenuItems = [
     { label: 'Option 1', id: '1', checked: false, separatorAfter: true },
@@ -102,6 +109,7 @@
     gap: 10px;
     position: relative;
     margin-left: 30%;
+    align-items: center;
     // outline: 1px solid pink;
 
     &:not(:first-child) {
@@ -134,22 +142,53 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
 <div class="block">
   <h1>UI Elements</h1>
 
-  <!---------- SEARCHFIELD ---------->
+  <!---------- INPUTTEXT ---------->
 
   <section>
-    <div class="row">
-      <div class="label">SearchField:</div>
-      <SearchField placeholder={'Replace'} width={'110px'} style='sidebar' icon='img-magnifyingglass' />
-      <SearchField placeholder={'Replace'} width={'110px'} style='toolbar' icon='img-magnifyingglass' />
-      <SearchField placeholder={'Replace'} width={'110px'} style='inline' icon='img-magnifyingglass' />
-    </div>
 
-    <div class="row">
-      <div class="label secondary">Compact:</div>
-      <SearchField placeholder={'Replace'} width={'110px'} style='sidebar' icon='img-magnifyingglass' compact={true} />
-      <SearchField placeholder={'Replace'} width={'110px'} style='toolbar' icon='img-magnifyingglass' compact={true} />
-      <SearchField placeholder={'Replace'} width={'110px'} style='inline' icon='img-magnifyingglass' compact={true} />
-    </div>
+    <FormRow label={'InputText:'} {maxWidth} {leftColumn} {gap} {margin}>
+      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' />
+      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' />
+      <InputText placeholder={'Replace'} width={'110px'} style='inline' />
+    </FormRow>
+
+    <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
+      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' compact={true} />
+      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' compact={true} />
+      <InputText placeholder={'Replace'} width={'110px'} style='inline' compact={true} />
+    </FormRow>
+
+    <FormRow label={'Single line:'} {maxWidth} {leftColumn} {gap} {margin}>
+      <InputText width={'110px'} style='sidebar' value={'It was the best.'} />
+      <InputText width={'110px'} style='toolbar' value={'It was the best of times, it was the Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us.'}/>
+      <InputText width={'110px'} style='inline' value={'It was the best of times, it was the Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us.'}/>
+    </FormRow>
+
+    <FormRow label={'Multi line:'} {maxWidth} {leftColumn} {gap} {margin}>
+      <InputText multiLine={true} multiLineMaxHeight={100} width={'110px'} style='sidebar' value={'It was the best.'} />
+      <InputText multiLine={true} multiLineMaxHeight={100} width={'110px'} style='toolbar' value={'It was the best of times, it was the Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us.'}/>
+      <InputText multiLine={true} multiLineMaxHeight={100} width={'110px'} style='inline' value={'It was the best of times, it was the Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us.'}/>
+    </FormRow>
+
+    <FormRow label={'With icon:'} {maxWidth} {leftColumn} {gap} {margin}>
+      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' icon='img-magnifyingglass' />
+      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' icon='img-magnifyingglass' />
+      <InputText placeholder={'Replace'} width={'110px'} style='inline' icon='img-magnifyingglass' />
+    </FormRow>
+
+    <FormRow label={'With icon & compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
+      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' icon='img-magnifyingglass' compact={true} />
+      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' icon='img-magnifyingglass' compact={true} />
+      <InputText placeholder={'Replace'} width={'110px'} style='inline' icon='img-magnifyingglass' compact={true} />
+    </FormRow>
+
+    <FormRow label={'With Description:'} {maxWidth} {leftColumn} {gap} {margin} multiLine={true} labelTopOffset={'7px'}>
+      <InputText placeholder={'Replace'} width={'300px'} style='inline' />
+      <Description margin={'4px 0 0'}>
+        An image with alt text on an empty line will be interpreted as a figure element. The image’s alt text will be used as the caption.
+      </Description>
+    </FormRow>
+
   </section> 
 
   <Separator />
@@ -157,16 +196,14 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- ICON BUTTON ---------->
 
   <section>
-    <div class="row">
-      <div class="label">IconButton:</div>
+    <FormRow label={'IconButton:'} {maxWidth} {leftColumn} {gap} {margin}>
       <IconButton tooltip='Tooltip' />
       <IconButton tooltip='Tooltip' disabled={true} />
-    </div>
-    <div class="row">
-      <div class="label secondary">Compact:</div>
+    </FormRow>
+    <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       <IconButton tooltip='Tooltip' compact={true} />
       <IconButton tooltip='Tooltip' disabled={true} compact={true} />
-    </div>
+    </FormRow>
   </section> 
   
   <Separator />
@@ -174,18 +211,16 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- ICON MENU BUTTON ---------->
 
   <section>
-    <div class="row">
-      <div class="label">IconButton w/ Menu:</div>
+    <FormRow label={'IconButton w/ Menu:'} {maxWidth} {leftColumn} {gap} {margin}>
       <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} />
       <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={false} />
       <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} disabled={true} />
-    </div>
-    <div class="row">
-      <div class="label secondary">IconButton w/ Menu (compact):</div>
+    </FormRow>
+    <FormRow label={'IconButton w/ Menu (compact):'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} compact={true} />
       <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={false} compact={true} />
       <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} disabled={true} compact={true} />
-    </div>
+    </FormRow>
   </section> 
   
   <Separator />
@@ -194,17 +229,15 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- POPUP BUTTON ---------->
 
   <section>
-    <div class="row">
-      <div class="label">PopupButton:</div>      
+    <FormRow label={'PopupButton:'} {maxWidth} {leftColumn} {gap} {margin}>
       <PopupButton items={popupMenuItems} width={'110px'} />
       <PopupButton items={popupMenuItems} width={'110px'} disabled={true} />
-    </div>
+    </FormRow>
 
-    <div class="row">
-      <div class="label secondary">Compact:</div>
+    <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       <PopupButton items={popupMenuItems} width={'110px'} compact={true} />
       <PopupButton items={popupMenuItems} width={'110px'} disabled={true} compact={true} />
-    </div>
+    </FormRow>
   </section> 
   
   <Separator />
@@ -212,17 +245,15 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- PULLDOWN BUTTON ---------->
 
   <section>
-    <div class="row">
-      <div class="label">PulldownButton:</div>      
+    <FormRow label={'PulldownButton:'} {maxWidth} {leftColumn} {gap} {margin}>
       <PulldownButton items={pulldownMenuItems} width={'110px'} on:select={(evt) => console.log(evt.detail.item)} />
       <PulldownButton items={pulldownMenuItems} width={'110px'} disabled={true} />
-    </div>
+    </FormRow>
 
-    <div class="row">
-      <div class="label secondary">Compact:</div>      
+    <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       <PulldownButton items={pulldownMenuItems} width={'110px'} on:select={(evt) => console.log(evt.detail.item)} compact={true} />
       <PulldownButton items={pulldownMenuItems} width={'110px'} disabled={true} compact={true} />
-    </div>
+    </FormRow>
   </section> 
 
   <Separator />
@@ -230,19 +261,17 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- PUSH BUTTON ---------->
   
   <section>
-    <div class="row">
-      <div class="label">PushButton:</div>      
+    <FormRow label={'PushButton:'} {maxWidth} {leftColumn} {gap} {margin}>
       <PushButton label="Normal" width='110px' />
       <PushButton label="Emphasized" emphasized={true} width='110px' />
       <PushButton label="Disabled" disabled={true} width='110px' />
-    </div>
+    </FormRow>
 
-    <div class="row">
-      <div class="label secondary">Compact:</div>      
+    <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       <PushButton label="Normal" width='110px' compact={true} />
       <PushButton label="Emphasized" emphasized={true} width='110px' compact={true} />
       <PushButton label="Disabled" disabled={true} width='110px' compact={true} />
-    </div>
+    </FormRow>
   </section>
   
   <Separator />
@@ -250,12 +279,17 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- RADIO BUTTON ---------->
 
   <section>
-    <div class="row">
-      <div class="label">RadioButton:</div>
+    <FormRow label={'RadioButton:'} {maxWidth} {leftColumn} {gap} {margin}>
       {#each radioList.items as item}
         <RadioButton bind:group={radioList.selected} value={item.id} label={item.label} />
       {/each}
-    </div>
+    </FormRow>
+
+    <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
+      {#each radioList.items as item}
+        <RadioButton bind:group={radioList.selected} value={item.id} label={item.label} compact={true} />
+      {/each}
+    </FormRow>
   </section>
 
   <Separator />
@@ -263,13 +297,26 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- CHECKBOX ---------->
 
   <section>
-    <div class="row">
-      <div class="label">Checkbox:</div>
+    <FormRow label={'Checkbox:'} {maxWidth} {leftColumn} {gap} {margin}>
       <Checkbox compact={false} checked={true} />
       <Checkbox compact={false} checked={false} />
       <Checkbox compact={false} disabled={true} checked={true} />
       <Checkbox compact={false} disabled={true} checked={false} />
-    </div>
+    </FormRow>
+
+    <FormRow label={'Checkbox:'} {maxWidth} {leftColumn} {margin} multiLine={true} labelTopOffset={'3px'}>
+      <Checkbox compact={false} checked={true} />
+      <Description margin={'4px 0 0 20px'}>
+        An image with alt text on an empty line will be interpreted as a figure element. The image’s alt text will be used as the caption.
+      </Description>
+    </FormRow>
+
+    <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
+      <Checkbox compact={true} checked={true} />
+      <Checkbox compact={true} checked={true} />
+      <Checkbox compact={true} disabled={true} checked={true} />
+      <Checkbox compact={true} disabled={true} checked={false} />
+    </FormRow>
   </section>
 
   <Separator />
@@ -277,14 +324,12 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <!---------- STEPPER ---------->
   
   <section>
-    <div class="row">
-      <div class="label">Stepper:</div>      
+    <FormRow label={'Stepper:'} {maxWidth} {leftColumn} {gap} {margin}>
       <Stepper compact={false} label='Label' />
-    </div>
-    <div class="row">
-      <div class="label">Stepper (disabled):</div>
+    </FormRow>
+    <FormRow label={'Disabled:'} {maxWidth} {leftColumn} {gap} {margin}>
       <Stepper compact={false} disabled={true} label='Label' />
-    </div>
+    </FormRow>
   </section>
 
   <Separator />

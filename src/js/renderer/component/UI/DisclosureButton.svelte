@@ -37,6 +37,7 @@
 
 <button
   class='disclosure'
+  tabindex='-1'
   use:css={{ left, rotation, opacity }}
   use:setSize={{width, height, margin, padding}}
   on:mousedown|stopPropagation={() => dispatch('toggle')}

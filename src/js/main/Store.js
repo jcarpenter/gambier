@@ -69,6 +69,11 @@ const storeDefault = {
     isReducedMotion: false,
   },
 
+  wizard: {
+    showOptionalLinkFields: false,
+    showOptionalImageFields: false
+  },
+
   sourceMode: false,
 
   focusedWindowId: 0,
@@ -79,6 +84,30 @@ const storeDefault = {
 
   timing: {
     treeListFolder: 300,
+  },
+
+  markdown: {
+    implicitFigures: false,
+  },
+
+  // When tabbing through document, we can control which elements are tabbable
+  tabbables: {
+    blockquote: false,
+    citation: true,
+    code: false,
+    emphasis: false,
+    fencedcodeblock: false,
+    footnote: true,
+    // frontmatter: false // TODO
+    header: false,
+    hr: false,
+    image: true,
+    link: true,
+    list: false,
+    math: false,
+    strikethrough: false,
+    strong: false,
+    taskList: false,
   },
 
   // Set of objects where key is doc id, and cursor position is 

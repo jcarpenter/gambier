@@ -218,7 +218,7 @@ function getMenuItems() {
       enabled: project !== undefined,
       async click(item, focusedWindow) {
         // TODO
-        // global.store.dispatch(await newFile(state))
+        global.store.dispatch({ type: 'CREATE_NEW_DOC'}, focusedWindow)
       }
     })
 
@@ -264,6 +264,15 @@ function getMenuItems() {
       }
     })
 
+    items.saveAs = new MenuItem({
+      label: 'Save As',
+      accelerator: 'CmdOrCtrl+Shift+S',
+      enabled: project !== undefined,
+      click(item, focusedWindow) {
+        focusedWindow.webContents.send('mainRequestsSaveAsFocusedPanel')
+      }
+    })
+
     items.saveAll = new MenuItem({
       label: 'Save All',
       accelerator: 'CmdOrCtrl+Alt+S',
@@ -283,6 +292,7 @@ function getMenuItems() {
         items.openProject,
         _______________,
         items.save,
+        items.saveAs,
         items.saveAll,
         items.moveToTrash,
         _______________,

@@ -27,11 +27,11 @@ const chokidarConfig = {
 
 export class Watcher {
   constructor(id, project, window) {
-    
+
     this.id = id
     this.directory = project.directory
     this.window = window
-    
+
     // If directory is populated, create the watcher
     if (this.directory) {
       this.start()
@@ -43,7 +43,7 @@ export class Watcher {
   id = ''
   directory = ''
   window = undefined
-  
+
   files = {}
   chokidarInstance = undefined
   pendingChanges = []
@@ -73,6 +73,19 @@ export class Watcher {
 
     // Send initial files to browser window
     this.window.webContents.send('initialFilesFromMain', this.files)
+
+    // Tell reducers when first project map is complete, 
+    // and pass along first file. Reducer then sets this as
+    // file that the focused panel should display.
+    const firstDocId = this.files.allIds.find((id) => {
+      const file = this.files.byId[id]
+      return file.type == 'doc'
+    })
+
+    global.store.dispatch({
+      type: 'PROJECT_FILES_MAPPED',
+      firstDocId
+    }, this.window)
 
     // Index files into DB
     insertAllDocsIntoDb(this.files)
@@ -129,27 +142,41 @@ export class Watcher {
 
     if (directoryWasAddedOrRemoved) {
 
+      /* 
+      NOTE: This code is identical to what we do in start()
+      If making changes, make sure to make them in both places.
+      Could abstract into one function, but I don't know what
+      to call it. `mapProject` is most logical, but already used.
+      */
+
       // Map project
       this.files = await mapProject(this.directory)
 
-      // Send files to browser window
+      // Send initial files to browser window
       this.window.webContents.send('initialFilesFromMain', this.files)
+
+      // Tell reducers when first project map is complete, 
+      // and pass along first file. Reducer then sets this as
+      // file that the focused panel should display.
+      const firstDocId = this.files.allIds.find((id) => {
+        const file = this.files.byId[id]
+        return file.type == 'doc'
+      })
+
+      global.store.dispatch({
+        type: 'PROJECT_FILES_MAPPED',
+        firstDocId
+      }, this.window)
 
       // Index files into DB
       insertAllDocsIntoDb(this.files)
 
     } else {
 
-      // Do not proceed if app is quitting. At this point, `this.files` is destroyed, 
-      // and Immer will throw error if we try to proceed.
-      // if (!this.files) return
-      console.log(global.state().appStatus)
+      // Do not proceed if app is quitting. At this point, `this.files` is destroyed, and Immer will throw error if we try to proceed.
       if (global.state().appStatus == 'wantsToQuit') return
-      // console.log(this.window)
-      // if (!this.window) return
-      
 
-      // Update `files` using Immer.
+      // Update `files` using Immer: 
 
       this.files = await produce(this.files, async (draft) => {
         for (const c of changes) {
@@ -231,6 +258,8 @@ export class Watcher {
       }, (patches, inversePatches) => {
         this.window.webContents.send('filesPatchesFromMain', patches)
       })
+
+      global.store.dispatch({ type: 'PROJECT_FILES_UPDATED' }, this.window)
     }
   }
 }

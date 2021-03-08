@@ -9,6 +9,7 @@ enablePatches() // Required by immer
 // These are accessed by Svelte components.
 export const state = writable({})
 export const isWindowFocused = writable(false)
+export const isMetaKeyDown = writable(false)
 export const project = writable({})
 export const sidebar = writable({})
 
@@ -71,6 +72,17 @@ export function init(initialState) {
 
   // Expose stateAsObject on window
   window.state = stateAsObject
+
+  // Listen for metakey presses
+  document.addEventListener('keydown', (evt) => {
+    if (evt.metaKey) {
+      isMetaKeyDown.set(true)
+    }
+  })
+
+  document.addEventListener('keyup', (evt) => {
+    isMetaKeyDown.set(false)
+  })
 }
 
 

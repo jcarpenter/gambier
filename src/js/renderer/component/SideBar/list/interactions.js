@@ -2,6 +2,8 @@
 A collection of common list interactions. These are shared across DocLists, TreeLists, etc.
 */
 
+import { getCmDataByPanelId } from "../../../editor/editor-utils"
+
 // -------- MOUSE DOWN -------- //
 
 export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files) {
@@ -11,17 +13,26 @@ export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files
   // Cmd-click while not selected: Add this to existing items
   // Cmd-click while selected: Remove this from existing items
 
+  const normalClicked = !domEvent.shiftKey && !domEvent.metaKey
+
+  if (normalClicked) return
+
+  // const clickedWhileSelected = !domEvent.metaKey && isSelected
+  // const clickedWhileNotSelected = !domEvent.metaKey && !isSelected
+
+  // if (clickedWhileSelected) {
+  // return
+  // } else if (clickedWhileNotSelected) {
+  //   selected = [id]
+  // }
+
   const shiftClicked = domEvent.shiftKey
-  const clickedWhileSelected = !domEvent.metaKey && isSelected
-  const clickedWhileNotSelected = !domEvent.metaKey && !isSelected
   const cmdClickedWhileNotSelected = domEvent.metaKey && !isSelected
   const cmdClickedWhileSelected = domEvent.metaKey && isSelected
 
   let selected = []
 
-  if (clickedWhileSelected) {
-    return
-  } else if (shiftClicked) {
+  if (shiftClicked) {
     const clickedIndex = listIds.indexOf(id)
     const lastSelectedIndex = listIds.indexOf(tab.lastSelected)
     const lastSelectedIsStillVisible = lastSelectedIndex !== -1
@@ -37,8 +48,6 @@ export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files
       const lastSelected = [...tab.selected]
       selected = [...newSelected, ...lastSelected]
     }
-  } else if (clickedWhileNotSelected) {
-    selected = [id]
   } else if (cmdClickedWhileNotSelected) {
     selected = [id, ...tab.selected]
   } else if (cmdClickedWhileSelected) {
@@ -66,20 +75,45 @@ export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files
 /**
  * Open the file `id` in the focused panel, if it's a doc, and only one file is selected.
  */
-export function onMouseup(domEvent, fileId, tab, tabId, listIds, panel, files) {
-    
-  // Open doc
-  const isDoc = files.byId[fileId].type == 'doc'
-  const isNotAlreadyOpen = fileId !== panel.docId
-  const oneFileSelected = tab.selected.length == 1
+export function onMouseup(domEvent, id, tab, tabId, panel, files) {
 
-  // Load doc
-  if (oneFileSelected && isDoc && isNotAlreadyOpen) {
+  // If shift or meta were pressed, we read this as a 
+  // "select stuff" action, and don't open docs.
+  const shiftOrMetaWerePressed =
+    domEvent.shiftKey || domEvent.metaKey
+  if (shiftOrMetaWerePressed) return
+
+  const isDoc = files.byId[id].type == 'doc'
+  const isNotAlreadyOpen = id !== panel.docId
+  // const oneFileSelected = tab.selected.length == 1
+
+  // If the selected doc is not already open, open it
+  // The 
+  if (isDoc && isNotAlreadyOpen) {
+
     window.api.send('dispatch', {
       type: 'OPEN_DOC_IN_PANEL',
       panelIndex: panel.index,
-      docId: fileId,
+      doc: files.byId[id],
+      selectInSideBar: true,
+      outgoingDoc: files.byId[panel.docId],
+      outgoingDocData: panel.unsavedChanges ?
+        getCmDataByPanelId(panel.id) : ''
     })
+
+  } else if (!isNotAlreadyOpen) {
+
+    // If user clicks on already-open doc, we usually don't 
+    // need to do anything. But if multiple items are selected
+    // we should deselect the other docs.
+    if (tab.selected.length > 1) {
+      window.api.send('dispatch', {
+        type: 'SIDEBAR_SET_SELECTED',
+        tabId: tabId,
+        lastSelected: id,
+        selected: [id],
+      })
+    }
   }
 }
 
@@ -181,30 +215,42 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
     selected = [id]
   }
 
-  // If there are multiple selected, find and remove any duplicates.
-  // Per: https://stackoverflow.com/a/14438954
+  // If there are multiple selected, select them (but don't open).
+  // If there's only one selection, open it.
   if (selected.length > 1) {
+
+    // First find and remove any duplicates.
+    // Per: https://stackoverflow.com/a/14438954
     selected = Array.from(new Set(selected))
-  }
 
-  // Update selection
-  window.api.send('dispatch', {
-    type: 'SIDEBAR_SET_SELECTED',
-    tabId: tabId,
-    lastSelected: id,
-    selected: selected,
-  })
-
-  // Open doc
-  const isDoc = files.byId[id].type == 'doc'
-  const oneFileSelected = selected.length == 1
-
-  if (oneFileSelected && isDoc) {
+    // Update selection
     window.api.send('dispatch', {
-      type: 'OPEN_DOC_IN_PANEL',
-      panelIndex: project.focusedPanelIndex,
-      docId: id,
+      type: 'SIDEBAR_SET_SELECTED',
+      tabId: tabId,
+      lastSelected: id,
+      selected: selected,
     })
+
+  } else {
+
+    const isDoc = files.byId[id].type == 'doc'
+    
+    // Open doc
+    if (isDoc) {
+
+      const panel = project.panels.find(({index}) => index == project.focusedPanelIndex)
+  
+      window.api.send('dispatch', {
+        type: 'OPEN_DOC_IN_PANEL',
+        panelIndex: panel.index,
+        doc: files.byId[id],
+        selectInSideBar: true,
+        outgoingDoc: files.byId[panel.docId],
+        outgoingDocData: panel.unsavedChanges ?
+          getCmDataByPanelId(panel.id) : ''
+      })
+
+    }
   }
 }
 

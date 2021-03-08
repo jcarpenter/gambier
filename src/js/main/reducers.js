@@ -40,13 +40,13 @@ export const update = (state, action, window) =>
             }
           })
 
-          // Re-apply theme values (they may change, during development)
-          // If theme has not yet been define, use the default.
-          applyTheme(draft, draft.theme.id)
-
           // Update `allIds` to match `byId`
           draft.projects.allIds = Object.keys(draft.projects.byId)
         }
+
+        // Re-apply theme values (they may change, during development)
+        // If theme has not yet been define, use the default.
+        applyTheme(draft, draft.theme.id)
 
         // If there are no projects, create a new empty one.
         if (!draft.projects.allIds.length) {
@@ -145,12 +145,40 @@ export const update = (state, action, window) =>
         break
       }
 
+      case 'SET_TABBABLES': {
+        if (action.blockquote) draft.tabbables.blockquote = action.blockquote
+        if (action.citation) draft.tabbables.citation = action.citation
+        if (action.code) draft.tabbables.code = action.code
+        if (action.emphasis) draft.tabbables.emphasis = action.emphasis
+        if (action.fencedcodeblock) draft.tabbables.fencedcodeblock = action.fencedcodeblock
+        if (action.footnote) draft.tabbables.footnote = action.footnote
+        if (action.header) draft.tabbables.header = action.header
+        if (action.hr) draft.tabbables.hr = action.hr
+        if (action.image) draft.tabbables.image = action.image
+        if (action.link) draft.tabbables.link = action.link
+        if (action.list) draft.tabbables.list = action.list
+        if (action.math) draft.tabbables.math = action.math
+        if (action.strikethrough) draft.tabbables.strikethrough = action.strikethrough
+        if (action.strong) draft.tabbables.strong = action.strong
+        if (action.taskList) draft.tabbables.taskList = action.taskList
+        break
+      }
+
       // CHROMIUM VALUES
 
       case 'SAVE_CHROMIUM_VALUES': {
         draft.chromium = action.values
         break
       }
+
+      // ------------------------ MARKDOWN ------------------------ //
+
+      case 'SET_MARKDOWN_OPTIONS': {
+        draft.markdown = action.markdownOptions
+        break
+      }
+
+
 
 
 
@@ -186,8 +214,68 @@ export const update = (state, action, window) =>
         }
 
         // Reset panels
+        // Tell panel to load first file in project
         project.focusedPanelIndex = 0
         project.panels = [{ ...newPanel, id: nanoid() }]
+
+        break
+      }
+
+      case 'PROJECT_FILES_MAPPED': {
+        // If project directory contains docs, select the first one.
+        if (action.firstDocId) {
+          
+          // Load doc in editor
+          project.panels[0].docId = action.firstDocId
+
+          // Select doc in sidebar 
+          project.sidebar.tabsById.project.selected = [action.firstDocId]
+        }
+        break
+      }
+
+      case 'PROJECT_FILES_UPDATED': {
+        // Called whenever a Watcher instance catches a change
+        // and updates files (note: does not fire when a directory)
+        // is added or removed.
+
+        // Are any of the project panels waiting for a file?
+        const aPanelIsWaitingForAFile = project.panels.some((p) => {
+          return p.status == 'justSavedAsAndWaitingToLoadTheNewFile'
+        })
+
+        // If yes, check if the file exists yet
+        if (aPanelIsWaitingForAFile) {
+
+          // Get watcher
+          const watcher = global.watchers.find((w) => {
+            return w.id == window.projectId
+          })
+
+          // For each panel that is waiting for a new file, 
+          // check files from watcher to see if it exists yet.
+          // If yes, `panel.docId` to the file's id.
+          // This will load it in the editor.
+          project.panels.forEach((panel) => {
+            if (panel.status == 'justSavedAsAndWaitingToLoadTheNewFile') {
+              const newDocId = watcher.files.allIds.find((id) => {
+                const file = watcher.files.byId[id]
+                return file.path == panel.pendingFilePathToLoad
+              })
+              if (newDocId) {
+                panel.docId = newDocId
+                panel.status = ''
+                delete panel.pendingFilePathToLoad
+                
+                // Select doc in sidebar
+                const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId]
+                activeTab.selected = [newDocId]
+              }
+            }
+          })
+        }
+        
+
         break
       }
 
@@ -340,17 +428,41 @@ export const update = (state, action, window) =>
 
       // PANEL
 
+      case 'CREATE_NEW_DOC': {
+        // Tell panel to load a new (empty) doc 
+        const panel = project.panels[project.focusedPanelIndex]
+        panel.docId = 'newDoc'
+        // Focus the editor
+        project.focusedSectionId = 'main'
+        // Deselect everything in active sidebar tab
+        const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId]
+        activeTab.selected = []
+        break
+      }
+
       case 'OPEN_DOC_IN_PANEL': {
-        const panel = project.panels[action.panelIndex]
         
+        const panel = project.panels[action.panelIndex]
+        panel.docId = action.doc.id
+        panel.unsavedChanges = false
+
         // If panel has unsaved changes, prompt panel to save them.
         // We'll open the selected doc once that's done.
-        if (panel.unsavedChanges) {
-          panel.status = 'userWantsToLoadDoc'
-          panel.pendingDocIdToLoad = action.docId
-        } else {
-          panel.docId = action.docId
-          panel.unsavedChanges = false
+        // if (panel.unsavedChanges) {
+        //   panel.status = 'userWantsToLoadDoc'
+        //   panel.pendingDocIdToLoad = action.docId
+        // } else {
+        //   panel.docId = action.docId
+        //   panel.unsavedChanges = false
+        // }
+
+        // console.log(action.docId, action.selectInSideBar)
+
+        // Select doc in sidebar 
+        if (action.selectInSideBar) {
+          const tab = project.sidebar.tabsById[project.sidebar.activeTabId]
+          tab.lastSelected = action.doc.id
+          tab.selected = [action.doc.id]
         }
 
         break
@@ -398,14 +510,15 @@ export const update = (state, action, window) =>
 
       case 'CLOSE_PANEL': {
         const panel = project.panels[action.panelIndex]
-        
+        closePanel(project, action.panelIndex)
+
         // If panel has unsaved changes, prompt panel to save them.
         // We'll close the panel once the changes are saved.
-        if (panel.unsavedChanges) {
-          panel.status = 'userWantsToClosePanel'
-        } else {
-          closePanel(project, action.panelIndex)
-        }
+        // if (panel.unsavedChanges) {
+        //   panel.status = 'userWantsToClosePanel'
+        // } else {
+        //   closePanel(project, action.panelIndex)
+        // }
         break
       }
 
@@ -415,7 +528,7 @@ export const update = (state, action, window) =>
       //   const panelToRight = project.panels[action.panelIndex + 1]
 
       //   break
-      
+
       // }
       case 'SET_PANEL_WIDTHS': {
         project.panels.forEach((panel, i) => panel.width = action.widths[i])
@@ -440,6 +553,17 @@ export const update = (state, action, window) =>
         break
       }
 
+      case 'SAVE_AS_SUCCESS': {
+        const panel = project.panels[action.panelIndex]
+        panel.unsavedChanges = false
+        
+        // Tell panel to load the new file, once it's available
+        panel.unsavedChanges = false
+        panel.status = 'justSavedAsAndWaitingToLoadTheNewFile'
+        panel.pendingFilePathToLoad = action.filePath
+        break
+      }
+
       case 'SAVE_DOC_SUCCESS': {
 
         const panel = project.panels[action.panelIndex]
@@ -447,7 +571,7 @@ export const update = (state, action, window) =>
 
         // Several app processes gate on unsavedChanges being saved.
         // As changes are saved, we check the following.
-        
+
         if (project.window.status == 'wantsToClose') {
 
           // If window wantsToClose, and there are no unsavedChanges,
@@ -459,7 +583,7 @@ export const update = (state, action, window) =>
 
         } else if (panel.status == 'userWantsToLoadDoc') {
 
-          // If panel was waiting to open new doc, open it
+          // If panel was waiting to open a doc, open it now
           panel.docId = panel.pendingDocIdToLoad
           panel.pendingDocIdToLoad = ''
           panel.status = ''
@@ -474,16 +598,31 @@ export const update = (state, action, window) =>
         break
       }
 
+      case 'SAVE_DOC_CANCELLED': {
+        console.log('Save process cancelled')
+        // TODO
+        break
+      }
+
       case 'SAVE_CURSOR_POSITION': {
-        draft.cursorPositionHistory[action.docId] = { 
-          line: action.line, 
+        draft.cursorPositionHistory[action.docId] = {
+          line: action.line,
           ch: action.ch
         }
         break
       }
 
+      // WIZARD
 
+      case 'TOGGLE_WIZARD_OPTIONAL_LINK_FIELDS': {
+        draft.wizard.showOptionalLinkFields = action.value
+        break
+      }
 
+      case 'TOGGLE_WIZARD_OPTIONAL_IMAGE_FIELDS': {
+        draft.wizard.showOptionalImageFields = action.value
+        break
+      }
     }
   }, (patches) => {
     // Update `global.patches`

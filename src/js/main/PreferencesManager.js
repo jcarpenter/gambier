@@ -79,7 +79,7 @@ async function open() {
 
   if (!app.isPackaged) {
     win.webContents.openDevTools();
-    win.setBounds({ width: 1060 })
+    win.setBounds({ width: 800 })
   }
 
   // Load index.html

@@ -1,10 +1,13 @@
 <script>
-  import { isWindowFocused } from '../../StateManager';
+  import { isWindowFocused, state } from '../../StateManager';
+  import Checkbox from '../ui/Checkbox.svelte';
+  import Description from '../ui/Description.svelte';
+  import FormRow from '../ui/FormRow.svelte';
+  import Separator from '../ui/Separator.svelte';
   import ToolbarTab from '../ui/ToolbarTab.svelte';
   import WindowFrame from '../ui/WindowFrame.svelte';
   import WindowTitleBar from '../ui/WindowTitleBar.svelte'; 
 
-  
   let activeTab = 'general'
   let tabs = [
     {
@@ -55,13 +58,16 @@
   }
 
   .window-body {
+    max-width: 600px;
+    margin: 0 auto;
     height: 100%;
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px 0;
+    // gap: 10px 0;
     overflow-x: hidden;
     overflow-y: scroll;
+    // align-items: center;
 
     // For dark mode, we want the background to be a darker 
     // shade the usual windowBackgroundColor.
@@ -72,28 +78,6 @@
     @include light {
       background: var(--windowBackgroundColor);
     }
-  }
-
-  .row {
-    position: relative;
-    margin-left: 40%;
-    // outline: 1px solid pink;
-  }
-
-  .label {
-    @include label-normal;
-    // outline: 1px solid blue;
-    position: absolute;
-    left: -8px;
-    color: var(--labelColor);
-    transform: translate(-100%, 0);
-    height: 20px;
-    display: flex;
-    align-items: center;
-  }
-
-  .label.secondary {
-    opacity: 0.25;
   }
 
 </style>
@@ -116,7 +100,65 @@
 
   <div class="window-body">
 
-    <!-- TODO -->
+    {#if activeTab=='markup'} 
+      
+      <!-- Figures -->
+
+      <FormRow label={'Figures:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+        <Checkbox 
+          label={'Implicit Figures'}
+          checked={$state.markdown.implicitFigures}
+          on:click={() => {
+            window.api.send('dispatch', {
+              type: 'SET_MARKDOWN_OPTIONS',
+              markdownOptions: {
+                ...$state.markdown, 
+                implicitFigures: !$state.markdown.implicitFigures
+              }
+            })
+          }}
+        />
+        <Description margin={'4px 0 0 20px'}>
+          An image with alt text on an empty line will be interpreted as a figure element. The image’s alt text will be used as the caption.
+        </Description>  
+      </FormRow>
+      
+      <FormRow leftColumn={'200px'} margin={'8px 0 0'}>
+        <Checkbox 
+          label={'Show Thumbnail'}
+          disabled={!$state.markdown.implicitFigures}
+          checked={true}
+          on:click={() => {
+            window.api.send('dispatch', {
+              type: 'SET_MARKDOWN_OPTIONS',
+              markdownOptions: {
+                ...$state.markdown, 
+                implicitFigures: !$state.markdown.implicitFigures
+              }
+            })
+          }}
+        />
+      </FormRow>
+
+      <FormRow leftColumn={'200px'} margin={'4px 0 0'}>
+        <Checkbox 
+          label={'Show Caption'}
+          disabled={!$state.markdown.implicitFigures}
+          checked={true}
+          on:click={() => {
+            window.api.send('dispatch', {
+              type: 'SET_MARKDOWN_OPTIONS',
+              markdownOptions: {
+                ...$state.markdown, 
+                implicitFigures: !$state.markdown.implicitFigures
+              }
+            })
+          }}
+        />
+      </FormRow>
+
+
+    {/if}
 
   </div>
 </div>

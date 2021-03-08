@@ -8,10 +8,10 @@
   import Header from './Header.svelte'
   import PopupButton from '../ui/PopupButton.svelte';
   import PushButton from '../ui/PushButton.svelte';
-  import SearchField from '../ui/SearchField.svelte'
+  import InputText from '../ui/InputText.svelte'
   import SearchResult from './list/SearchResult.svelte'
   import Separator from '../ui/Separator.svelte'
-
+  import FormRow from '../ui/FormRow.svelte';
 
   let query = '' // Bound to search field
   let replaceWith = '' // Bound to replace field
@@ -166,7 +166,7 @@
 
 <style type="text/scss">
 
-  #numberOfResults {
+  .numberOfResults {
     @include label-normal-small;
     color: var(--labelColor);
     min-height: 25px;
@@ -177,28 +177,7 @@
     justify-content: center;
   }
 
-  .row {
-    margin: 8px 10px 0;
-    display: flex;
-    align-items: center;
-    .label {
-      @include label-normal-small;
-      user-select: none;
-      text-align: right;
-      flex-basis: 46px;
-      flex-shrink: 0;
-      margin-right: 6px;
-    }
-    .items {
-      display: flex;
-      align-items: center;
-    }
-    &:first-of-type {
-      margin-top: 5px;
-    }
-  }
-
-  .list {
+  .listOfResults {
     padding: 5px 10px 10px;
     flex-grow: 1;
     overflow-y: scroll;
@@ -219,76 +198,115 @@
 
 
 <div class="section">
-  <Header title={tab.title} hoverToShowSlot={true}>
-  </Header>
-  <Separator margin={'0 10px'} />
-  <SearchField icon={'img-magnifyingglass'} placeholder={'Name'} margin={'10px 10px 0'} bind:query={query} compact={true} />
-  <Separator margin={'10px 10px 0'} />
+  
+  <Header title={tab.title} hoverToShowSlot={true}></Header>
+  
+  <Separator margin={'0 10px 8px'} />
+  
+  <InputText icon={'img-magnifyingglass'} placeholder={'Name'} margin={'0 10px 0'} bind:value={query} compact={true} />
+  
+  <Separator margin={'8px 10px 0'} />
 
   <!------------- OPTIONS ------------->
-  <Expandable title={'Options:'} maxExpandedHeight={75} isOpen={tab.options.isOpen} on:toggle={() => window.api.send('dispatch', {type: 'SIDEBAR_TOGGLE_EXPANDABLE', tabId: tabId, expandable: 'options'})}>
-    
-    <!-- Match: -->
-    <div class="row">
-      <div class="label">Match:</div>
-      <div class="items">
-        <Checkbox compact={true} checked={options.matchCase} label='Case' margin={'0 5px 0 0'} on:click={(evt) => updateOptions('matchCase', !options.matchCase)} />
-        <Checkbox compact={true} checked={options.matchExactPhrase} label='Exact Phrase' on:click={(evt) => updateOptions('matchExactPhrase', !options.matchExactPhrase)} />
+  <Expandable 
+    title={'Options:'} 
+    maxExpandedHeight={75}
+    margin={'0 8px'} 
+    isOpen={tab.options.isOpen} 
+    on:toggle={() => 
+      window.api.send('dispatch', {
+        type: 'SIDEBAR_TOGGLE_EXPANDABLE', 
+        tabId: tabId, 
+        expandable: 'options'
+    })
+  }>
+
+    {#if tab.options.isOpen}
+
+      <!-- Match: -->
+      <FormRow label={'Match:'} margin={'4px 10px 8px'} leftColumn={'50px'} outroDelay={200} compact={true} >
+        <Checkbox 
+          label='Case'
+          checked={options.matchCase} 
+          margin={'0 5px 0 0'} 
+          compact={true} 
+          on:click={(evt) => updateOptions('matchCase', !options.matchCase)} 
+        />
+        <Checkbox 
+          label='Exact Phrase'
+          checked={options.matchExactPhrase} 
+          compact={true} 
+          on:click={(evt) => updateOptions('matchExactPhrase', !options.matchExactPhrase)} 
+        />
         <!-- <Token label={'Case'} /><Token label={'Exact Phrase'} /> -->
-      </div>
-    </div>
+      </FormRow>
 
-    <!-- Look In: -->
-    <div class="row">
-      <div class="label">Look In:</div>
-      <div>
+      <!-- Match: -->
+      <FormRow label={'Look In:'} margin={'4px 10px 8px'} leftColumn={'50px'} outroDelay={200} compact={true}>
         <PopupButton compact=true items={lookInOptions} width='110px' on:selectItem={(evt) => updateOptions('lookIn', evt.detail.item.id)}/>
-      </div>
-    </div>
-    
-    <!-- Tags -->
-    <!-- <div class="row">
-      <div class="label">Tags:</div>
-      <div>
-      </div>
-    </div> -->
+      </FormRow>
 
+      <!-- Tags -->
+      <!-- <div class="row">
+        <div class="label">Tags:</div>
+        <div>
+        </div>
+      </div> -->
+    {/if}
+    
   </Expandable>
+
   <Separator margin={'0 10px'} />
 
-  <!-- <Header title={'Options'}>
-    <DisclosureButton
-      width={14}
-      height={14}
-      padding={6}
-      left={$sidebar.width - 20}
-      rotation={$sidebar.isPreviewOpen ? -90 : 90}
-      tooltip={'Toggle Expanded'}
-      on:toggle={() => {
-        window.api.send('dispatch', { type: 'TOGGLE_SIDEBAR_PREVIEW' })
-      }} />
-  </Header> -->
 
   <!------------- REPLACE ------------->
-  <Expandable title={'Replace:'} maxExpandedHeight={55} isOpen={tab.replace.isOpen} on:toggle={() => window.api.send('dispatch', {type: 'SIDEBAR_TOGGLE_EXPANDABLE', tabId: tabId, expandable: 'replace'})}>
-    <div class="row">
-      <SearchField placeholder='Replace' width='100%' compact={true} bind:query={replaceWith} on:keydown={(evt) => { 
-        if (evt.key == 'Enter') {
-          replaceAll(evt.metaKey)
-        }
-      }}/>
-      <PushButton label="Replace All" width='120px' margin='0 0 0 5px' on:mousedown={(evt) => replaceAll(evt.metaKey)} compact={false} />
-    </div>
+
+  <Expandable 
+    title={'Replace:'} 
+    maxExpandedHeight={55}
+    margin={'0 8px'} 
+    isOpen={tab.replace.isOpen} 
+    on:toggle={() => 
+      window.api.send('dispatch', {
+        type: 'SIDEBAR_TOGGLE_EXPANDABLE', 
+        tabId: tabId, 
+        expandable: 'replace'
+      })
+    }
+  >
+    {#if tab.replace.isOpen}
+      <FormRow margin={'4px 10px 8px'} outroDelay={200} compact={true}>
+        <InputText 
+          placeholder='Replace' 
+          width='100%' 
+          compact={true} 
+          bind:value={replaceWith} 
+          on:input={(evt) => { 
+            if (evt.key == 'Enter') {
+              replaceAll(evt.metaKey)
+            }
+          }}
+        />
+        <PushButton 
+          label="Replace All" 
+          width='120px' 
+          margin='0 0 0 5px' 
+          compact={false}
+          on:mousedown={(evt) => replaceAll(evt.metaKey)} 
+        />
+      </FormRow>
+    {/if}
   </Expandable>
+
   <Separator margin={'0 10px'} />
   
   
   <!------------- RESULTS ------------->
   {#if query}
-    <div id="numberOfResults">Found {numHits} results in {results.length} documents</div>
+    <div class="numberOfResults">Found {numHits} results in {results.length} documents</div>
     <Separator margin={'0 10px'} />  
   {/if}
-  <div class="list">
+  <div class="listOfResults">
     {#each results as result (result.id)}
       <SearchResult id={result.id} hits={result.hits} listIds={resultIds} />
     {/each}

@@ -102,7 +102,7 @@
 	class:isSelected
 	class:isSidebarFocused
 	on:mousedown={(evt) => onMousedown(evt, id, isSelected, tab, tabId, listIds, $files)}
-	on:mouseup={(evt) => onMouseup(evt, id, tab, tabId, listIds, $project.panels[$project.focusedPanelIndex], $files)}
+	on:mouseup={(evt) => onMouseup(evt, id, tab, tabId, $project.panels[$project.focusedPanelIndex], $files)}
 	>
 		<div class="title">{doc.title ? doc.title : doc.name}</div>
 			{#if showTags}
