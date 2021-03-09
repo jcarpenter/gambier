@@ -7,6 +7,7 @@
 
   let panelsEl
 
+  
   // ------- RESIZE ------- //
 
   let widths = []

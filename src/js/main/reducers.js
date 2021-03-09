@@ -27,17 +27,24 @@ export const update = (state, action, window) =>
         // Update appStatus 
         draft.appStatus = 'coldStarting'
 
-        // Delete existing projects that 1) are missing their directory, or 2) have an inaccessible directory
         if (draft.projects.allIds.length) {
           draft.projects.allIds.forEach((id) => {
 
             const project = draft.projects.byId[id]
+
+            // Delete existing projects that 1) are missing their directory, or 2) have an inaccessible directory
             const directoryIsMissing = !project.directory
             const directoryIsInaccessible = !isDirectoryAccessible(project.directory)
-
             if (directoryIsMissing || directoryIsInaccessible) {
               delete draft.projects.byId[id]
             }
+
+            // Set unsavedChanages on all panels to false
+            // This shouldn't be necessary, when app is working normally, user is saving changes before closing, etc. Should only be needed when app crashes with unsaved changes. They're lost, unfortunately, so this should be false on next cold start.
+            project.panels.forEach((p) => p.unsavedChanges = false)
+
+            // Same as above: this shouldn't 
+            project.window.status = 'open'
           })
 
           // Update `allIds` to match `byId`
@@ -224,7 +231,7 @@ export const update = (state, action, window) =>
       case 'PROJECT_FILES_MAPPED': {
         // If project directory contains docs, select the first one.
         if (action.firstDocId) {
-          
+
           // Load doc in editor
           project.panels[0].docId = action.firstDocId
 
@@ -266,7 +273,7 @@ export const update = (state, action, window) =>
                 panel.docId = newDocId
                 panel.status = ''
                 delete panel.pendingFilePathToLoad
-                
+
                 // Select doc in sidebar
                 const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId]
                 activeTab.selected = [newDocId]
@@ -274,7 +281,7 @@ export const update = (state, action, window) =>
             }
           })
         }
-        
+
 
         break
       }
@@ -429,7 +436,7 @@ export const update = (state, action, window) =>
       // PANEL
 
       case 'CREATE_NEW_DOC': {
-        // Tell panel to load a new (empty) doc 
+        // Tell the focused panel to load a new (empty) doc 
         const panel = project.panels[project.focusedPanelIndex]
         panel.docId = 'newDoc'
         // Focus the editor
@@ -440,29 +447,47 @@ export const update = (state, action, window) =>
         break
       }
 
-      case 'OPEN_DOC_IN_PANEL': {
-        
+      case 'OPEN_NEW_DOC_IN_PANEL': {
+
         const panel = project.panels[action.panelIndex]
-        panel.docId = action.doc.id
-        panel.unsavedChanges = false
 
-        // If panel has unsaved changes, prompt panel to save them.
-        // We'll open the selected doc once that's done.
-        // if (panel.unsavedChanges) {
-        //   panel.status = 'userWantsToLoadDoc'
-        //   panel.pendingDocIdToLoad = action.docId
-        // } else {
-        //   panel.docId = action.docId
-        //   panel.unsavedChanges = false
-        // }
+        const canCreateNewDoc =
+          action.saveOutcome == "noUnsavedChanges" ||
+          action.saveOutcome == "saved" ||
+          action.saveOutcome == "dontSave"
 
-        // console.log(action.docId, action.selectInSideBar)
+        if (canCreateNewDoc) {
+          panel.docId = 'newDoc'
+          panel.unsavedChanges = false
+        } else {
+          // Do nothing
+        }
 
-        // Select doc in sidebar 
-        if (action.selectInSideBar) {
-          const tab = project.sidebar.tabsById[project.sidebar.activeTabId]
-          tab.lastSelected = action.doc.id
-          tab.selected = [action.doc.id]
+        break
+      }
+
+      case 'OPEN_DOC_IN_PANEL': {
+
+        const panel = project.panels[action.panelIndex]
+
+        const canOpenDoc =
+          action.saveOutcome == "noUnsavedChanges" ||
+          action.saveOutcome == "saved" ||
+          action.saveOutcome == "dontSave"
+
+        // If we can open the doc, do so. Else, do nothing. 
+        if (canOpenDoc) {
+          // Open doc
+          panel.docId = action.doc.id
+          panel.unsavedChanges = false
+          // Select doc in sidebar 
+          if (action.selectInSideBar) {
+            const tab = project.sidebar.tabsById[project.sidebar.activeTabId]
+            tab.lastSelected = action.doc.id
+            tab.selected = [action.doc.id]
+          }
+        } else {
+          // Do nothing
         }
 
         break
@@ -509,27 +534,60 @@ export const update = (state, action, window) =>
       }
 
       case 'CLOSE_PANEL': {
-        const panel = project.panels[action.panelIndex]
-        closePanel(project, action.panelIndex)
 
-        // If panel has unsaved changes, prompt panel to save them.
-        // We'll close the panel once the changes are saved.
-        // if (panel.unsavedChanges) {
-        //   panel.status = 'userWantsToClosePanel'
-        // } else {
-        //   closePanel(project, action.panelIndex)
-        // }
+        const canClosePanel =
+          action.saveOutcome == "noUnsavedChanges" ||
+          action.saveOutcome == "saved" ||
+          action.saveOutcome == "dontSave"
+
+        // If it's safe to close the panel, do so. 
+        // Else, do nothing. 
+        if (canClosePanel) {
+          closePanel(project, action.panelIndex)
+        } else {
+          // Do nothing
+        }
+
         break
       }
 
-      // case 'SET_PANEL_WIDTH': {
-      //   // Set width of the panel of `panelIndex`, and the one to it's right (if there is one)
-      //   const panel = project.panels[action.panelIndex]
-      //   const panelToRight = project.panels[action.panelIndex + 1]
+      case 'SAVE_PANEL_CHANGES_SO_WE_CAN_CLOSE_WINDOW': {
 
-      //   break
+        const panel = project.panels[action.panelIndex]
 
-      // }
+        const panelChangesAreSaved =
+          action.saveOutcome == 'noUnsavedChanges' ||
+          action.saveOutcome == 'saved' ||
+          action.saveOutcome == 'dontSave'
+
+        // If there are no unsaved changes in any panels,
+        // mark the window `safeToClose`.
+        // Else, if the user cancelled a save flow.
+        // cancel the window closing.
+        if (panelChangesAreSaved && project.window.status == 'wantsToClose') {
+
+          panel.unsavedChanges = false
+
+          const allPanelsHaveSaved = project.panels.every((p) => !p.unsavedChanges)
+          if (allPanelsHaveSaved) {
+            project.window.status = 'safeToClose'
+          }
+
+        } else if (action.saveOutcome == 'cancelled' && project.window.status == 'wantsToClose') {
+
+          // Cancel window closing
+          project.window.status = 'open'
+
+          // Cancel app quitting (if it's in progress)
+          if (draft.appStatus == 'wantsToQuit') {
+            draft.appStatus = 'open'
+          }
+
+        }
+
+        break
+      }
+
       case 'SET_PANEL_WIDTHS': {
         project.panels.forEach((panel, i) => panel.width = action.widths[i])
         break
@@ -537,6 +595,11 @@ export const update = (state, action, window) =>
 
       case 'FOCUS_PANEL': {
         project.focusedPanelIndex = action.panelIndex
+        const panel = project.panels[action.panelIndex]
+        // Select the file in the sidebar
+        const activeSideBarTab = project.sidebar.tabsById[project.sidebar.activeTabId]
+        activeSideBarTab.lastSelected = panel.docId
+        activeSideBarTab.selected = [panel.docId]
         break
       }
 
@@ -553,54 +616,25 @@ export const update = (state, action, window) =>
         break
       }
 
-      case 'SAVE_AS_SUCCESS': {
+      case 'SAVE_DOC': {
         const panel = project.panels[action.panelIndex]
-        panel.unsavedChanges = false
-        
-        // Tell panel to load the new file, once it's available
-        panel.unsavedChanges = false
-        panel.status = 'justSavedAsAndWaitingToLoadTheNewFile'
-        panel.pendingFilePathToLoad = action.filePath
-        break
-      }
-
-      case 'SAVE_DOC_SUCCESS': {
-
-        const panel = project.panels[action.panelIndex]
-        panel.unsavedChanges = false
-
-        // Several app processes gate on unsavedChanges being saved.
-        // As changes are saved, we check the following.
-
-        if (project.window.status == 'wantsToClose') {
-
-          // If window wantsToClose, and there are no unsavedChanges,
-          // mark it 'safeToClose`
-          const allDocsHaveSaved = project.panels.every((p) => !p.unsavedChanges)
-          if (allDocsHaveSaved) {
-            project.window.status = 'safeToClose'
-          }
-
-        } else if (panel.status == 'userWantsToLoadDoc') {
-
-          // If panel was waiting to open a doc, open it now
-          panel.docId = panel.pendingDocIdToLoad
-          panel.pendingDocIdToLoad = ''
-          panel.status = ''
-
-        } else if (panel.status == 'userWantsToClosePanel') {
-
-          // If panel was waiting to close, close it.
-          closePanel(project, action.panelIndex)
-          panel.status = ''
-
+        if (action.saveOutcome == 'saved') {
+          panel.unsavedChanges = false
         }
         break
       }
 
-      case 'SAVE_DOC_CANCELLED': {
-        console.log('Save process cancelled')
-        // TODO
+      case 'SAVE_DOC_AS': {
+        const panel = project.panels[action.panelIndex]
+
+        // If saved successfully, set unsavedChanges false,
+        // and tell panel to load the new file.
+        if (action.saveOutcome == 'saved') {
+          panel.unsavedChanges = false
+          panel.status = 'justSavedAsAndWaitingToLoadTheNewFile'
+          panel.pendingFilePathToLoad = action.saveToPath
+        }
+
         break
       }
 

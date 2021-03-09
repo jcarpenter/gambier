@@ -1,14 +1,14 @@
 <script>
   import { state, project, isMetaKeyDown } from '../../StateManager'
   import { files } from '../../FilesManager'
-  import { onMount, createEventDispatcher } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { makeEditor } from '../../editor/editor2';
 
   import Wizard from './wizard/Wizard.svelte'
   import Autocomplete from './Autocomplete.svelte'
   import Preview from './preview/Preview.svelte'
   import { markDoc2 } from '../../editor/mark';
-  import { loadDoc, saveDoc, saveDocAs, saveCursorPosition, loadEmptyDoc, promptToSave } from '../../editor/editor-utils';
+  import { loadDoc, saveCursorPosition, loadEmptyDoc } from '../../editor/editor-utils';
   import { mapDoc } from '../../editor/map';
 
   export let panel = {}
@@ -34,28 +34,16 @@
 
     const isNewDoc = panel.docId == 'newDoc'
 
-    const shouldSaveChanges = 
-      statusHasChanged && 
-      panel.unsavedChanges && 
-        (panel.status == 'userWantsToLoadDoc' || 
-         panel.status == 'userWantsToClosePanel')
-    
-    if (shouldSaveChanges) {
-      saveCursorPosition(cm)
-      promptToSave(cm, doc, isNewDoc)
-      // saveDoc(cm, doc)
-    }
-
     // If doc has changed, load new one
     // This will also load initial doc, on Editor creation.
-    const noDocIsLoadedYet = panel.docId && !cm.state.panel.docId
     const docHasChanged = panel.docId !== cm.state.panel.docId
-    if (isNewDoc) {
+    if (docHasChanged) {
       saveCursorPosition(cm)
-      loadEmptyDoc(cm)
-    } else if (noDocIsLoadedYet || docHasChanged) {
-      saveCursorPosition(cm)
-      loadDoc(cm, doc)
+      if (isNewDoc) {
+        loadEmptyDoc(cm)
+      } else {
+        loadDoc(cm, doc)
+      }
     }
 
     // If save status has changed, and it's now "no unsaved changes", mark the doc clean
@@ -99,12 +87,12 @@
   function windowStatusChanged() {
     if (!cm) return
     if (windowStatus == 'wantsToClose' && panel.unsavedChanges) {
-
       window.api.send('dispatch', {
-        type: 'PROMPT_TO_SAVE_DOC',
+        type: 'SAVE_PANEL_CHANGES_SO_WE_CAN_CLOSE_WINDOW',
         panelIndex: panel.index,
-        outgoingDoc,
+        outgoingDoc: doc,
         outgoingDocData: cm.getValue(),
+        isNewDoc: panel.docId == 'newDoc'
       })
     }
   }
@@ -123,6 +111,7 @@
     // TODO
   }
 
+  let removeListenerMethods = []
 
   onMount(async () => {
 
@@ -131,33 +120,89 @@
     cm = makeEditor(el)
     window.cmInstances.push(cm)
 
+    // If the panel is focused, focus the CodeMirror instance
+    if (isFocusedPanel) cm.focus()
+
+    // Set `cm.state.panel` to a copy of panel
+    // cm.state.panel = { ...panel }
+
     // ------ CREATE LISTENERS ------ //
 
-    // User has clicked File > Save
-    window.api.receive('mainRequestsSaveFocusedPanel', () => {
+    const newDocListener = window.api.receive('mainRequestsCreateNewDocInFocusedPanel', () => {
+      const isNewDoc = panel.docId == 'newDoc'
+      if (isFocusedPanel) {
+        window.api.send('dispatch', { 
+        type: 'OPEN_NEW_DOC_IN_PANEL', 
+        panelIndex: panel.index,
+        outgoingDoc: doc,
+        outgoingDocData: panel.unsavedChanges ?
+          getCmDataByPanelId(panel.id) : '',
+        isNewDoc
+      })
+      }
+    })
+
+    // Save
+    const saveListener = window.api.receive('mainRequestsSaveFocusedPanel', () => {
       if (isFocusedPanel && panel.unsavedChanges) {
-        if (panel.docId == 'newDoc') {
-          saveDocAs(cm, doc, true)
+        const isNewDoc = panel.docId == 'newDoc'
+        if (isNewDoc) {
+          window.api.send('dispatch', {
+            type: 'SAVE_DOC_AS',
+            panelIndex: panel.index,
+            doc,
+            data: cm.getValue(),
+            isNewDoc
+          })
         } else {
-          saveDoc(cm, doc)
+          window.api.send('dispatch', {
+            type: 'SAVE_DOC',
+            panelIndex: panel.index,
+            doc,
+            data: cm.getValue(),
+          })
         }
       }
     })
 
-    // User has clicked File > Save As
-    window.api.receive('mainRequestsSaveAsFocusedPanel', () => {
+    // Save As
+    const saveAsListener = window.api.receive('mainRequestsSaveAsFocusedPanel', () => {
       if (isFocusedPanel) {
         const isNewDoc = panel.docId == 'newDoc'
-        saveDocAs(cm, doc, isNewDoc)
+        window.api.send('dispatch', {
+          type: 'SAVE_DOC_AS',
+          panelIndex: panel.index,
+          doc,
+          data: cm.getValue(),
+          isNewDoc
+        })
       }
     })
 
-    // User has clicked File > Save All
-    window.api.receive('mainRequestsSaveAll', () => {
+    // Save All
+    const saveAllListener = window.api.receive('mainRequestsSaveAll', () => {
       if (panel.unsavedChanges) {
-        saveDoc(cm, doc)
+        const isNewDoc = panel.docId == 'newDoc'
+        if (isNewDoc) {
+          window.api.send('dispatch', {
+            type: 'SAVE_DOC_AS',
+            panelIndex: panel.index,
+            doc,
+            data: cm.getValue(),
+            isNewDoc
+          })
+        } else {
+          window.api.send('dispatch', {
+            type: 'SAVE_DOC',
+            panelIndex: panel.index,
+            doc,
+            data: cm.getValue(),
+          })
+        }
       }
     })
+
+    removeListenerMethods.push(newDocListener, saveListener, saveAsListener, saveAllListener)
 
     // ------ CREATE COMPONENTS ------ //
 
@@ -185,6 +230,10 @@
     cm.wizard = wizard
   })
 
+  onDestroy(() => {
+    // Remove `window.api.receive` listeners
+    removeListenerMethods.forEach((remove) => remove())
+  })
 
 </script>
 
@@ -195,6 +244,10 @@
     height: 100%;
     position: relative;
     overflow: hidden;
+  }
+
+  .isFocusedPanel {
+
   }
 </style>
 

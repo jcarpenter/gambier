@@ -11,8 +11,8 @@ var chroma = require('chroma-js');
 require('colors');
 require('deep-eql');
 var Database = require('better-sqlite3');
-var chokidar = require('chokidar');
 var matter = require('gray-matter');
+var chokidar = require('chokidar');
 var removeMd = require('remove-markdown');
 var sizeOf = require('image-size');
 var debounce = require('debounce');
@@ -25,8 +25,8 @@ var produce__default = /*#__PURE__*/_interopDefaultLegacy(produce);
 var fs__default = /*#__PURE__*/_interopDefaultLegacy(fs);
 var chroma__default = /*#__PURE__*/_interopDefaultLegacy(chroma);
 var Database__default = /*#__PURE__*/_interopDefaultLegacy(Database);
-var chokidar__default = /*#__PURE__*/_interopDefaultLegacy(chokidar);
 var matter__default = /*#__PURE__*/_interopDefaultLegacy(matter);
+var chokidar__default = /*#__PURE__*/_interopDefaultLegacy(chokidar);
 var removeMd__default = /*#__PURE__*/_interopDefaultLegacy(removeMd);
 var sizeOf__default = /*#__PURE__*/_interopDefaultLegacy(sizeOf);
 
@@ -114,17 +114,24 @@ const update = (state, action, window) =>
         // Update appStatus 
         draft.appStatus = 'coldStarting';
 
-        // Delete existing projects that 1) are missing their directory, or 2) have an inaccessible directory
         if (draft.projects.allIds.length) {
           draft.projects.allIds.forEach((id) => {
 
             const project = draft.projects.byId[id];
+
+            // Delete existing projects that 1) are missing their directory, or 2) have an inaccessible directory
             const directoryIsMissing = !project.directory;
             const directoryIsInaccessible = !isDirectoryAccessible(project.directory);
-
             if (directoryIsMissing || directoryIsInaccessible) {
               delete draft.projects.byId[id];
             }
+
+            // Set unsavedChanages on all panels to false
+            // This shouldn't be necessary, when app is working normally, user is saving changes before closing, etc. Should only be needed when app crashes with unsaved changes. They're lost, unfortunately, so this should be false on next cold start.
+            project.panels.forEach((p) => p.unsavedChanges = false);
+
+            // Same as above: this shouldn't 
+            project.window.status = 'open';
           });
 
           // Update `allIds` to match `byId`
@@ -309,7 +316,7 @@ const update = (state, action, window) =>
       case 'PROJECT_FILES_MAPPED': {
         // If project directory contains docs, select the first one.
         if (action.firstDocId) {
-          
+
           // Load doc in editor
           project.panels[0].docId = action.firstDocId;
 
@@ -351,7 +358,7 @@ const update = (state, action, window) =>
                 panel.docId = newDocId;
                 panel.status = '';
                 delete panel.pendingFilePathToLoad;
-                
+
                 // Select doc in sidebar
                 const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId];
                 activeTab.selected = [newDocId];
@@ -359,7 +366,7 @@ const update = (state, action, window) =>
             }
           });
         }
-        
+
 
         break
       }
@@ -514,7 +521,7 @@ const update = (state, action, window) =>
       // PANEL
 
       case 'CREATE_NEW_DOC': {
-        // Tell panel to load a new (empty) doc 
+        // Tell the focused panel to load a new (empty) doc 
         const panel = project.panels[project.focusedPanelIndex];
         panel.docId = 'newDoc';
         // Focus the editor
@@ -525,29 +532,43 @@ const update = (state, action, window) =>
         break
       }
 
-      case 'OPEN_DOC_IN_PANEL': {
-        
+      case 'OPEN_NEW_DOC_IN_PANEL': {
+
         const panel = project.panels[action.panelIndex];
-        panel.docId = action.doc.id;
-        panel.unsavedChanges = false;
 
-        // If panel has unsaved changes, prompt panel to save them.
-        // We'll open the selected doc once that's done.
-        // if (panel.unsavedChanges) {
-        //   panel.status = 'userWantsToLoadDoc'
-        //   panel.pendingDocIdToLoad = action.docId
-        // } else {
-        //   panel.docId = action.docId
-        //   panel.unsavedChanges = false
-        // }
+        const canCreateNewDoc =
+          action.saveOutcome == "noUnsavedChanges" ||
+          action.saveOutcome == "saved" ||
+          action.saveOutcome == "dontSave";
 
-        // console.log(action.docId, action.selectInSideBar)
+        if (canCreateNewDoc) {
+          panel.docId = 'newDoc';
+          panel.unsavedChanges = false;
+        }
 
-        // Select doc in sidebar 
-        if (action.selectInSideBar) {
-          const tab = project.sidebar.tabsById[project.sidebar.activeTabId];
-          tab.lastSelected = action.doc.id;
-          tab.selected = [action.doc.id];
+        break
+      }
+
+      case 'OPEN_DOC_IN_PANEL': {
+
+        const panel = project.panels[action.panelIndex];
+
+        const canOpenDoc =
+          action.saveOutcome == "noUnsavedChanges" ||
+          action.saveOutcome == "saved" ||
+          action.saveOutcome == "dontSave";
+
+        // If we can open the doc, do so. Else, do nothing. 
+        if (canOpenDoc) {
+          // Open doc
+          panel.docId = action.doc.id;
+          panel.unsavedChanges = false;
+          // Select doc in sidebar 
+          if (action.selectInSideBar) {
+            const tab = project.sidebar.tabsById[project.sidebar.activeTabId];
+            tab.lastSelected = action.doc.id;
+            tab.selected = [action.doc.id];
+          }
         }
 
         break
@@ -594,27 +615,58 @@ const update = (state, action, window) =>
       }
 
       case 'CLOSE_PANEL': {
-        const panel = project.panels[action.panelIndex];
-        closePanel(project, action.panelIndex);
 
-        // If panel has unsaved changes, prompt panel to save them.
-        // We'll close the panel once the changes are saved.
-        // if (panel.unsavedChanges) {
-        //   panel.status = 'userWantsToClosePanel'
-        // } else {
-        //   closePanel(project, action.panelIndex)
-        // }
+        const canClosePanel =
+          action.saveOutcome == "noUnsavedChanges" ||
+          action.saveOutcome == "saved" ||
+          action.saveOutcome == "dontSave";
+
+        // If it's safe to close the panel, do so. 
+        // Else, do nothing. 
+        if (canClosePanel) {
+          closePanel(project, action.panelIndex);
+        }
+
         break
       }
 
-      // case 'SET_PANEL_WIDTH': {
-      //   // Set width of the panel of `panelIndex`, and the one to it's right (if there is one)
-      //   const panel = project.panels[action.panelIndex]
-      //   const panelToRight = project.panels[action.panelIndex + 1]
+      case 'SAVE_PANEL_CHANGES_SO_WE_CAN_CLOSE_WINDOW': {
 
-      //   break
+        const panel = project.panels[action.panelIndex];
 
-      // }
+        const panelChangesAreSaved =
+          action.saveOutcome == 'noUnsavedChanges' ||
+          action.saveOutcome == 'saved' ||
+          action.saveOutcome == 'dontSave';
+
+        // If there are no unsaved changes in any panels,
+        // mark the window `safeToClose`.
+        // Else, if the user cancelled a save flow.
+        // cancel the window closing.
+        if (panelChangesAreSaved && project.window.status == 'wantsToClose') {
+
+          panel.unsavedChanges = false;
+
+          const allPanelsHaveSaved = project.panels.every((p) => !p.unsavedChanges);
+          if (allPanelsHaveSaved) {
+            project.window.status = 'safeToClose';
+          }
+
+        } else if (action.saveOutcome == 'cancelled' && project.window.status == 'wantsToClose') {
+
+          // Cancel window closing
+          project.window.status = 'open';
+
+          // Cancel app quitting (if it's in progress)
+          if (draft.appStatus == 'wantsToQuit') {
+            draft.appStatus = 'open';
+          }
+
+        }
+
+        break
+      }
+
       case 'SET_PANEL_WIDTHS': {
         project.panels.forEach((panel, i) => panel.width = action.widths[i]);
         break
@@ -622,6 +674,11 @@ const update = (state, action, window) =>
 
       case 'FOCUS_PANEL': {
         project.focusedPanelIndex = action.panelIndex;
+        const panel = project.panels[action.panelIndex];
+        // Select the file in the sidebar
+        const activeSideBarTab = project.sidebar.tabsById[project.sidebar.activeTabId];
+        activeSideBarTab.lastSelected = panel.docId;
+        activeSideBarTab.selected = [panel.docId];
         break
       }
 
@@ -638,54 +695,25 @@ const update = (state, action, window) =>
         break
       }
 
-      case 'SAVE_AS_SUCCESS': {
+      case 'SAVE_DOC': {
         const panel = project.panels[action.panelIndex];
-        panel.unsavedChanges = false;
-        
-        // Tell panel to load the new file, once it's available
-        panel.unsavedChanges = false;
-        panel.status = 'justSavedAsAndWaitingToLoadTheNewFile';
-        panel.pendingFilePathToLoad = action.filePath;
-        break
-      }
-
-      case 'SAVE_DOC_SUCCESS': {
-
-        const panel = project.panels[action.panelIndex];
-        panel.unsavedChanges = false;
-
-        // Several app processes gate on unsavedChanges being saved.
-        // As changes are saved, we check the following.
-
-        if (project.window.status == 'wantsToClose') {
-
-          // If window wantsToClose, and there are no unsavedChanges,
-          // mark it 'safeToClose`
-          const allDocsHaveSaved = project.panels.every((p) => !p.unsavedChanges);
-          if (allDocsHaveSaved) {
-            project.window.status = 'safeToClose';
-          }
-
-        } else if (panel.status == 'userWantsToLoadDoc') {
-
-          // If panel was waiting to open a doc, open it now
-          panel.docId = panel.pendingDocIdToLoad;
-          panel.pendingDocIdToLoad = '';
-          panel.status = '';
-
-        } else if (panel.status == 'userWantsToClosePanel') {
-
-          // If panel was waiting to close, close it.
-          closePanel(project, action.panelIndex);
-          panel.status = '';
-
+        if (action.saveOutcome == 'saved') {
+          panel.unsavedChanges = false;
         }
         break
       }
 
-      case 'SAVE_DOC_CANCELLED': {
-        console.log('Save process cancelled');
-        // TODO
+      case 'SAVE_DOC_AS': {
+        const panel = project.panels[action.panelIndex];
+
+        // If saved successfully, set unsavedChanges false,
+        // and tell panel to load the new file.
+        if (action.saveOutcome == 'saved') {
+          panel.unsavedChanges = false;
+          panel.status = 'justSavedAsAndWaitingToLoadTheNewFile';
+          panel.pendingFilePathToLoad = action.saveToPath;
+        }
+
         break
       }
 
@@ -1841,70 +1869,6 @@ async function deleteFiles(paths) {
 	}
 }
 
-async function saveDoc (doc, data, panelIndex) {
-	try {
-		await fsExtra.writeFile(doc.path, data, 'utf8');
-		return {
-			type: 'SAVE_DOC_SUCCESS',
-			panelIndex: panelIndex,
-		}
-	} catch (err) {
-		return {
-			type: 'SAVE_DOC_FAIL',
-			err: err
-		}
-	}
-}
-
-async function saveDocAs (doc, data, isNewDoc, panelIndex, window) {
-
-  const project = global.state().projects.byId[window.projectId];
-
-  let defaultPath = isNewDoc ? 
-    `${project.directory}/Untitled.md` : 
-    doc.path;
-
-  const { filePath, canceled } = await electron.dialog.showSaveDialog(window, {
-    defaultPath: defaultPath
-  });
-
-  if (canceled) {
-    return {
-      type: 'SAVE_DOC_CANCELLED',
-      panelIndex: panelIndex,
-    }
-  } else {
-
-    try {
-      await fsExtra.writeFile(filePath, data, 'utf8');
-      return {
-        type: 'SAVE_AS_SUCCESS',
-        filePath,
-        panelIndex: panelIndex,
-      }
-    } catch (err) {
-      return {
-        type: 'SAVE_DOC_FAIL',
-        err: err
-      }
-    }
-  }
-
-
-  // try {
-  // 	await writeFile(doc.path, data, 'utf8')
-  // 	return {
-  // 		type: 'SAVE_DOC_SUCCESS',
-  // 		panelIndex: panelIndex,
-  // 	}
-  // } catch (err) {
-  // 	return {
-  // 		type: 'SAVE_DOC_FAIL',
-  // 		err: err
-  // 	}
-  // }
-}
-
 async function selectProjectDirectoryFromDialog () {
 
   const win = electron.BrowserWindow.getFocusedWindow();
@@ -2062,111 +2026,41 @@ function init$1() {
         store.dispatch(await selectProjectDirectoryFromDialog(), win);
         break
 
+      // The following actions all 
+      case ('SAVE_PANEL_CHANGES_SO_WE_CAN_CLOSE_WINDOW'):
       case ('CLOSE_PANEL'):
-      case ('OPEN_DOC_IN_PANEL'):
-
+      case ('OPEN_NEW_DOC_IN_PANEL'):
+      case ('OPEN_DOC_IN_PANEL'): {
+        
         const project = global.state().projects.byId[win.projectId];
         const panel = project.panels[action.panelIndex];
-
-        // If there are unsaved changes, prompt user to save.
+  
         if (panel.unsavedChanges) {
-
-          const outgoingDocIsNewDoc = action.outgoingDoc.id == 'newDoc';
-          const message = outgoingDocIsNewDoc ?
-            'Do you want to save the changes you made to the new document?' :
-            `Do you want to save the changes you made to ${action.outgoingDoc.path.slice(action.outgoingDoc.path.lastIndexOf('/') + 1)}?`;
-
-          const { response } = await electron.dialog.showMessageBox(win, {
-            message,
-            detail: "Your changes will be lost if you don't save them.",
-            type: "warning",
-            buttons: ["Save", "Don't Save", "Cancel"],
-            defaultId: 0,
-          });
-
-          switch (response) {
-            
-            // "Save"
-            case 0: {
-              if (outgoingDocIsNewDoc) {
-
-                // "Save As" prompt
-
-                const { filePath, canceled } = await electron.dialog.showSaveDialog(window, {
-                  defaultPath: `${project.directory}/Untitled.md`
-                });
-
-                if (canceled) ; else {
-
-                  // Save file
-                  await fsExtra.writeFile(filePath, action.outgoingDocData, 'utf8');
-
-                  // Then forward the original action
-                  store.dispatch(action, win);
-                }
-
-              } else {
-
-                // "Save" prompt
-                await fsExtra.writeFile(action.outgoingDoc.path, action.outgoingDocData, 'utf8');
-
-                // Then forward the original action
-                store.dispatch(action, win);
-              }
-              break
-            }
-            
-            // "Don't Save": Just forward the original action.
-            case 1: {
-              store.dispatch(action, win);
-              break
-            }
-          }
-
+          promptToSaveChangesThenForwardAction(action, win);
         } else {
-
-          // If there are no unsaved changes,
-          // just forward the original action.
-          store.dispatch(action, win);
+          // No unsaved changes. Forward the action.
+          store.dispatch({ ...action, saveOutcome: 'noUnsavedChanges' }, win);
         }
-
+  
         break
+      }
 
-      case ('PROMPT_TO_SAVE_DOC'):
-
-        // const project = global.state().projects.byId[window.projectId]
-
-        // let defaultPath = isNewDoc ? 
-        //   `${project.directory}/Untitled.md` : 
-        //   doc.path
-
-        const filename = action.doc.path.slice(action.doc.path.lastIndexOf('/'));
-
-        const { response } = await electron.dialog.showMessageBox(win, {
-          message: `Do you want to save the changes you made to ${filename}?`,
-          detail: "Your changes will be lost if you don't save them.",
-          type: "warning",
-          buttons: ["Save", "Don't Save", "Cancel"],
-          defaultId: 0,
-        });
-
-        console.log(response);
-
-
-        // store.dispatch(await promptToSaveDoc(action.doc, action.data, action.isNewDoc, action.panelIndex), win)
-        break
       case ('SAVE_DOC'):
-        store.dispatch(await saveDoc(action.doc, action.data, action.panelIndex), win);
+        saveDoc(action, win);
         break
+
       case ('SAVE_DOC_AS'):
-        store.dispatch(await saveDocAs(action.doc, action.data, action.isNewDoc, action.panelIndex, win), win);
+        saveDocAs(action, win);
         break
+
       case ('DELETE_FILE'):
         store.dispatch(await deleteFile(action.path), win);
         break
+
       case ('DELETE_FILES'):
         store.dispatch(await deleteFiles(action.paths), win);
         break
+
       default:
         store.dispatch(action, win);
         break
@@ -2315,7 +2209,206 @@ function init$1() {
 
 
 /**
- * Utility function that returns filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
+ * Save the selected doc
+ */
+async function saveDoc(action, win) {
+  try {
+
+    // Try to write file
+    await fsExtra.writeFile(action.doc.path, action.data, 'utf8');
+
+    // If save is successful, forward the original action
+    // along with save outcome.
+    store.dispatch({ ...action, saveOutcome: "saved" }, win);
+
+  } catch (err) {
+
+    // If save is unsuccessful, forward the original action
+    // along with save outcome.
+    // This shouldn't happen, but we catch it just in case.
+    store.dispatch({ ...action, saveOutcome: "failed" }, win);
+  }
+}
+
+
+function getTitleFromDoc(data) {
+  const { data: frontMatter, content, isEmpty } = matter__default['default'](data);
+
+  // Get first header in content
+  // https://regex101.com/r/oR5sec/1
+  
+  // Try to get title from front matter
+  if (!isEmpty && frontMatter.title) return frontMatter.title
+
+  // Try to get title from first header in content
+  const firstHeaderInContent = content.match(/^#{1,6}[ |\t]*(.*)$/m);
+  if (firstHeaderInContent) return firstHeaderInContent[1]
+
+  // Try to get title from first 1-3 words of the doc
+  // Demo: https://regex101.com/r/QmWS6c/1
+  let firstWords = content.match(/^(\w+\s?){1,3}/)[0];
+  if (firstWords) {
+    // If last character is whitespace, trim it
+    firstWords = firstWords.replace(/\s$/, '');
+    return firstWords
+  }
+
+  // Else, return 'Untitled'
+  return 'Untitled'
+
+}
+
+
+/**
+ * Show 'Save As' dialog
+ */
+async function saveDocAs(action, win) {
+
+  const project = global.state().projects.byId[win.projectId];
+
+  // Suggested path varies depending on whether doc is new.
+  const defaultPath = action.isNewDoc ?
+    `${project.directory}/${getTitleFromDoc(action.data)}.md` :
+    action.doc.path;
+
+  const { filePath, canceled } = await electron.dialog.showSaveDialog(win, {
+    defaultPath
+  });
+
+  if (canceled) {
+
+    // Forward original action, 
+    // with 'cancelled' saveOutcome
+    store.dispatch({ ...action, saveOutcome: "cancelled" }, win);
+
+  } else {
+
+    try {
+
+      // Try to write file
+      await fsExtra.writeFile(filePath, action.data, 'utf8');
+
+      // If save is successful, forward the original action
+      // along with save outcome, and chosen save path.
+      store.dispatch({
+        ...action,
+        saveOutcome: "saved",
+        saveToPath: filePath
+      }, win);
+
+    } catch (err) {
+
+      // If save is unsuccessful, forward the original action
+      // along with save outcome.
+      // This shouldn't happen, but we catch it just in case.
+      store.dispatch({ ...action, saveOutcome: "failed" }, win);
+
+    }
+  }
+}
+
+
+/**
+ * 
+ * @param {*} action - With type, and assorted optional properties. 
+ */
+async function promptToSaveChangesThenForwardAction(action, win) {
+
+  const project = global.state().projects.byId[win.projectId];
+
+  // Prompt's wording depends on whether doc is new...
+  const message = action.isNewDoc ?
+    'Do you want to save the changes you made to the new document?' :
+    `Do you want to save the changes you made to ${action.outgoingDoc.path.slice(action.outgoingDoc.path.lastIndexOf('/') + 1)}?`;
+
+  // Show prompt
+  const { response } = await electron.dialog.showMessageBox(win, {
+    message,
+    detail: "Your changes will be lost if you don't save them.",
+    type: "warning",
+    buttons: ["Save", "Don't Save", "Cancel"],
+    defaultId: 0,
+  });
+
+  // What button did the user select?
+  const userSelectedSave = response == 0;
+  const userSelectedDontSave = response == 1;
+  const userSelectedCancel = response == 2;
+
+  if (userSelectedSave) {
+
+    // User selected "Save"...
+
+    // If doc is new, show "Save As" flow
+    // Else just save.
+    if (action.isNewDoc) {
+
+      // "Save As" prompt
+
+      const { filePath, canceled } = await electron.dialog.showSaveDialog(window, {
+        defaultPath: `${project.directory}/Untitled.md`
+      });
+
+      if (canceled) {
+
+        // Forward original action, 
+        // with 'cancelled' saveOutcome
+        store.dispatch({ ...action, saveOutcome: "cancelled" }, win);
+
+      } else {
+
+        // Save file
+        await fsExtra.writeFile(filePath, action.outgoingDocData, 'utf8');
+
+        // Then forward the original action, 
+        // along with save outcome
+        store.dispatch({ ...action, saveOutcome: "saved" }, win);
+      }
+
+    } else {
+
+      try {
+
+        // Try to save the doc. 
+        await fsExtra.writeFile(action.outgoingDoc.path, action.outgoingDocData, 'utf8');
+
+        // If save is successful, forward the original action
+        // along with save outcome.
+        store.dispatch({ ...action, saveOutcome: "saved" }, win);
+
+      } catch (err) {
+
+        // If save is unsuccessful, forward the original action
+        // along with save outcome.
+        // This shouldn't happen, but we catch it just in case.
+        store.dispatch({ ...action, saveOutcome: "failed" }, win);
+
+      }
+    }
+
+  } else if (userSelectedDontSave) {
+
+    // User selected "Don't Save"...
+    // Forward the original action,
+    // along with save outcome.
+
+    store.dispatch({ ...action, saveOutcome: "dontSave" }, win);
+
+  } else if (userSelectedCancel) {
+
+    // User selected "Cancel"...
+    // Forward the original action,
+    // along with save outcome.
+
+    store.dispatch({ ...action, saveOutcome: "cancelled" }, win);
+
+  }
+}
+
+
+
+/**
+ * Return filename with incremented integer suffix. Used when moving files to avoid overwriting files of same name in destination directory, ala macOS. Looks to see if other files in same directory already have same name +_ integer suffix, and if so, increments.
  * Original:      /Users/Susan/Notes/ship.jpg
  * First copy:    /Users/Susan/Notes/ship 2.jpg
  * Second copy:   /Users/Susan/Notes/ship 3.jpg
@@ -2511,12 +2604,19 @@ function getMenuItems() {
 
         // If there are multiple panels open, close the focused one. Else, close the project window.
         if (project.panels.length > 1) {
-          global.store.dispatch({
-            type: 'CLOSE_PANEL',
-            panelIndex: project.focusedPanelIndex
-          }, focusedWindow);
-        } else {
-          focusedWindow.close();
+
+          console.log('Close Editor');
+
+          focusedWindow.webContents.send('mainRequestsCloseFocusedPanel');
+
+          // TODO: Make this work with new system
+
+        //   global.store.dispatch({
+        //     type: 'CLOSE_PANEL',
+        //     panelIndex: project.focusedPanelIndex
+        //   }, focusedWindow)
+        // } else {
+        //   focusedWindow.close()
         }
       }
     });
@@ -2567,8 +2667,9 @@ function getMenuItems() {
       accelerator: 'CmdOrCtrl+N',
       enabled: project !== undefined,
       async click(item, focusedWindow) {
-        // TODO
-        global.store.dispatch({ type: 'CREATE_NEW_DOC'}, focusedWindow);
+        focusedWindow.webContents.send('mainRequestsCreateNewDocInFocusedPanel');
+
+        // global.store.dispatch({ type: 'CREATE_NEW_DOC'}, focusedWindow)
       }
     });
 
@@ -2580,7 +2681,7 @@ function getMenuItems() {
         // Create new panel to right of the current focused panel
         global.store.dispatch({
           type: 'OPEN_NEW_PANEL',
-          docId: '',
+          docId: 'newDoc',
           panelIndex: project.focusedPanelIndex + 1
         }, focusedWindow);
       }
@@ -3140,8 +3241,8 @@ const chokidarConfig = {
   ignoreInitial: true,
   persistent: true,
   awaitWriteFinish: {
-    stabilityThreshold: 400,
-    pollInterval: 200
+    stabilityThreshold: 200, // 3/9: Was 400
+    pollInterval: 50 // 3/9: Was 200
   }
 };
 
@@ -3233,7 +3334,7 @@ class Watcher {
   debounceFunc = debounce.debounce(() => {
     this.applyChanges(this.pendingChanges);
     this.pendingChanges = []; // Reset
-  }, 400)
+  }, 200) // 3/9: Was 400
 
   batchChanges(event, filePath, stats) {
     const change = { event: event, path: filePath };
@@ -3555,6 +3656,16 @@ async function createWindow(id, project) {
     }
   });
 
+  // De-focus window when a sheet is open
+  win.on('sheet-begin', () => {
+    global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' });
+  });
+
+  // Focus window when a sheet closes
+  win.on('sheet-end', () => {
+    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win);
+  });
+
   // Open DevTools
   if (!electron.app.isPackaged) win.webContents.openDevTools();
 
@@ -3779,6 +3890,16 @@ async function open() {
     if (global.state().focusedWindowId == win.projectId) {
       global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' });
     }
+  });
+
+  // De-focus window when a sheet is open
+  win.on('sheet-begin', () => {
+    global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' });
+  });
+
+  // Focus window when a sheet closes
+  win.on('sheet-end', () => {
+    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win);
   });
 
   win.on('close', () => {

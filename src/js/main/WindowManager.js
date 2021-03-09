@@ -127,6 +127,16 @@ export async function createWindow(id, project) {
     }
   })
 
+  // De-focus window when a sheet is open
+  win.on('sheet-begin', () => {
+    global.store.dispatch({ type: 'NO_WINDOW_FOCUSED' })
+  })
+
+  // Focus window when a sheet closes
+  win.on('sheet-end', () => {
+    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
+  })
+
   // Open DevTools
   if (!app.isPackaged) win.webContents.openDevTools();
 

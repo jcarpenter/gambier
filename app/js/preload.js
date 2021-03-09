@@ -11,7 +11,7 @@ var electron = require('electron');
 // ipc.config.retry = 1500;
 
 // ipc.connectTo('world', () => {
-  
+
 //   ipc.of.world.on('connect', () => {
 //     ipc.log('## connected to world ##'.rainbow, ipc.config.delay)
 //     ipc.of.world.emit(
@@ -19,11 +19,11 @@ var electron = require('electron');
 //       'hello'
 //     )
 //   })
-  
+
 //   ipc.of.world.on('disconnect', () => {
 //     ipc.log('disconnected from world'.notice)
 //   })
-  
+
 //   // Any event or message type your server listens for
 //   ipc.of.world.on('message',(data) => {
 //       ipc.log('got a message from world : '.debug, data)
@@ -36,7 +36,7 @@ var electron = require('electron');
 // Whitelist channels
 
 // Renderer "receives" from Main
-let validReceiveChannels = ['mainRequestsSaveFocusedPanel', 'mainRequestsSaveAsFocusedPanel', 'mainRequestsSaveAll', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain'];
+let validReceiveChannels = ['mainRequestsSaveFocusedPanel', 'mainRequestsSaveAsFocusedPanel', 'mainRequestsSaveAll', 'mainRequestsCloseFocusedPanel', 'mainRequestsCreateNewDocInFocusedPanel', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain'];
 
 // Renderer "sends" to Main
 let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'saveFileThenCloseWindow', 'saveFileThenQuitApp', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch', 'moveOrCopyIntoFolder', 'replaceAll'];
@@ -44,30 +44,36 @@ let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'saveFile
 // Round trip: Renderer --> Main --> Renderer
 let validInvokeChannels = ['getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb', 'getColors'];
 
-// Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object.
-electron.contextBridge.exposeInMainWorld(
-  'api',
-  {
-    receive: (channel, func) => {
-      if (validReceiveChannels.includes(channel)) {
-        // console.log(`Main --> ${channel} --> Renderer`)
-        // Deliberately strip event as it includes `sender` 
-        electron.ipcRenderer.on(channel, (event, ...args) => func(...args));
-      }
-    },
+// "Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object."
+// Implementation per: https://stackoverflow.com/a/63894861
+electron.contextBridge.exposeInMainWorld('api', {
 
-    send: (channel, ...args) => {
-      // console.log(`Renderer --> ${channel} --> Main`)
-      if (validSendChannels.includes(channel)) {
-        electron.ipcRenderer.send(channel, ...args);
-      }
-    },
-
-    invoke: (channel, ...args) => {
-      // console.log(`Renderer --> ${channel} --> Main --> (Response) --> Renderer`)
-      if (validInvokeChannels.includes(channel)) {
-        return electron.ipcRenderer.invoke(channel, ...args)
+  // Main -> Renderer
+  receive: (channel, callback) => {
+    if (validReceiveChannels.includes(channel)) {
+      // Strip `event` as it includes sender.
+      const subscription = (event, ...args) => callback(...args);
+      electron.ipcRenderer.on(channel, subscription);
+      // Return a method that can be called to remove the listener
+      return () => {
+        electron.ipcRenderer.removeListener(channel, subscription);
       }
     }
-  }
-);
+  },
+
+  // Renderer -> Main
+  send: (channel, ...args) => {
+    if (validSendChannels.includes(channel)) {
+      electron.ipcRenderer.send(channel, ...args);
+    }
+  },
+
+  // Renderer -> Main -> Renderer
+  invoke: (channel, ...args) => {
+    if (validInvokeChannels.includes(channel)) {
+      return electron.ipcRenderer.invoke(channel, ...args)
+    }
+  },
+
+
+});

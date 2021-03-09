@@ -161,12 +161,19 @@ function getMenuItems() {
 
         // If there are multiple panels open, close the focused one. Else, close the project window.
         if (project.panels.length > 1) {
-          global.store.dispatch({
-            type: 'CLOSE_PANEL',
-            panelIndex: project.focusedPanelIndex
-          }, focusedWindow)
-        } else {
-          focusedWindow.close()
+
+          console.log('Close Editor')
+
+          focusedWindow.webContents.send('mainRequestsCloseFocusedPanel')
+
+          // TODO: Make this work with new system
+
+        //   global.store.dispatch({
+        //     type: 'CLOSE_PANEL',
+        //     panelIndex: project.focusedPanelIndex
+        //   }, focusedWindow)
+        // } else {
+        //   focusedWindow.close()
         }
       }
     })
@@ -217,8 +224,9 @@ function getMenuItems() {
       accelerator: 'CmdOrCtrl+N',
       enabled: project !== undefined,
       async click(item, focusedWindow) {
-        // TODO
-        global.store.dispatch({ type: 'CREATE_NEW_DOC'}, focusedWindow)
+        focusedWindow.webContents.send('mainRequestsCreateNewDocInFocusedPanel')
+
+        // global.store.dispatch({ type: 'CREATE_NEW_DOC'}, focusedWindow)
       }
     })
 
@@ -230,7 +238,7 @@ function getMenuItems() {
         // Create new panel to right of the current focused panel
         global.store.dispatch({
           type: 'OPEN_NEW_PANEL',
-          docId: '',
+          docId: 'newDoc',
           panelIndex: project.focusedPanelIndex + 1
         }, focusedWindow)
       }

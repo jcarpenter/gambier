@@ -637,48 +637,6 @@ export function getTextFromRange(cm, line, start, end) {
 // -------- OPENING & CLOSING -------- //
 
 /**
- * 
- */
-export function promptToSave(cm, doc, isNewDoc) {
-  window.api.send('dispatch', {
-    type: 'PROMPT_TO_SAVE_DOC',
-    doc,
-    data: cm.getValue(),
-    isNewDoc,
-    panelIndex: cm.state.panel.index
-  })
-}
-
-/**
- * Save editor contents
- */
-export function saveDoc(cm, doc) {
-  
-  const isNewDoc = !doc || !doc.path
-  
-  if (isNewDoc) {
-    saveDocAs(cm, doc)
-  } else {
-    window.api.send('dispatch', {
-      type: 'SAVE_DOC',
-      doc,
-      data: cm.getValue(),
-      panelIndex: cm.state.panel.index
-    })
-  }
-}
-
-export function saveDocAs(cm, doc, isNewDoc) {
-  window.api.send('dispatch', {
-    type: 'SAVE_DOC_AS',
-    doc,
-    data: cm.getValue(),
-    isNewDoc,
-    panelIndex: cm.state.panel.index
-  })
-}
-
-/**
  * Load empty doc into editor, and clear history
  * @param {*} cm 
  */
@@ -694,6 +652,8 @@ export function loadEmptyDoc(cm) {
  * @param {*} doc - Instance of an object from `files.byId`
  */
 export async function loadDoc(cm, doc) {
+
+  console.log(cm, doc)
 
   if (!cm || !doc) return
 

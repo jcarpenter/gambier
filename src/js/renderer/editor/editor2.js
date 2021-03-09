@@ -1,4 +1,3 @@
-// import { editorState, dispatch } from './state'
 import * as actions from './keymapActions'
 import { getCharAt, getFromAndTo } from './editor-utils'
 import { onBeforeChange } from './onBeforeChange'
@@ -11,7 +10,11 @@ export function makeEditor(parentElement) {
 
   const cm = CodeMirror(parentElement, {
     mode: 'gambier',
+
+    // "Whether CodeMirror should scroll or wrap for long lines. Defaults to false (scroll)."
     lineWrapping: true,
+    
+    // "Whether to show line numbers to the left of the editor."
     lineNumbers: false,
 
     // "How many spaces a block (whatever that means in the edited 
@@ -93,9 +96,6 @@ export function makeEditor(parentElement) {
     unsavedChanges: false,
     doc: {}, // Only need this for doc.id, and only in one place: saveCursorPosition  
   }
-
-  // Set `dispatch` as method on `cm` object (for convenience)
-  // cm.dispatch = dispatch
 
 
   // ------ CREATE LISTENERS ------ //

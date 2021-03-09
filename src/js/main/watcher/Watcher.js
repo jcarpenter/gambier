@@ -20,8 +20,8 @@ const chokidarConfig = {
   ignoreInitial: true,
   persistent: true,
   awaitWriteFinish: {
-    stabilityThreshold: 400,
-    pollInterval: 200
+    stabilityThreshold: 200, // 3/9: Was 400
+    pollInterval: 50 // 3/9: Was 200
   }
 }
 
@@ -113,7 +113,7 @@ export class Watcher {
   debounceFunc = debounce(() => {
     this.applyChanges(this.pendingChanges)
     this.pendingChanges = [] // Reset
-  }, 400)
+  }, 200) // 3/9: Was 400
 
   batchChanges(event, filePath, stats) {
     const change = { event: event, path: filePath }

@@ -1,8 +1,9 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
 import { readFile, writeFile, renameSync, copyFileSync, existsSync, readdirSync } from 'fs-extra'
 import path from 'path'
-import { saveDoc, saveDocAs, deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
+import { deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
 import { getColors } from './AppearanceManager.js'
+import matter from 'gray-matter'
 
 export function init() {
 
@@ -124,18 +125,31 @@ export function init() {
         store.dispatch(await selectProjectDirectoryFromDialog(), win)
         break
 
-      case ('PROMPT_TO_SAVE_DOC'):
+      // The following actions all 
+      case ('SAVE_PANEL_CHANGES_SO_WE_CAN_CLOSE_WINDOW'):
       case ('CLOSE_PANEL'):
-      case ('OPEN_DOC_IN_PANEL'):
-        promptToSaveChangesThenForwardAction(action)
+      case ('OPEN_NEW_DOC_IN_PANEL'):
+      case ('OPEN_DOC_IN_PANEL'): {
+        
+        const project = global.state().projects.byId[win.projectId]
+        const panel = project.panels[action.panelIndex]
+  
+        if (panel.unsavedChanges) {
+          promptToSaveChangesThenForwardAction(action, win)
+        } else {
+          // No unsaved changes. Forward the action.
+          store.dispatch({ ...action, saveOutcome: 'noUnsavedChanges' }, win)
+        }
+  
         break
+      }
 
       case ('SAVE_DOC'):
-        store.dispatch(await saveDoc(action.doc, action.data, action.panelIndex), win)
+        saveDoc(action, win)
         break
 
       case ('SAVE_DOC_AS'):
-        store.dispatch(await saveDocAs(action.doc, action.data, action.isNewDoc, action.panelIndex, win), win)
+        saveDocAs(action, win)
         break
 
       case ('DELETE_FILE'):
@@ -294,110 +308,202 @@ export function init() {
 
 
 /**
- * 
- * @param {*} action - With typee, and assorted optional properties. 
+ * Save the selected doc
  */
-function promptToSaveChangesThenForwardAction(action) {
+async function saveDoc(action, win) {
+  try {
+
+    // Try to write file
+    await writeFile(action.doc.path, action.data, 'utf8')
+
+    // If save is successful, forward the original action
+    // along with save outcome.
+    store.dispatch({ ...action, saveOutcome: "saved" }, win)
+
+  } catch (err) {
+
+    // If save is unsuccessful, forward the original action
+    // along with save outcome.
+    // This shouldn't happen, but we catch it just in case.
+    store.dispatch({ ...action, saveOutcome: "failed" }, win)
+  }
+}
+
+
+function getTitleFromDoc(data) {
+  const { data: frontMatter, content, isEmpty } = matter(data)
+
+  // Get first header in content
+  // https://regex101.com/r/oR5sec/1
+  
+  // Try to get title from front matter
+  if (!isEmpty && frontMatter.title) return frontMatter.title
+
+  // Try to get title from first header in content
+  const firstHeaderInContent = content.match(/^#{1,6}[ |\t]*(.*)$/m)
+  if (firstHeaderInContent) return firstHeaderInContent[1]
+
+  // Try to get title from first 1-3 words of the doc
+  // Demo: https://regex101.com/r/QmWS6c/1
+  let firstWords = content.match(/^(\w+\s?){1,3}/)[0]
+  if (firstWords) {
+    // If last character is whitespace, trim it
+    firstWords = firstWords.replace(/\s$/, '')
+    return firstWords
+  }
+
+  // Else, return 'Untitled'
+  return 'Untitled'
+
+}
+
+
+/**
+ * Show 'Save As' dialog
+ */
+async function saveDocAs(action, win) {
 
   const project = global.state().projects.byId[win.projectId]
-  const panel = project.panels[action.panelIndex]
 
-  if (!panel.unsavedChanges) {
+  // Suggested path varies depending on whether doc is new.
+  const defaultPath = action.isNewDoc ?
+    `${project.directory}/${getTitleFromDoc(action.data)}.md` :
+    action.doc.path
 
-    // No unsaved changes: We just forward the action.
+  const { filePath, canceled } = await dialog.showSaveDialog(win, {
+    defaultPath
+  })
 
-    store.dispatch({ ...action, saveOutcome: 'noUnsavedChanges' }, win)
+  if (canceled) {
+
+    // Forward original action, 
+    // with 'cancelled' saveOutcome
+    store.dispatch({ ...action, saveOutcome: "cancelled" }, win)
 
   } else {
 
-    // Unsaved changes: We prompt user to save...
+    try {
 
-    // Prompt's wording depends on whether doc is new...
-    const outgoingDocIsNewDoc = action.outgoingDoc.id == 'newDoc'
-    const message = outgoingDocIsNewDoc ?
-      'Do you want to save the changes you made to the new document?' :
-      `Do you want to save the changes you made to ${action.outgoingDoc.path.slice(action.outgoingDoc.path.lastIndexOf('/') + 1)}?`
+      // Try to write file
+      await writeFile(filePath, action.data, 'utf8')
 
-    // Show prompt
-    const { response } = await dialog.showMessageBox(win, {
-      message,
-      detail: "Your changes will be lost if you don't save them.",
-      type: "warning",
-      buttons: ["Save", "Don't Save", "Cancel"],
-      defaultId: 0,
-    })
+      // If save is successful, forward the original action
+      // along with save outcome, and chosen save path.
+      store.dispatch({
+        ...action,
+        saveOutcome: "saved",
+        saveToPath: filePath
+      }, win)
 
-    // What button did the user select?
-    const userSelectedSave = response == 0
-    const userSelectedDontSave = response == 1
-    const userSelectedCancel = response == 2
+    } catch (err) {
 
-    if (userSelectedSave) {
-
-      // User selected "Save"...
-
-      // If doc is new, show "Save As" flow
-      // Else just save.
-      if (outgoingDocIsNewDoc) {
-
-        // "Save As" prompt
-
-        const { filePath, canceled } = await dialog.showSaveDialog(window, {
-          defaultPath: `${project.directory}/Untitled.md`
-        })
-
-        if (canceled) {
-
-          // Forward original action, 
-          // with 'cancelled' saveOutcome
-          store.dispatch({ ...action, saveOutcome: "cancelled" }, win)
-
-        } else {
-
-          // Save file
-          await writeFile(filePath, action.outgoingDocData, 'utf8')
-
-          // Then forward the original action, 
-          // along with save outcome
-          store.dispatch({ ...action, saveOutcome: "saved" }, win)
-        }
-
-      } else {
-
-        try {
-
-          // Try to save the doc. 
-          await writeFile(action.outgoingDoc.path, action.outgoingDocData, 'utf8')
-
-          // If save is successful, forward the original action
-          // along with save outcome.
-          store.dispatch({ ...action, saveOutcome: "saved" }, win)
-
-        } catch (err) {
-
-          // If save is unsuccessful, forward the original action
-          // along with save outcome.
-          // This shouldn't happen, but we catch it just in case.
-          store.dispatch({ ...action, saveOutcome: "failed" }, win)
-
-        }
-      }
-
-    } else if (userSelectedDontSave) {
-
-      // User selected "Save"...
-      // Just forward the original action.
-
-      store.dispatch(action, win)
-
-    } else if (userSelectedCancel) {
-
-      // If user selected "Cancel"...
-      // Do nothing...
+      // If save is unsuccessful, forward the original action
+      // along with save outcome.
+      // This shouldn't happen, but we catch it just in case.
+      store.dispatch({ ...action, saveOutcome: "failed" }, win)
 
     }
   }
 }
+
+
+/**
+ * 
+ * @param {*} action - With type, and assorted optional properties. 
+ */
+async function promptToSaveChangesThenForwardAction(action, win) {
+
+  const project = global.state().projects.byId[win.projectId]
+
+  // Prompt's wording depends on whether doc is new...
+  const message = action.isNewDoc ?
+    'Do you want to save the changes you made to the new document?' :
+    `Do you want to save the changes you made to ${action.outgoingDoc.path.slice(action.outgoingDoc.path.lastIndexOf('/') + 1)}?`
+
+  // Show prompt
+  const { response } = await dialog.showMessageBox(win, {
+    message,
+    detail: "Your changes will be lost if you don't save them.",
+    type: "warning",
+    buttons: ["Save", "Don't Save", "Cancel"],
+    defaultId: 0,
+  })
+
+  // What button did the user select?
+  const userSelectedSave = response == 0
+  const userSelectedDontSave = response == 1
+  const userSelectedCancel = response == 2
+
+  if (userSelectedSave) {
+
+    // User selected "Save"...
+
+    // If doc is new, show "Save As" flow
+    // Else just save.
+    if (action.isNewDoc) {
+
+      // "Save As" prompt
+
+      const { filePath, canceled } = await dialog.showSaveDialog(window, {
+        defaultPath: `${project.directory}/Untitled.md`
+      })
+
+      if (canceled) {
+
+        // Forward original action, 
+        // with 'cancelled' saveOutcome
+        store.dispatch({ ...action, saveOutcome: "cancelled" }, win)
+
+      } else {
+
+        // Save file
+        await writeFile(filePath, action.outgoingDocData, 'utf8')
+
+        // Then forward the original action, 
+        // along with save outcome
+        store.dispatch({ ...action, saveOutcome: "saved" }, win)
+      }
+
+    } else {
+
+      try {
+
+        // Try to save the doc. 
+        await writeFile(action.outgoingDoc.path, action.outgoingDocData, 'utf8')
+
+        // If save is successful, forward the original action
+        // along with save outcome.
+        store.dispatch({ ...action, saveOutcome: "saved" }, win)
+
+      } catch (err) {
+
+        // If save is unsuccessful, forward the original action
+        // along with save outcome.
+        // This shouldn't happen, but we catch it just in case.
+        store.dispatch({ ...action, saveOutcome: "failed" }, win)
+
+      }
+    }
+
+  } else if (userSelectedDontSave) {
+
+    // User selected "Don't Save"...
+    // Forward the original action,
+    // along with save outcome.
+
+    store.dispatch({ ...action, saveOutcome: "dontSave" }, win)
+
+  } else if (userSelectedCancel) {
+
+    // User selected "Cancel"...
+    // Forward the original action,
+    // along with save outcome.
+
+    store.dispatch({ ...action, saveOutcome: "cancelled" }, win)
+
+  }
+}
+
 
 
 /**

@@ -98,7 +98,8 @@ export function onMouseup(domEvent, id, tab, tabId, panel, files) {
       selectInSideBar: true,
       outgoingDoc: files.byId[panel.docId],
       outgoingDocData: panel.unsavedChanges ?
-        getCmDataByPanelId(panel.id) : ''
+        getCmDataByPanelId(panel.id) : '',
+      isNewDoc: panel.docId == 'newDoc'
     })
 
   } else if (!isNotAlreadyOpen) {
@@ -247,7 +248,8 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
         selectInSideBar: true,
         outgoingDoc: files.byId[panel.docId],
         outgoingDocData: panel.unsavedChanges ?
-          getCmDataByPanelId(panel.id) : ''
+          getCmDataByPanelId(panel.id) : '',
+        isNewDoc: panel.docId == 'newDoc'
       })
 
     }

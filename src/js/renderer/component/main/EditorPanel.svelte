@@ -1,12 +1,13 @@
 <script>
   import { project } from '../../StateManager';
   import { files } from '../../FilesManager';
+  import { onMount, onDestroy } from 'svelte'
 
   import Editor from './Editor.svelte';
   import IconButton from '../ui/IconButton.svelte';
   import { createEventDispatcher } from 'svelte'
-import AddressBar from './AddressBar.svelte';
-import { getCmDataByPanelId } from '../../editor/editor-utils';
+  import AddressBar from './AddressBar.svelte';
+  import { getCmDataByPanelId } from '../../editor/editor-utils';
   const dispatch = createEventDispatcher()
 
   export let index = 0
@@ -103,8 +104,13 @@ import { getCmDataByPanelId } from '../../editor/editor-utils';
     // Load dragged doc
     window.api.send('dispatch', { 
       type: 'OPEN_DOC_IN_PANEL', 
-      docId: draggedDocId, 
-      panelIndex: index 
+      panelIndex: index,
+      doc: files.byId[draggedDocId],
+      selectInSideBar: true,
+      outgoingDoc: doc,
+      outgoingDocData: panel.unsavedChanges ?
+        getCmDataByPanelId(panel.id) : '',
+      isNewDoc: panel.docId == 'newDoc'
     })
     
     // Focus panel
@@ -191,19 +197,19 @@ import { getCmDataByPanelId } from '../../editor/editor-utils';
    function openPanelToRight() {
     window.api.send('dispatch', {
       type: 'OPEN_NEW_PANEL',
-      docId: '',
+      docId: 'newDoc',
       panelIndex: index + 1
     })
   }
 
   function closeThisPanel() {
-
     window.api.send('dispatch', {
       type: 'CLOSE_PANEL',
       panelIndex: index,
       outgoingDoc: doc,
       outgoingDocData: panel.unsavedChanges ? 
-        getCmDataByPanelId(panel.id) : ''
+        getCmDataByPanelId(panel.id) : '',
+      isNewDoc: panel.docId == 'newDoc'
     })
   }
 
@@ -214,6 +220,25 @@ import { getCmDataByPanelId } from '../../editor/editor-utils';
       panelIndex: index
     })
   }
+
+  // ------- ON MOUNT ------- //
+
+  let removeListenerMethods = []
+
+  onMount(() => {
+    const listener1 = window.api.receive('mainRequestsCloseFocusedPanel', () => {
+      if (isFocusedPanel) {
+        closeThisPanel()
+      }
+    })
+    removeListenerMethods.push(listener1)
+  })
+
+  onDestroy(() => {
+    // Remove `window.api.receive` listeners
+    removeListenerMethods.forEach((remove) => remove())
+  })
+
 
 </script>
 
@@ -350,6 +375,10 @@ import { getCmDataByPanelId } from '../../editor/editor-utils';
       z-index: 10;
       background: rgba(0, 200, 100, 0.4);
     }
+  }
+
+  .isFocusedPanel {
+    
   }
 
 
