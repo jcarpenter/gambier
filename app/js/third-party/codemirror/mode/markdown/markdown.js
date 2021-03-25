@@ -1,6 +1,5 @@
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: https://codemirror.net/LICENSE
-
 (function (mod) {
   if (typeof exports == "object" && typeof module == "object") // CommonJS
     mod(require("../../lib/codemirror"), require("../xml/xml"), require("../meta"));
@@ -30,20 +29,6 @@
     if (modeCfg.maxBlockquoteDepth === undefined)
       modeCfg.maxBlockquoteDepth = 0;
 
-    // Turn on task lists? ("- [ ] " and "- [x] ")
-    if (modeCfg.taskLists === undefined)
-      modeCfg.taskLists = false;
-
-    // Turn on strikethrough syntax
-    if (modeCfg.strikethrough === undefined)
-      modeCfg.strikethrough = false;
-
-    if (modeCfg.emoji === undefined)
-      modeCfg.emoji = false;
-
-    if (modeCfg.fencedCodeBlockHighlighting === undefined)
-      modeCfg.fencedCodeBlockHighlighting = true;
-
     if (modeCfg.fencedCodeBlockDefaultMode === undefined)
       modeCfg.fencedCodeBlockDefaultMode = '';
 
@@ -52,12 +37,31 @@
 
     // Shared regular expressions and strings
 
-    var atxHeaderRE = modeCfg.allowAtxHeaderWithoutSpace ? /^(#+)/ : /^(#+)(?: |$)/
-    var texMathRE = /^\$\$$/
-    var expandedTab = "   " // CommonMark specifies tab as 4 spaces
-    var punctuation = /[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~\xA1\xA7\xAB\xB6\xB7\xBB\xBF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2308-\u230B\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E42\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]|\uD800[\uDD00-\uDD02\uDF9F\uDFD0]|\uD801\uDD6F|\uD802[\uDC57\uDD1F\uDD3F\uDE50-\uDE58\uDE7F\uDEF0-\uDEF6\uDF39-\uDF3F\uDF99-\uDF9C]|\uD804[\uDC47-\uDC4D\uDCBB\uDCBC\uDCBE-\uDCC1\uDD40-\uDD43\uDD74\uDD75\uDDC5-\uDDC9\uDDCD\uDDDB\uDDDD-\uDDDF\uDE38-\uDE3D\uDEA9]|\uD805[\uDCC6\uDDC1-\uDDD7\uDE41-\uDE43\uDF3C-\uDF3E]|\uD809[\uDC70-\uDC74]|\uD81A[\uDE6E\uDE6F\uDEF5\uDF37-\uDF3B\uDF44]|\uD82F\uDC9F|\uD836[\uDE87-\uDE8B]/
+    const atxHeaderRE = modeCfg.allowAtxHeaderWithoutSpace ? /^(#+)/ : /^(#+)(?: |$)/
+    const citationRE = /^[^\[\]\(\)]*?-?@[a-z0-9_][a-z0-9_:.#$%&\-+?<>~/]*?.*?\](?!\()/
+    const emailInBracketsRE = /^[^> \\]+@(?:[^\\>]|\\.)+>/
+    const emojiRE = /^(?:[a-z_\d+][a-z_\d+-]*|\-[a-z_\d+][a-z_\d+-]*):/
+    const expandedTab = "   " // CommonMark specifies tab as 4 spaces
+    const fencedCodeBlockRE = /^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/
+    const figureRE = /^![^\]]*\](\(.*?\)| ?\[.*?\])/
+    const footnoteInlineRE = /\[.+?\]/
+    const footnoteReferenceRE = /\^\S*\]/
+    const footnoteReferenceDefinitionRE = /^\[\^\S*\]: /
+    const hrRE = /^([*\-_])(?:\s*\1){2,}\s*$/
+    const imageRE = /\[[^\]]*\](\(.*?\)|\[.*?\])?/
+    const linkInlineRE = /[^\]]*?\]\(.*?\)/
+    const linkReferenceDefinitionRE = /^\[[^\]]+?\]:\s*(?:<[^<>\n]*>|(?!<)[^\s]+)/
+    const linkReferenceFullRE = /[^\]]+?\]\[[^\]]+\]/
+    const linkReferenceCollapsedRE = /[^\]]+?\]\[\]/
+    const linkReferenceShortcutRE = /[^\]@]+?\](?!\[|\()/
+    const listRE = /^(?:[*\-+]|^[0-9]+([.)]))\s+/
+    const markdownFormattingCharactersRE = /^[^#!\[\]*_\\<>^` "'(~:$]+/
+    const texMathRE = /^\$\$$/
+    const urlInBracketsRE = /^(https?|ftps?):\/\/(?:[^\\>]|\\.)+>/
 
-    var urlRE = /^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i
+    const punctuation = /[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~\xA1\xA7\xAB\xB6\xB7\xBB\xBF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2308-\u230B\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E42\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]|\uD800[\uDD00-\uDD02\uDF9F\uDFD0]|\uD801\uDD6F|\uD802[\uDC57\uDD1F\uDD3F\uDE50-\uDE58\uDE7F\uDEF0-\uDEF6\uDF39-\uDF3F\uDF99-\uDF9C]|\uD804[\uDC47-\uDC4D\uDCBB\uDCBC\uDCBE-\uDCC1\uDD40-\uDD43\uDD74\uDD75\uDDC5-\uDDC9\uDDCD\uDDDB\uDDDD-\uDDDF\uDE38-\uDE3D\uDEA9]|\uD805[\uDCC6\uDDC1-\uDDD7\uDE41-\uDE43\uDF3C-\uDF3E]|\uD809[\uDC70-\uDC74]|\uD81A[\uDE6E\uDE6F\uDEF5\uDF37-\uDF3B\uDF44]|\uD82F\uDC9F|\uD836[\uDE87-\uDE8B]/
+
+    const urlRE = /^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i
 
     function switchInline(stream, state, f) {
       state.f = state.inline = f;
@@ -85,15 +89,10 @@
       state.linkUrl = false;
       state.linkText = false;
 
-      // Reset EM state
       state.em = false;
-      // Reset STRONG state
       state.strong = false;
-      // Reset strikethrough state
       state.strikethrough = false;
-      // Reset state.quote
       state.quote = 0;
-      // Reset state.indentedCode
       state.indentedCode = false;
       if (state.f == htmlBlock) {
         var exit = htmlModeMissing
@@ -129,11 +128,15 @@
       // Footnote reference definition:
       // If it's active (would have been turned on on previous line),
       // continue it, if this line is indendent. Else, discontinue.
-      if (state.footnoteReferenceDefinition) {
-        if (!state.indentation) {
-          state.footnoteReferenceDefinition = false
-        }
-      }
+      // TODO: 3/24/2021: Re-enable multi-line footnote reference definitions in future.
+      // if (state.footnoteReferenceDefinition) {
+      //   if (!state.indentation) {
+      //     state.footnoteReferenceDefinition = false
+      //   }
+      // }
+
+      if (state.linkReferenceDefinition) state.linkReferenceDefinition = false
+      if (state.footnoteReferenceDefinition) state.footnoteReferenceDefinition = false
 
       // Reset
       state.figure = false
@@ -173,7 +176,7 @@
       );
 
       var isHr = (state.list === false || prevLineIsHr || prevLineLineIsEmpty) &&
-        state.indentation <= maxNonCodeIndentation && stream.match(/^([*\-_])(?:\s*\1){2,}\s*$/);
+        state.indentation <= maxNonCodeIndentation && stream.match(hrRE);
 
       var match = null;
 
@@ -208,21 +211,20 @@
         stream.eatSpace();
         return getStyles(state);
 
-      } else if (!isHr && !state.setext && firstTokenOnLine && stream.match(/^\[\^\S*\]: /, false)) {
+      } else if (!isHr && !state.setext && firstTokenOnLine && stream.match(footnoteReferenceDefinitionRE, false)) {
 
         // ----- Footnote: Reference definition ----- //
         state.footnoteReferenceDefinition = true
-        state.formatting = true
         state.f = state.inline;
         return getStyles(state);
 
-      } else if (!isHr && !state.setext && stream.column() <= 3 && stream.match(/^\[[^\]]+?\]:\s*(?:<[^<>\n]*>|(?!<)[^\s]+)/, false)) {
+      } else if (!isHr && !state.setext && stream.column() <= 3 && stream.match(linkReferenceDefinitionRE, false)) {
 
         // ----- Link: Reference definition ----- //
         // Regexp demo: https://regex101.com/r/6nSTuL/6/
         return switchInline(stream, state, linkReferenceDefinition);
 
-      } else if (!isHr && !state.setext && firstTokenOnLine && stream.match(/^![^\]]*\](\(.*?\)| ?\[.*?\])/, false)) {
+      } else if (modeCfg.implicitFigures && !isHr && !state.setext && firstTokenOnLine && stream.match(figureRE, false)) {
 
         // ----- Figure ----- //
         state.figure = true
@@ -231,7 +233,7 @@
         return getStyles(state);
 
 
-      } else if (!isHr && !state.setext && firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(/^(?:[*\-+]|^[0-9]+([.)]))\s+/))) {
+      } else if (!isHr && !state.setext && firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(listRE))) {
 
         // ----- List ----- //
         var listType = match[1] ? "ol" : "ul";
@@ -294,7 +296,7 @@
         return getStyles(state);
 
 
-      } else if (firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(/^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/, true))) {
+      } else if (firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(fencedCodeBlockRE, true))) {
 
         // ----- Fenced code block ----- //
 
@@ -424,13 +426,9 @@
     function getStyles(state) {
       var styles = [];
 
-      if (state.linkReference) {
-        if (state.linkReference) { styles.push('reference'); }
-
-        if (state.referenceStyleFull) { styles.push('full'); }
-        if (state.referenceStyleCollapsed) { styles.push('collapsed'); }
-        if (state.referenceStyleShortcut) { styles.push('shortcut'); }
-      }
+      if (state.footnoteReferenceDefinition) styles.push('line-footnote-reference-definition')
+      if (state.footnoteReferenceDefinitionContent) styles.push('content')
+      if (state.footnoteLabel) styles.push('label')
 
       if (state.footnote) {
         styles.push('footnote');
@@ -438,30 +436,31 @@
         if (state.footnoteReference) styles.push('reference');
         if (state.footnoteLabel) { styles.push('label'); }
         if (state.footnoteContent) { styles.push('content'); }
-        if (state.footnoteReferenceDefinition) styles.push('line-footnote-reference-definition');
       }
-
-      if (state.referenceDefinitionAnchor) styles.push('definition-anchor');
 
       if (state.figure) styles.push('line-figure');
 
-      if (state.image) {
-        styles.push('image');
-        if (state.imageAltText) { styles.push('alttext'); }
-        if (state.imageLabel) styles.push('label');
-        if (state.imageMarker) { styles.push('marker'); }
-        if (state.linkTitle) { styles.push('title'); }
-        if (state.linkUrl) { styles.push('url'); }
-      }
+      if (state.image) styles.push('image');
+
+      if (state.linkReferenceDefinition) styles.push('line-link-reference-definition')
 
       if (state.link) {
-        if (!state.image) styles.push('link');
-        if (state.linkInline) { styles.push('inline'); }
-        if (state.linkLabel) { styles.push('label'); }
-        if (state.linkReferenceDefinition) { styles.push('line-link-reference-definition'); }
-        if (state.linkText) { styles.push('text'); }
-        if (state.linkTitle) { styles.push('title'); }
-        if (state.linkUrl) { styles.push('url'); }
+        styles.push('link')
+        if (state.linkInline) styles.push('inline')
+      }
+
+      if (state.link || state.image || state.linkReferenceDefinition) {
+        if (state.linkText) styles.push('text')
+        if (state.linkTitle) styles.push('title')
+        if (state.linkUrl) styles.push('url')
+        if (state.linkLabel) styles.push('label')
+      }
+
+      if (state.linkReference) {
+        if (state.linkReference) styles.push('reference')
+        if (state.referenceStyleFull) styles.push('full')
+        if (state.referenceStyleCollapsed) styles.push('collapsed')
+        if (state.referenceStyleShortcut) styles.push('shortcut')
       }
 
       // Other
@@ -469,11 +468,11 @@
       if (state.citation) styles.push('citation')
       if (state.citationKey) styles.push('key')
       if (state.code >= 1) styles.push('code')
-      if (state.em) styles.push('em')
+      if (state.em) styles.push('emphasis')
       if (state.emailInBrackets) styles.push('email-in-brackets')
       if (state.emoji) styles.push('emoji')
       if (state.header) styles.push('line-header', "line-h" + state.header)
-      if (state.malformed) styles.push('malformed')
+      if (state.incomplete) styles.push('incomplete')
       if (state.strikethrough) styles.push('strikethrough')
       if (state.strong) styles.push("strong")
       if (state.texMathDisplay) styles.push('line-texmath-display')
@@ -583,7 +582,7 @@
       // The following if statement finds and moves to the end of 1-to-infinity text characters.
       // Characters in the [^...] set are markdown formatting characters.
       // Characters NOT in the [^...] set are processed as text.
-      if (stream.match(/^[^#!\[\]*_\\<>^` "'(~:$]+/, true)) {
+      if (stream.match(markdownFormattingCharactersRE, true)) {
         return getStyles(state);
       }
       return undefined;
@@ -647,7 +646,7 @@
 
       // URL-in-brackets
       // E.g. `<http://google.com>`
-      if (ch === '<' && stream.match(/^(https?|ftps?):\/\/(?:[^\\>]|\\.)+>/, false)) {
+      if (ch === '<' && stream.match(urlInBracketsRE, false)) {
         state.urlInBrackets = true
         state.formatting = 'url-in-brackets-start'
         // state.link = true
@@ -663,8 +662,8 @@
       }
 
       // Autolink-in-brackets Email
-      // E.g. `<steve@apple.com`
-      if (ch === '<' && stream.match(/^[^> \\]+@(?:[^\\>]|\\.)+>/, false)) {
+      // E.g. `<steve@apple.com>`
+      if (ch === '<' && stream.match(emailInBracketsRE, false)) {
         state.formatting = 'email-in-brackets-start'
         state.emailInBrackets = true
         return getStyles(state);
@@ -687,7 +686,7 @@
 
       // Citation
       // Demo: https://regex101.com/r/Pv10hL/2
-      if (ch === '[' && stream.match(/^[^\[\]\(\)]*?-?@[a-z0-9_][a-z0-9_:.#$%&\-+?<>~/]*?.*?\](?!\()/, false)) {
+      if (ch === '[' && stream.match(citationRE, false)) {
         // stream.backUp(1);
         state.formatting = 'citation-start';
         state.citation = true;
@@ -745,7 +744,7 @@
       // }
 
       // Emoji
-      if (modeCfg.emoji && ch === ":" && stream.match(/^(?:[a-z_\d+][a-z_\d+-]*|\-[a-z_\d+][a-z_\d+-]*):/)) {
+      if (modeCfg.emoji && ch === ":" && stream.match(emojiRE)) {
         state.emoji = true;
         state.formatting = true
         var retType = getStyles(state);
@@ -768,10 +767,10 @@
         var setEm = null, setStrong = null
         if (len % 2) { // Em
           if (!state.em && leftFlanking && (ch === "*" || !rightFlanking || punctuation.test(before))) {
-            state.formatting = 'em-start'
+            state.formatting = 'emphasis-start'
             setEm = true
           } else if (state.em == ch && rightFlanking && (ch === "*" || !leftFlanking || punctuation.test(after))) {
-            state.formatting = 'em-end'
+            state.formatting = 'emphasis-end'
             setEm = false
           }
         }
@@ -785,8 +784,6 @@
           }
         }
         if (setStrong != null || setEm != null) {
-          // state.formatting = true
-          // if (modeCfg.highlightFormatting) state.formatting = setEm == null ? "strong" : setStrong == null ? "em" : "strong em"
           if (setEm === true) state.em = ch
           if (setStrong === true) state.strong = ch
           var t = getStyles(state)
@@ -808,55 +805,68 @@
       // NOTE 9/10/2020: Am not sure what this does, exactly.
       if (ch === '\\') {
         stream.next();
-        if (modeCfg.highlightFormatting) {
-          var styles = getStyles(state);
-          var formattingEscape = 'md' + "-escape";
-          return styles ? styles + " " + formattingEscape : formattingEscape;
-        }
+        var styles = getStyles(state);
+        var formattingEscape = 'md' + "-escape";
+        return styles ? styles + " " + formattingEscape : formattingEscape;
       }
 
       // Footnote (inline)
-      if (ch === '^' && stream.match(/\[.*?\]/, false)) {
+      if (ch === '^' && stream.match(footnoteInlineRE, false)) {
 
-        // If brackets do not contain at least one non-whitespace character, the footnote is missing content, and malformed.
+        // If brackets do not contain at least one non-whitespace character, the footnote is missing content, and incomplete.
         // if (!stream.match(/\[\S+\]/, false)) {
-        //   state.malformed = true
+        //   state.incomplete = true
         // }
 
         // Skip ahead one. This prevents link parsing from triggering.
         stream.next() // So we get the `[` in the opening `^[`
-        state.formatting = 'footnote-start';
+        state.formatting = 'footnote-inline-start';
         state.footnote = true
         state.footnoteInline = true
 
         var styles = getStyles(state)
-        if (!state.malformed) state.footnoteContent = true
+        if (!state.incomplete) state.footnoteContent = true
         return styles
       }
 
       // Footnote (inline): Closing
       if (ch === ']' && state.footnoteInline && !state.link) {
-        state.formatting = 'footnote-end';
+        state.formatting = 'footnote-inline-end';
         state.footnoteContent = false
         var styles = getStyles(state);
         state.footnote = false
+        state.formatting = false
         state.footnoteInline = false;
-        if (state.malformed) state.malformed = false
+        if (state.incomplete) state.incomplete = false
         return styles;
       }
 
-      // Footnote (reference)
+      // Footnote reference definition: start of line
+      if (ch === '[' && state.footnoteReferenceDefinition && stream.match(/\S*\]:/, false)) {
+        state.formatting = 'footnote-reference-definition-start';
+        stream.next()
+        var styles = getStyles(state)
+        state.footnoteLabel = true
+        return styles
+      }
+
+      // Footnote reference definition: end of label, start of content
+      // Content is everything until end of the line
+      if (ch === ']' && state.footnoteReferenceDefinition && state.footnoteLabel) {
+        state.footnoteLabel = false
+        state.formatting = true
+        stream.match(/:\s+/)
+        var styles = getStyles(state)
+        state.footnoteReferenceDefinitionContent = true
+        return styles
+      }
+
+      // Footnote (reference-style)
       // Demo: https://regex101.com/r/RH5vFf/2
-      if (ch === '[' && !state.image && stream.match(/\^\S*\]/, false)) {
+      if (ch === '[' && !state.image && stream.match(footnoteReferenceRE, false)) {
         stream.next() // So we get the `^` in the opening `[^`
         state.footnoteReference = true
-        // If this is the reference footnote that opens each reference footnote definition (e.g.) `[^myFootnote]: Blah blah blah`, we attach an `anchor` style to it.
-        if (state.footnoteReferenceDefinition && stream.match(/\S*\]:/, false)) {
-          // state.referenceDefinitionAnchor = true
-          state.formatting = 'reference-definition-anchor-start';
-        } else {
-          state.formatting = 'footnote-start';
-        }
+        state.formatting = 'footnote-reference-start';
         state.footnote = true
         var styles = getStyles(state)
         state.footnoteLabel = true
@@ -867,85 +877,94 @@
       if (ch === ']' && state.footnoteReference) {
         // Include the `:` that definitions have
         if (stream.peek() == ':') stream.next()
-        if (state.footnoteReferenceDefinition) {
-          state.formatting = 'reference-definition-anchor-end';
-        } else {
-          state.formatting = 'footnote-end';
-        }
+        state.formatting = 'footnote-end';
         state.footnoteLabel = false
         var styles = getStyles(state);
         state.footnote = false;
         state.footnoteReference = false;
-        // state.referenceDefinitionAnchor = false;
         return styles;
       }
 
-      // Image
-      if (ch === '!' && stream.match(/\[[^\]]*\](\(.*?\)|\[.*?\])?/, false)) {
-        state.image = true;
-        state.formatting = true;
-        var styles = getStyles(state);
-        return styles
-      }
+      const isImageStart = ch === '!' && stream.match(imageRE, false)
+      const isLinkStart = ch === '[' && !state.link && !state.image
 
-      // Link: Opening `[`
-      if (ch === '[' && (!state.link || state.image)) {
+      // Images and Links: Opening `!` or `[`
+      if (isImageStart || isLinkStart) {
 
-        if (stream.match(/[^\]]*?\]\(.*?\)/, false)) {
+        const isInlineStart = stream.match(linkInlineRE, false)
+        const isFullReferenceStart = stream.match(linkReferenceFullRE, false)
+        const isCollapsedReferenceStart = stream.match(linkReferenceCollapsedRE, false)
+
+        if (isInlineStart || isFullReferenceStart || isCollapsedReferenceStart) {
+          if (isImageStart) {
+            stream.next() // Advance to `[`
+            state.image = true
+            state.formatting = 'image-start'
+
+          } else if (isLinkStart) {
+            state.link = true
+            state.formatting = 'link-start'
+          }
+        }
+
+        if (isInlineStart) {
 
           // Inline link: Start of text
           // E.g. `[text](url "title") `
           //       ^
-          state.formatting = 'link-start'
-          state.link = true;
+
           state.linkInline = true;
+          state.formatting = state.formatting.replace('-start', '-inline-start')
 
           // Is URL missing?
-          const urlMissing = stream.match(/[^\]]+?\]\(\)/, false)
-          if (urlMissing) state.malformed = true
+          const textMissing = stream.peek() == ']'
+          const urlMissing = stream.match(/[^\]]*?\]\(\)/, false)
+          if ((textMissing && state.link) || urlMissing) state.incomplete = true
 
           var styles = getStyles(state);
           state.linkText = true;
           return styles
 
-        } else if (stream.match(/[^\]]+?\]\[[^\]]+\]/, false)) {
+        } else if (isFullReferenceStart) {
 
           // "Full" reference link: Start of text
           // E.g. `[text][label]`
           //       ^
-          state.formatting = 'link-start'
-          state.link = true;
+          state.formatting = state.formatting.replace('-start', '-reference-full-start')
           state.linkReference = true
           state.referenceStyleFull = true
           var styles = getStyles(state);
           state.linkText = true;
           return styles
 
-        } else if (stream.match(/[^\]]+?\]\[\]/, false)) {
+        } else if (isCollapsedReferenceStart) {
 
           // "Collapsed" reference link: Start of label
           // E.g. `[text][]`
           //       ^
-          state.formatting = 'link-start'
-          state.link = true;
+          state.formatting = state.formatting.replace('-start', '-reference-collapsed-start')
           state.linkReference = true
           state.referenceStyleCollapsed = true
           var styles = getStyles(state);
           state.linkLabel = true;
           return styles
 
-        } else if (stream.match(/[^\]@]+?\](?!\[|\()/, false)) {
+        } else if (stream.match(linkReferenceShortcutRE, false)) {
+
+          // TODO: 3/24/2021: Disabling support for shortcut markdown links for now,
+          // as they cause too many headaches when trying to also support autocomplete
+          // triggering on `[]`.
 
           // "Shortcut: reference link: Start of label
           // E.g. `[label]`
           //       ^
-          state.formatting = 'link-start'
-          state.link = true;
-          state.linkReference = true
-          state.referenceStyleShortcut = true
-          var styles = getStyles(state);
-          state.linkLabel = true;
-          return styles
+          // state.formatting = 'link-start'
+          // state.link = true;
+          // state.linkReference = true
+          // state.referenceStyleShortcut = true
+          // var styles = getStyles(state);
+          // state.linkLabel = true;
+          // return styles
         }
       }
 
@@ -953,7 +972,7 @@
       // Continuation of inline, and full or collapsed reference-style links.
       // End of shortcut reference-style links.
       // Handles both inline []() or reference [][] types.
-      if (ch === ']' && state.link) {
+      if (ch === ']' && (state.link || state.image)) {
 
         state.formatting = true
 
@@ -988,7 +1007,7 @@
               // E.g. `[text][label]`
               //                   ^
               state.linkLabel = false
-              state.formatting = 'link-end'
+              state.formatting = state.image ? 'image-end' : 'link-end'
               var styles = getStyles(state);
               closeLink = true
             }
@@ -1002,7 +1021,7 @@
             stream.next()
             stream.next()
             state.linkLabel = false
-            state.formatting = 'link-end'
+            state.formatting = state.image ? 'image-end' : 'link-end'
             var styles = getStyles(state);
             closeLink = true
 
@@ -1012,41 +1031,11 @@
             // E.g. `[label]`
             //             ^
             state.linkLabel = false
-            state.formatting = 'link-end'
+            state.formatting = state.image ? 'image-end' : 'link-end'
             var styles = getStyles(state);
             closeLink = true
           }
         }
-
-        // if (state.linkInline && state.linkText && stream.match(/\(.*?\)/, false)) {
-
-        //   // Inline link: End of text, start of destination
-        //   // E.g. `[text](url "title")`
-        //   //            ^
-        //   // state.linkText = false
-        //   // var styles = getStyles(state);
-        //   // state.inline = state.f = linkDestination
-
-        // } else if (state.linkReference && state.linkText && stream.peek() === '[') {
-
-        //   // Reference link (full or collapsed): End of text.
-        //   // E.g. `[text][label]` or `[text][]`
-        //   //            ^                  ^
-        //   // state.linkText = false
-        //   // var styles = getStyles(state);
-        //   // state.linkLabel = true
-
-        // } else if (state.linkReference) {
-
-        //   // Reference link (all types): End of label, and of link
-        //   // E.g. `[text][label]`, `[text][]`, `[label]`
-        //   //                   ^           ^          ^
-        //   // state.linkLabel = false
-        //   // var styles = getStyles(state);
-        //   // state.linkReference = false
-        //   // state.link = false;
-        //   // state.image = false;
-        // }
 
         // False all the things!
         if (closeLink) {
@@ -1176,7 +1165,8 @@
         // Handle case where URL is missing `()`
         if (stream.peek() == ')') {
           stream.next()
-          state.malformed = true
+          state.incomplete = true
+          state.formatting = state.image ? 'image-inline-end' : 'link-inline-end'
           var styles = getStyles(state)
           reset()
           return styles
@@ -1188,39 +1178,47 @@
         return styles
       }
 
+      // Jump to end of URL
       if (state.linkUrl) {
+        stream.match(/.*?(?=\)|\s)/)
+        var styles = getStyles(state)
+        state.linkUrl = false
+        return styles
+      }
 
-        // Is there a title after the URL? 
-        // If yes, jump to it and set `state.linkTitle` true. Else, jump to closing ')'
-        // Find URL with title following. Demo: https://regex101.com/r/anM7bj/3
-        // TODO: Improve to filter out erroneous titles (e.g. line breaks?)
-        if (stream.match(/^(?:[^\\\(\)]|\\.|\((?:[^\\\(\)]|\\.))*?(?=\s(".*?")|\s('.*?')|\s(\(.*?\)))/)) {
-          var styles = getStyles(state)
-          state.linkUrl = false;
-          state.linkTitle = true
-          return styles
-        } else {
-          // Jump to end of URL, inside link destination that doesn't have a title. 
-          // Demo: https://regex101.com/r/ljZwpn/1
-          stream.match(/.*?(?=\))/)
-          var styles = getStyles(state);
-          state.linkUrl = false;
-          return styles
-        }
+      // Is there a title? 
+      // Demo: https://regex101.com/r/IrMSgJ/1
+      if (ch === ' ' && stream.match(/\s*(("|').*?\2\))|(\(.*?\)\))/, false)) {
+        stream.match(/\s*("|'|\()/) // Advance to start of title text
+        state.formatting = true
+        var styles = getStyles(state)
+        state.linkTitle = true
+        return styles
+      }
+
+      // If there's a title, jump to the end of it
+      if (state.linkTitle) {
+        stream.match(/.*?(?="|'|\))/)
+        var styles = getStyles(state)
+        state.linkTitle = false
+        state.formatting = true
+        return styles
       }
 
       // If there's a title, jump to end of it
       // Demo: https://regex101.com/r/TqWExF/1/
-      if (state.linkTitle && ch !== ')') {
-        stream.match(/^.*?("|'|\))(?=\))/)
-        return getStyles(state)
-      }
+      // if (state.linkTitle && ch !== ')') {
+      //   stream.match(/^.*?("|'|\))(?=\))/)
+      //   return getStyles(state)
+      // }
 
       // End
-      if (ch === ')') {
+      // if (ch.equalsAny("'", '"',  )) {
+      if (ch === ')' || ch === '"' || ch === "'") {
+        if (stream.peek() == ')') stream.next()
         state.linkUrl = false;
         state.linkTitle = false;
-        state.formatting = 'link-end'
+        state.formatting = state.image ? 'image-inline-end' : 'link-inline-end'
         var styles = getStyles(state);
         reset()
         return styles;
@@ -1234,7 +1232,7 @@
         state.linkReference = false
         state.linkUrl = false
         state.image = false
-        if (state.malformed) state.malformed = false
+        if (state.incomplete) state.incomplete = false
       }
     }
 
@@ -1246,11 +1244,10 @@
       // Label
       if (ch == '[') {
         // if (!state.link && stream.match(/^\[[^\]]+?\]:/), false) {
-        state.link = true
-        state.linkReference = true
+        // state.link = true
+        // state.linkReference = true
         state.linkReferenceDefinition = true
-        // state.referenceDefinitionAnchor = true
-        state.formatting = 'reference-definition-anchor-start'
+        state.formatting = 'link-reference-definition-start'
         var styles = getStyles(state)
         state.linkLabel = true
         return styles
@@ -1264,36 +1261,74 @@
         return styles
       }
 
+      // Close label
       if (ch === ']') {
-        stream.match(/:\s*/, false)
-        stream.next() // Include the `:`
-        state.formatting = 'reference-definition-anchor-end'
+        // Include `:` and following whitespace
+        stream.match(/:\s*/)
+        state.formatting = true
         var styles = getStyles(state)
-        // state.referenceDefinitionAnchor = false
-        stream.match(/\s*/) // Skip the whitespace
         state.linkUrl = true
         return styles
       }
 
-
-      if (state.linkUrl && stream.match(/(?:<[^<>\n]*>|(?!<)[^\s]+)/)) {
+      // Jump to end of URL
+      if (state.linkUrl) {
+        stream.match(/(?:<[^<>\n]*>|(?!<)[^\s]+)/)
         var styles = getStyles(state)
         state.linkUrl = false
-
-        // If we're al eol(), or there are only spaces left, reset().
-        if (stream.eol() || stream.match(/\s+$/)) {
+        // If there's no title ahead, end the reference definition
+        if (!stream.match(/\s*(("|').*?\2)|(\(.*?\)\))/, false)) {
           reset()
         }
         return styles
       }
 
+      // Is there a title? 
+      // Demo: https://regex101.com/r/IrMSgJ/1
+      // if (ch === ' ' && stream.match(/\s*(("|').*?\2\))|(\(.*?\)\))/, false)) {
+      //   console.log("title found")
+      //   stream.match(/\s*("|'|\()/) // Advance to start of title text
+      //   state.formatting = true
+      //   var styles = getStyles(state)
+      //   state.linkTitle = true
+      //   return styles
+      // }
+
+      // If there's a title, jump to the end of it
+      // if (state.linkTitle) {
+      //   stream.match(/.*?(?="|'|\))/)
+      //   var styles = getStyles(state)
+      //   state.linkTitle = false
+      //   state.formatting = true
+      //   return styles
+      // }
+
       // Title found
-      if (stream.match(/(".*?")|('.*?')|(\(.*?\))/)) {
-        state.linkTitle = true
+      if (stream.match(/(".*?")|('.*?')|(\(.*?\))/, false)) {
+        stream.match(/\s*("|'|\()/) // Advance to start of title text
+        state.formatting = true
         var styles = getStyles(state)
+        state.linkTitle = true
+        return styles
+      }
+
+      // If there's a title, jump to the end of it
+      if (state.linkTitle) {
+        stream.match(/.*?(?="|'|\))/)
+        var styles = getStyles(state)
+        state.linkTitle = false
+        state.formatting = true
         reset()
         return styles
       }
+
+      // If we're al eol(), or there are only spaces left, reset().
+      // if (stream.eol() || stream.match(/\s+$/)) {
+      //   state.formatting = true // So we get closing character of title
+      //   var styles = getStyles(state)
+      //   reset()
+      //   return styles
+      // }
 
       function reset() {
         state.f = state.inline = inlineNormal;
@@ -1307,7 +1342,7 @@
       }
 
       // Have to have this, or we get error
-      stream.next();
+      // stream.next();
     }
 
     function citation(stream, state) {
@@ -1395,6 +1430,7 @@
     //   return tokenTypes.linkText;
     // }
 
+
     // function footnoteUrl(stream, state) {
     //   // Check if space, and return NULL if so (to avoid marking the space)
     //   // if (stream.eatSpace()) {
@@ -1466,7 +1502,7 @@
           referenceStyleCollapsed: false,
           referenceStyleShortcut: false,
 
-          malformed: false,
+          incomplete: false,
           citation: false,
           code: 0,
           em: false,
@@ -1541,7 +1577,7 @@
           referenceStyleCollapsed: s.referenceStyleCollapsed,
           referenceStyleShortcut: s.referenceStyleShortcut,
 
-          malformed: s.malformed,
+          incomplete: s.incomplete,
           citation: s.citation,
           code: s.code,
           em: s.em,
@@ -1581,7 +1617,13 @@
 
           // Find blank lines
           // If we find a line with only whitespace, and we're NOT currently in a footnote reference definition, make it a blankLine(). We allow empty lines inside footnote reference definitions, so we want to process them the normal way (via blockNormal, inlineNormal, etc).
-          if (!state.footnoteReferenceDefinition && stream.match(/^\s*$/, true)) {
+          // TODO: 3/24/2021: Re-enable multi-line footnote reference definitions in future.
+          // if (!state.footnoteReferenceDefinition && stream.match(/^\s*$/, true)) {
+          //   blankLine(state);
+          //   return null;
+          // }
+
+          if (stream.match(/^\s*$/, true)) {
             blankLine(state);
             return null;
           }
@@ -1616,20 +1658,21 @@
 
               // Footnote reference definitions can span multiple lines: "Subsequent paragraphs are indented to show that they belong to the previous footnote." — https://pandoc.org/MANUAL.html#footnotes. So if `footnote-reference-definition` state is active, and this line is indented, we add `line-footnote-reference-definition-continued` class.
 
-              if (indentation > 0) {
-                if (state.footnoteReferenceDefinition) {
-                  return 'line-footnote-reference-definition-continued'
-                } else {
-                  return null
-                };
-              }
+              // TODO: 3/24/2021: Re-enable multi-line footnote reference definitions in future.
+              // if (indentation > 0) {
+              //   if (state.footnoteReferenceDefinition) {
+              //     return 'line-footnote-reference-definition-continued content'
+              //   } else {
+              //     return null
+              //   };
+              // }
             }
           }
         }
 
         // Automatic links (aka bare urls)
         // This is an odd place to find and flag these, but I couldn't figure out how to make it work in inlineNormal. The code is adapted from GitHub-Flavored mode: https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L99
-        if (!state.link && !state.urlInBrackets && !state.emailInBrackets && stream.match(urlRE)) {
+        if (!state.link && !state.image && !state.urlInBrackets && !state.emailInBrackets && !state.linkReferenceDefinition && stream.match(urlRE)) {
           // state.link = true
           state.bareUrl = true
           var styles = getStyles(state)

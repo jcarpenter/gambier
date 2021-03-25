@@ -1,25 +1,32 @@
 <script>
-  import { state, project, isMetaKeyDown } from '../../StateManager'
+  import { state, project, isMetaKeyDown, markdownOptions } from '../../StateManager'
   import { files } from '../../FilesManager'
   import { onMount, onDestroy } from 'svelte'
-  import { makeEditor } from '../../editor/editor2';
+  import { makeEditor, setMode } from '../../editor/editor2';
 
   import Wizard from './wizard/Wizard.svelte'
   import Autocomplete from './Autocomplete.svelte'
   import Preview from './preview/Preview.svelte'
-  import { markDoc2 } from '../../editor/mark';
-  import { loadDoc, saveCursorPosition, loadEmptyDoc } from '../../editor/editor-utils';
-  import { mapDoc } from '../../editor/map';
+  import { markDoc } from '../../editor/mark';
+  import { loadDoc, saveCursorPosition, loadEmptyDoc, getCmDataByPanelId } from '../../editor/editor-utils';
 
   export let panel = {}
   export let doc = undefined
   export let isFocusedPanel = false // 1/18: Not using these yet
   export let visible = false
+  export let width = 0
+  
+  // We have to call `cm.refresh()` when the panel size
+  // changes or selections and cursors don't update.
+  $: width, refreshSize()
+  function refreshSize() {
+    if (!cm) return
+    cm.refresh()
+  }
 
   // Bindings
   let cm // CodeMirror (Editor) instance
   let el // This element
-
 
   $: panel, onPanelChange()
 
@@ -30,13 +37,13 @@
     if (!cm) return
 
     // If status has changed...
-    const statusHasChanged = panel.status !== cm.state.panel.status
+    const statusHasChanged = panel.status !== cm.panel.status
 
     const isNewDoc = panel.docId == 'newDoc'
 
     // If doc has changed, load new one
     // This will also load initial doc, on Editor creation.
-    const docHasChanged = panel.docId !== cm.state.panel.docId
+    const docHasChanged = panel.docId !== cm.panel.docId
     if (docHasChanged) {
       saveCursorPosition(cm)
       if (isNewDoc) {
@@ -48,15 +55,15 @@
 
     // If save status has changed, and it's now "no unsaved changes", mark the doc clean
     // Per: https://codemirror.net/doc/manual.html#markClean
-    const saveStatusHasChanged = cm.state.panel.unsavedChanges !== panel.unsavedChanges
+    const saveStatusHasChanged = cm.panel.unsavedChanges !== panel.unsavedChanges
     if (saveStatusHasChanged) {
       if (!panel.unsavedChanges) {
         cm.doc.markClean()
       }
     }
 
-    // Set cm.state.panel to a copy of panel when panel changes.
-    cm.state.panel = { ...panel }
+    // Set cm.panel to a copy of panel when panel changes.
+    cm.panel = { ...panel }
   }
 
 
@@ -72,9 +79,7 @@
     // Clear current marks, regardless of sourceMode true/false.
     cm.getAllMarks().forEach((m) => m.clear())
     if (!sourceMode) { 
-      // mapDoc(cm)
-      // markDoc(cm) 
-      markDoc2(cm) 
+      markDoc(cm) 
     }
   }
 
@@ -111,6 +116,13 @@
     // TODO
   }
 
+  $: $markdownOptions, setMarkdownOptions()
+
+  function setMarkdownOptions() {
+    if (!cm) return
+    setMode(cm)
+  }
+
   let removeListenerMethods = []
 
   onMount(async () => {
@@ -123,8 +135,8 @@
     // If the panel is focused, focus the CodeMirror instance
     if (isFocusedPanel) cm.focus()
 
-    // Set `cm.state.panel` to a copy of panel
-    // cm.state.panel = { ...panel }
+    // Set `cm.panel` to a copy of panel
+    // cm.panel = { ...panel }markdownOptions
 
     // ------ CREATE LISTENERS ------ //
 
@@ -141,7 +153,7 @@
       })
       }
     })
-
+    
     // Save
     const saveListener = window.api.receive('mainRequestsSaveFocusedPanel', () => {
       if (isFocusedPanel && panel.unsavedChanges) {
@@ -208,12 +220,10 @@
 
     // Add wizard, autocomplete and preview components to CodeMirror's scroller element. If we don't, and instead were to define them as components here, in Editor.svelte,they would be siblings of the top-level CodeMirror element (which is added to the `el` div), and therefore NOT scroll with the editor.
 
-    // const autocomplete = new Autocomplete({
-    //   target: cm.getScrollerElement(),
-    //   props: {
-    //     cm: cm
-    //   }
-    // })
+    const autocomplete = new Autocomplete({
+      target: cm.getScrollerElement(),
+      props: { cm }
+    })
 
     const preview = new Preview({
       target: cm.getScrollerElement(),
@@ -226,6 +236,7 @@
     })
 
     // Expose as props on `cm`
+    cm.autocomplete = autocomplete
     cm.preview = preview
     cm.wizard = wizard
   })

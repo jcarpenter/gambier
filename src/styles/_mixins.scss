@@ -15,7 +15,6 @@
     }
 }
 
-
 // -------------- Color functions -------------- //
 // Short-hand concise functions for colors.
 // Use like: `background-color: white(0.2);`
@@ -40,52 +39,46 @@
     @return hsla(0, 0%, $lightness, $alpha);
 }
 
-
 // -------------- UI style variables -------------- //
-// Variables for common styles in UI elements. 
+// Variables for common styles in UI elements.
 // E.g. gradient backgrounds for buttons.
 // Useful because 1) they're concise, and 2) make re-use easy.
 
 // Slight white gradient over `darkerControlAccentColor`
-$btn-accent-bg: 
-    linear-gradient(white(0.15), white(0)), 
-    var(--darkerControlAccentColor);
+$btn-accent-bg: linear-gradient(white(0.15), white(0)), var(--darkerControlAccentColor);
 
 // STANDARD BUTTONS: Push, popup, pulldown, etc.
 
 $dark-btn-bg: var(--buttonBackgroundColor);
-$dark-btn-outline: 
-    inset 0 0.5px 0 0 white(0.25), // Top bevel
-    0 0 0 0.5px black(0.15), // Outline
+$dark-btn-outline: inset 0 0.5px 0 0 white(0.25),
+    // Top bevel
+    0 0 0 0.5px black(0.15),
+    // Outline
     0 1px 1px 0 black(0.15); // Drop shadow
 
 $light-btn-bg: var(--buttonBackgroundColor);
 // was 'white'
-$light-btn-outline: 
-    0 0 0 0.5px black(0.08), // Outline
+$light-btn-outline: 0 0 0 0.5px black(0.08),
+    // Outline
     0 0.5px 1px 0.5px black(0.1); // Drop shadow
 
 // INSET BUTTONS: Radio, checkbox, etc.
 
-$dark-inset-btn-bg: 
-    linear-gradient(hsla(0, 0%, 100%, 0.27), hsla(0, 0%, 100%, 0.38)),
-    var(--buttonBackgroundColor);
-$dark-inset-btn-outline: 
-    inset 0 1px 0 0 white(0.15), // Top bevel
+$dark-inset-btn-bg: linear-gradient(hsla(0, 0%, 100%, 0.27), hsla(0, 0%, 100%, 0.38)), var(--buttonBackgroundColor);
+$dark-inset-btn-outline: inset 0 1px 0 0 white(0.15),
+    // Top bevel
     0 0 0 0.5px black(0.15); // Outline
 
 $light-inset-btn-bg: var(--buttonBackgroundColor);
 // was 'white'
-$light-inset-btn-outline: 
-    inset 0 1.5px 1px 0 black(0.1), // Top inner shadow,
+$light-inset-btn-outline: inset 0 1.5px 1px 0 black(0.1),
+    // Top inner shadow,
     inset 0 0 0 0.5px black(0.2); // Outline
- 
+
 // BORDER-RADIUS
 
 $border-radius-normal: 5.5px;
 $border-radius-compact: 4px;
-
-
 
 // -------------- Layout mixins -------------- //
 
@@ -117,7 +110,6 @@ $border-radius-compact: 4px;
 //     transform: translate(-50%, -50%);
 // }
 
-
 // -------------- Set focus on field -------------- //
 // Helpers for focus animations on field UI elements
 
@@ -128,8 +120,8 @@ $border-radius-compact: 4px;
 }
 
 // The white(0.25) is there to lighten the controlAccentColor,
-// which is too dark, compared to the macOS native field-focused 
-// color. The actual macOS color is not part of the official 
+// which is too dark, compared to the macOS native field-focused
+// color. The actual macOS color is not part of the official
 // color set, so they must be manipulating controlAccentColor
 // behind the scenes (boosting brightness + saturation).
 
@@ -139,17 +131,12 @@ $border-radius-compact: 4px;
 
 @keyframes selectField {
     from {
-        box-shadow:
-            0 0 0 20px transparent,
-            0 0 0 20px transparent;
+        box-shadow: 0 0 0 20px transparent, 0 0 0 20px transparent;
     }
     to {
-        box-shadow: 
-            0 0 0 4px white(0.25),
-            0 0 0 4px var(--controlAccentColor);
+        box-shadow: 0 0 0 4px white(0.25), 0 0 0 4px var(--controlAccentColor);
     }
 }
-
 
 // -------------- Resets -------------- //
 
@@ -191,6 +178,11 @@ $border-radius-compact: 4px;
 }
 
 // -------------- Typography -------------- //
+
+@mixin code-typography {
+    font-family: "SFMono-Regular";
+    font-size: 0.9em;
+}
 
 // Labels - Normal
 
@@ -245,7 +237,6 @@ $border-radius-compact: 4px;
     line-height: 16px;
     letter-spacing: -0.07px;
 }
-
 
 // UNUSED
 

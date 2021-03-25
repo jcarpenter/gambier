@@ -8,23 +8,24 @@
   import Image from './Image.svelte'
   import ReferenceImage from './ReferenceImage.svelte';
   import { getLineSpans } from '../../../editor/editor-utils';
+  import { getElementAt } from '../../../editor/map';
+
 
   export let cm = null
-  export let element = null
-  export let el = null // DOM element, set with bind:this
-
+  export let textMarker = null
+  export let type = ''
+  
+  let element = null
+  let el = null // DOM element, set with bind:this
   let isVisible = false
-  let isError = false
+  let isIncomplete = false
   let leftPos = '-5000px' // Default value
   let topPos = '0px'
 
-  cm.on('changes', onChanges)
 
-  /**
-   * Check if target element was affected by changes.
-   * If yes, get the updated element.
-   */
-  function onChanges(cm, changes) {
+  // On changes, check if target element was affected.
+  // If yes, get the updated element.
+  cm.on('changes', (cm, changes) => {
 
     if (!isVisible) return
     
@@ -34,30 +35,28 @@
         to.line == element.line &&
         element.start <= from.ch &&
         element.end >= to.ch
-    )
+    ) !== undefined
 
     // Get the updated target element.
     // We assume line and start will be the same, before and after.
     // NOTE: This may not always be true! This is a potential bug source.
     if (elementWasAffected) {
-      const spans = getLineSpans(cm, cm.getLineHandle(element.line)) 
-      element = spans.find(({line, start}) => line == element.line && start == element.start).element
-      if (!element) {
-        hide()
-      }
-
-      // target = cm.state.inlineElements.find((e) => 
-        // e.line == target.line && e.start == target.start
-      // )
+      // if (!textMarker) {
+      // }
+      textMarker = cm.findMarksAt({ line: element.line, ch: element.start })
+      // const { from } = textMarker.find()
+      element = getElementAt(cm, element.line, element.start + 1)
+      
+      if (!element) hide()
     }
-  }
+  })
+
 
   // ------- EVENT HANDLERS ------ //
 
   function onFocusout(evt) {
     if (!el.contains(evt.relatedTarget)) {
       hide()
-      // cm.dispatch({ type: 'deSelectMark' })
     }
   }
 
@@ -67,22 +66,23 @@
    */
   function onKeydown(evt) {
     const fieldsAreNotFocused = document.activeElement == el
-    const key = evt.key
-    if (key == 'Tab' && !evt.altKey) {
+    if (evt.key == 'Tab' && !evt.altKey) {
       tab(evt)
-    } else if (key == 'Tab' && evt.altKey) {
+    } else if (evt.key == 'Tab' && evt.altKey) {
       altTab(evt)
-    } else if (fieldsAreNotFocused && (key == 'Backspace' || key == 'Delete')) {
+    } else if (evt.key.equalsAny('Backspace', 'Delete') && fieldsAreNotFocused) {
       deleteTarget()
-    }
-  }
-
-  /**
-   * Handle closing the editor on Enter or Escape
-   */
-  function onKeyup(evt) {
-    if (evt.key == 'Enter' || evt.key == 'Escape') {
+    } else if (evt.key == 'Enter' || evt.key == 'Escape') {
       cm.focus()
+    } else if (evt.key.equalsAny('ArrowLeft', 'ArrowRight') && fieldsAreNotFocused) {
+      // Close wizard if user presses arrow while no fields are selected
+      cm.focus()
+      cm.triggerOnKeyDown({
+        type: 'keydown',
+        keyCode: evt.key == 'ArrowLeft' ? 37 : 39,
+        altKey: false,
+        shiftKey: false,
+      })
     }
   }
 
@@ -90,7 +90,6 @@
    * Prevent CodeMirror from taking back focus when we try to interact with the Wizard. This seems to be due to CodeMirror's "ensureFocus" function.
    */
   // function onForwardedInteraction(evt) {
-  //   console.log('onForwardedInteraction')
   //   if (evt.detail.type == 'keydown' && evt.detail.key == 'Enter') {
   //     evt.detail.preventDefault()
   //     cm.dispatch({ type: 'deSelectMark' })
@@ -104,12 +103,9 @@
    * Delete the target range
    */
   function deleteTarget() {
+    const { from, to } = textMarker.find()
     cm.focus()
-    cm.replaceRange(
-      '',
-      { line: target.line, ch: target.start },
-      { line: target.line, ch: target.end }
-    )
+    cm.replaceRange('', from, to)
   }
 
   /**
@@ -117,7 +113,6 @@
    */
   function tab(evt) {
     evt.preventDefault()
-    // Tab between inputs
     const focusables = Array.from(
       el.querySelectorAll(`[contenteditable]:not([tabindex="-1"])`)
     )
@@ -126,25 +121,25 @@
     const firstItemFocused = indexOfFocused == 0
     const lastItemFocused = indexOfFocused == focusables.length - 1
 
-    let elementToFocus
+    let inputToFocus
     if (!evt.shiftKey) {
       // Tab to next focusable element.
       // If at end, loop back and focus first element.
-      elementToFocus = (nothingFocused || lastItemFocused) ? focusables[0] : focusables[indexOfFocused + 1]
+      inputToFocus = (nothingFocused || lastItemFocused) ? focusables[0] : focusables[indexOfFocused + 1]
     } else {
       // Tab backwards to previous focusable element.
       // If at start, focus last element.
-      elementToFocus = (nothingFocused || firstItemFocused) ? focusables[focusables.length - 1] : focusables[indexOfFocused - 1]
+      inputToFocus = (nothingFocused || firstItemFocused) ? focusables[focusables.length - 1] : focusables[indexOfFocused - 1]
     }
 
-    if (elementToFocus) {
+    if (inputToFocus) {
       // We can't call `select()` on contenteditable, so instead we have to focus it, 
       // then call `selectAll` a moment later (or else browser selects previous scope).
-      if (elementToFocus.hasAttribute('contenteditable')) {
-        elementToFocus.focus()
+      if (inputToFocus.hasAttribute('contenteditable')) {
+        inputToFocus.focus()
         setTimeout(() => document.execCommand('selectAll', false, null), 1)
       } else {
-        elementToFocus.select()
+        inputToFocus.select()
       }
     }
   }
@@ -165,11 +160,16 @@
   }
 
   /**
-   * Show wizard by toggling 'isVisible' class, and setting `top` and `left` positions.
+   * Show wizard by toggling 'isVisible' class, 
+   * and setting `top` and `left` positions.
    */
-  export async function show(newElement) {
+  export async function show(newTextMarker) {
 
-    element = newElement
+    textMarker = newTextMarker
+    const { from } = textMarker.find()
+
+    // Get the element we're editing
+    element = getElementAt(cm, from.line, from.ch + 1)
 
     // Update position
     // Docs: https://codemirror.net/doc/manual.html#charCoords
@@ -184,7 +184,7 @@
     cm.scrollIntoView(null)
 
     // Error
-    // isError = target.error
+    isIncomplete = element.isIncomplete
 
     // Make visible
     isVisible = true
@@ -197,10 +197,10 @@
    * Hide wizard by toggling `isVisible` class and positioning off-screen.
    */
   function hide() {
+    element = undefined
     isVisible = false
-    // Reset to default values
-    leftPos = '-5000px'
-    topPos = '0px'
+    leftPos = '-5000px' // Default value
+    topPos = '0px' // Default value
   }
 
 </script>
@@ -234,7 +234,7 @@
     transition: max-height 250ms ease-out;
     max-height: 1000px;
 
-    &.visible {
+    &.isVisible {
       outline: none;
       opacity: 1;
       transition: opacity 0.05s;
@@ -356,12 +356,11 @@
   bind:this={el}
   style="left:{leftPos}; top:{topPos};"
   class="below"
-  class:error={isError}
-  class:visible={isVisible}
+  class:isVisible
+  class:isIncomplete
   tabindex="-1"
   on:mousedown|stopPropagation
   on:keydown={onKeydown}
-  on:keyup={onKeyup}
   on:focusout={onFocusout}
 >
   {#if !element}

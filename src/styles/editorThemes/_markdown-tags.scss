@@ -1,9 +1,5 @@
 @use "../mixins" as *;
 
-@mixin code-typography {
-  font-size: 0.9em;
-  font-family: "SFMono-Regular";
-}
 
 // -------------- Marks (shared) -------------- //
 
@@ -99,7 +95,7 @@
 
 // -------------- Emphasis -------------- //
 
-.cm-em {
+.cm-emphasis {
   color: var(--emphasis);
   font-style: italic;
   &.cm-md {
@@ -142,7 +138,7 @@
   // padding-right: 0.3em;
 }
 
-// Inline
+// Source
 
 .cm-footnote {
   color: var(--footnote-source);
@@ -152,7 +148,7 @@
   }
 }
 
-// Line
+// Reference definition
 
 .CodeMirror-line.footnote-reference-definition,
 .CodeMirror-line.footnote-reference-definition-continued {
@@ -251,6 +247,7 @@
   &.cm-url {
     color: var(--image-source-url);
     text-decoration: underline;
+    text-decoration-skip: edges;
     word-break: break-all;
   }
 
@@ -266,6 +263,12 @@
 
 .CodeMirror-line.figure {
   background-color: rgba(241, 188, 127, 0.2) !important;
+}
+
+// -------------- Incomplete -------------- //
+
+.cm-incomplete {
+  border-bottom: 2px solid salmon;
 }
 
 // -------------- Link -------------- //
@@ -291,7 +294,11 @@
   }
 }
 
-// Inline
+.metaKeyDown .mark.link:hover {
+  cursor: pointer;
+}
+
+// Source
 
 .cm-link,
 .cm-autolink-url,
@@ -303,6 +310,7 @@
   &.cm-url {
     color: var(--link-source-url);
     text-decoration: underline;
+    text-decoration-skip: edges;
     opacity: 0.8;
     word-break: break-all;
 
@@ -443,7 +451,7 @@
 // -------------- Email-in-Brackets -------------- //
 
 .cm-bare-url,
-.cm-email-in-brackets,
+.cm-emphasisail-in-brackets,
 .cm-url-in-brackets {
   color: var(--in-brackets);
   &.cm-md {
@@ -452,8 +460,11 @@
 }
 
 .metaKeyDown {
+  .cm-link.cm-url:hover {
+    cursor: pointer;
+  }
   .cm-bare-url:hover,
-  .cm-email-in-brackets:hover,
+  .cm-emphasisail-in-brackets:hover,
   .cm-url-in-brackets:hover {
     // text-decoration: underline;
     border-bottom: 1px solid var(--in-brackets);

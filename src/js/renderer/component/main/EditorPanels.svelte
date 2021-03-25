@@ -29,7 +29,7 @@
   * @param index - Of panel to left of the divider
   */
   function resizePanel(evt, index) {
-    
+   
     const panels = panelsEl.getBoundingClientRect()
     const domEvent = evt.detail.domEvent
 

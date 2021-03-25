@@ -187,8 +187,6 @@ export const update = (state, action, window) =>
 
 
 
-
-
       // ------------------------ PROJECT-SPECIFIC ------------------------ //
 
       // CREATE, EDIT, REMOVE
@@ -245,6 +243,47 @@ export const update = (state, action, window) =>
         // Called whenever a Watcher instance catches a change
         // and updates files (note: does not fire when a directory)
         // is added or removed.
+
+        // See if project panels are effected
+        project.panels.forEach((panel) => {
+
+          // Get watcher
+          const watcher = global.watchers.find((w) => {
+            return w.id == window.projectId
+          })
+
+          // If panel is waiting for a new file, 
+          // check files from watcher to see if it exists yet.
+          // If yes, set `panel.docId` to the file's id.
+          // This will load it in the editor.
+          if (panel.status == 'justSavedAsAndWaitingToLoadTheNewFile') {
+            const newDocId = watcher.files.allIds.find((id) => {
+              const file = watcher.files.byId[id]
+              return file.path == panel.pendingFilePathToLoad
+            })
+            if (newDocId) {
+              panel.docId = newDocId
+              panel.status = ''
+              delete panel.pendingFilePathToLoad
+
+              // Select doc in sidebar
+              const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId]
+              activeTab.selected = [newDocId]
+            }
+          } else {
+
+            console.log('1')
+
+            // Else, check if panel's file was deleted.
+            // If yes, show an empty doc.
+            const panelFileWasDeleted = !watcher.files.allIds.includes(panel.docId)
+            if (panelFileWasDeleted) {
+              console.log('2')
+              panel.docId = 'newDoc'
+              panel.unsavedChanges = false
+            }
+          }
+        })
 
         // Are any of the project panels waiting for a file?
         const aPanelIsWaitingForAFile = project.panels.some((p) => {

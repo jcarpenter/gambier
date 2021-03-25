@@ -388,12 +388,12 @@ div.CodeMirror-dragcursors {
 .CodeMirror-line::selection,
 .CodeMirror-line > span::selection,
 .CodeMirror-line > span > span::selection {
-    background: #d7d4f0;
+    background: #1900ff;
 }
 .CodeMirror-line::-moz-selection,
 .CodeMirror-line > span::-moz-selection,
 .CodeMirror-line > span > span::-moz-selection {
-    background: #d7d4f0;
+    background: #00ffe1;
 }
 
 .cm-searching {

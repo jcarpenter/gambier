@@ -274,8 +274,6 @@ const update = (state, action, window) =>
 
 
 
-
-
       // ------------------------ PROJECT-SPECIFIC ------------------------ //
 
       // CREATE, EDIT, REMOVE
@@ -330,6 +328,47 @@ const update = (state, action, window) =>
         // Called whenever a Watcher instance catches a change
         // and updates files (note: does not fire when a directory)
         // is added or removed.
+
+        // See if project panels are effected
+        project.panels.forEach((panel) => {
+
+          // Get watcher
+          const watcher = global.watchers.find((w) => {
+            return w.id == window.projectId
+          });
+
+          // If panel is waiting for a new file, 
+          // check files from watcher to see if it exists yet.
+          // If yes, set `panel.docId` to the file's id.
+          // This will load it in the editor.
+          if (panel.status == 'justSavedAsAndWaitingToLoadTheNewFile') {
+            const newDocId = watcher.files.allIds.find((id) => {
+              const file = watcher.files.byId[id];
+              return file.path == panel.pendingFilePathToLoad
+            });
+            if (newDocId) {
+              panel.docId = newDocId;
+              panel.status = '';
+              delete panel.pendingFilePathToLoad;
+
+              // Select doc in sidebar
+              const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId];
+              activeTab.selected = [newDocId];
+            }
+          } else {
+
+            console.log('1');
+
+            // Else, check if panel's file was deleted.
+            // If yes, show an empty doc.
+            const panelFileWasDeleted = !watcher.files.allIds.includes(panel.docId);
+            if (panelFileWasDeleted) {
+              console.log('2');
+              panel.docId = 'newDoc';
+              panel.unsavedChanges = false;
+            }
+          }
+        });
 
         // Are any of the project panels waiting for a file?
         const aPanelIsWaitingForAFile = project.panels.some((p) => {
@@ -886,7 +925,12 @@ const storeDefault = {
   },
 
   markdown: {
-    implicitFigures: false,
+    implicitFigures: true,
+    emoji: true,
+    strikethrough: true,
+    taskLists: true,
+    fencedCodeBlockHighlighting: false,
+    allowAtxHeaderWithoutSpace: false
   },
 
   // When tabbing through document, we can control which elements are tabbable
@@ -1037,6 +1081,8 @@ const newProject = {
   }
 };
 
+// -------- PROTOTYPE EXTENSIONS -------- //
+
 /**
  * Return true if array has ALL of the items
  * @param  {...any} items - One or more strings
@@ -1063,6 +1109,16 @@ String.prototype.includesAny = function(...items) {
 };
 
 /**
+ * Return true if string includes ALL of the items.
+ * E.g. Returns true if string is "reference-full" and items
+ * are "reference" and "full"
+ * @param  {...any} items - One or more strings
+ */
+String.prototype.includesAll = function(...items) {
+  return items.every((i) => this.includes(i))
+};
+
+/**
  * Return true if string equals any of the items.
  * E.g. Returns true if item is `-span` and string is `text-span`
  * @param  {...any} items - One or more strings
@@ -1071,6 +1127,19 @@ String.prototype.equalsAny = function(...items) {
   return items.some((i) => this === i)
 };
 
+/**
+ * Return first character of string
+ */
+String.prototype.firstChar = function() {
+  return this.charAt(0)
+};
+
+/**
+ * Return last character of string
+ */
+String.prototype.lastChar = function() {
+  return this.charAt(this.length - 1)
+};
 
 /**
  * Get the diff between two arrays
@@ -1080,16 +1149,6 @@ String.prototype.equalsAny = function(...items) {
 function getArrayDiff(arr1, arr2) {
   return arr1.filter(x => !arr2.includes(x));
 }
-
-const formats = {
-  document: ['.md', '.markdown'],
-  image: [
-    '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
-  ],
-  av: [
-    '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
-  ]
-};
 
 /**
  * Wrap setTimeout in a promise so we can use with async/await. 
@@ -1102,28 +1161,6 @@ async function wait(ms) {
   });
 }
 
-function isDoc(fileExtension) {
-  return formats.document.includes(fileExtension)
-}
-
-function isMedia(fileExtension) {
-  const isImage = formats.image.includes(fileExtension);
-  const isAV = formats.av.includes(fileExtension);
-  return isImage || isAV
-}
-
-function getMediaType(fileExtension) {
-  const isImage = formats.image.includes(fileExtension);
-  const isAV = formats.av.includes(fileExtension);
-  if (isImage) {
-    return 'img'
-  } else if (isAV) {
-    return 'av'
-  } else {
-    console.error('File extension does not match supported media types');
-  }
-}
-
 function findInTree (tree, value, key = 'id', reverse = false) {
   const stack = [ tree[0] ];
   while (stack.length) {
@@ -1134,6 +1171,45 @@ function findInTree (tree, value, key = 'id', reverse = false) {
   return null
 }
 
+
+// -------- CHECK FORMAT -------- //
+
+const formats = {
+  document: ['.md', '.markdown'],
+  image: ['.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'],
+  av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm']
+};
+
+/**
+ * Return true if file extension is among valid doc formats.
+ */
+function isDoc(extension) {
+  return formats.document.includes(extension)
+}
+
+/**
+ * Return true if file extension is among valid image or media formats. 
+ */
+function isMedia(extension) {
+  const isImage = formats.image.includes(extension);
+  const isAV = formats.av.includes(extension);
+  return isImage || isAV
+}
+
+/**
+ * Return media type ('img' or 'av'), based on file extension.
+ */
+function getMediaType(extension) {
+  const isImage = formats.image.includes(extension);
+  const isAV = formats.av.includes(extension);
+  if (isImage) {
+    return 'img'
+  } else if (isAV) {
+    return 'av'
+  } else {
+    console.error('File extension does not match supported media types');
+  }
+}
 
 // -------- COMPARE PATCHES -------- //
 
@@ -1194,7 +1270,7 @@ function propHasChangedTo(keysAsString, value, objTo, objFrom) {
 }
 
 /**
- * Utility function for hasChanged. 
+ * Utility function for `propHasChangedTo`. 
  * Convert propAddress string to array of keys.
  * Before: "projects[5].window"
  * After: ["projects", 5, "window"]
@@ -1215,7 +1291,7 @@ function extractKeysFromString(keyAsString) {
 }
 
 /**
- * Utility function for `hasChanged`. 
+ * Utility function for ``propHasChangedTo``. 
  * @param {*} nestedObj 
  * @param {*} pathArr 
  */
@@ -1395,6 +1471,7 @@ function getDarkColors() {
     backgroundColor: '0, 0, 0',
     buttonBackgroundColor: '#5B5B5BFF',
     menuBackgroundColor: 'hsla(0, 0%, 17%, 0.9)',
+    errorColor: '#FA6E50',
 
     // macOS "Dynamic colors":
     // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
@@ -1451,6 +1528,7 @@ function getLightColors() {
     backgroundColor: '255, 255, 255',
     buttonBackgroundColor: '#FFFFFFFF',
     menuBackgroundColor: 'hsla(0, 0%, 95%, 0.8)',
+    errorColor: '#FA6E50',
 
     // macOS "Dynamic colors":
     // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
@@ -1908,25 +1986,54 @@ async function selectCitationsFileFromDialog () {
 
 function init$1() {
 
-  // -------- IPC: Renderer "receives" from Main -------- //
-
-  // On change, send updated state to renderer (each BrowserWindow)
-  // global.store.onDidAnyChange(async (state, oldState) => {
-  //   const windows = BrowserWindow.getAllWindows()
-  //   if (windows.length) {
-  //     windows.forEach((win) => win.webContents.send(' ', state, oldState))
-  //   }
-  // })
 
   // -------- IPC: Renderer "sends" to Main -------- //
+
+  electron.ipcMain.on('saveImageFromClipboard', async (evt) => {
+    const win = electron.BrowserWindow.fromWebContents(evt.sender);
+    const project = global.state().projects.byId[win.projectId];
+    console.log(project);
+
+    const img = electron.clipboard.readImage();
+    const png = img.toPNG();
+    await fsExtra.writeFile(`${project.directory}/test.png`, png);
+    // console.log('It\'s saved!')
+  });
 
   electron.ipcMain.on('showWindow', (evt) => {
     const win = electron.BrowserWindow.fromWebContents(evt.sender);
     win.show();
   });
 
+  function isValidHttpUrl(string) {
+    let url;
+
+    try {
+      url = new URL(string);
+    } catch (_) {
+      return false;
+    }
+
+    return url.protocol === "http:" || url.protocol === "https:";
+  }
+
   electron.ipcMain.on('openUrlInDefaultBrowser', (evt, url) => {
-    electron.shell.openExternal(url);
+    // Check if URL is valid.
+    // Per https://stackoverflow.com/a/43467144
+    // If no, try appending protocol and check again.
+    // This handles cases like `apple.com`, where user
+    // leaves off protocol for sake of brevity.
+    // 
+    let isValid = isValidHttpUrl(url);
+    if (!isValid) {
+      url = `http://${url}`;
+      isValid = isValidHttpUrl(url);
+    }
+    try {
+      electron.shell.openExternal(url);
+    } catch (err) {
+      console.log('Bar URL');
+    }
   });
 
   electron.ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths, isMatchCase, isMatchExactPhrase, isMetaKeyPressed) => {
@@ -1964,54 +2071,6 @@ function init$1() {
   });
 
 
-  electron.ipcMain.on('moveOrCopyIntoFolder', async (evt, filePath, folderPath, isCopy) => {
-    // Get destination
-    const fileName = path__default['default'].basename(filePath);
-    let destinationPath = path__default['default'].format({
-      dir: folderPath,
-      base: fileName
-    });
-
-    // Does file already exist at destination?
-    const fileAlreadyExists = fsExtra.existsSync(destinationPath);
-
-    // If yes, prompt user to confirm overwrite. 
-    // Else, just move/copy
-    if (fileAlreadyExists) {
-      const selectedButtonId = electron.dialog.showMessageBoxSync({
-        type: 'question',
-        message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
-        buttons: ['Keep Both', 'Stop', 'Replace'],
-        cancelId: 1
-      });
-      switch (selectedButtonId) {
-        // Keep both
-        case 0:
-          destinationPath = getIncrementedFileName(destinationPath);
-          fsExtra.copyFileSync(filePath, destinationPath);
-          break
-        // Stop (Do nothing)
-        case 1:
-          break
-        // Replace
-        case 2:
-          if (isCopy) {
-            fsExtra.copyFileSync(filePath, destinationPath);
-          } else {
-            fsExtra.renameSync(filePath, destinationPath);
-          }
-          break
-      }
-    } else {
-      if (isCopy) {
-        fsExtra.copyFileSync(filePath, destinationPath);
-      } else {
-        fsExtra.renameSync(filePath, destinationPath);
-      }
-    }
-  });
-
-
   electron.ipcMain.on('dispatch', async (evt, action) => {
 
     const win = electron.BrowserWindow.fromWebContents(evt.sender);
@@ -2031,17 +2090,17 @@ function init$1() {
       case ('CLOSE_PANEL'):
       case ('OPEN_NEW_DOC_IN_PANEL'):
       case ('OPEN_DOC_IN_PANEL'): {
-        
+
         const project = global.state().projects.byId[win.projectId];
         const panel = project.panels[action.panelIndex];
-  
+
         if (panel.unsavedChanges) {
           promptToSaveChangesThenForwardAction(action, win);
         } else {
           // No unsaved changes. Forward the action.
           store.dispatch({ ...action, saveOutcome: 'noUnsavedChanges' }, win);
         }
-  
+
         break
       }
 
@@ -2068,11 +2127,6 @@ function init$1() {
   });
 
   // -------- IPC: Invoke -------- //
-
-  // NOTE: We handle this in DbManager.js
-  // ipcMain.handle('queryDb', (evt, params) => {
-  //   ...
-  // })
 
   electron.ipcMain.handle('getState', (evt) => {
     return global.state()
@@ -2102,39 +2156,76 @@ function init$1() {
   electron.ipcMain.handle('getFormatOfClipboard', (evt) => {
     return electron.clipboard.availableFormats()
   });
+
+  electron.ipcMain.handle('moveOrCopyFileIntoProject', async (evt, filePath, folderPath, isCopy) => {
+
+    let wasSuccess = false;
+
+    // Get destination
+    const fileName = path__default['default'].basename(filePath);
+    let destinationPath = path__default['default'].format({
+      dir: folderPath,
+      base: fileName
+    });
+
+    // Does file already exist at destination?
+    const fileAlreadyExists = fsExtra.existsSync(destinationPath);
+
+    // If yes, prompt user to confirm overwrite. 
+    // Else, just move/copy
+    if (fileAlreadyExists) {
+      const selectedButtonId = electron.dialog.showMessageBoxSync({
+        type: 'question',
+        message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
+        buttons: ['Keep Both', 'Stop', 'Replace'],
+        cancelId: 1
+      });
+      switch (selectedButtonId) {
+
+        // Keep both
+        case 0:
+          destinationPath = getIncrementedFileName(destinationPath);
+          fsExtra.copyFileSync(filePath, destinationPath);
+          wasSuccess = true;
+
+        // Stop (Do nothing)
+        case 1:
+          wasSuccess = false;
+
+        // Replace
+        case 2:
+          if (isCopy) {
+            fsExtra.copyFileSync(filePath, destinationPath);
+          } else {
+            fsExtra.renameSync(filePath, destinationPath);
+          }
+          wasSuccess = true;
+      }
+    } else {
+      if (isCopy) {
+        fsExtra.copyFileSync(filePath, destinationPath);
+      } else {
+        fsExtra.renameSync(filePath, destinationPath);
+      }
+      wasSuccess = true;
+    }
+
+    return {
+      wasSuccess,
+      destinationPath
+    }
+  });
+
+
+
+
 }
 
 
 
-// -------- IPC: Renderer "sends" to Main -------- //
-
-
-// // ipcMain.on('saveProjectStateToDisk', (evt, state) => {
-// //   const win = BrowserWindow.fromWebContents(evt.sender)
-// //   const projects = store.store.projects.slice(0)
-// //   const indexOfProjectToUpdate = projects.findIndex((p) => p.windowId == state.windowId)
-// //   projects[indexOfProjectToUpdate] = state
-// //   store.set('projects', projects)
-// // })
-
-// // ipcMain.on('saveFileThenCloseWindow', async (event, path, data) => {
-// //   await writeFile(path, data, 'utf8')
-// //   canCloseWindowSafely = true
-// //   win.close()
-// // })
-
-// // ipcMain.on('saveFileThenQuitApp', async (event, path, data) => {
-// //   await writeFile(path, data, 'utf8')
-// //   canQuitAppSafely = true
-// //   app.quit()
-// // })
-
 
 
 // -------- IPC: Invoke -------- //
-
-
-
 
 // // ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
 // //   // return path.resolve(basePath, filepath)
@@ -2177,21 +2268,10 @@ function init$1() {
 // // })
 
 
-
-// // ipcMain.handle('getState', async (event) => {
-// //   return store.store
-// // })
-
 // // ipcMain.handle('getCitations', (event) => {
 // //   return projectCitations.getCitations()
 // // })
 
-// // ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
-
-// //   // Load file and return
-// //   let file = await readFile(filePath, encoding)
-// //   return file
-// // })
 
 // // ipcMain.handle('getFileById', async (event, id, encoding) => {
 
@@ -2236,7 +2316,7 @@ function getTitleFromDoc(data) {
 
   // Get first header in content
   // https://regex101.com/r/oR5sec/1
-  
+
   // Try to get title from front matter
   if (!isEmpty && frontMatter.title) return frontMatter.title
 
@@ -2447,20 +2527,6 @@ function getIncrementedFileName(origPath) {
   })
 }
 
-/*
-Main instantiates new MenuBarManager instance. 
-Constructor creates variables, change listeners, and calls init().
-*/
-
-// I want to get values from Editor.svelte to editor
-// Example I'll use: toggle source mode
-// User selects `View > Source mode`
-// Enabled == Is active project `panel.sourceMode` true?
-// Dispatch command to reducer
-// Reducer sets value to panel
-// EditorPanel.svelte detects the change, and updates the `sourceMode` prop of Editor.svelte
-// Editor.svelte, when value changes, tells editor.js
-
 const isMac = process.platform === 'darwin';
 let menu;
 let menuItems = {};
@@ -2468,7 +2534,6 @@ let menuItems = {};
 /**
  * On startup, create initial menu bar, and create change listeners.
  */
-
 function init$2() {
 
   // ------ SETUP CHANGE LISTENERS ------ //
@@ -2756,7 +2821,6 @@ function getMenuItems() {
 
   // -------- Edit -------- //
 
-
   // mI.startspeaking = new MenuItem({ role: 'startspeaking' })
   // mI.stopspeaking = new MenuItem({ role: 'stopspeaking' })
 
@@ -2803,6 +2867,27 @@ function getMenuItems() {
             ]
           }
         ] : []
+      ]
+    }
+  ));
+
+
+  // -------- Format -------- //
+
+  items.emphasis = new electron.MenuItem({
+    label: 'Emphasis',
+    accelerator: 'CmdOrCtrl+I',
+    enabled: project !== undefined,
+    click(item, focusedWindow) {
+      focusedWindow.webContents.send('formatCommand', 'emphasis');
+    }
+  });
+
+  items.topLevel.push(new electron.MenuItem(
+    {
+      label: 'Format',
+      submenu: [
+        items.emphasis
       ]
     }
   ));
@@ -3469,7 +3554,7 @@ class Watcher {
                   }
                 }
                 // Delete from database (if it's a doc)
-                if (isDoc(ext)) global.db.delete(file.id);
+                if (isDoc(ext)) global.db.delete(id);
                 break
               }
             }

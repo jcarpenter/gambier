@@ -16,6 +16,18 @@
     --mark-borderRadius: 3px;
 
     @include dark {
+        $link: #0d67dc;
+        --link-mark:                    #{$link};
+        --link-mark-bg:                 #{color.adjust($link, $alpha: -0.9)};
+        --link-mark-border:             #{color.adjust($link, $lightness: -30%, $alpha: -0.9)};
+        --link-mark-highlight:          white;
+        --link-mark-highlight-bg:       #{$link};
+        --link-source:                  #{$link};
+        --link-source-url:              #{color.adjust($link, $alpha: -0.2)};
+        --link-source-title:            #{color.adjust($link, $alpha: -0.4)};
+        --link-source-bg:               #{color.adjust($link, $alpha: -0.95)};
+        --link-source-md:               #{color.adjust($link, $alpha: -0.4)};
+        --link-ref-definition-bg:       #{color.adjust($link, $alpha: -0.9)};
     }
 
     @include light {

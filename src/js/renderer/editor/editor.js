@@ -535,7 +535,7 @@ function tabToPrevElement() {
 /**
  * Tab to the next element in the document.
  */
-function tabToNextElement() {
+function tabToNextMark() {
 
   const { line: cursorLine, ch: cursorCh } = doc.getCursor()
 
@@ -633,7 +633,7 @@ function makeEditor(textarea) {
       // 'Cmd-LeftClick': cmdClick,
       'Left': () => arrow('toLeft'),
       'Right': () => arrow('toRight'),
-      'Alt-Tab': tabToNextElement,
+      'Alt-Tab': tabToNextMark,
       'Shift-Alt-Tab': tabToPrevElement,
       'Backspace': () => backspaceOrDelete(),
       'Delete': () => backspaceOrDelete(),

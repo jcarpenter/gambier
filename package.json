@@ -47,7 +47,6 @@
     "electron-localshortcut": "^3.2.1",
     "electron-store": "^6.0.1",
     "fs-extra": "^9.0.1",
-    "fuse.js": "^6.4.3",
     "gray-matter": "^4.0.2",
     "hierarchy-js": "^1.0.4",
     "image-size": "^0.9.3",

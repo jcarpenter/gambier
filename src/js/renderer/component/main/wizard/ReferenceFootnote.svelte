@@ -7,22 +7,36 @@
   export let cm = null
   export let element = null
 
-  let definition = null
   let multipleDefinitionsFound = false
   let noDefinitionsFound = false
 
+  let label
+  let definition
+
   $: { 
+
+    label = element.spans.find((f) => f.type.includes('label'))
+    
+    // if (!label) {
+    //   const index = isFull ? 
+    //     element.markdown.indexOf('][') + 2 + element.start :
+    //     element.start + 1
+    //   label = { start: index, end: index, string: '' }
+    // }
+
     if (element) {
-      const definitions = getReferenceDefinitions(cm, element.label.string, 'footnote')
+      const definitions = getReferenceDefinitions(cm, label.string, 'footnote')
 
       noDefinitionsFound = definitions.length == 0
       multipleDefinitionsFound = definitions.length > 1
 
+      console.log(noDefinitionsFound, multipleDefinitionsFound)
+
       // If there's one match, select it
       // Else set definition null
       definition = definitions.length == 1 ?
-        definition = definitions[0] :
-        null
+        definition = definitions[0].spans.find((s) => s.type.includes('content')).string :
+        ''
     }
   }
 
@@ -40,9 +54,9 @@
   <InputText 
     width='100%' 
     compact={true} 
-    bind:value={element.label.string} 
+    bind:value={label.string} 
     on:input={(evt) => 
-      writeToDoc(cm, evt.target.textContent, element.line, element.label.start, element.label.end)
+      writeToDoc(cm, evt.target.textContent, element.line, label.start, label.end)
     }
   />
 </FormRow>
@@ -51,9 +65,9 @@
 
 <div class="definition">
   {#if noDefinitionsFound}
-    <div class="error-message">No definitions for <span class="id">{element.label.string}</span> found.</div>
+    <div class="error-message">No definitions for <span class="id">{label.string}</span> found.</div>
   {:else if multipleDefinitionsFound}
-    <div class="error-message">Multiple definitions for <span class="id">{element.label.string}</span> found.</div>
+    <div class="error-message">Multiple definitions for <span class="id">{label.string}</span> found.</div>
   {:else}
     <FormRow margin={'0'}>   
       <InputText
@@ -62,7 +76,7 @@
         editable={false}
         width='100%' 
         compact={true} 
-        bind:value={definition.content.string} 
+        bind:value={definition} 
       />
     </FormRow>
   {/if}

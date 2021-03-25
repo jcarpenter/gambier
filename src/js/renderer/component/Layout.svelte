@@ -86,8 +86,8 @@
       <Separator />
       <div id="content">
         <EditorPanels />
-        <!-- <UIElements /> -->
         <!-- <Colors /> -->
+        <!-- <UIElements /> -->
         <!-- <State /> -->
         <!-- <Files /> -->
       </div>

@@ -101,7 +101,28 @@
   <div class="window-body">
 
     {#if activeTab=='markup'} 
-      
+
+      <!-- Strikethrough -->
+
+      <FormRow label={'Strikethrough:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+        <Checkbox 
+          label={'Strikethrough'}
+          checked={$state.markdown.strikethrough}
+          on:click={() => {
+            window.api.send('dispatch', {
+              type: 'SET_MARKDOWN_OPTIONS',
+              markdownOptions: {
+                ...$state.markdown, 
+                strikethrough: !$state.markdown.strikethrough
+              }
+            })
+          }}
+        />
+        <Description margin={'4px 0 0 20px'}>
+          Use wrapping tilde characters to create strikethrough text: ~~Hello World~~.
+        </Description>  
+      </FormRow>
+
       <!-- Figures -->
 
       <FormRow label={'Figures:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
@@ -119,7 +140,7 @@
           }}
         />
         <Description margin={'4px 0 0 20px'}>
-          An image with alt text on an empty line will be interpreted as a figure element. The image’s alt text will be used as the caption.
+          An image element with alt text on an empty line will be interpreted as a figure element, and can be displayed with an inline preview. The alt text will be used as caption text.
         </Description>  
       </FormRow>
       
@@ -157,6 +178,23 @@
         />
       </FormRow>
 
+
+    {:else if activeTab=='media'} 
+
+      <FormRow label={'Images:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+        <Checkbox 
+          label={'Always copy image files into project'}
+          checked={$state.markdown.strikethrough}
+          on:click={() => {
+            window.api.send('dispatch', {
+              type: 'SET_MARKDOWN_OPTIONS'
+            })
+          }}
+        />
+        <Description margin={'4px 0 0 20px'}>
+          When selected, image files dropped into the project from the file system will always be copied. Otherwise they will be moved by default, and copied only if the Option key is held.
+        </Description>  
+      </FormRow>
 
     {/if}
 

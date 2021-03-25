@@ -7,6 +7,17 @@
   export let cm = null
   export let element = null
 
+  let content
+
+  $: {
+    if (element.spans.length) {
+      content = element.spans[0]
+    } else {
+      const index = element.markdown.indexOf('[') + 1 + element.start
+      content = { start: index, end: index, string: ''}
+    }
+  }
+
 </script>
 
 <style type="text/scss"></style>
@@ -24,11 +35,11 @@
     multiLineMaxHeight={200}
     width={'100%'}
     compact={true} 
-    bind:value={element.content.string} 
+    bind:value={content.string} 
     on:input={(evt) => 
       writeToDoc(
         cm, evt.target.textContent, 
-        element.line, element.content.start, element.content.end
+        element.line, content.start, content.end
       )
     }
   />

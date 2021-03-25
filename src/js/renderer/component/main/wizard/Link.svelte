@@ -5,11 +5,44 @@
   import { writeToDoc } from '../../../editor/editor-utils';
   import { state } from '../../../StateManager';
   import FormRow from '../../ui/FormRow.svelte';
+  import { onDestroy } from 'svelte';
   
   export let cm = null
   export let element = null
 
-  // $: console.log(element)
+  let text
+  let url
+  let title
+  let clearUrlAndTitleOnDestroy = false
+
+  $: {
+    text = element.spans.find((f) => f.type.includes('text'))
+    url = element.spans.find((f) => f.type.includes('url'))
+    title = element.spans.find((f) => f.type.includes('title'))
+
+    if (!url) {
+      const index = element.markdown.indexOf('](') + 2 + element.start
+      url = { start: index, end: index, string: '' }
+    }
+
+    if (!title) {
+      const index = element.markdown.lastIndexOf(')') + element.start
+      title = { start: index, end: index, string: '' }
+    }
+  }
+
+  /**
+   * Handle edge case where user deletes URL and leaves Title.
+   * We don't write the change until they destroy the element.
+   * This avoids unexpected side effects while editing.
+   * E.g. Breaking the link by having title but no URL
+  */
+  onDestroy(() => {
+    if (clearUrlAndTitleOnDestroy) {
+      const newLink = `[${text.string}]()`
+      writeToDoc(cm, newLink, element.line, element.start, element.end)
+    }
+  })
 
 </script>
 
@@ -29,9 +62,9 @@
     placeholder='' 
     width='100%'
     compact={true} 
-    bind:value={element.text.string} 
+    bind:value={text.string} 
     on:input={(evt) => 
-      writeToDoc(cm, evt.target.textContent, element.line, element.text.start, element.text.end)
+      writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end)
     }
   />
 </FormRow>
@@ -43,10 +76,21 @@
     placeholder='' 
     width='100%' 
     compact={true} 
-    bind:value={element.url.string} 
-    on:input={(evt) => 
-      writeToDoc(cm, evt.target.textContent, element.line, element.url.start, element.url.end)
-    }
+    isError={url.string == ''}
+    bind:value={url.string} 
+    on:input={(evt) => {
+      // Don't immediately write changes if user makes URL blank,
+      // and title is not blank, or else the element will break.
+      // E.g. [text]( "title")
+      const urlIsBlank = evt.target.textContent == ""
+      const titleIsNotBlank = title.string !== ""
+      if (urlIsBlank && titleIsNotBlank) {
+        clearUrlAndTitleOnDestroy = true
+      } else {
+        clearUrlAndTitleOnDestroy = false
+        writeToDoc(cm, evt.target.textContent, element.line, url.start, url.end)
+      }
+    }}
   />
 </FormRow>
 
@@ -64,27 +108,29 @@
   }
 >
   {#if $state.wizard.showOptionalLinkFields}
+  
     <FormRow label={'Title:'} leftColumn={'30px'} margin={'4px 8px 8px'} compact={true}>
       <InputText 
         multiLine={true}
         multiLineMaxHeight='100'
         width='100%' 
         compact={true} 
-        bind:value={element.title.string} 
+        isDisabled={url.string == ''}
+        bind:value={title.string} 
         on:input={(evt) => {
-          
-          const wasBlank = element.title.start == element.title.end
-          const isNowBlank = element.title.string.length == 0
-          
+
+          const wasBlank = title.start == title.end
+          const isNowBlank = title.string.length == 0
+
           if (wasBlank) {
             // To be a valid Commonmark link title, we need to insert whitespace before the value, and wrap it in quotation marks.
-            writeToDoc(cm, ` "${evt.target.textContent}"`, element.line, element.title.start, element.title.end)
+            writeToDoc(cm, ` "${evt.target.textContent}"`, element.line, title.start, title.end)
           } else if (isNowBlank) {
             // If we've cleared the title for whatever reason, we need to also delete the surrounding quotation marks and whitespace.
-            writeToDoc(cm, evt.target.textContent, element.line, element.title.start - 2, element.title.end + 1)
+            writeToDoc(cm, evt.target.textContent, element.line, title.start - 2, title.end + 1)
           } else {
             // If the above are not true, do the usual...
-            writeToDoc(cm, evt.target.textContent, element.line, element.title.start, element.title.end)
+            writeToDoc(cm, evt.target.textContent, element.line, title.start, title.end)
           }
         }}
       />

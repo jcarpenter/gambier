@@ -248,7 +248,7 @@ export class Watcher {
                   }
                 }
                 // Delete from database (if it's a doc)
-                if (isDoc(ext)) global.db.delete(file.id)
+                if (isDoc(ext)) global.db.delete(id)
                 break
               }
             }

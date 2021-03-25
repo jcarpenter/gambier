@@ -223,13 +223,11 @@
   .menu {
     background: var(--menuBackgroundColor);
     @include dark { 
-      // background: gray(17%, 0.9);
       border: 1px solid white(0.2);
       box-shadow:
         0 0 0 0.5px black(1);
     }
     @include light { 
-      // background: gray(95%, 0.8);
       box-shadow: 
         inset 0 0.5px 0 0 white(0.5), // Top bevel
         0 0 0 0.5px black(0.12), // Outline

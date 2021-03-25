@@ -1,77 +1,159 @@
-import { mapDoc, remapInlineElementsForLine } from "./map"
-import { clearLineMarks, markDoc, markDoc2, markLine2 } from "./mark"
+import { getCharAt, getLineClasses, getPrevChars, getNextChars, getTextFromRange, getDocElements, setUnsavedChanges, getLineElements } from "./editor-utils"
+import { clearLineMarks, markDoc, markElement, markLine } from "./mark"
+import { getElementAt } from "./map"
 
 /**
  * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
  */
 export function onChanges(cm, changes) {
 
-  // Update `unsavedChanges` value on the parent panel.
-  updateUnsavedChanges(cm)
- 
-  // Check if multiple lines have changed
-  const hasMultipleLinesChanged = changes.some((change) => {
-    return (
-      change.from.line !== change.to.line || change.origin === '+swapLine'
-    )
-  })
-  const isSingleEdit = changes.length == 1
-  const isUndo = changes.some((change) => change.origin == 'undo')
+
+  const isMultipleChanges = changes.length > 1
+  const oneOfChangesSpansMultipleLines = changes.some((change) =>
+    change.from.line !== change.to.line ||
+    change.origin === '+swapLine'
+  )
+
+  // Update `unsavedChanges` on parent panel.
+  setUnsavedChanges(cm)
 
   // Set cursor, if `cm.setCursorAfterChanges` !== null. We use this when want to place the cursor at a specific position _after_ we've changed the text.
-
   // if (cm.setCursorAfterChanges !== null) {
   //   cm.setCursor(cm.setCursorAfterChanges)
   //   // Reset
   //   cm.setCursorAfterChanges = null
   // }
 
-  // Remap elements and re-mark:
-  // - ...everything, if multiple lines have changed.
-  // - ...one line only, if only one line has changed
 
-  if (hasMultipleLinesChanged) {
-    // mapDoc(cm)
-    // markDoc(cm)
-    markDoc2(cm)
-  } else {
+  // ------ If there are multiple changes, or a multi-line change... ------ //
 
-    const lineNo = changes[0].from.line
-    const lineHandle = cm.getLineHandle(lineNo)
+  // markDoc...
+  if (isMultipleChanges || oneOfChangesSpansMultipleLines) {
+    markDoc(cm)
+    return
+  }
 
-    // Autocomplete: Determine if we need to open it or not
-    if (cm.state.showAutocomplete && isSingleEdit && !isUndo) {
-      // If preceding character was `^`, user is trying to create an inline footnote, so we don't open the autocomplete UI. We just make sure the wizard opens after the widget is created.
 
-      const changeText = changes[0].text[0]
-      const emptyBrackets = changeText == '[]'
-      const bracketsAroundSingleSelection =
-        !emptyBrackets &&
-        changeText.charAt(0) == '[' &&
-        changeText.charAt(changeText.length - 1) == ']'
+  // ------ Else, process as single edit on single line ------ //
 
-      if (emptyBrackets || bracketsAroundSingleSelection) {
-        markAutocomplete(cm, changeText)
-        cm.dispatch({ type: 'setAutoComplete', value: false })
-        // showAutocomplete = false
-      }
-    } else {
-      // Remap everything if line changed had block styles. We do this because blockElements can contain reference definitions. And if reference definitions change, lineElements also need to be remapped (because they incorporate data from reference definitions).
+  const { from, to, text, removed, origin } = changes[0]
+  const lineHandle = cm.getLineHandle(from.line)
+  const lineClasses = getLineClasses(lineHandle)
+  const textMarkers = cm.findMarks(
+    { line: from.line, ch: 0 },
+    { line: from.line, ch: cm.getLine(from.line).length }
+  )
+  const cursor = cm.getCursor()
 
-      const hasBlockElementChanged = lineHandle.styleClasses !== undefined
-      if (hasBlockElementChanged) {
-        // mapDoc(cm)
-        // markDoc(cm)
-        markDoc2(cm)
+
+  // ------ If a reference definition was changed, we re-mark whole doc ------ //
+
+  // Because if reference definitions change, links/images/footnotes
+  // that point to them also need to change.
+
+  const isReferenceDefinition = lineClasses.includes('definition')
+  if (isReferenceDefinition) {
+    markDoc(cm)
+    return
+  }
+
+
+  // ------ If change happened inside TextMarker, update it ------ //
+
+  const textMarker = cm.findMarksAt(cursor)[0]
+  if (textMarker) {
+    textMarker.component.updateDisplayedText()
+    return
+  }
+
+
+  // ------ If a new element was created, check if it needs a TextMarker ------ //
+
+  if (!window.state.sourceMode) {
+    const elementAtCursor = getElementAt(cm, from.line, from.ch)
+    const isMarkable = elementAtCursor?.mark.isMarkable
+    if (elementAtCursor && isMarkable) {
+      const isAlreadyMarked = cm.findMarksAt({ line: from.line, ch: from.ch }).length
+      const elementNeedsMark = isMarkable && !isAlreadyMarked
+      const cursorIsInside =
+        cursor.ch > elementAtCursor?.start &&
+        cursor.ch < elementAtCursor?.end
+      if (elementNeedsMark && !cursorIsInside) {
+        markElement(cm, elementAtCursor)
+        return
       } else {
-        // Remap lineElements, redo line marks, and finish
-        // remapInlineElementsForLine(cm, lineHandle)
-        clearLineMarks(cm, lineHandle)
-        // markLine(cm, lineHandle)
-        markLine2(cm, lineHandle)
+        const marks = cm.getAllMarks()
+        const alreadyBookmarked = marks.find((m) => m.type == 'bookmark' && m.isSpotToMark)
+        if (!alreadyBookmarked) {
+          const bookmark = cm.setBookmark(cursor)
+          bookmark.isSpotToMark = true
+          console.log(cm.getAllMarks())
+        }
+        return
       }
     }
   }
+
+
+  // ------ Else, determine if we should show autocomplete ------ //
+
+  // We never show autocomplete on undo
+  const isUndo = changes.some((change) => change.origin == 'undo')
+  const changeText = text[0]
+  const isSingleChar = changeText.length == 1
+  const isMultipleChar = changeText.length > 2
+
+  const isEmptyBrackets =
+    changeText == '[]' &&
+    getPrevChars(cm, 0, 2, cursor) !== '[[' && // local link (open)
+    getNextChars(cm, 0, 2, cursor) !== ']]' && // local link (close)
+    getPrevChars(cm, 0, 2, cursor) !== '^[' // inline footnote (open)
+
+  const isBracketsAroundSelection =
+    changeText.length > 2 &&
+    changeText.firstChar() == '[' &&
+    changeText.lastChar() == ']' &&
+    getPrevChars(cm, 0, 2, cursor) !== '[[' &&
+    getNextChars(cm, 0, 2, cursor) !== ']]' &&
+    getPrevChars(cm, 0, 2, cursor) !== '^['
+
+  const showElementsAutocomplete = !isUndo && (isEmptyBrackets || isBracketsAroundSelection)
+
+  if (showElementsAutocomplete) {
+    cm.autocomplete.show('elements')
+    return
+  }
+
+  // ------ Else, if there are TextMarkers, clear and re-mark the line ------ //
+
+  // if (textMarkers.length) {
+  //   console.log("clear and re-mark the line")
+  //   clearLineMarks(cm, lineHandle)
+  //   markLine(cm, lineHandle)
+  // }
+
+  return
+
+
+  const isInlineFootnote =
+    getCharAt(cm, from.line, to.ch - 1) == '^'
+
+  const showCitationsAutocomplete =
+    changeText == '@' &&
+    getPrevChars(cm, 0, 2, cursor) == '[@' &&
+    getNextChars(cm, 0, 1, cursor) == ']' &&
+    !isUndo
+
+  const showLocalLinkAutocomplete =
+    changeText == '[]' &&
+    getPrevChars(cm, 0, 2, cursor) == '[[' &&
+    getNextChars(cm, 0, 2, cursor) == ']]' &&
+    !isUndo
+
+
+
+
+
 
   // cm.dispatch({ type: 'changes', changes: changes })
 
@@ -98,28 +180,3 @@ export function onChanges(cm, changes) {
 }
 
 
-/**
- * On change, update `unsavedChanges` value on the parent panel.
- * Avoid spamming by first checking if there's a mismatch
- * between current state value and `cm.doc.isClean()`.
- */
-function updateUnsavedChanges(cm) {
-  const docIsNowClean = cm.doc.isClean()
-  const prevStateHadUnsavedChanges = cm.state.panel.unsavedChanges
-
-  if (docIsNowClean && prevStateHadUnsavedChanges) {
-    // Need to update panel state: The doc is now clean.
-    window.api.send('dispatch', {
-      type: 'SET_UNSAVED_CHANGES',
-      panelIndex: cm.state.panel.index,
-      value: false
-    })
-  } else if (!prevStateHadUnsavedChanges) {
-    // Need to update panel state: The doc now has unsaved changes.
-    window.api.send('dispatch', {
-      type: 'SET_UNSAVED_CHANGES',
-      panelIndex: cm.state.panel.index,
-      value: true
-    })
-  }
-}

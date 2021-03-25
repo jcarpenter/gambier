@@ -152,41 +152,43 @@
 
   // ------ RESIZE ------ //
 
-  /**
-   * If user clicks-and-drags close enough to left/right edges, we start a resize operation (and cancel the event default). Else we just focus the panel.
-   */
-   function onMouseDown(domEvent) {
+  // TODO 3/17: Remove this? Not sure it's doing anything anymore. Found it active but seemingly not called by anything.
+
+  // /**
+  //  * If user clicks-and-drags close enough to left/right edges, we start a resize operation (and cancel the event default). Else we just focus the panel.
+  //  */
+  //  function onMouseDown(domEvent) {
     
-    const { x, width } = el.getBoundingClientRect()
-    const posX = domEvent.clientX - x
-    const isCloseEnoughToLeftEdge = posX < 10
-    const isCloseEnoughToRightEdge = posX > width - 10
+  //   const { x, width } = el.getBoundingClientRect()
+  //   const posX = domEvent.clientX - x
+  //   const isCloseEnoughToLeftEdge = posX < 10
+  //   const isCloseEnoughToRightEdge = posX > width - 10
 
-    if (isCloseEnoughToRightEdge || isCloseEnoughToRightEdge) {
-      domEvent.preventDefault()
-    } else {
-      focusPanel()
-    }
-  }
+  //   if (isCloseEnoughToRightEdge || isCloseEnoughToRightEdge) {
+  //     domEvent.preventDefault()
+  //   } else {
+  //     focusPanel()
+  //   }
+  // }
 
-  function setWidth(domEvent) {
-    dispatch('resize', { 
-      domEvent: domEvent, 
-    })
-  }
+  // function setWidth(domEvent) {
+  //   dispatch('resize', { 
+  //     domEvent: domEvent, 
+  //   })
+  // }
 
-  function resize(domEvent) {
-    dragging = true;
-    window.addEventListener('mouseup', resizeEnd, false);
-    window.addEventListener('mousemove', setWidth, false);
-  }
+  // function resize(domEvent) {
+  //   dragging = true;
+  //   window.addEventListener('mouseup', resizeEnd, false);
+  //   window.addEventListener('mousemove', setWidth, false);
+  // }
 
-  function resizeEnd() {
-    dragging = false;
-    window.removeEventListener('mouseup', resizeEnd, false);
-    window.removeEventListener('mousemove', setWidth, false);
-    dispatch('resizeend')
-  }
+  // function resizeEnd() {
+  //   dragging = false;
+  //   window.removeEventListener('mouseup', resizeEnd, false);
+  //   window.removeEventListener('mousemove', setWidth, false);
+  //   dispatch('resizeend')
+  // }
 
 
   // ------- OPEN, CLOSE, AND FOCUS PANELS ------- //
@@ -453,6 +455,6 @@
     />
   </div>
 
-  <Editor {panel} {doc} {isFocusedPanel} />
+  <Editor {panel} {doc} {isFocusedPanel} {width} />
 
 </div>

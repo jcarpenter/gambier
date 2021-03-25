@@ -253,6 +253,9 @@ import { onMount } from 'svelte';
       <SwatchLarge name={'disabledControlTextColor'} {colors} {overriddenVariables}> 
         Unfocused list element backgrounds (Media and Doc).
       </SwatchLarge>
+      <SwatchLarge name={'errorColor'} {colors} {overriddenVariables}> 
+        Error states. E.g. Border on empty required input field.
+      </SwatchLarge>
     </div>
   </div>
 

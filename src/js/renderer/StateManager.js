@@ -1,6 +1,6 @@
 import { writable } from "svelte/store";
 import { applyPatches, enablePatches } from "immer"
-import { stateHasChanged, wait } from "../shared/utils";
+import { objHasChanged, stateHasChanged, wait } from "../shared/utils";
 import { updateTheme } from './ThemeManager'
 
 enablePatches() // Required by immer
@@ -12,34 +12,48 @@ export const isWindowFocused = writable(false)
 export const isMetaKeyDown = writable(false)
 export const project = writable({})
 export const sidebar = writable({})
+export const markdownOptions = writable({})
 
 // Current state as JS object:
 // This may seem redundant (why not access state store?, but it's here for performance reasons. When we applyPatches(state, patches), we need to pass it the current state. We could get that from `state` writable by using `get(state)`, but that creates and destroys a one-time subscriber every time. Which has performance implications given how often we modify state. Svelte specifically recommends against this type of use, in the docs: https://svelte.dev/docs#get. So instead we create an intemediary `stateAsObject`, apply patches to it, and then pass it to state.set(...).
 export let stateAsObject = {}
 
+// Copy of the previous state, so we can check for changes
+let oldState = {} 
 
 /**
  * Set Svelte stores from `stateAsObject`.
  */
 function setStores() {
-  
+   
   // Set `state` store
   state.set(stateAsObject)
 
   // Set `isWindowFocused` store
   isWindowFocused.set(stateAsObject.focusedWindowId == window.id)
-  
+
+  // Set isMetaKeyDown false when window is not focused
+  if (stateAsObject.focusedWindowId !== window.id) {
+    isMetaKeyDown.set(false)
+  }
+
   // Set `project` and `sidebar` stores, if this is NOT the prefs window.
   if (window.id !== 'preferences') {
     const proj = stateAsObject.projects.byId[window.id]
     project.set(proj)
     sidebar.set(proj.sidebar)
   }
+
+  const markdownOptionsHaveChanged = objHasChanged(oldState.markdown, stateAsObject.markdown)
+  if (markdownOptionsHaveChanged) {
+    markdownOptions.set(stateAsObject.markdown)
+  }
 }
 
 function updateFromPatches(patches) {
 
   // Update stateAsObject
+  oldState = {...stateAsObject}
   stateAsObject = applyPatches(stateAsObject, patches)
 
   // Update `window.state`
@@ -83,6 +97,8 @@ export function init(initialState) {
   document.addEventListener('keyup', (evt) => {
     isMetaKeyDown.set(false)
   })
+
+  
 }
 
 

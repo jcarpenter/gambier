@@ -1,8 +1,69 @@
+import Autocomplete from './marks/Autocomplete.svelte'
+
+export function showAutocomplete(cm, from, to, changeText, removed) {
+
+  // -------- MENU -------- //
+
+  // Set initial options
+  // const menuItems = {
+  //   selectedIndex: 0,
+  //   list: {
+  //     0: {
+  //       label: 'Link',
+  //       preview: '[...](...)',
+  //     },
+  //     1: {
+  //       label: 'Image',
+  //       preview: '![...](...)',
+  //     },
+  //     2: {
+  //       label: 'Footnote',
+  //       preview: '^[...]',
+  //     },
+  //     3: {
+  //       label: 'Citation',
+  //       preview: '[@...]',
+  //     },
+  //     length: 4
+  //   },
+  // }
+
+  // cm.autocomplete.menu.menuItems = menuItems
+
+  // Set position
+  // const paddingOnLeftSideOfEditor = cm.display.lineSpace.offsetLeft
+  // cm.autocomplete.menu.element.style.top = `${cm.cursorCoords(true, 'local').bottom}px`
+  // cm.autocomplete.menu.element.style.left = `${autocomplete.offsetLeft + paddingOnLeftSideOfEditor}px`
+
+  // Show
+  cm.autocomplete.show()
+
+
+  // const frag = document.createDocumentFragment()
+
+  // var component = new Autocomplete({
+  //   target: frag,
+  //   props: { 
+  //     cm,
+
+  //   }
+  // })
+
+  // const mark = cm.markText(from, to,
+  //   {
+  //     replacedWith: frag,
+  //     handleMouseEvents: false,
+  //   }
+  // )
+
+}
+
+
 /**
  * Insert widget via `markText` at cursor position. But only if there's either 1) no selection, or 2) a single seleciton. If there are multiple selections, just wrap them in brackets with replaceRange, and don't show the automcomplete widget.
  * @param {*} cm 
  */
-export default function markAutocomplete(cm, text) {
+export function showAutocompleteOld(cm, text) {
 
 
   const doc = cm.getDoc()

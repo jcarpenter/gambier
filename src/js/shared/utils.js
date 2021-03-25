@@ -1,21 +1,6 @@
 import deepEql from 'deep-eql'
 
-/**
- * Returns true if arrays have same items in same order
- * From: https://gomakethings.com/how-to-check-if-two-arrays-are-equal-with-vanilla-js/
- */
-export function arraysEqual (arr1, arr2) {
-
-	// Check if the arrays are the same length
-	if (arr1.length !== arr2.length) return false
-
-	// Check if all items exist and are in the same order
-	for (var i = 0; i < arr1.length; i++) {
-		if (arr1[i] !== arr2[i]) return false
-  }
-  
-  return true
-}
+// -------- PROTOTYPE EXTENSIONS -------- //
 
 /**
  * Return true if array has ALL of the items
@@ -43,6 +28,16 @@ String.prototype.includesAny = function(...items) {
 }
 
 /**
+ * Return true if string includes ALL of the items.
+ * E.g. Returns true if string is "reference-full" and items
+ * are "reference" and "full"
+ * @param  {...any} items - One or more strings
+ */
+String.prototype.includesAll = function(...items) {
+  return items.every((i) => this.includes(i))
+}
+
+/**
  * Return true if string equals any of the items.
  * E.g. Returns true if item is `-span` and string is `text-span`
  * @param  {...any} items - One or more strings
@@ -51,6 +46,39 @@ String.prototype.equalsAny = function(...items) {
   return items.some((i) => this === i)
 }
 
+/**
+ * Return first character of string
+ */
+String.prototype.firstChar = function() {
+  return this.charAt(0)
+}
+
+/**
+ * Return last character of string
+ */
+String.prototype.lastChar = function() {
+  return this.charAt(this.length - 1)
+}
+
+
+// -------- MISC HELPERS -------- //
+
+/**
+ * Returns true if arrays have same items in same order
+ * From: https://gomakethings.com/how-to-check-if-two-arrays-are-equal-with-vanilla-js/
+ */
+export function arraysEqual (arr1, arr2) {
+
+	// Check if the arrays are the same length
+	if (arr1.length !== arr2.length) return false
+
+	// Check if all items exist and are in the same order
+	for (var i = 0; i < arr1.length; i++) {
+		if (arr1[i] !== arr2[i]) return false
+  }
+  
+  return true
+}
 
 /**
  * Get the diff between two arrays
@@ -77,14 +105,12 @@ export function prettySize(bytes, separator = ' ', postFix = '') {
   return 'n/a';
 }
 
-const formats = {
-  document: ['.md', '.markdown'],
-  image: [
-    '.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'
-  ],
-  av: [
-    '.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'
-  ]
+/**
+ * Shorthand function for `JSON.stringify`
+ * @param {*} value 
+ */
+export function stringify(value) {
+  return JSON.stringify(value, null, '\t')
 }
 
 /**
@@ -98,40 +124,6 @@ export async function wait(ms) {
   });
 }
 
-export function isDoc(fileExtension) {
-  return formats.document.includes(fileExtension)
-}
-
-export function isMedia(fileExtension) {
-  const isImage = formats.image.includes(fileExtension)
-  const isAV = formats.av.includes(fileExtension)
-  return isImage || isAV
-}
-
-export function getMediaType(fileExtension) {
-  const isImage = formats.image.includes(fileExtension)
-  const isAV = formats.av.includes(fileExtension)
-  if (isImage) {
-    return 'img'
-  } else if (isAV) {
-    return 'av'
-  } else {
-    console.error('File extension does not match supported media types')
-  }
-}
-
-/**
- * Return file type ('doc', 'img', 'av') based on file extension.
- * @param {*} fileExtension - String. E.g. 'gif'
- */
-export function getFileType(fileExtension) {
-  if (isDoc(fileExtension)) {
-    return 'doc'
-  } else if (isMedia(fileExtension)) {
-    return getMediaType(fileExtension)
-  }
-}
-
 export function findInTree (tree, value, key = 'id', reverse = false) {
   const stack = [ tree[0] ]
   while (stack.length) {
@@ -142,10 +134,93 @@ export function findInTree (tree, value, key = 'id', reverse = false) {
   return null
 }
 
-export function stringify(value) {
-  return JSON.stringify(value, null, '\t')
+// Copied from:
+// https://github.com/Rich-Harris/yootils/blob/master/src/number/clamp.ts
+export function clamp(num, min, max) {
+  return num < min ? min : num > max ? max : num;
 }
 
+
+// -------- CHECK FORMAT -------- //
+
+const formats = {
+  document: ['.md', '.markdown'],
+  image: ['.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'],
+  av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm']
+}
+
+export const urlRE = new RegExp(/^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i)
+
+const imagePathRE = new RegExp(/^.*?\.(apng|bmp|gif|jpg|jpeg|jfif|pjpeg|pjp|png|svg|tif|tiff|webp)$/i)
+
+export const htmlRE = new RegExp(/<\/?[a-z][\s\S]*>/)
+
+
+/**
+ * Return true if URL tests positive against GitHub's URL regex.
+ * https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L14
+ */
+export function isUrl(string) {
+  return urlRE.test(string)
+}
+
+/**
+ * Return true if string has valid image file format extension
+ * E.g. .jpg, .gif, .apng.
+ */
+export function isImagePath(url) {
+  return imagePathRE.test(url)
+}
+
+/**
+ * Return true if file extension is among valid doc formats.
+ */
+export function isDoc(extension) {
+  return formats.document.includes(extension)
+}
+
+/**
+ * Return true if file extension is among valid image or media formats. 
+ */
+export function isMedia(extension) {
+  const isImage = formats.image.includes(extension)
+  const isAV = formats.av.includes(extension)
+  return isImage || isAV
+}
+
+/**
+ * Check if string contains HTML. Uses regexp from StackOverflow:
+ * https://stackoverflow.com/a/15458987
+ */
+export function isHTML(string) {
+  return htmlRE.test(string)
+}
+
+/**
+ * Return media type ('img' or 'av'), based on file extension.
+ */
+export function getMediaType(extension) {
+  const isImage = formats.image.includes(extension)
+  const isAV = formats.av.includes(extension)
+  if (isImage) {
+    return 'img'
+  } else if (isAV) {
+    return 'av'
+  } else {
+    console.error('File extension does not match supported media types')
+  }
+}
+
+/**
+ * Return file type ('doc', 'img', 'av'), based on file extension.
+ */
+export function getFileType(extension) {
+  if (isDoc(extension)) {
+    return 'doc'
+  } else if (isMedia(extension)) {
+    return getMediaType(extension)
+  }
+}
 
 // -------- COMPARE PATCHES -------- //
 
@@ -176,7 +251,26 @@ export function stateHasChanged(patches, props, toValue = '') {
 }
 
 
-// -------- COMPARE OBJECTS -------- //
+// -------- WORK WITH OBJECTS -------- //
+
+/**
+ * Check if object is empty" {}
+ */
+// Taken from https://coderwall.com/p/_g3x9q/how-to-check-if-javascript-object-is-empty
+export function isEmpty(obj) {
+  for(var key in obj) {
+      if(obj.hasOwnProperty(key))
+          return false
+  }
+  return true
+}
+
+/**
+ * Return true if property values of two objects do not match.
+ */
+export function hasChanged(key, objA, objB) {
+  return objA[key] !== objB[key]
+}
 
 /**
  * Compare two objects and return `true` if they differ.
@@ -241,7 +335,7 @@ export function propHasChangedTo(keysAsString, value, objTo, objFrom) {
 }
 
 /**
- * Utility function for hasChanged. 
+ * Utility function for `propHasChangedTo`. 
  * Convert propAddress string to array of keys.
  * Before: "projects[5].window"
  * After: ["projects", 5, "window"]
@@ -262,11 +356,28 @@ function extractKeysFromString(keyAsString) {
 }
 
 /**
- * Utility function for `hasChanged`. 
+ * Utility function for ``propHasChangedTo``. 
  * @param {*} nestedObj 
  * @param {*} pathArr 
  */
 const getNestedObject = (nestedObj, pathArr) => {
 	return pathArr.reduce((obj, key) =>
 		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+}
+
+
+// -------- SVELTE (Render-process only) -------- //
+// Main process cannot use these functions
+
+/**
+ * Mount Svelte component without the unnecessary empty parent frag.
+ * From: https://github.com/sveltejs/svelte/issues/1549#issuecomment-397819063
+ * @param {*} Component - To be rendered
+ * @param {*} options - For the component (e.g. target)
+ */
+export function mountComponent(Component, options) {
+  const frag = document.createDocumentFragment();
+  const component = new Component({ ...options, target: frag });
+  options.target.parentNode.replaceChild(frag, options.target);
+  return component;
 }

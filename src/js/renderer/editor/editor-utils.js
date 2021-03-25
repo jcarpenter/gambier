@@ -1,7 +1,17 @@
-import { markDoc2 } from "./mark"
+import { setMode } from "./editor2"
+import { markDoc } from "./mark"
+import * as map from './map'
 
+// -------- SPANS & ELEMENTS -------- //
 
-// -------- GET LINE SPANS / ELEMENTS -------- //
+export function getDocElements(cm) {
+  const elements = []
+  cm.eachLine((lineHandle) => {
+    const lineElements = getLineElements(cm, lineHandle)
+    elements.push(...lineElements)
+  })
+  return elements
+}
 
 /**
  * Return array of "spans" for the line.
@@ -11,17 +21,16 @@ import { markDoc2 } from "./mark"
  * NOTE: We parse these from `lineHandle.styles`, which is a  strangely-formatted (but very useful) array of classes (e.g. `link inline text`) and the token number they end on. The format is number-followed-by-string——e.g. `24, "link inline text", 35, "link inline url"`——where `24` is the ending character of `link inline text`, and the starting character of `link inline url`. This array can also contain empty strings (e.g. "") and multiple consecutive numbers, which we need to ignore when parsing (they seem to belong to empty tokens).
  */
 export function getLineSpans(cm, lineHandle) {
-  
+
   let spans = []
-  
+
   // If lineHandle has no styles, return empty array
   if (!lineHandle.styles?.some((s) => typeof s === 'string' && s !== '')) return spans
 
   const line = lineHandle.lineNo()
-
+  
   // Get line classes
   const lineClasses = getLineClasses(lineHandle)
-
 
   // ---------- Get spans from lineHandle "styles" ---------- //
 
@@ -97,10 +106,34 @@ export function getLineSpans(cm, lineHandle) {
     }
   })
 
+  return spans
+}
 
-  // ---------- Get parent element details ---------- //
+/** 
+ * For the given line, return line classes. E.g. 'header'
+*/
+export function getLineClasses(lineHandle) {
+  return lineHandle.styleClasses ?
+    lineHandle.styleClasses.textClass :
+    ""
+}
 
-  // Add `element` property to each span with details about the parent element that it belons to. E.g. if the span is a url, it belongs to a link parent element.
+/**
+ * Get array of "elements" for the line. 
+ * Elements are made of one or more spans.
+ * E.g. `url` and `title` are child spans of a link element.
+ * CodeMirror markdown mode returns spans, but does not understand
+ * elements. So we map the elements by reading the spans.
+ * @param {*} cm 
+ * @param {*} lineHandle 
+ */
+export function getLineElements(cm, lineHandle) {
+
+  let spans = getLineSpans(cm, lineHandle)
+  let elements = []
+
+  // If no spans, return empty array
+  if (!spans) return
 
   for (const [index, s] of spans.entries()) {
 
@@ -109,31 +142,71 @@ export function getLineSpans(cm, lineHandle) {
 
     if (!isStartOfParentEl) continue
 
-    // Stub out the object
+    // ---------- Stub out the object ---------- //
+
     // We'll set `type` and end `below`
     let element = {
       type: '', // TBD
       line: s.line,
       start: s.start,
       classes: s.classes.filter((c) => !c.includes('-start') && c !== 'md'),
-      end: 0, // TBD
+      end: 0, // TBD,
+      isIncomplete: s.classes.includes('incomplete'),
+      children: [],
+      isNew: false
     }
 
-    // Determine `type` and `end`
+    elements.push(element)
+
+    // ---------- Set `type` and find `end` ---------- //
+
     if (s.classes.includes('bare-url')) {
 
       element.type = 'bare-url'
       element.end = s.end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      const start = element.start
+      const end = element.end
+      const string = element.markdown
+      element.content = { start, end, string }
 
     } else if (s.classes.includes('citation-start')) {
 
       element.type = 'citation'
       element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('citation-end')).end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: true, isEditable: false }
+      // Get content
+      const start = element.start + 1
+      const end = element.end - 1
+      const string = getTextFromRange(cm, element.line, start, end)
+      element.content = { start, end, string }
 
     } else if (s.classes.includes('email-in-brackets-start')) {
 
       element.type = 'email-in-brackets'
       element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('email-in-brackets-end')).end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      const start = element.start + 1
+      const end = element.end - 1
+      const string = getTextFromRange(cm, element.line, start, end)
+      element.content = { start, end, string }
+
+    } else if (s.classes.includes('em')) {
+
+      element.type = 'emphasis'
+      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('em-end')).end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      const start = element.start + 1
+      const end = element.end - 1
+      const string = getTextFromRange(cm, element.line, start, end)
+      element.content = { start, end, string }
 
     } else if (s.classes.includes('footnote-start')) {
 
@@ -142,11 +215,36 @@ export function getLineSpans(cm, lineHandle) {
         'footnote-inline' :
         'footnote-reference'
       element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('footnote-end')).end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: true, isEditable: false }
+      // Get content
+      if (element.type == 'footnote-inline') {
+        const start = element.start + element.markdown.indexOf('[') + 1
+        const end = element.start + element.markdown.lastIndexOf(']')
+        const string = getTextFromRange(cm, element.line, start, end)
+        element.content = { start, end, string }
+      }
 
     } else if (s.classes.hasAll('footnote', 'reference-definition-anchor-start')) {
 
       element.type = 'footnote-reference-definition'
       element.end = cm.getLine(element.line).length
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      // TODO
+
+    } else if (s.lineClasses.includes('header')) {
+
+      element.type = 'header'
+      element.markdown = cm.getLine(element.line)
+      element.end = element.markdown.length
+      element.mark = { isMarkable: false, isEditable: false }
+      element.content = {
+        start: element.start,
+        end: element.end,
+        string: element.markdown
+      }
 
     } else if (s.classes.includes('link-start')) {
 
@@ -177,15 +275,55 @@ export function getLineSpans(cm, lineHandle) {
         spans[index - 1].element = element
       }
 
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+
+      // Set mark details
+      element.mark = { isMarkable: true, isEditable: isImage ? false : true }
+      if (!isImage) {
+        // Specify what span the mark should show
+        if (element.type.includesAny('shortcut', 'collapsed')) {
+          element.mark.displayedSpanName = 'label'
+        } else {
+          element.mark.displayedSpanName = 'text'
+        }
+      }
+
+      // Get content
+      element.content = {
+        start: element.start,
+        end: element.end,
+        string: element.markdown
+      }
+
     } else if (s.classes.hasAll('link', 'reference-definition-anchor-start')) {
 
       element.type = 'link-reference-definition'
       element.end = cm.getLine(element.line).length
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      // TODO
 
     } else if (s.classes.includes('url-in-brackets-start')) {
 
       element.type = 'url-in-brackets'
       element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('url-in-brackets-end')).end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      // TODO
+
+    } else if (s.classes.includes('strong')) {
+
+      element.type = 'strong'
+      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('strong-end')).end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      const start = element.start + 2
+      const end = element.end - 2
+      const string = getTextFromRange(cm, element.line, start, end)
+      element.content = { start, end, string }
 
     } else if (s.classes.includes('task')) {
 
@@ -197,52 +335,22 @@ export function getLineSpans(cm, lineHandle) {
       element.start = s.start - 2
       element.type = 'task'
       element.end = s.end
+      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
+      element.mark = { isMarkable: false, isEditable: false }
+      // Get content
+      // TODO
     }
 
-    // Get markdown
-    element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
 
-    // Should span to be replaced by a TextMarker?
-    if (!window.state.sourceMode) {
+    // ---------- Get children ---------- //
 
-      const isRightType = element.type.includesAny('citation', 'footnote', 'image', 'link', 'task')
-      const isNotReferenceDefinitonAnchor = !s.classes.includes('reference-definition-anchor-start')
-      const isNotInsideLinkReferenceDefinition = !s.lineClasses.includes('link-reference-definition')
-
-      if (isRightType && isNotReferenceDefinitonAnchor && isNotInsideLinkReferenceDefinition) {
-        element.isMarked = true
-      } else {
-        element.isMarked = false
-      }
-    }
-
-    // Get child details
-    if (element.type == 'bare-url') {
-
-      // Bare URLs don't have any children; they're just a URL.
-      // `element.markdown` is the url.
-
-    } else if (element.type == 'email-in-brackets') {
+    if (element.type == 'email-in-brackets') {
 
       // The email address is everything between the brackets
-      const emailStart = element.start + 1
-      const emailEnd = spans.slice(index + 1).find((s) => s.classes.includes('email-in-brackets-end')).end - 1
-      element.url = {
-        start: emailStart,
-        end: emailEnd,
-        string: getTextFromRange(cm, element.line, emailStart, emailEnd)
-      }
-
-    } else if (element.type == 'footnote-inline') {
-
-      const content = spans.slice(index + 1).find((s) => s.classes.includes('content') && s.end <= element.end)
-      if (content) {
-        element.content = {
-          start: content.start,
-          end: content.end,
-          string: getTextFromRange(cm, element.line, content.start, content.end)
-        }
-      }
+      const start = element.start + 1
+      const end = element.end - 1
+      const string = getTextFromRange(cm, element.line, start, end)
+      element.url = { start, end, string }
 
     } else if (element.type == 'footnote-reference') {
 
@@ -277,6 +385,9 @@ export function getLineSpans(cm, lineHandle) {
 
     } else if (element.type.includesAny('link', 'image')) {
 
+      // If the element is incomplete, with spans missing (e.g no URL entered)
+      // we still create the property, with empty string, and correct start/end ch.
+
       const text = spans.slice(index + 1).find((s) => s.classes.includes('text') && s.end <= element.end)
       if (text) {
         element.text = {
@@ -284,7 +395,14 @@ export function getLineSpans(cm, lineHandle) {
           end: text.end,
           string: getTextFromRange(cm, element.line, text.start, text.end),
         }
+      } else if (element.type.equalsAny('link-inline', 'image-inline')) {
+        element.text = {
+          start: element.start + element.markdown.indexOf('[') + 1,
+          end: element.start + element.markdown.indexOf('[') + 1,
+          string: '',
+        }
       }
+      element.children.push(text)
 
       const url = spans.slice(index + 1).find((s) => s.classes.includes('url') && s.end <= element.end)
       if (url) {
@@ -293,7 +411,14 @@ export function getLineSpans(cm, lineHandle) {
           end: url.end,
           string: getTextFromRange(cm, element.line, url.start, url.end),
         }
+      } else if (element.type.equalsAny('link-inline', 'image-inline')) {
+        element.url = {
+          start: element.start + element.markdown.indexOf('(') + 1,
+          end: element.start + element.markdown.indexOf('(') + 1,
+          string: ''
+        }
       }
+      element.children.push(url)
 
       const title = spans.slice(index + 1).find((s) => s.classes.includes('title') && s.end <= element.end)
       if (title) {
@@ -308,7 +433,7 @@ export function getLineSpans(cm, lineHandle) {
           end: title.end - 1,
           string: wrappedString.slice(openingCharactersLength, wrappedString.length - 1)
         }
-      } else if (element.type == 'link-inline') {
+      } else if (element.type.equalsAny('link-inline', 'image-inline')) {
         element.title = {
           start: element.url.end,
           end: element.url.end,
@@ -316,14 +441,34 @@ export function getLineSpans(cm, lineHandle) {
         }
       }
 
-      const label = spans.slice(index + 1).find((s) => s.classes.includes('label') && s.end <= element.end)
-      if (label) {
-        element.label = {
-          start: label.start,
-          end: label.end,
-          string: getTextFromRange(cm, element.line, label.start, label.end)
+      if (element.type.includesAny('link-reference', 'image-reference')) {
+
+        const label = spans.slice(index + 1).find((s) => s.classes.includes('label') && s.end <= element.end)
+        if (label) {
+          element.label = {
+            start: label.start,
+            end: label.end,
+            string: getTextFromRange(cm, element.line, label.start, label.end),
+          }
+        } else {
+          // TODO: This needs to differ, based on full vs collapsed
+          // element.label = {
+          //   start: element.start + element.markdown.indexOf('[') + 1,
+          //   end:  element.start + element.markdown.indexOf(']'),
+          // }
         }
+        element.children.push(element.label)
       }
+
+      // if (label) {
+      //   element.label = {
+      //     start: label.start,
+      //     end: label.end,
+      //     string: getTextFromRange(cm, element.line, label.start, label.end)
+      //   }
+      // }
+
+
     } else if (element.type == 'url-in-brackets') {
 
       // The URL is everything between the brackets
@@ -336,65 +481,41 @@ export function getLineSpans(cm, lineHandle) {
       }
     }
 
-    // If there's a marker, get it
-    if (element.isMarked) {
-      element.mark = cm.findMarksAt(
-        { line: element.line, ch: element.start }
-      )[0]
-    }
+    // ---------- If there's a marker, get it ---------- //
 
-    // Add `element` to all child spans
-    // To any spans inside the `start` and `end`
-    const childSpans = spans.slice(index).filter((s) => element.start <= s.start && s.end <= element.end)
-    childSpans.forEach((c) => c.element = element)
+    // if (element.isMarked) {
+    //   element.mark = cm.findMarksAt(
+    //     { line: element.line, ch: element.start }
+    //   )[0]
+    // }
+
+    // Add child spans to element
+    element.spans = spans.slice(index).filter((s) => element.start <= s.start && s.end <= element.end)
   }
 
-  return spans
-}
 
-/** 
- * For the given line, return line classes. E.g. 'header'
-*/
-export function getLineClasses(lineHandle) {
-  return lineHandle.styleClasses ?
-    lineHandle.styleClasses.textClass :
-    ""
-}
 
-/**
- * Get array of "elements" for the line. 
- * Elements are the parents of individual spans.
- * E.g. A url and a title span belong to a parent link.
- * Elements are sometimes easier to work with than the more
- * granular individual spans.
- * @param {*} cm 
- * @param {*} lineHandle 
- */
-export function getLineElements(cm, lineHandle) {
-  
-  let spans = getLineSpans(cm, lineHandle)
-  
-  // If no spans, return empty array
-  if (!spans) return 
 
-  // Filter to non-formatting spans, with elements
-  spans = spans.filter((s) => s.element)
 
-  // Get elements from spans
-  let elements = spans.map((s) => s.element)
 
-  elements = elements.filter((e, index) => {
-    const prevEl = elements[index - 1]
-    const sameAsPrevEl = e.start == prevEl?.start
-    return sameAsPrevEl ? false : true
-  })
-  
+  // // Filter to non-formatting spans, with elements
+  // spans = spans.filter((s) => s.element)
+
+  // // Get elements from spans
+  // let elements = spans.map((s) => s.element)
+
+  // elements = elements.filter((e, index) => {
+  //   const prevEl = elements[index - 1]
+  //   const sameAsPrevEl = e.start == prevEl?.start
+  //   return sameAsPrevEl ? false : true
+  // })
+
   return elements
 }
 
 
 /**
- * Get the span at the specified line and ch
+ * Get span at specified line and ch
  * Exclude formatting.
  */
 export function getSpanAt(cm, line, ch) {
@@ -409,48 +530,18 @@ export function getSpanAt(cm, line, ch) {
 }
 
 
-
-// -------- MISC -------- //
-
 /**
- * Sometimes we need to access CodeMirror instances from outside their parent Editor components. This is a convenience function for finding the CM instance from `windows.cmInstances` by the ID of it's associated panel, and getting it's ddata.
- * @param {*} panelId 
+ * Get element at specified line and ch
  */
-export function getCmDataByPanelId(panelId) {
-  const cmInstance = window.cmInstances.find((c) => c.state.panel.id == panelId)
-  const data = cmInstance.getValue()
-  return data
-}
-
-/**
- * For the given reference label, find the definition.
- * Returns object
- * @param {*} cm 
- * @param {*} label 
- */
-export function getReferenceDefinitions(cm, label, type = 'link') {
-
-  let definitionsMatchingLabel = []
-
-  cm.eachLine((lineHandle) => {
-
-    // If line has no block styles, return
-    const lineHasBlockStyles = lineHandle.styleClasses !== undefined && lineHandle.styleClasses !== null
-    if (!lineHasBlockStyles) return
-
-    // lineHandles contain a list of block-level classes in the (confusingly-named) `stylesClasses.textClass` property.
-    const blockStyles = lineHandle.styleClasses.textClass
-
-    if (!blockStyles.includes(`${type}-reference-definition`)) return
-
-    const definition = getLineSpans(cm, lineHandle).find((s) => s.element.label.string == label)?.element
-
-    if (definition) {
-      definitionsMatchingLabel.push(definition)
-    }
-  })
-
-  return definitionsMatchingLabel
+export function getElementAt(cm, line, ch) {
+  const lineHandle = cm.getLineHandle(line)
+  const lineElements = getLineElements(cm, lineHandle)
+  const element = lineElements.find((e) =>
+    e.line == line &&
+    e.start < ch &&
+    ch < e.end
+  )
+  return element
 }
 
 
@@ -477,6 +568,69 @@ export function getSurroundingSpan(cm) {
 }
 
 
+
+// -------- GET DOCUMENT DETAILS -------- //
+
+/**
+ * Sometimes we need to access CodeMirror instances from outside their parent Editor components. This is a convenience function for finding the CM instance from `windows.cmInstances` by the ID of it's associated panel, and getting it's ddata.
+ * @param {*} panelId 
+ */
+export function getCmDataByPanelId(panelId) {
+  const cmInstance = window.cmInstances.find((c) => c.state.panel.id == panelId)
+  const data = cmInstance.getValue()
+  return data
+}
+
+/**
+ * For the given reference label, find the definition.
+ * Returns object
+ * @param {*} cm 
+ * @param {*} label 
+ * @param {*} type - 'link' or 'footnote' 
+ */
+export function getReferenceDefinitions(cm, label, type = 'link') {
+
+  let definitionsMatchingLabel = []
+
+  for (var i = 0; i < cm.lineCount(); i++) {
+    const firstTokenType = cm.getTokenTypeAt({ line: i, ch: 0 })
+    if (!firstTokenType) continue
+    if (!firstTokenType.includes(`${type}-reference-definition-start`)) continue 
+    const element = map.getElementAt(cm, i, 1)
+    const elementLabel = element.spans.find((s) => s.type.includes('label'))?.string
+    if (elementLabel == label) {
+      definitionsMatchingLabel.push(element)
+    }
+  }
+
+  return definitionsMatchingLabel
+
+  cm.eachLine((lineHandle) => {
+
+    // If line has no block styles, return
+    const lineHasBlockStyles = 
+      lineHandle.styleClasses !== undefined && 
+      lineHandle.styleClasses !== null
+    if (!lineHasBlockStyles) return
+
+    // If blockStyles doesn't have reference definition, 
+    // of the correct type, return.
+    // lineHandles contain a list of block-level classes in the 
+    // (confusingly-named) `stylesClasses.textClass` property.
+    const blockStyles = lineHandle.styleClasses.textClass
+    if (!blockStyles.includes(`${type}-reference-definition`)) return
+
+    const definition = getLineSpans(cm, lineHandle).find((s) => s.element.label.string == label)?.element
+
+    if (definition) {
+      definitionsMatchingLabel.push(definition)
+    }
+  })
+
+  return definitionsMatchingLabel
+}
+
+
 /**
  * Get title w/o the preceding whitespace and wrapping characters.
  * Before: ` "Computers"` After: `Computers`.
@@ -499,7 +653,7 @@ export function getTitleWithoutWrappingCharacters(line, start, end, string) {
 /**
  * Is specified line a list?
  */
-export function isList(cm, line) {``
+export function isList(cm, line) {
   const lineHandle = cm.getLineHandle(line)
   const lineIsList = getLineClasses(lineHandle).includes('list')
   return lineIsList
@@ -514,7 +668,7 @@ export function isList(cm, line) {``
 export function isLineClassesHeterogeneous(cm, range) {
 
   const { topLine, bottomLine } = getTopAndBottomLines(range)
-  
+
   // If this is a single line selection, it cannot contain
   // multiple line styles, so we return false.
   if (topLine == bottomLine) return false
@@ -534,7 +688,7 @@ export function isLineClassesHeterogeneous(cm, range) {
 
   // We know line styles are heterogeneous if they don't all
   // match the first one.
-  const areHeterogeneous = 
+  const areHeterogeneous =
     lineClassesInsideRange.length > 1 &&
     !lineClassesInsideRange.every((ls) => {
       return ls == lineClassesInsideRange[0]
@@ -555,7 +709,7 @@ export function getTopAndBottomLines(range) {
 
   // First check if the range is just a single cursor
   // If yes, topLine and bottomLine are the same, so return
-  const isSingleCursor = 
+  const isSingleCursor =
     range.anchor.ch == range.head.ch &&
     range.anchor.line == range.head.line
   if (isSingleCursor) {
@@ -615,6 +769,21 @@ export function getFromAndTo(range) {
 }
 
 
+
+// -------- READ/WRITE STRINGS FROM DOC -------- //
+
+/**
+ * Return true if there's only one cursor, and no text selected.
+ */
+export function isSingleCursor(cm) {
+  const selections = cm.listSelections()
+  const isSingleCursor =
+    selections.length == 1 &&
+    selections[0].anchor.line == selections[0].head.line &&
+    selections[0].anchor.ch == selections[0].head.ch
+  return isSingleCursor
+}
+
 /**
  * Return a single character at the specified position
  */
@@ -625,7 +794,6 @@ export function getCharAt(cm, line, ch = 0) {
   )
 }
 
-
 /**
  * A _slighty_ more compact snippet for getting text from a range.
  */
@@ -633,8 +801,74 @@ export function getTextFromRange(cm, line, start, end) {
   return cm.getRange({ line: line, ch: start }, { line: line, ch: end })
 }
 
+/**
+ * Return N characters immediately preceding the `fromPos` value.
+ * @param {*} cm 
+ * @param {*} numOfCharacters - How many characters before fromPos.ch to get
+ * @param {*} fromPos - Pos (object with line and ch) to look before.
+ */
+export function getPrevChars(cm, numSkipBehind, numToGet, fromPos,) {
+  const { line, ch } = fromPos
+  return cm.getRange(
+    { line, ch: ch - numSkipBehind - numToGet },
+    { line, ch: ch - numSkipBehind }
+  )
+}
 
-// -------- OPENING & CLOSING -------- //
+/**
+ * Return N characters immediately following the `fromPos` value.
+ * @param {*} cm 
+ * @param {*} numToGet - How many characters after fromPos.ch to get
+ * @param {*} fromPos - Pos (object with line and ch) to look before.
+ */
+export function getNextChars(cm, numSkipAhead, numToGet, fromPos) {
+  const { line, ch } = fromPos
+  return cm.getRange(
+    { line, ch: ch + numSkipAhead },
+    { line, ch: ch + numSkipAhead + numToGet }
+  )
+}
+
+/**
+ * Write input value to cm.
+ */
+export function writeToDoc(cm, value, line, start, end) {
+  cm.replaceRange(
+    value,
+    { line, ch: start },
+    { line, ch: end },
+    '+input'
+  )
+}
+
+
+// -------- SAVE, OPEN, CLOSE -------- //
+
+/**
+ * On change, update `unsavedChanges` value on the parent panel.
+ * Avoid spamming by first checking if there's a mismatch
+ * between current state value and `cm.doc.isClean()`.
+ */
+export function setUnsavedChanges(cm) {
+  const docIsNowClean = cm.doc.isClean()
+  const prevStateHadUnsavedChanges = cm.panel.unsavedChanges
+
+  if (docIsNowClean && prevStateHadUnsavedChanges) {
+    // Need to update panel state: The doc is now clean.
+    window.api.send('dispatch', {
+      type: 'SET_UNSAVED_CHANGES',
+      panelIndex: cm.panel.index,
+      value: false
+    })
+  } else if (!prevStateHadUnsavedChanges) {
+    // Need to update panel state: The doc now has unsaved changes.
+    window.api.send('dispatch', {
+      type: 'SET_UNSAVED_CHANGES',
+      panelIndex: cm.panel.index,
+      value: true
+    })
+  }
+}
 
 /**
  * Load empty doc into editor, and clear history
@@ -653,13 +887,7 @@ export function loadEmptyDoc(cm) {
  */
 export async function loadDoc(cm, doc) {
 
-  console.log(cm, doc)
-
   if (!cm || !doc) return
-
-  // Update `cm.state.doc` to a copy of action.doc 
-  // (so we reduce risk of mutating action.doc).
-  cm.state.doc = { ...doc }
 
   // Get the doc text
   const text = doc.path ?
@@ -667,7 +895,8 @@ export async function loadDoc(cm, doc) {
 
   // Load the doc text into the editor, and clear history.
   // "Each editor is associated with an instance of CodeMirror.Doc, its document. A document represents the editor content, plus a selection, an undo history, and a mode. A document can only be associated with a single editor at a time. You can create new documents by calling the CodeMirror.Doc(text: string, mode: Object, firstLineNumber: ?number, lineSeparator: ?string) constructor" — https://codemirror.net/doc/manual.html#Doc
-  cm.swapDoc(CodeMirror.Doc(text, 'gambier'))
+  cm.swapDoc(CodeMirror.Doc(text))
+  setMode(cm)
 
   // Restore cursor position, if possible
   const cursorHistory = window.state.cursorPositionHistory[doc.id]
@@ -680,18 +909,10 @@ export async function loadDoc(cm, doc) {
   }
 
   // Map, mark and focus the editor
-  // mapDoc(cm)
-  // markDoc(cm)
-  markDoc2(cm)
+  markDoc(cm)
 
   // setCursor(cm)
-
-  // TODO 10/29: Been disabled for a while.
-  // Update media path
-  // mediaBasePath = filePath.substring(0, filePath.lastIndexOf('/'))
-  // console.log(`mediaBasePath is ${mediaBasePath}`)
 }
-
 
 /**
  * Focus the editor. We wrap in a setTimeout or it doesn't work.
@@ -708,7 +929,7 @@ export function focusEditor(cm) {
  */
 export function saveCursorPosition(cm) {
 
-  const docId = cm.state.doc.id
+  const docId = cm.panel.docId
   const cursorPos = cm.doc.getCursor()
 
   // Only save if the doc is not empty, 
@@ -729,18 +950,6 @@ export function saveCursorPosition(cm) {
 
 
 // -------- WIZARD -------- //
-
-/**
- * Write input value to cm.
- */
-export function writeToDoc(cm, value, line, start, end) {
-  cm.replaceRange(
-    value,
-    { line, ch: start },
-    { line, ch: end },
-    '+input'
-  )
-}
 
 export function switchInlineReferenceType(cm, newType) {
   // Strings depend on whether we're dealing with link, image or footnote

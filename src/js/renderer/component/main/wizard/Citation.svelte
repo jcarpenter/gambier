@@ -14,7 +14,7 @@
   <h1>Citation</h1>
 </header>
 
-<Separator margin={'0 0 8px'} />
+<!-- <Separator margin={'0 0 8px'} /> -->
 
 <!------ DEFINITION ------>
 

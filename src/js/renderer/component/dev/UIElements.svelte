@@ -189,6 +189,14 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
       </Description>
     </FormRow>
 
+    <FormRow label={'Disabled:'} {maxWidth} {leftColumn} {gap} {margin} multiLine={true} labelTopOffset={'7px'}>
+      <InputText placeholder={'I am disabled'} width={'300px'} style='inline' isDisabled={true} />
+    </FormRow>
+
+    <FormRow label={'Error:'} {maxWidth} {leftColumn} {gap} {margin} multiLine={true} labelTopOffset={'7px'}>
+      <InputText placeholder={'I have an error'} width={'300px'} style='inline' isError={true} />
+    </FormRow>
+
   </section> 
 
   <Separator />

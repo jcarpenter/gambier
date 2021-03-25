@@ -87,7 +87,12 @@ const storeDefault = {
   },
 
   markdown: {
-    implicitFigures: false,
+    implicitFigures: true,
+    emoji: true,
+    strikethrough: true,
+    taskLists: true,
+    fencedCodeBlockHighlighting: false,
+    allowAtxHeaderWithoutSpace: false
   },
 
   // When tabbing through document, we can control which elements are tabbable

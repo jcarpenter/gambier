@@ -109,6 +109,7 @@ export function dragIntoFolder(node, properties) {
     evt.preventDefault()
     if (isFolder) {
       const file = evt.dataTransfer.files[0]
+      // TODO 3/21: Update this to new `invoke` version
       window.api.send('moveOrCopyIntoFolder', file.path, folderPath, evt.altKey)
     }
     node.classList.remove('isDraggedOver')

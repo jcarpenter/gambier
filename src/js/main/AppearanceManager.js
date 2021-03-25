@@ -175,6 +175,7 @@ function getDarkColors() {
     backgroundColor: '0, 0, 0',
     buttonBackgroundColor: '#5B5B5BFF',
     menuBackgroundColor: 'hsla(0, 0%, 17%, 0.9)',
+    errorColor: '#FA6E50',
 
     // macOS "Dynamic colors":
     // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
@@ -231,6 +232,7 @@ function getLightColors() {
     backgroundColor: '255, 255, 255',
     buttonBackgroundColor: '#FFFFFFFF',
     menuBackgroundColor: 'hsla(0, 0%, 95%, 0.8)',
+    errorColor: '#FA6E50',
 
     // macOS "Dynamic colors":
     // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors

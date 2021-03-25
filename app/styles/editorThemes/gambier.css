@@ -63,8 +63,8 @@
 }
 
 .cm-code {
-  font-size: 0.9em;
   font-family: "SFMono-Regular";
+  font-size: 0.9em;
   color: var(--code-source);
   background-color: var(--code-source-bg);
 }
@@ -72,17 +72,17 @@
   color: var(--code-source-md);
 }
 
-.cm-em {
+.cm-emphasis {
   color: var(--emphasis);
   font-style: italic;
 }
-.cm-em.cm-md {
+.cm-emphasis.cm-md {
   color: var(--emphasis-md);
 }
 
 .CodeMirror-line.fencedcodeblock {
-  font-size: 0.9em;
   font-family: "SFMono-Regular";
+  font-size: 0.9em;
   background-color: var(--fencedcodeblock-bg);
   border-radius: 3px;
 }
@@ -184,6 +184,7 @@
 .cm-image.cm-url {
   color: var(--image-source-url);
   text-decoration: underline;
+  text-decoration-skip: edges;
   word-break: break-all;
 }
 .cm-image.cm-title {
@@ -195,6 +196,10 @@
 
 .CodeMirror-line.figure {
   background-color: rgba(241, 188, 127, 0.2) !important;
+}
+
+.cm-incomplete {
+  border-bottom: 2px solid salmon;
 }
 
 .mark.link {
@@ -213,6 +218,10 @@
   border-color: var(--link-mark-highlight-bg);
 }
 
+.metaKeyDown .mark.link:hover {
+  cursor: pointer;
+}
+
 .cm-link,
 .cm-autolink-url,
 .cm-autolink-email {
@@ -225,6 +234,7 @@
 .cm-autolink-email.cm-url {
   color: var(--link-source-url);
   text-decoration: underline;
+  text-decoration-skip: edges;
   opacity: 0.8;
   word-break: break-all;
 }
@@ -268,14 +278,14 @@
 }
 
 .cm-texmath-inline {
-  font-size: 0.9em;
   font-family: "SFMono-Regular";
+  font-size: 0.9em;
   background-color: var(--texmath-inline);
 }
 
 .CodeMirror-line.texmath-display {
-  font-size: 0.9em;
   font-family: "SFMono-Regular";
+  font-size: 0.9em;
   background-color: var(--texmath-display);
 }
 
@@ -298,18 +308,21 @@
 }
 
 .cm-bare-url,
-.cm-email-in-brackets,
+.cm-emphasisail-in-brackets,
 .cm-url-in-brackets {
   color: var(--in-brackets);
 }
 .cm-bare-url.cm-md,
-.cm-email-in-brackets.cm-md,
+.cm-emphasisail-in-brackets.cm-md,
 .cm-url-in-brackets.cm-md {
   color: var(--in-brackets-md);
 }
 
+.metaKeyDown .cm-link.cm-url:hover {
+  cursor: pointer;
+}
 .metaKeyDown .cm-bare-url:hover,
-.metaKeyDown .cm-email-in-brackets:hover,
+.metaKeyDown .cm-emphasisail-in-brackets:hover,
 .metaKeyDown .cm-url-in-brackets:hover {
   border-bottom: 1px solid var(--in-brackets);
   cursor: pointer;
@@ -729,13 +742,13 @@ div.CodeMirror-dragcursors {
 .CodeMirror-line::selection,
 .CodeMirror-line > span::selection,
 .CodeMirror-line > span > span::selection {
-  background: #d7d4f0;
+  background: #1900ff;
 }
 
 .CodeMirror-line::-moz-selection,
 .CodeMirror-line > span::-moz-selection,
 .CodeMirror-line > span > span::-moz-selection {
-  background: #d7d4f0;
+  background: #00ffe1;
 }
 
 .cm-searching {
@@ -771,6 +784,21 @@ span.CodeMirror-selectedtext {
   --clr-gray-darker: hsl(0, 0%, 15%);
   --clr-gray-lighter: hsl(0, 0%, 85%);
   --mark-borderRadius: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  .CodeMirror {
+    --link-mark: #0d67dc;
+    --link-mark-bg: rgba(13, 103, 220, 0.1);
+    --link-mark-border: rgba(4, 35, 76, 0.1);
+    --link-mark-highlight: white;
+    --link-mark-highlight-bg: #0d67dc;
+    --link-source: #0d67dc;
+    --link-source-url: rgba(13, 103, 220, 0.8);
+    --link-source-title: rgba(13, 103, 220, 0.6);
+    --link-source-bg: rgba(13, 103, 220, 0.05);
+    --link-source-md: rgba(13, 103, 220, 0.6);
+    --link-ref-definition-bg: rgba(13, 103, 220, 0.1);
+  }
 }
 @media (prefers-color-scheme: light) {
   .CodeMirror {

@@ -7,22 +7,58 @@
   export let cm = null
   export let element = null
 
-  let definition = null
+  let isFull = false
+  let isCollapsed = false
   let multipleDefinitionsFound = false
   let noDefinitionsFound = false
 
+  let label  
+  let text
+  let definitionUrl
+  let definitionTitle
+  
   $: { 
-    if (element) {
-      const definitions = getReferenceDefinitions(cm, element.label.string, 'link')
 
+    isFull = element.type.includes('full')
+    isCollapsed = element.type.includes('collapsed')
+
+    // Get `label`
+    // Full reference links: `[text][label]`
+    // Collapsed reference links: `[label][]`
+    
+    label = element.spans.find((f) => f.type.includes('label'))
+    
+    if (!label) {
+      const index = isFull ? 
+        element.markdown.indexOf('][') + 2 + element.start :
+        element.start + 1
+      label = { start: index, end: index, string: '' }
+    }
+
+    // Get `text`, if element is a full reference link.
+    // E.g. `[text][label]`
+    if (isFull) {
+      text = element.spans.find((f) => f.type.includes('text'))
+      if (!text) {
+        text = { start: element.start + 1, end: element.start + 1, string: '' }
+      }
+    }
+
+    if (label.string !== '') {
+      const definitions = getReferenceDefinitions(cm, label.string, 'link')
+      
       noDefinitionsFound = definitions.length == 0
       multipleDefinitionsFound = definitions.length > 1
 
       // If there's one match, select it
       // Else set definition null
-      definition = definitions.length == 1 ?
-        definition = definitions[0] :
-        null
+      if (definitions.length == 1) {
+        definitionUrl = definitions[0].spans.find((s) => s.type.includes('url'))?.string
+        definitionTitle = definitions[0].spans.find((s) => s.type.includes('title'))?.string
+      } else {
+        definitionUrl = undefined
+        definitionTitle = undefined
+      }
     }
   }
 
@@ -36,7 +72,7 @@
 
 <Separator margin={'0 0 8px'} />
 
-{#if element.type.includes('full')}
+{#if isFull }
   
   <!------ FULL ------>
 
@@ -46,9 +82,9 @@
       multiLineMaxHeight='200'
       width='100%' 
       compact={true} 
-      bind:value={element.text.string} 
+      bind:value={text.string} 
       on:input={(evt) => 
-        writeToDoc(cm, evt.target.textContent, element.line, element.text.start, element.text.end)
+        writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end)
       }
     />
   </FormRow>
@@ -57,14 +93,14 @@
     <InputText 
       width='100%' 
       compact={true} 
-      bind:value={element.label.string} 
+      bind:value={label.string} 
       on:input={(evt) => 
-        writeToDoc(cm, evt.target.textContent, element.line, element.label.start, element.label.end)
+        writeToDoc(cm, evt.target.textContent, element.line, label.start, label.end)
       }
     />
   </FormRow>
 
-{:else}
+{:else if isCollapsed}
 
   <!------ COLLAPSED OR SHORTCUT ------>
 
@@ -72,9 +108,9 @@
     <InputText 
       width='100%' 
       compact={true} 
-      bind:value={element.label.string} 
+      bind:value={label.string} 
       on:input={(evt) => 
-        writeToDoc(cm, evt.target.textContent, element.line, element.label.start, element.label.end)
+        writeToDoc(cm, evt.target.textContent, element.line, label.start, label.end)
       }
     />
   </FormRow>
@@ -85,9 +121,9 @@
 
 <div class="definition">
   {#if noDefinitionsFound}
-    <div class="error-message">No definitions for <span class="id">{element.label.string}</span> found.</div>
+    <div class="error-message">No definitions for <span class="id">{label.string}</span> found.</div>
   {:else if multipleDefinitionsFound}
-    <div class="error-message">Multiple definitions for <span class="id">{element.label.string}</span> found.</div>
+    <div class="error-message">Multiple definitions for <span class="id">{label.string}</span> found.</div>
   {:else}
 
     <FormRow label={'URL:'} leftColumn={'30px'} margin={'0'} multiLine={true} labelTopOffset={'4px'} compact={true}>
@@ -97,11 +133,11 @@
         editable={false}
         width='100%' 
         compact={true} 
-        bind:value={definition.url.string} 
+        bind:value={definitionUrl} 
       />
     </FormRow>
 
-    {#if definition.title}
+    {#if definitionTitle}
       <Separator margin={'2px 0 '} />
       <FormRow label={'Title:'} leftColumn={'30px'} margin={'0'} multiLine={true} labelTopOffset={'4px'} compact={true}>
         <InputText
@@ -110,10 +146,9 @@
           editable={false}
           width='100%' 
           compact={true} 
-          bind:value={definition.title.string} 
+          bind:value={definitionTitle} 
         />
       </FormRow>
     {/if}
   {/if}
 </div>
-

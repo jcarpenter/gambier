@@ -4,20 +4,6 @@ import { selectProjectDirectoryFromDialog } from './actions/index.js'
 import { remove } from 'fs-extra'
 import { themes } from './Themes.js'
 
-/*
-Main instantiates new MenuBarManager instance. 
-Constructor creates variables, change listeners, and calls init().
-*/
-
-// I want to get values from Editor.svelte to editor
-// Example I'll use: toggle source mode
-// User selects `View > Source mode`
-// Enabled == Is active project `panel.sourceMode` true?
-// Dispatch command to reducer
-// Reducer sets value to panel
-// EditorPanel.svelte detects the change, and updates the `sourceMode` prop of Editor.svelte
-// Editor.svelte, when value changes, tells editor.js
-
 const isMac = process.platform === 'darwin'
 let menu
 let menuItems = {}
@@ -25,7 +11,6 @@ let menuItems = {}
 /**
  * On startup, create initial menu bar, and create change listeners.
  */
-
 export function init() {
 
   // ------ SETUP CHANGE LISTENERS ------ //
@@ -313,7 +298,6 @@ function getMenuItems() {
 
   // -------- Edit -------- //
 
-
   // mI.startspeaking = new MenuItem({ role: 'startspeaking' })
   // mI.stopspeaking = new MenuItem({ role: 'stopspeaking' })
 
@@ -360,6 +344,27 @@ function getMenuItems() {
             ]
           }
         ] : []
+      ]
+    }
+  ))
+
+
+  // -------- Format -------- //
+
+  items.emphasis = new MenuItem({
+    label: 'Emphasis',
+    accelerator: 'CmdOrCtrl+I',
+    enabled: project !== undefined,
+    click(item, focusedWindow) {
+      focusedWindow.webContents.send('formatCommand', 'emphasis')
+    }
+  })
+
+  items.topLevel.push(new MenuItem(
+    {
+      label: 'Format',
+      submenu: [
+        items.emphasis
       ]
     }
   ))

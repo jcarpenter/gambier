@@ -1,32 +1,52 @@
 <script>
+  import { tick } from "svelte";
+
   import { getFromAndTo, writeToDoc } from "../editor-utils";
+  import { getElementAt } from "../map";
 
   export let cm
-  export let element
-  export let highlighted = false
+  export let textMarker = null
+  export let type = '' // element.type
+  export let classes = [] // element.classes
+  
+  let el // This dom element
+  let isEditable = false // Depends on `type`
+  let displayedText = '' // Depends on the span and isEditable
+  let isHighlighted = false
 
-  let el
-  let isEditable = false
-  let displayedText = ''
+  $: textMarker, updateDisplayedText()
+  
+  /**
+   * Get displayed text. 
+   * Called on initial setup, once textMarker is set.
+   * and whenever `onChanges` handler detects a change
+   * has effected textMarker.
+   * Ignore non-editable marks.
+   */
+  export async function updateDisplayedText() {
 
-  $: element, getDisplayedText()
+    if (!textMarker) return
+    
+    const { from, to } = textMarker.find()
+    const element = getElementAt(cm, from.line, from.ch + 1)
+    isEditable = element.mark.isEditable
+    if (!isEditable) return
 
-  // Get text that mark displays. If the mark is editable,
-  // this is a string of one of the child elements, e.g.
-  // `content`, or `text.
-  function getDisplayedText() {
-    if (!element) return
-    isEditable = element.type.includesAny('link', 'url-in-brackets')
+    // Only update displayedText if there's a new value.
+    // const newDisplayedText = element[element.mark.displayedSpanName].string
+    // if (displayedText !== newDisplayedText) {
+    //   displayedText = newDisplayedText
+    // }
+    const newDisplayedText = element.spans.find((c) => c.type.includes(element.mark.displayedSpanName)).string
+    if (displayedText !== newDisplayedText) displayedText = newDisplayedText
 
-    if (isEditable) {
-      if (element.type.includesAny('collapsed', 'shortcut')) {
-        displayedText = element.label.string
-      } else if (element.type == 'url-in-brackets') {
-        displayedText = element.url.string
-      } else {
-        displayedText = element.text.string
-      }
-    }
+    // Wait for state changes to apply to DOM,
+    // then call changed() on the textMarker.
+    // This tells CodeMirror that a resize has happened,
+    // which is critical for correct cursor positioning.
+    await tick()
+    textMarker.changed()
+    
   }
 
 
@@ -35,9 +55,10 @@
   /**
    * When the doc selection changes (or the cursor moves), a `beforeSelectionChange` listener calls this function on each mark in the doc, and passes in the new selection origin and ranges.
    */
-  export function onSelectionChange(origin, ranges) {
-    for (const r of ranges) {
-      const { from, to } = getFromAndTo(r)
+  export function onSelectionChange() {
+    const selections = cm.listSelections()
+    for (const range of selections) {
+      const { from, to } = getFromAndTo(range)
       if (isEditable) checkIfArrowedInto(origin, from, to)
       checkIfInsideSelection(from, to)
     }
@@ -45,20 +66,20 @@
 
   /**
    * If user arrows into mark, place cursor inside the mark, on the appropriate edge. Sounds obvious, but we have to implement this manually, by checking
-   * @param from
-   * @param to
+   * @param selectionFrom
+   * @param selectionTo
    */
-  function checkIfArrowedInto(origin, from, to) {
+  function checkIfArrowedInto(origin, selectionFrom, selectionTo) {
 
-    const { line, start, end } = element
+    const { from, to } = textMarker.find()
 
     // Our criteria for whether to arrow into the mark.
     const keyWasPressed = origin == '+move'
-    const markIsNotHighlighted = !highlighted
+    const markIsNotHighlighted = !isHighlighted
     const isSingleChSelectionOnSameLineAsMark = 
-      from.line == to.line && // Single line
-      from.ch == to.ch && // Single ch
-      from.line == line // Same line as mark
+      selectionFrom.line == selectionTo.line && // Single line
+      selectionFrom.ch == selectionTo.ch && // Single ch
+      selectionFrom.line == from.line // Same line as mark
 
     // Only proceed if the above are all true. Highlighted is important because when the mark is highlighted, we want the cursor to skip over the mark, instead of entering. By not proceeding, CM handles the arrow without interference, and the cursor skips the mark.
     if (!keyWasPressed || !markIsNotHighlighted || !isSingleChSelectionOnSameLineAsMark) return
@@ -66,9 +87,11 @@
     // Set the cursor inside the mark on the correct side.
     // All the weird stuff with `createRange` etc is just part of how
     // setting text selections works with HTML, apparently.
-    const enteredLeft = to.ch == end && to.sticky == null
-    const enteredRight = to.ch == start && to.sticky == null
+    const enteredLeft = selectionTo.ch == to.ch && selectionTo.sticky == null
+    const enteredRight = selectionTo.ch == from.ch && selectionTo.sticky == null
+    
     if (!enteredLeft && !enteredRight) return
+   
     const placeCursorAt = enteredLeft ? 0 : displayedText.length
     const range = document.createRange();
     const sel = window.getSelection();
@@ -82,42 +105,47 @@
   /**
    * If mark is inside a text selection, highlight it. 
    * Else, make sure it's not highlighted.
-   * @param from
-   * @param to
+   * @param selectionFrom
+   * @param selectionTo
    */
-  function checkIfInsideSelection(from, to) {
-
-    const { line, start, end } = element
-
-    const isMultiLineSelection = from.line !== to.line
+  function checkIfInsideSelection(selectionFrom, selectionTo) {
+    
+    const { from, to } = textMarker.find()
+    const isMultiLineSelection = selectionFrom.line !== selectionTo.line
     const isMultiChSelectionOnSameLineAsMark = 
-      from.line == to.line &&
-      from.ch !== to.ch
-      from.line == line
+      selectionFrom.line == selectionTo.line &&
+      selectionFrom.ch !== selectionTo.ch
+      selectionFrom.line == from.line
 
     if (isMultiLineSelection) {
       var isInside = 
-        (from.line == line && from.ch <= start) ||
-        (from.line < line && line < to.line) ||
-        (to.line == line && to.ch >= end)
+        (selectionFrom.line == from.line && selectionFrom.ch <= from.ch) ||
+        (selectionFrom.line < from.line && from.line < selectionTo.line) ||
+        (selectionTo.line == from.line && selectionTo.ch >= to.ch)
     } else if (isMultiChSelectionOnSameLineAsMark) {
       var isInside =
-        line == from.line &&
-        from.ch <= start && end <= to.ch
+        from.line == selectionFrom.line &&
+        selectionFrom.ch <= from.ch && to.ch <= selectionTo.ch
     } else {
       var isInside = false
     }
 
-    highlighted = isInside
+    isHighlighted = isInside
   }
 
+  /**
+   * Set selection of CM instance.
+   * If editable, place cursor at start of mark/element.
+   * If NOT editable, select the entire mark/element
+   * @param evt
+   */
   function selectMark(evt) {
-    const { line, start, end } = element
+    const { from, to } = textMarker.find()
     // Clear existing editor text selection, otherwise it will remain visible while the cursor is inside the contenteditable.
     if (isEditable) {
-      cm.setCursor(element.line, element.start)
+      cm.setCursor(to.line, to.ch)
     } else {
-      cm.setSelection({line, ch: start}, {line, ch: end})
+      cm.setSelection(from, to)
     }
   }
 
@@ -134,33 +162,55 @@
    * @param evt
    */
   export function openWizard() {
-    const { line, start, end } = element
+    const { from, to } = textMarker.find()
     // Notice we seem to select from end-to-start. With `setSelection`
     // the first value is the anchor, and second is the head. So we're
     // telling CM to place the anchor on the right. We do this so that
     // when alt-tabbing, we skip over the element child spans.
-    cm.setSelection({ line, ch: end }, { line, ch: start })
-    highlighted = true
-    cm.wizard.show(element)
+    // console.log(from, to)
+    cm.setSelection(from, to)
+    isHighlighted = true
+    cm.wizard.show(textMarker, type)
   }
 
 
   // --------- EDITABLE MARK FUNCTIONS --------- //
+
+  /**
+   * Open url on command click (if there is a url)
+   */
+  function onClick(evt) {
+    if (evt.metaKey && type.includes('link')) {
+      const { from, to } = textMarker.find()
+      const element = getElementAt(cm, from.line, from.ch + 1)
+      const url = element.spans.find((s) => s.type.includes('url'))
+      if (url?.string) {
+        window.api.send('openUrlInDefaultBrowser', url.string)
+      } else {
+        // TODO: Handle missing url?
+        // Mark should be visibly "incomplete", so maybe we
+        // just do nothing on click. And/or don't style with 
+        // cursor: pointer. 
+      }
+    }
+  }
   
   function onKeyDown(evt) {
     
-    const { line, start, end } = element
-    
+    const { from, to } = textMarker.find()
+
     switch (evt.key) {
       case 'Backspace':
-      case 'Delete':
-        cm.replaceRange('', { line, ch: start }, { line, ch: end })
-        cm.focus()
+      case 'Delete': 
+        if (isHighlighted) {
+          cm.replaceRange('', from, to)
+          cm.focus()
+        }
         break
       case 'ArrowLeft':
         const atLeftEdge = window.getSelection().getRangeAt(0).endOffset == 0
         if (atLeftEdge) {
-          cm.setCursor(line, start)
+          cm.setCursor(from.line, from.ch)
           cm.focus()
           if (evt.altKey) {
             // If alt key is pressed, trigger a second alt-left in CodeMirror, 
@@ -178,7 +228,7 @@
       case 'ArrowRight':
         const atRightEdge = window.getSelection().getRangeAt(0).endOffset == el.innerText.length
         if (atRightEdge) {
-          cm.setCursor(line, end)
+          cm.setCursor(to.line, to.ch)
           cm.focus()
           // If alt key is pressed, trigger a second alt-right in CodeMirror, 
           // to correctly reproduce expected behaviour (cursor jumps to 
@@ -193,6 +243,16 @@
           }
         }
         break
+      case 'ArrowUp':
+        evt.preventDefault()
+        cm.focus()
+        cm.triggerOnKeyDown({ type: 'keydown', keyCode: 38, altKey: false, shiftKey: false,})
+        break
+      case 'ArrowDown':
+        evt.preventDefault()
+        cm.focus()
+        cm.triggerOnKeyDown({ type: 'keydown', keyCode: 40, altKey: false, shiftKey: false,})
+        break
       case 'Tab':
         evt.preventDefault()
         if (evt.altKey) {
@@ -202,42 +262,46 @@
         break
     }
   }
+
+  /**
+   * Write changes to the document.
+   */
+  function writeChanges(evt) {
+    // Determine which span to write to. Depends on type and spanName.
+    const { from, to } = textMarker.find()
+    const element = getElementAt(cm, from.line, from.ch + 1)
+    const { line, start, end } = element[element.mark.displayedSpanName]
+    // Write changes
+    writeToDoc(cm, evt.target.textContent, line, start, end)
+    // Tell CodeMirror that TextMarker changed size
+    textMarker.changed()
+  }
 </script>
 
 <style type="text/scss"></style>
 
 <svelte:options accessors={true}/>
 
-{#if element.type.equalsAny('url-in-brackets')}
+{#if isEditable}
   <span
     contenteditable
     tabindex="0"
     bind:this={el}
-    class={`mark editable ${element.classes.join(' ')}`}
-    class:highlighted
-    bind:textContent={element.url.string}
-    on:mousedown={selectMark}
-    on:keydown={onKeyDown}
-    on:dblclick={openWizard}
-  />
-{:else if isEditable}
-  <span
-    contenteditable
-    tabindex="0"
-    bind:this={el}
-    class={`mark editable ${element.classes.join(' ')}`}
-    class:highlighted
+    class={`mark editable ${classes.join(' ')}`}
+    class:highlighted={isHighlighted}
     bind:textContent={displayedText}
     on:mousedown={selectMark}
     on:keydown={onKeyDown}
+    on:click={onClick}
     on:dblclick={openWizard}
+    on:input={writeChanges}
   />
 {:else}
   <span
     tabindex="0"
     bind:this={el}
-    class={`mark ${element.classes.join(' ')}`}
-    class:highlighted
+    class={`mark ${classes.join(' ')}`}
+    class:highlighted={isHighlighted}
     on:mousedown={selectMark}
     on:dblclick={openWizard}
   />

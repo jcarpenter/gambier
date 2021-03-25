@@ -28,21 +28,26 @@ import { contextBridge, ipcRenderer } from 'electron'
 //   )
 // })
 
-// console.log("Hi there")
 
-// Whitelist channels
+
+//------ Whitelist channels ------//
 
 // Renderer "receives" from Main
-let validReceiveChannels = ['mainRequestsSaveFocusedPanel', 'mainRequestsSaveAsFocusedPanel', 'mainRequestsSaveAll', 'mainRequestsCloseFocusedPanel', 'mainRequestsCreateNewDocInFocusedPanel', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain']
+let validReceiveChannels = ['formatCommand', 'mainRequestsSaveFocusedPanel', 'mainRequestsSaveAsFocusedPanel', 'mainRequestsSaveAll', 'mainRequestsCloseFocusedPanel', 'mainRequestsCreateNewDocInFocusedPanel', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain']
 
 // Renderer "sends" to Main
-let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'saveFileThenCloseWindow', 'saveFileThenQuitApp', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch', 'moveOrCopyIntoFolder', 'replaceAll']
+let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch', 'replaceAll', 'saveImageFromClipboard']
 
 // Round trip: Renderer --> Main --> Renderer
-let validInvokeChannels = ['getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb', 'getColors']
+let validInvokeChannels = ['moveOrCopyFileIntoProject', 'getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb', 'getColors']
 
-// "Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object."
-// Implementation per: https://stackoverflow.com/a/63894861
+
+//------ Receive, Send, Invoke ------//
+
+// "Expose protected methods that allow the renderer process to use the ipcRenderer without exposing the entire object." - Implementation per: https://stackoverflow.com/a/63894861
+
+// "The api provided to exposeInMainWorld must be a Function, String, Number, Array, Boolean, or an object whose keys are strings and values are a Function, String, Number, Array, Boolean, or another nested object that meets the same conditions." - https://www.electronjs.org/docs/api/context-bridge#api
+
 contextBridge.exposeInMainWorld('api', {
 
   // Main -> Renderer

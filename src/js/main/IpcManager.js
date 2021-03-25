@@ -7,25 +7,54 @@ import matter from 'gray-matter'
 
 export function init() {
 
-  // -------- IPC: Renderer "receives" from Main -------- //
-
-  // On change, send updated state to renderer (each BrowserWindow)
-  // global.store.onDidAnyChange(async (state, oldState) => {
-  //   const windows = BrowserWindow.getAllWindows()
-  //   if (windows.length) {
-  //     windows.forEach((win) => win.webContents.send(' ', state, oldState))
-  //   }
-  // })
 
   // -------- IPC: Renderer "sends" to Main -------- //
+
+  ipcMain.on('saveImageFromClipboard', async (evt) => {
+    const win = BrowserWindow.fromWebContents(evt.sender)
+    const project = global.state().projects.byId[win.projectId]
+    console.log(project)
+
+    const img = clipboard.readImage()
+    const png = img.toPNG()
+    await writeFile(`${project.directory}/test.png`, png)
+    // console.log('It\'s saved!')
+  })
 
   ipcMain.on('showWindow', (evt) => {
     const win = BrowserWindow.fromWebContents(evt.sender)
     win.show()
   })
 
+  function isValidHttpUrl(string) {
+    let url;
+
+    try {
+      url = new URL(string);
+    } catch (_) {
+      return false;
+    }
+
+    return url.protocol === "http:" || url.protocol === "https:";
+  }
+
   ipcMain.on('openUrlInDefaultBrowser', (evt, url) => {
-    shell.openExternal(url)
+    // Check if URL is valid.
+    // Per https://stackoverflow.com/a/43467144
+    // If no, try appending protocol and check again.
+    // This handles cases like `apple.com`, where user
+    // leaves off protocol for sake of brevity.
+    // 
+    let isValid = isValidHttpUrl(url)
+    if (!isValid) {
+      url = `http://${url}`
+      isValid = isValidHttpUrl(url)
+    }
+    try {
+      shell.openExternal(url)
+    } catch (err) {
+      console.log('Bar URL')
+    }
   })
 
   ipcMain.on('replaceAll', (evt, query, replaceWith, filePaths, isMatchCase, isMatchExactPhrase, isMetaKeyPressed) => {
@@ -63,54 +92,6 @@ export function init() {
   })
 
 
-  ipcMain.on('moveOrCopyIntoFolder', async (evt, filePath, folderPath, isCopy) => {
-    // Get destination
-    const fileName = path.basename(filePath)
-    let destinationPath = path.format({
-      dir: folderPath,
-      base: fileName
-    })
-
-    // Does file already exist at destination?
-    const fileAlreadyExists = existsSync(destinationPath)
-
-    // If yes, prompt user to confirm overwrite. 
-    // Else, just move/copy
-    if (fileAlreadyExists) {
-      const selectedButtonId = dialog.showMessageBoxSync({
-        type: 'question',
-        message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
-        buttons: ['Keep Both', 'Stop', 'Replace'],
-        cancelId: 1
-      })
-      switch (selectedButtonId) {
-        // Keep both
-        case 0:
-          destinationPath = getIncrementedFileName(destinationPath)
-          copyFileSync(filePath, destinationPath)
-          break
-        // Stop (Do nothing)
-        case 1:
-          break
-        // Replace
-        case 2:
-          if (isCopy) {
-            copyFileSync(filePath, destinationPath)
-          } else {
-            renameSync(filePath, destinationPath)
-          }
-          break
-      }
-    } else {
-      if (isCopy) {
-        copyFileSync(filePath, destinationPath)
-      } else {
-        renameSync(filePath, destinationPath)
-      }
-    }
-  })
-
-
   ipcMain.on('dispatch', async (evt, action) => {
 
     const win = BrowserWindow.fromWebContents(evt.sender)
@@ -130,17 +111,17 @@ export function init() {
       case ('CLOSE_PANEL'):
       case ('OPEN_NEW_DOC_IN_PANEL'):
       case ('OPEN_DOC_IN_PANEL'): {
-        
+
         const project = global.state().projects.byId[win.projectId]
         const panel = project.panels[action.panelIndex]
-  
+
         if (panel.unsavedChanges) {
           promptToSaveChangesThenForwardAction(action, win)
         } else {
           // No unsaved changes. Forward the action.
           store.dispatch({ ...action, saveOutcome: 'noUnsavedChanges' }, win)
         }
-  
+
         break
       }
 
@@ -167,11 +148,6 @@ export function init() {
   })
 
   // -------- IPC: Invoke -------- //
-
-  // NOTE: We handle this in DbManager.js
-  // ipcMain.handle('queryDb', (evt, params) => {
-  //   ...
-  // })
 
   ipcMain.handle('getState', (evt) => {
     return global.state()
@@ -201,39 +177,76 @@ export function init() {
   ipcMain.handle('getFormatOfClipboard', (evt) => {
     return clipboard.availableFormats()
   })
+
+  ipcMain.handle('moveOrCopyFileIntoProject', async (evt, filePath, folderPath, isCopy) => {
+
+    let wasSuccess = false
+
+    // Get destination
+    const fileName = path.basename(filePath)
+    let destinationPath = path.format({
+      dir: folderPath,
+      base: fileName
+    })
+
+    // Does file already exist at destination?
+    const fileAlreadyExists = existsSync(destinationPath)
+
+    // If yes, prompt user to confirm overwrite. 
+    // Else, just move/copy
+    if (fileAlreadyExists) {
+      const selectedButtonId = dialog.showMessageBoxSync({
+        type: 'question',
+        message: `An item named ${fileName} already exists in this location. Do you want to replace it with the one you’re moving?`,
+        buttons: ['Keep Both', 'Stop', 'Replace'],
+        cancelId: 1
+      })
+      switch (selectedButtonId) {
+
+        // Keep both
+        case 0:
+          destinationPath = getIncrementedFileName(destinationPath)
+          copyFileSync(filePath, destinationPath)
+          wasSuccess = true
+
+        // Stop (Do nothing)
+        case 1:
+          wasSuccess = false
+
+        // Replace
+        case 2:
+          if (isCopy) {
+            copyFileSync(filePath, destinationPath)
+          } else {
+            renameSync(filePath, destinationPath)
+          }
+          wasSuccess = true
+      }
+    } else {
+      if (isCopy) {
+        copyFileSync(filePath, destinationPath)
+      } else {
+        renameSync(filePath, destinationPath)
+      }
+      wasSuccess = true
+    }
+
+    return {
+      wasSuccess,
+      destinationPath
+    }
+  })
+
+
+
+
 }
 
 
 
-// -------- IPC: Renderer "sends" to Main -------- //
-
-
-// // ipcMain.on('saveProjectStateToDisk', (evt, state) => {
-// //   const win = BrowserWindow.fromWebContents(evt.sender)
-// //   const projects = store.store.projects.slice(0)
-// //   const indexOfProjectToUpdate = projects.findIndex((p) => p.windowId == state.windowId)
-// //   projects[indexOfProjectToUpdate] = state
-// //   store.set('projects', projects)
-// // })
-
-// // ipcMain.on('saveFileThenCloseWindow', async (event, path, data) => {
-// //   await writeFile(path, data, 'utf8')
-// //   canCloseWindowSafely = true
-// //   win.close()
-// // })
-
-// // ipcMain.on('saveFileThenQuitApp', async (event, path, data) => {
-// //   await writeFile(path, data, 'utf8')
-// //   canQuitAppSafely = true
-// //   app.quit()
-// // })
-
 
 
 // -------- IPC: Invoke -------- //
-
-
-
 
 // // ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
 // //   // return path.resolve(basePath, filepath)
@@ -276,21 +289,10 @@ export function init() {
 // // })
 
 
-
-// // ipcMain.handle('getState', async (event) => {
-// //   return store.store
-// // })
-
 // // ipcMain.handle('getCitations', (event) => {
 // //   return projectCitations.getCitations()
 // // })
 
-// // ipcMain.handle('getFileByPath', async (event, filePath, encoding) => {
-
-// //   // Load file and return
-// //   let file = await readFile(filePath, encoding)
-// //   return file
-// // })
 
 // // ipcMain.handle('getFileById', async (event, id, encoding) => {
 
@@ -335,7 +337,7 @@ function getTitleFromDoc(data) {
 
   // Get first header in content
   // https://regex101.com/r/oR5sec/1
-  
+
   // Try to get title from front matter
   if (!isEmpty && frontMatter.title) return frontMatter.title
 

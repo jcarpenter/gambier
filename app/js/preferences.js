@@ -1063,6 +1063,464 @@ return typeDetect;
 })));
 });
 
+/* globals Symbol: false, Uint8Array: false, WeakMap: false */
+/*!
+ * deep-eql
+ * Copyright(c) 2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+
+function FakeMap() {
+  this._key = 'chai/deep-eql__' + Math.random() + Date.now();
+}
+
+FakeMap.prototype = {
+  get: function getMap(key) {
+    return key[this._key];
+  },
+  set: function setMap(key, value) {
+    if (Object.isExtensible(key)) {
+      Object.defineProperty(key, this._key, {
+        value: value,
+        configurable: true,
+      });
+    }
+  },
+};
+
+var MemoizeMap = typeof WeakMap === 'function' ? WeakMap : FakeMap;
+/*!
+ * Check to see if the MemoizeMap has recorded a result of the two operands
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {MemoizeMap} memoizeMap
+ * @returns {Boolean|null} result
+*/
+function memoizeCompare(leftHandOperand, rightHandOperand, memoizeMap) {
+  // Technically, WeakMap keys can *only* be objects, not primitives.
+  if (!memoizeMap || isPrimitive(leftHandOperand) || isPrimitive(rightHandOperand)) {
+    return null;
+  }
+  var leftHandMap = memoizeMap.get(leftHandOperand);
+  if (leftHandMap) {
+    var result = leftHandMap.get(rightHandOperand);
+    if (typeof result === 'boolean') {
+      return result;
+    }
+  }
+  return null;
+}
+
+/*!
+ * Set the result of the equality into the MemoizeMap
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {MemoizeMap} memoizeMap
+ * @param {Boolean} result
+*/
+function memoizeSet(leftHandOperand, rightHandOperand, memoizeMap, result) {
+  // Technically, WeakMap keys can *only* be objects, not primitives.
+  if (!memoizeMap || isPrimitive(leftHandOperand) || isPrimitive(rightHandOperand)) {
+    return;
+  }
+  var leftHandMap = memoizeMap.get(leftHandOperand);
+  if (leftHandMap) {
+    leftHandMap.set(rightHandOperand, result);
+  } else {
+    leftHandMap = new MemoizeMap();
+    leftHandMap.set(rightHandOperand, result);
+    memoizeMap.set(leftHandOperand, leftHandMap);
+  }
+}
+
+/*!
+ * Primary Export
+ */
+
+var deepEql = deepEqual;
+var MemoizeMap_1 = MemoizeMap;
+
+/**
+ * Assert deeply nested sameValue equality between two objects of any type.
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Object} [options] (optional) Additional options
+ * @param {Array} [options.comparator] (optional) Override default algorithm, determining custom equality.
+ * @param {Array} [options.memoize] (optional) Provide a custom memoization object which will cache the results of
+    complex objects for a speed boost. By passing `false` you can disable memoization, but this will cause circular
+    references to blow the stack.
+ * @return {Boolean} equal match
+ */
+function deepEqual(leftHandOperand, rightHandOperand, options) {
+  // If we have a comparator, we can't assume anything; so bail to its check first.
+  if (options && options.comparator) {
+    return extensiveDeepEqual(leftHandOperand, rightHandOperand, options);
+  }
+
+  var simpleResult = simpleEqual(leftHandOperand, rightHandOperand);
+  if (simpleResult !== null) {
+    return simpleResult;
+  }
+
+  // Deeper comparisons are pushed through to a larger function
+  return extensiveDeepEqual(leftHandOperand, rightHandOperand, options);
+}
+
+/**
+ * Many comparisons can be canceled out early via simple equality or primitive checks.
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @return {Boolean|null} equal match
+ */
+function simpleEqual(leftHandOperand, rightHandOperand) {
+  // Equal references (except for Numbers) can be returned early
+  if (leftHandOperand === rightHandOperand) {
+    // Handle +-0 cases
+    return leftHandOperand !== 0 || 1 / leftHandOperand === 1 / rightHandOperand;
+  }
+
+  // handle NaN cases
+  if (
+    leftHandOperand !== leftHandOperand && // eslint-disable-line no-self-compare
+    rightHandOperand !== rightHandOperand // eslint-disable-line no-self-compare
+  ) {
+    return true;
+  }
+
+  // Anything that is not an 'object', i.e. symbols, functions, booleans, numbers,
+  // strings, and undefined, can be compared by reference.
+  if (isPrimitive(leftHandOperand) || isPrimitive(rightHandOperand)) {
+    // Easy out b/c it would have passed the first equality check
+    return false;
+  }
+  return null;
+}
+
+/*!
+ * The main logic of the `deepEqual` function.
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Object} [options] (optional) Additional options
+ * @param {Array} [options.comparator] (optional) Override default algorithm, determining custom equality.
+ * @param {Array} [options.memoize] (optional) Provide a custom memoization object which will cache the results of
+    complex objects for a speed boost. By passing `false` you can disable memoization, but this will cause circular
+    references to blow the stack.
+ * @return {Boolean} equal match
+*/
+function extensiveDeepEqual(leftHandOperand, rightHandOperand, options) {
+  options = options || {};
+  options.memoize = options.memoize === false ? false : options.memoize || new MemoizeMap();
+  var comparator = options && options.comparator;
+
+  // Check if a memoized result exists.
+  var memoizeResultLeft = memoizeCompare(leftHandOperand, rightHandOperand, options.memoize);
+  if (memoizeResultLeft !== null) {
+    return memoizeResultLeft;
+  }
+  var memoizeResultRight = memoizeCompare(rightHandOperand, leftHandOperand, options.memoize);
+  if (memoizeResultRight !== null) {
+    return memoizeResultRight;
+  }
+
+  // If a comparator is present, use it.
+  if (comparator) {
+    var comparatorResult = comparator(leftHandOperand, rightHandOperand);
+    // Comparators may return null, in which case we want to go back to default behavior.
+    if (comparatorResult === false || comparatorResult === true) {
+      memoizeSet(leftHandOperand, rightHandOperand, options.memoize, comparatorResult);
+      return comparatorResult;
+    }
+    // To allow comparators to override *any* behavior, we ran them first. Since it didn't decide
+    // what to do, we need to make sure to return the basic tests first before we move on.
+    var simpleResult = simpleEqual(leftHandOperand, rightHandOperand);
+    if (simpleResult !== null) {
+      // Don't memoize this, it takes longer to set/retrieve than to just compare.
+      return simpleResult;
+    }
+  }
+
+  var leftHandType = typeDetect(leftHandOperand);
+  if (leftHandType !== typeDetect(rightHandOperand)) {
+    memoizeSet(leftHandOperand, rightHandOperand, options.memoize, false);
+    return false;
+  }
+
+  // Temporarily set the operands in the memoize object to prevent blowing the stack
+  memoizeSet(leftHandOperand, rightHandOperand, options.memoize, true);
+
+  var result = extensiveDeepEqualByType(leftHandOperand, rightHandOperand, leftHandType, options);
+  memoizeSet(leftHandOperand, rightHandOperand, options.memoize, result);
+  return result;
+}
+
+function extensiveDeepEqualByType(leftHandOperand, rightHandOperand, leftHandType, options) {
+  switch (leftHandType) {
+    case 'String':
+    case 'Number':
+    case 'Boolean':
+    case 'Date':
+      // If these types are their instance types (e.g. `new Number`) then re-deepEqual against their values
+      return deepEqual(leftHandOperand.valueOf(), rightHandOperand.valueOf());
+    case 'Promise':
+    case 'Symbol':
+    case 'function':
+    case 'WeakMap':
+    case 'WeakSet':
+      return leftHandOperand === rightHandOperand;
+    case 'Error':
+      return keysEqual(leftHandOperand, rightHandOperand, [ 'name', 'message', 'code' ], options);
+    case 'Arguments':
+    case 'Int8Array':
+    case 'Uint8Array':
+    case 'Uint8ClampedArray':
+    case 'Int16Array':
+    case 'Uint16Array':
+    case 'Int32Array':
+    case 'Uint32Array':
+    case 'Float32Array':
+    case 'Float64Array':
+    case 'Array':
+      return iterableEqual(leftHandOperand, rightHandOperand, options);
+    case 'RegExp':
+      return regexpEqual(leftHandOperand, rightHandOperand);
+    case 'Generator':
+      return generatorEqual(leftHandOperand, rightHandOperand, options);
+    case 'DataView':
+      return iterableEqual(new Uint8Array(leftHandOperand.buffer), new Uint8Array(rightHandOperand.buffer), options);
+    case 'ArrayBuffer':
+      return iterableEqual(new Uint8Array(leftHandOperand), new Uint8Array(rightHandOperand), options);
+    case 'Set':
+      return entriesEqual(leftHandOperand, rightHandOperand, options);
+    case 'Map':
+      return entriesEqual(leftHandOperand, rightHandOperand, options);
+    default:
+      return objectEqual(leftHandOperand, rightHandOperand, options);
+  }
+}
+
+/*!
+ * Compare two Regular Expressions for equality.
+ *
+ * @param {RegExp} leftHandOperand
+ * @param {RegExp} rightHandOperand
+ * @return {Boolean} result
+ */
+
+function regexpEqual(leftHandOperand, rightHandOperand) {
+  return leftHandOperand.toString() === rightHandOperand.toString();
+}
+
+/*!
+ * Compare two Sets/Maps for equality. Faster than other equality functions.
+ *
+ * @param {Set} leftHandOperand
+ * @param {Set} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+
+function entriesEqual(leftHandOperand, rightHandOperand, options) {
+  // IE11 doesn't support Set#entries or Set#@@iterator, so we need manually populate using Set#forEach
+  if (leftHandOperand.size !== rightHandOperand.size) {
+    return false;
+  }
+  if (leftHandOperand.size === 0) {
+    return true;
+  }
+  var leftHandItems = [];
+  var rightHandItems = [];
+  leftHandOperand.forEach(function gatherEntries(key, value) {
+    leftHandItems.push([ key, value ]);
+  });
+  rightHandOperand.forEach(function gatherEntries(key, value) {
+    rightHandItems.push([ key, value ]);
+  });
+  return iterableEqual(leftHandItems.sort(), rightHandItems.sort(), options);
+}
+
+/*!
+ * Simple equality for flat iterable objects such as Arrays, TypedArrays or Node.js buffers.
+ *
+ * @param {Iterable} leftHandOperand
+ * @param {Iterable} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+
+function iterableEqual(leftHandOperand, rightHandOperand, options) {
+  var length = leftHandOperand.length;
+  if (length !== rightHandOperand.length) {
+    return false;
+  }
+  if (length === 0) {
+    return true;
+  }
+  var index = -1;
+  while (++index < length) {
+    if (deepEqual(leftHandOperand[index], rightHandOperand[index], options) === false) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*!
+ * Simple equality for generator objects such as those returned by generator functions.
+ *
+ * @param {Iterable} leftHandOperand
+ * @param {Iterable} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+
+function generatorEqual(leftHandOperand, rightHandOperand, options) {
+  return iterableEqual(getGeneratorEntries(leftHandOperand), getGeneratorEntries(rightHandOperand), options);
+}
+
+/*!
+ * Determine if the given object has an @@iterator function.
+ *
+ * @param {Object} target
+ * @return {Boolean} `true` if the object has an @@iterator function.
+ */
+function hasIteratorFunction(target) {
+  return typeof Symbol !== 'undefined' &&
+    typeof target === 'object' &&
+    typeof Symbol.iterator !== 'undefined' &&
+    typeof target[Symbol.iterator] === 'function';
+}
+
+/*!
+ * Gets all iterator entries from the given Object. If the Object has no @@iterator function, returns an empty array.
+ * This will consume the iterator - which could have side effects depending on the @@iterator implementation.
+ *
+ * @param {Object} target
+ * @returns {Array} an array of entries from the @@iterator function
+ */
+function getIteratorEntries(target) {
+  if (hasIteratorFunction(target)) {
+    try {
+      return getGeneratorEntries(target[Symbol.iterator]());
+    } catch (iteratorError) {
+      return [];
+    }
+  }
+  return [];
+}
+
+/*!
+ * Gets all entries from a Generator. This will consume the generator - which could have side effects.
+ *
+ * @param {Generator} target
+ * @returns {Array} an array of entries from the Generator.
+ */
+function getGeneratorEntries(generator) {
+  var generatorResult = generator.next();
+  var accumulator = [ generatorResult.value ];
+  while (generatorResult.done === false) {
+    generatorResult = generator.next();
+    accumulator.push(generatorResult.value);
+  }
+  return accumulator;
+}
+
+/*!
+ * Gets all own and inherited enumerable keys from a target.
+ *
+ * @param {Object} target
+ * @returns {Array} an array of own and inherited enumerable keys from the target.
+ */
+function getEnumerableKeys(target) {
+  var keys = [];
+  for (var key in target) {
+    keys.push(key);
+  }
+  return keys;
+}
+
+/*!
+ * Determines if two objects have matching values, given a set of keys. Defers to deepEqual for the equality check of
+ * each key. If any value of the given key is not equal, the function will return false (early).
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Array} keys An array of keys to compare the values of leftHandOperand and rightHandOperand against
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+function keysEqual(leftHandOperand, rightHandOperand, keys, options) {
+  var length = keys.length;
+  if (length === 0) {
+    return true;
+  }
+  for (var i = 0; i < length; i += 1) {
+    if (deepEqual(leftHandOperand[keys[i]], rightHandOperand[keys[i]], options) === false) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*!
+ * Recursively check the equality of two Objects. Once basic sameness has been established it will defer to `deepEqual`
+ * for each enumerable key in the object.
+ *
+ * @param {Mixed} leftHandOperand
+ * @param {Mixed} rightHandOperand
+ * @param {Object} [options] (Optional)
+ * @return {Boolean} result
+ */
+function objectEqual(leftHandOperand, rightHandOperand, options) {
+  var leftHandKeys = getEnumerableKeys(leftHandOperand);
+  var rightHandKeys = getEnumerableKeys(rightHandOperand);
+  if (leftHandKeys.length && leftHandKeys.length === rightHandKeys.length) {
+    leftHandKeys.sort();
+    rightHandKeys.sort();
+    if (iterableEqual(leftHandKeys, rightHandKeys) === false) {
+      return false;
+    }
+    return keysEqual(leftHandOperand, rightHandOperand, leftHandKeys, options);
+  }
+
+  var leftHandEntries = getIteratorEntries(leftHandOperand);
+  var rightHandEntries = getIteratorEntries(rightHandOperand);
+  if (leftHandEntries.length && leftHandEntries.length === rightHandEntries.length) {
+    leftHandEntries.sort();
+    rightHandEntries.sort();
+    return iterableEqual(leftHandEntries, rightHandEntries, options);
+  }
+
+  if (leftHandKeys.length === 0 &&
+      leftHandEntries.length === 0 &&
+      rightHandKeys.length === 0 &&
+      rightHandEntries.length === 0) {
+    return true;
+  }
+
+  return false;
+}
+
+/*!
+ * Returns true if the argument is a primitive.
+ *
+ * This intentionally returns true for all objects that can be compared by reference,
+ * including functions and symbols.
+ *
+ * @param {Mixed} value
+ * @return {Boolean} result
+ */
+function isPrimitive(value) {
+  return value === null || typeof value !== 'object';
+}
+deepEql.MemoizeMap = MemoizeMap_1;
+
+// -------- PROTOTYPE EXTENSIONS -------- //
+
 /**
  * Return true if array has ALL of the items
  * @param  {...any} items - One or more strings
@@ -1089,6 +1547,16 @@ String.prototype.includesAny = function(...items) {
 };
 
 /**
+ * Return true if string includes ALL of the items.
+ * E.g. Returns true if string is "reference-full" and items
+ * are "reference" and "full"
+ * @param  {...any} items - One or more strings
+ */
+String.prototype.includesAll = function(...items) {
+  return items.every((i) => this.includes(i))
+};
+
+/**
  * Return true if string equals any of the items.
  * E.g. Returns true if item is `-span` and string is `text-span`
  * @param  {...any} items - One or more strings
@@ -1097,6 +1565,19 @@ String.prototype.equalsAny = function(...items) {
   return items.some((i) => this === i)
 };
 
+/**
+ * Return first character of string
+ */
+String.prototype.firstChar = function() {
+  return this.charAt(0)
+};
+
+/**
+ * Return last character of string
+ */
+String.prototype.lastChar = function() {
+  return this.charAt(this.length - 1)
+};
 
 // -------- COMPARE PATCHES -------- //
 
@@ -1124,6 +1605,15 @@ function stateHasChanged(patches, props, toValue = '') {
       return hasChanged
     }
   })
+}
+
+/**
+ * Compare two objects and return `true` if they differ.
+ * @param {*} objA 
+ * @param {*} objB 
+ */
+function objHasChanged(objA, objB) {
+  return !deepEql(objA, objB)
 }
 
 /**
@@ -1183,34 +1673,48 @@ const isWindowFocused = writable(false);
 const isMetaKeyDown = writable(false);
 const project = writable({});
 const sidebar = writable({});
+const markdownOptions = writable({});
 
 // Current state as JS object:
 // This may seem redundant (why not access state store?, but it's here for performance reasons. When we applyPatches(state, patches), we need to pass it the current state. We could get that from `state` writable by using `get(state)`, but that creates and destroys a one-time subscriber every time. Which has performance implications given how often we modify state. Svelte specifically recommends against this type of use, in the docs: https://svelte.dev/docs#get. So instead we create an intemediary `stateAsObject`, apply patches to it, and then pass it to state.set(...).
 let stateAsObject = {};
 
+// Copy of the previous state, so we can check for changes
+let oldState = {}; 
 
 /**
  * Set Svelte stores from `stateAsObject`.
  */
 function setStores() {
-  
+   
   // Set `state` store
   state.set(stateAsObject);
 
   // Set `isWindowFocused` store
   isWindowFocused.set(stateAsObject.focusedWindowId == window.id);
-  
+
+  // Set isMetaKeyDown false when window is not focused
+  if (stateAsObject.focusedWindowId !== window.id) {
+    isMetaKeyDown.set(false);
+  }
+
   // Set `project` and `sidebar` stores, if this is NOT the prefs window.
   if (window.id !== 'preferences') {
     const proj = stateAsObject.projects.byId[window.id];
     project.set(proj);
     sidebar.set(proj.sidebar);
   }
+
+  const markdownOptionsHaveChanged = objHasChanged(oldState.markdown, stateAsObject.markdown);
+  if (markdownOptionsHaveChanged) {
+    markdownOptions.set(stateAsObject.markdown);
+  }
 }
 
 function updateFromPatches(patches) {
 
   // Update stateAsObject
+  oldState = {...stateAsObject};
   stateAsObject = vn(stateAsObject, patches);
 
   // Update `window.state`
@@ -1254,6 +1758,8 @@ function init$2(initialState) {
   document.addEventListener('keyup', (evt) => {
     isMetaKeyDown.set(false);
   });
+
+  
 }
 
 /**
@@ -2622,15 +3128,15 @@ const file$7 = "src/js/renderer/component/preferences/Preferences.svelte";
 function add_css$7() {
 	var style = element("style");
 	style.id = "svelte-1hz4oz3-style";
-	style.textContent = "@keyframes svelte-1hz4oz3-selectField{from{box-shadow:0 0 0 20px transparent, 0 0 0 20px transparent}to{box-shadow:0 0 0 4px rgba(255, 255, 255, 0.25), 0 0 0 4px var(--controlAccentColor)}}#main.svelte-1hz4oz3{width:100%;height:100%;overflow:hidden}.toolbar.svelte-1hz4oz3{display:flex;width:100%;justify-content:center;height:52px;gap:2px}.window-body.svelte-1hz4oz3{max-width:600px;margin:0 auto;height:100%;padding:20px;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:scroll}@media(prefers-color-scheme: dark){.window-body.svelte-1hz4oz3{filter:brightness(0.6);background:var(--windowBackgroundColor)}}@media(prefers-color-scheme: light){.window-body.svelte-1hz4oz3{background:var(--windowBackgroundColor)}}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiUHJlZmVyZW5jZXMuc3ZlbHRlIiwic291cmNlcyI6WyJQcmVmZXJlbmNlcy5zdmVsdGUiXSwic291cmNlc0NvbnRlbnQiOlsiPHNjcmlwdD5cbiAgaW1wb3J0IHsgaXNXaW5kb3dGb2N1c2VkLCBzdGF0ZSB9IGZyb20gJy4uLy4uL1N0YXRlTWFuYWdlcic7XG4gIGltcG9ydCBDaGVja2JveCBmcm9tICcuLi91aS9DaGVja2JveC5zdmVsdGUnO1xuICBpbXBvcnQgRGVzY3JpcHRpb24gZnJvbSAnLi4vdWkvRGVzY3JpcHRpb24uc3ZlbHRlJztcbiAgaW1wb3J0IEZvcm1Sb3cgZnJvbSAnLi4vdWkvRm9ybVJvdy5zdmVsdGUnO1xuICBpbXBvcnQgU2VwYXJhdG9yIGZyb20gJy4uL3VpL1NlcGFyYXRvci5zdmVsdGUnO1xuICBpbXBvcnQgVG9vbGJhclRhYiBmcm9tICcuLi91aS9Ub29sYmFyVGFiLnN2ZWx0ZSc7XG4gIGltcG9ydCBXaW5kb3dGcmFtZSBmcm9tICcuLi91aS9XaW5kb3dGcmFtZS5zdmVsdGUnO1xuICBpbXBvcnQgV2luZG93VGl0bGVCYXIgZnJvbSAnLi4vdWkvV2luZG93VGl0bGVCYXIuc3ZlbHRlJzsgXG5cbiAgbGV0IGFjdGl2ZVRhYiA9ICdnZW5lcmFsJ1xuICBsZXQgdGFicyA9IFtcbiAgICB7XG4gICAgICBpZDogJ2dlbmVyYWwnLFxuICAgICAgdGl0bGU6ICdHZW5lcmFsJyxcbiAgICAgIGljb246ICdpbWctZ2VhcnNoYXBlJ1xuICAgIH0sXG4gICAge1xuICAgICAgaWQ6ICd0aGVtZScsXG4gICAgICB0aXRsZTogJ1RoZW1lJyxcbiAgICAgIGljb246ICdpbWctcGFpbnRwYWxldHRlLW1lZGl1bS1yZWd1bGFyJ1xuICAgIH0sXG4gICAge1xuICAgICAgaWQ6ICdtYXJrdXAnLFxuICAgICAgdGl0bGU6ICdNYXJrdXAnLFxuICAgICAgaWNvbjogJ2ltZy10ZXh0Zm9ybWF0LW1lZGl1bS1yZWd1bGFyJ1xuICAgIH0sXG4gICAge1xuICAgICAgaWQ6ICdtZWRpYScsXG4gICAgICB0aXRsZTogJ01lZGlhJyxcbiAgICAgIGljb246ICdpbWctcGhvdG8tbWVkaXVtLXJlZ3VsYXInXG4gICAgfSxcbiAgICB7XG4gICAgICBpZDogJ2NpdGF0aW9ucycsXG4gICAgICB0aXRsZTogJ0NpdGF0aW9ucycsXG4gICAgICBpY29uOiAnaW1nLXF1b3RlLWJ1YmJsZS1tZWRpdW0tcmVndWxhcidcbiAgICB9LFxuICBdXG5cbiAgJDogd2luZG93VGl0bGUgPSB0YWJzLmZpbmQoKHsgaWQgfSkgPT4gaWQgPT0gYWN0aXZlVGFiKS50aXRsZVxuXG48L3NjcmlwdD5cblxuPHN0eWxlIHR5cGU9XCJ0ZXh0L3Njc3NcIj5Aa2V5ZnJhbWVzIHNlbGVjdEZpZWxkIHtcbiAgZnJvbSB7XG4gICAgYm94LXNoYWRvdzogMCAwIDAgMjBweCB0cmFuc3BhcmVudCwgMCAwIDAgMjBweCB0cmFuc3BhcmVudDtcbiAgfVxuICB0byB7XG4gICAgYm94LXNoYWRvdzogMCAwIDAgNHB4IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC4yNSksIDAgMCAwIDRweCB2YXIoLS1jb250cm9sQWNjZW50Q29sb3IpO1xuICB9XG59XG4jbWFpbiB7XG4gIHdpZHRoOiAxMDAlO1xuICBoZWlnaHQ6IDEwMCU7XG4gIG92ZXJmbG93OiBoaWRkZW47XG59XG5cbi50b29sYmFyIHtcbiAgZGlzcGxheTogZmxleDtcbiAgd2lkdGg6IDEwMCU7XG4gIGp1c3RpZnktY29udGVudDogY2VudGVyO1xuICBoZWlnaHQ6IDUycHg7XG4gIGdhcDogMnB4O1xufVxuXG4ud2luZG93LWJvZHkge1xuICBtYXgtd2lkdGg6IDYwMHB4O1xuICBtYXJnaW46IDAgYXV0bztcbiAgaGVpZ2h0OiAxMDAlO1xuICBwYWRkaW5nOiAyMHB4O1xuICBkaXNwbGF5OiBmbGV4O1xuICBmbGV4LWRpcmVjdGlvbjogY29sdW1uO1xuICBvdmVyZmxvdy14OiBoaWRkZW47XG4gIG92ZXJmbG93LXk6IHNjcm9sbDtcbn1cbkBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6IGRhcmspIHtcbiAgLndpbmRvdy1ib2R5IHtcbiAgICBmaWx0ZXI6IGJyaWdodG5lc3MoMC42KTtcbiAgICBiYWNrZ3JvdW5kOiB2YXIoLS13aW5kb3dCYWNrZ3JvdW5kQ29sb3IpO1xuICB9XG59XG5AbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOiBsaWdodCkge1xuICAud2luZG93LWJvZHkge1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXdpbmRvd0JhY2tncm91bmRDb2xvcik7XG4gIH1cbn08L3N0eWxlPlxuXG48ZGl2IGlkPVwibWFpblwiIGNsYXNzOmlzV2luZG93Rm9jdXNlZD17JGlzV2luZG93Rm9jdXNlZH0+XG5cbiAgIDwhLS0tLS0tLS0tLSBGUkFNRSAtLS0tLS0tLS0tPlxuXG4gIDxXaW5kb3dGcmFtZT5cbiAgICA8V2luZG93VGl0bGVCYXIgdGl0bGU9e3dpbmRvd1RpdGxlfSAvPlxuICAgIDxkaXYgY2xhc3M9XCJ0b29sYmFyXCI+XG4gICAgICB7I2VhY2ggdGFicyBhcyB7aWQsIHRpdGxlLCBpY29ufX1cbiAgICAgICAgPFRvb2xiYXJUYWIgbGFiZWw9e3RpdGxlfSBpY29uPXtpY29ufSBpc1NlbGVjdGVkPXtpZCA9PSBhY3RpdmVUYWJ9IG9uOm1vdXNldXA9eygpID0+IGFjdGl2ZVRhYiA9IGlkfS8+XG4gICAgICB7L2VhY2h9XG4gICAgPC9kaXY+XG4gIDwvV2luZG93RnJhbWU+XG4gIFxuXG4gIDwhLS0tLS0tLS0tLSBCT0RZIC0tLS0tLS0tLS0+XG5cbiAgPGRpdiBjbGFzcz1cIndpbmRvdy1ib2R5XCI+XG5cbiAgICB7I2lmIGFjdGl2ZVRhYj09J21hcmt1cCd9IFxuICAgICAgXG4gICAgICA8IS0tIEZpZ3VyZXMgLS0+XG5cbiAgICAgIDxGb3JtUm93IGxhYmVsPXsnRmlndXJlczonfSBsZWZ0Q29sdW1uPXsnMjAwcHgnfSBtYXJnaW49eyc4cHggMCAwJ30gbXVsdGlMaW5lPXt0cnVlfSBsYWJlbFRvcE9mZnNldD17JzNweCd9PlxuICAgICAgICA8Q2hlY2tib3ggXG4gICAgICAgICAgbGFiZWw9eydJbXBsaWNpdCBGaWd1cmVzJ31cbiAgICAgICAgICBjaGVja2VkPXskc3RhdGUubWFya2Rvd24uaW1wbGljaXRGaWd1cmVzfVxuICAgICAgICAgIG9uOmNsaWNrPXsoKSA9PiB7XG4gICAgICAgICAgICB3aW5kb3cuYXBpLnNlbmQoJ2Rpc3BhdGNoJywge1xuICAgICAgICAgICAgICB0eXBlOiAnU0VUX01BUktET1dOX09QVElPTlMnLFxuICAgICAgICAgICAgICBtYXJrZG93bk9wdGlvbnM6IHtcbiAgICAgICAgICAgICAgICAuLi4kc3RhdGUubWFya2Rvd24sIFxuICAgICAgICAgICAgICAgIGltcGxpY2l0RmlndXJlczogISRzdGF0ZS5tYXJrZG93bi5pbXBsaWNpdEZpZ3VyZXNcbiAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgfSlcbiAgICAgICAgICB9fVxuICAgICAgICAvPlxuICAgICAgICA8RGVzY3JpcHRpb24gbWFyZ2luPXsnNHB4IDAgMCAyMHB4J30+XG4gICAgICAgICAgQW4gaW1hZ2Ugd2l0aCBhbHQgdGV4dCBvbiBhbiBlbXB0eSBsaW5lIHdpbGwgYmUgaW50ZXJwcmV0ZWQgYXMgYSBmaWd1cmUgZWxlbWVudC4gVGhlIGltYWdl4oCZcyBhbHQgdGV4dCB3aWxsIGJlIHVzZWQgYXMgdGhlIGNhcHRpb24uXG4gICAgICAgIDwvRGVzY3JpcHRpb24+ICBcbiAgICAgIDwvRm9ybVJvdz5cbiAgICAgIFxuICAgICAgPEZvcm1Sb3cgbGVmdENvbHVtbj17JzIwMHB4J30gbWFyZ2luPXsnOHB4IDAgMCd9PlxuICAgICAgICA8Q2hlY2tib3ggXG4gICAgICAgICAgbGFiZWw9eydTaG93IFRodW1ibmFpbCd9XG4gICAgICAgICAgZGlzYWJsZWQ9eyEkc3RhdGUubWFya2Rvd24uaW1wbGljaXRGaWd1cmVzfVxuICAgICAgICAgIGNoZWNrZWQ9e3RydWV9XG4gICAgICAgICAgb246Y2xpY2s9eygpID0+IHtcbiAgICAgICAgICAgIHdpbmRvdy5hcGkuc2VuZCgnZGlzcGF0Y2gnLCB7XG4gICAgICAgICAgICAgIHR5cGU6ICdTRVRfTUFSS0RPV05fT1BUSU9OUycsXG4gICAgICAgICAgICAgIG1hcmtkb3duT3B0aW9uczoge1xuICAgICAgICAgICAgICAgIC4uLiRzdGF0ZS5tYXJrZG93biwgXG4gICAgICAgICAgICAgICAgaW1wbGljaXRGaWd1cmVzOiAhJHN0YXRlLm1hcmtkb3duLmltcGxpY2l0RmlndXJlc1xuICAgICAgICAgICAgICB9XG4gICAgICAgICAgICB9KVxuICAgICAgICAgIH19XG4gICAgICAgIC8+XG4gICAgICA8L0Zvcm1Sb3c+XG5cbiAgICAgIDxGb3JtUm93IGxlZnRDb2x1bW49eycyMDBweCd9IG1hcmdpbj17JzRweCAwIDAnfT5cbiAgICAgICAgPENoZWNrYm94IFxuICAgICAgICAgIGxhYmVsPXsnU2hvdyBDYXB0aW9uJ31cbiAgICAgICAgICBkaXNhYmxlZD17ISRzdGF0ZS5tYXJrZG93bi5pbXBsaWNpdEZpZ3VyZXN9XG4gICAgICAgICAgY2hlY2tlZD17dHJ1ZX1cbiAgICAgICAgICBvbjpjbGljaz17KCkgPT4ge1xuICAgICAgICAgICAgd2luZG93LmFwaS5zZW5kKCdkaXNwYXRjaCcsIHtcbiAgICAgICAgICAgICAgdHlwZTogJ1NFVF9NQVJLRE9XTl9PUFRJT05TJyxcbiAgICAgICAgICAgICAgbWFya2Rvd25PcHRpb25zOiB7XG4gICAgICAgICAgICAgICAgLi4uJHN0YXRlLm1hcmtkb3duLCBcbiAgICAgICAgICAgICAgICBpbXBsaWNpdEZpZ3VyZXM6ICEkc3RhdGUubWFya2Rvd24uaW1wbGljaXRGaWd1cmVzXG4gICAgICAgICAgICAgIH1cbiAgICAgICAgICAgIH0pXG4gICAgICAgICAgfX1cbiAgICAgICAgLz5cbiAgICAgIDwvRm9ybVJvdz5cblxuXG4gICAgey9pZn1cblxuICA8L2Rpdj5cbjwvZGl2PiJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUEyQ3dCLFdBQVcsMEJBQVksQ0FBQyxBQUM5QyxJQUFJLEFBQUMsQ0FBQyxBQUNKLFVBQVUsQ0FBRSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsV0FBVyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDLFdBQVcsQUFDNUQsQ0FBQyxBQUNELEVBQUUsQUFBQyxDQUFDLEFBQ0YsVUFBVSxDQUFFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxLQUFLLEdBQUcsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsR0FBRyxDQUFDLElBQUksb0JBQW9CLENBQUMsQUFDdEYsQ0FBQyxBQUNILENBQUMsQUFDRCxLQUFLLGVBQUMsQ0FBQyxBQUNMLEtBQUssQ0FBRSxJQUFJLENBQ1gsTUFBTSxDQUFFLElBQUksQ0FDWixRQUFRLENBQUUsTUFBTSxBQUNsQixDQUFDLEFBRUQsUUFBUSxlQUFDLENBQUMsQUFDUixPQUFPLENBQUUsSUFBSSxDQUNiLEtBQUssQ0FBRSxJQUFJLENBQ1gsZUFBZSxDQUFFLE1BQU0sQ0FDdkIsTUFBTSxDQUFFLElBQUksQ0FDWixHQUFHLENBQUUsR0FBRyxBQUNWLENBQUMsQUFFRCxZQUFZLGVBQUMsQ0FBQyxBQUNaLFNBQVMsQ0FBRSxLQUFLLENBQ2hCLE1BQU0sQ0FBRSxDQUFDLENBQUMsSUFBSSxDQUNkLE1BQU0sQ0FBRSxJQUFJLENBQ1osT0FBTyxDQUFFLElBQUksQ0FDYixPQUFPLENBQUUsSUFBSSxDQUNiLGNBQWMsQ0FBRSxNQUFNLENBQ3RCLFVBQVUsQ0FBRSxNQUFNLENBQ2xCLFVBQVUsQ0FBRSxNQUFNLEFBQ3BCLENBQUMsQUFDRCxNQUFNLEFBQUMsdUJBQXVCLElBQUksQ0FBQyxBQUFDLENBQUMsQUFDbkMsWUFBWSxlQUFDLENBQUMsQUFDWixNQUFNLENBQUUsV0FBVyxHQUFHLENBQUMsQ0FDdkIsVUFBVSxDQUFFLElBQUksdUJBQXVCLENBQUMsQUFDMUMsQ0FBQyxBQUNILENBQUMsQUFDRCxNQUFNLEFBQUMsdUJBQXVCLEtBQUssQ0FBQyxBQUFDLENBQUMsQUFDcEMsWUFBWSxlQUFDLENBQUMsQUFDWixVQUFVLENBQUUsSUFBSSx1QkFBdUIsQ0FBQyxBQUMxQyxDQUFDLEFBQ0gsQ0FBQyJ9 */";
+	style.textContent = "@keyframes svelte-1hz4oz3-selectField{from{box-shadow:0 0 0 20px transparent, 0 0 0 20px transparent}to{box-shadow:0 0 0 4px rgba(255, 255, 255, 0.25), 0 0 0 4px var(--controlAccentColor)}}#main.svelte-1hz4oz3{width:100%;height:100%;overflow:hidden}.toolbar.svelte-1hz4oz3{display:flex;width:100%;justify-content:center;height:52px;gap:2px}.window-body.svelte-1hz4oz3{max-width:600px;margin:0 auto;height:100%;padding:20px;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:scroll}@media(prefers-color-scheme: dark){.window-body.svelte-1hz4oz3{filter:brightness(0.6);background:var(--windowBackgroundColor)}}@media(prefers-color-scheme: light){.window-body.svelte-1hz4oz3{background:var(--windowBackgroundColor)}}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiUHJlZmVyZW5jZXMuc3ZlbHRlIiwic291cmNlcyI6WyJQcmVmZXJlbmNlcy5zdmVsdGUiXSwic291cmNlc0NvbnRlbnQiOlsiPHNjcmlwdD5cbiAgaW1wb3J0IHsgaXNXaW5kb3dGb2N1c2VkLCBzdGF0ZSB9IGZyb20gJy4uLy4uL1N0YXRlTWFuYWdlcic7XG4gIGltcG9ydCBDaGVja2JveCBmcm9tICcuLi91aS9DaGVja2JveC5zdmVsdGUnO1xuICBpbXBvcnQgRGVzY3JpcHRpb24gZnJvbSAnLi4vdWkvRGVzY3JpcHRpb24uc3ZlbHRlJztcbiAgaW1wb3J0IEZvcm1Sb3cgZnJvbSAnLi4vdWkvRm9ybVJvdy5zdmVsdGUnO1xuICBpbXBvcnQgU2VwYXJhdG9yIGZyb20gJy4uL3VpL1NlcGFyYXRvci5zdmVsdGUnO1xuICBpbXBvcnQgVG9vbGJhclRhYiBmcm9tICcuLi91aS9Ub29sYmFyVGFiLnN2ZWx0ZSc7XG4gIGltcG9ydCBXaW5kb3dGcmFtZSBmcm9tICcuLi91aS9XaW5kb3dGcmFtZS5zdmVsdGUnO1xuICBpbXBvcnQgV2luZG93VGl0bGVCYXIgZnJvbSAnLi4vdWkvV2luZG93VGl0bGVCYXIuc3ZlbHRlJzsgXG5cbiAgbGV0IGFjdGl2ZVRhYiA9ICdnZW5lcmFsJ1xuICBsZXQgdGFicyA9IFtcbiAgICB7XG4gICAgICBpZDogJ2dlbmVyYWwnLFxuICAgICAgdGl0bGU6ICdHZW5lcmFsJyxcbiAgICAgIGljb246ICdpbWctZ2VhcnNoYXBlJ1xuICAgIH0sXG4gICAge1xuICAgICAgaWQ6ICd0aGVtZScsXG4gICAgICB0aXRsZTogJ1RoZW1lJyxcbiAgICAgIGljb246ICdpbWctcGFpbnRwYWxldHRlLW1lZGl1bS1yZWd1bGFyJ1xuICAgIH0sXG4gICAge1xuICAgICAgaWQ6ICdtYXJrdXAnLFxuICAgICAgdGl0bGU6ICdNYXJrdXAnLFxuICAgICAgaWNvbjogJ2ltZy10ZXh0Zm9ybWF0LW1lZGl1bS1yZWd1bGFyJ1xuICAgIH0sXG4gICAge1xuICAgICAgaWQ6ICdtZWRpYScsXG4gICAgICB0aXRsZTogJ01lZGlhJyxcbiAgICAgIGljb246ICdpbWctcGhvdG8tbWVkaXVtLXJlZ3VsYXInXG4gICAgfSxcbiAgICB7XG4gICAgICBpZDogJ2NpdGF0aW9ucycsXG4gICAgICB0aXRsZTogJ0NpdGF0aW9ucycsXG4gICAgICBpY29uOiAnaW1nLXF1b3RlLWJ1YmJsZS1tZWRpdW0tcmVndWxhcidcbiAgICB9LFxuICBdXG5cbiAgJDogd2luZG93VGl0bGUgPSB0YWJzLmZpbmQoKHsgaWQgfSkgPT4gaWQgPT0gYWN0aXZlVGFiKS50aXRsZVxuXG48L3NjcmlwdD5cblxuPHN0eWxlIHR5cGU9XCJ0ZXh0L3Njc3NcIj5Aa2V5ZnJhbWVzIHNlbGVjdEZpZWxkIHtcbiAgZnJvbSB7XG4gICAgYm94LXNoYWRvdzogMCAwIDAgMjBweCB0cmFuc3BhcmVudCwgMCAwIDAgMjBweCB0cmFuc3BhcmVudDtcbiAgfVxuICB0byB7XG4gICAgYm94LXNoYWRvdzogMCAwIDAgNHB4IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC4yNSksIDAgMCAwIDRweCB2YXIoLS1jb250cm9sQWNjZW50Q29sb3IpO1xuICB9XG59XG4jbWFpbiB7XG4gIHdpZHRoOiAxMDAlO1xuICBoZWlnaHQ6IDEwMCU7XG4gIG92ZXJmbG93OiBoaWRkZW47XG59XG5cbi50b29sYmFyIHtcbiAgZGlzcGxheTogZmxleDtcbiAgd2lkdGg6IDEwMCU7XG4gIGp1c3RpZnktY29udGVudDogY2VudGVyO1xuICBoZWlnaHQ6IDUycHg7XG4gIGdhcDogMnB4O1xufVxuXG4ud2luZG93LWJvZHkge1xuICBtYXgtd2lkdGg6IDYwMHB4O1xuICBtYXJnaW46IDAgYXV0bztcbiAgaGVpZ2h0OiAxMDAlO1xuICBwYWRkaW5nOiAyMHB4O1xuICBkaXNwbGF5OiBmbGV4O1xuICBmbGV4LWRpcmVjdGlvbjogY29sdW1uO1xuICBvdmVyZmxvdy14OiBoaWRkZW47XG4gIG92ZXJmbG93LXk6IHNjcm9sbDtcbn1cbkBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6IGRhcmspIHtcbiAgLndpbmRvdy1ib2R5IHtcbiAgICBmaWx0ZXI6IGJyaWdodG5lc3MoMC42KTtcbiAgICBiYWNrZ3JvdW5kOiB2YXIoLS13aW5kb3dCYWNrZ3JvdW5kQ29sb3IpO1xuICB9XG59XG5AbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOiBsaWdodCkge1xuICAud2luZG93LWJvZHkge1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXdpbmRvd0JhY2tncm91bmRDb2xvcik7XG4gIH1cbn08L3N0eWxlPlxuXG48ZGl2IGlkPVwibWFpblwiIGNsYXNzOmlzV2luZG93Rm9jdXNlZD17JGlzV2luZG93Rm9jdXNlZH0+XG5cbiAgIDwhLS0tLS0tLS0tLSBGUkFNRSAtLS0tLS0tLS0tPlxuXG4gIDxXaW5kb3dGcmFtZT5cbiAgICA8V2luZG93VGl0bGVCYXIgdGl0bGU9e3dpbmRvd1RpdGxlfSAvPlxuICAgIDxkaXYgY2xhc3M9XCJ0b29sYmFyXCI+XG4gICAgICB7I2VhY2ggdGFicyBhcyB7aWQsIHRpdGxlLCBpY29ufX1cbiAgICAgICAgPFRvb2xiYXJUYWIgbGFiZWw9e3RpdGxlfSBpY29uPXtpY29ufSBpc1NlbGVjdGVkPXtpZCA9PSBhY3RpdmVUYWJ9IG9uOm1vdXNldXA9eygpID0+IGFjdGl2ZVRhYiA9IGlkfS8+XG4gICAgICB7L2VhY2h9XG4gICAgPC9kaXY+XG4gIDwvV2luZG93RnJhbWU+XG4gIFxuXG4gIDwhLS0tLS0tLS0tLSBCT0RZIC0tLS0tLS0tLS0+XG5cbiAgPGRpdiBjbGFzcz1cIndpbmRvdy1ib2R5XCI+XG5cbiAgICB7I2lmIGFjdGl2ZVRhYj09J21hcmt1cCd9IFxuXG4gICAgICA8IS0tIFN0cmlrZXRocm91Z2ggLS0+XG5cbiAgICAgIDxGb3JtUm93IGxhYmVsPXsnU3RyaWtldGhyb3VnaDonfSBsZWZ0Q29sdW1uPXsnMjAwcHgnfSBtYXJnaW49eyc4cHggMCAwJ30gbXVsdGlMaW5lPXt0cnVlfSBsYWJlbFRvcE9mZnNldD17JzNweCd9PlxuICAgICAgICA8Q2hlY2tib3ggXG4gICAgICAgICAgbGFiZWw9eydTdHJpa2V0aHJvdWdoJ31cbiAgICAgICAgICBjaGVja2VkPXskc3RhdGUubWFya2Rvd24uc3RyaWtldGhyb3VnaH1cbiAgICAgICAgICBvbjpjbGljaz17KCkgPT4ge1xuICAgICAgICAgICAgd2luZG93LmFwaS5zZW5kKCdkaXNwYXRjaCcsIHtcbiAgICAgICAgICAgICAgdHlwZTogJ1NFVF9NQVJLRE9XTl9PUFRJT05TJyxcbiAgICAgICAgICAgICAgbWFya2Rvd25PcHRpb25zOiB7XG4gICAgICAgICAgICAgICAgLi4uJHN0YXRlLm1hcmtkb3duLCBcbiAgICAgICAgICAgICAgICBzdHJpa2V0aHJvdWdoOiAhJHN0YXRlLm1hcmtkb3duLnN0cmlrZXRocm91Z2hcbiAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgfSlcbiAgICAgICAgICB9fVxuICAgICAgICAvPlxuICAgICAgICA8RGVzY3JpcHRpb24gbWFyZ2luPXsnNHB4IDAgMCAyMHB4J30+XG4gICAgICAgICAgVXNlIHdyYXBwaW5nIHRpbGRlIGNoYXJhY3RlcnMgdG8gY3JlYXRlIHN0cmlrZXRocm91Z2ggdGV4dDogfn5IZWxsbyBXb3JsZH5+LlxuICAgICAgICA8L0Rlc2NyaXB0aW9uPiAgXG4gICAgICA8L0Zvcm1Sb3c+XG5cbiAgICAgIDwhLS0gRmlndXJlcyAtLT5cblxuICAgICAgPEZvcm1Sb3cgbGFiZWw9eydGaWd1cmVzOid9IGxlZnRDb2x1bW49eycyMDBweCd9IG1hcmdpbj17JzhweCAwIDAnfSBtdWx0aUxpbmU9e3RydWV9IGxhYmVsVG9wT2Zmc2V0PXsnM3B4J30+XG4gICAgICAgIDxDaGVja2JveCBcbiAgICAgICAgICBsYWJlbD17J0ltcGxpY2l0IEZpZ3VyZXMnfVxuICAgICAgICAgIGNoZWNrZWQ9eyRzdGF0ZS5tYXJrZG93bi5pbXBsaWNpdEZpZ3VyZXN9XG4gICAgICAgICAgb246Y2xpY2s9eygpID0+IHtcbiAgICAgICAgICAgIHdpbmRvdy5hcGkuc2VuZCgnZGlzcGF0Y2gnLCB7XG4gICAgICAgICAgICAgIHR5cGU6ICdTRVRfTUFSS0RPV05fT1BUSU9OUycsXG4gICAgICAgICAgICAgIG1hcmtkb3duT3B0aW9uczoge1xuICAgICAgICAgICAgICAgIC4uLiRzdGF0ZS5tYXJrZG93biwgXG4gICAgICAgICAgICAgICAgaW1wbGljaXRGaWd1cmVzOiAhJHN0YXRlLm1hcmtkb3duLmltcGxpY2l0RmlndXJlc1xuICAgICAgICAgICAgICB9XG4gICAgICAgICAgICB9KVxuICAgICAgICAgIH19XG4gICAgICAgIC8+XG4gICAgICAgIDxEZXNjcmlwdGlvbiBtYXJnaW49eyc0cHggMCAwIDIwcHgnfT5cbiAgICAgICAgICBBbiBpbWFnZSBlbGVtZW50IHdpdGggYWx0IHRleHQgb24gYW4gZW1wdHkgbGluZSB3aWxsIGJlIGludGVycHJldGVkIGFzIGEgZmlndXJlIGVsZW1lbnQsIGFuZCBjYW4gYmUgZGlzcGxheWVkIHdpdGggYW4gaW5saW5lIHByZXZpZXcuIFRoZSBhbHQgdGV4dCB3aWxsIGJlIHVzZWQgYXMgY2FwdGlvbiB0ZXh0LlxuICAgICAgICA8L0Rlc2NyaXB0aW9uPiAgXG4gICAgICA8L0Zvcm1Sb3c+XG4gICAgICBcbiAgICAgIDxGb3JtUm93IGxlZnRDb2x1bW49eycyMDBweCd9IG1hcmdpbj17JzhweCAwIDAnfT5cbiAgICAgICAgPENoZWNrYm94IFxuICAgICAgICAgIGxhYmVsPXsnU2hvdyBUaHVtYm5haWwnfVxuICAgICAgICAgIGRpc2FibGVkPXshJHN0YXRlLm1hcmtkb3duLmltcGxpY2l0RmlndXJlc31cbiAgICAgICAgICBjaGVja2VkPXt0cnVlfVxuICAgICAgICAgIG9uOmNsaWNrPXsoKSA9PiB7XG4gICAgICAgICAgICB3aW5kb3cuYXBpLnNlbmQoJ2Rpc3BhdGNoJywge1xuICAgICAgICAgICAgICB0eXBlOiAnU0VUX01BUktET1dOX09QVElPTlMnLFxuICAgICAgICAgICAgICBtYXJrZG93bk9wdGlvbnM6IHtcbiAgICAgICAgICAgICAgICAuLi4kc3RhdGUubWFya2Rvd24sIFxuICAgICAgICAgICAgICAgIGltcGxpY2l0RmlndXJlczogISRzdGF0ZS5tYXJrZG93bi5pbXBsaWNpdEZpZ3VyZXNcbiAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgfSlcbiAgICAgICAgICB9fVxuICAgICAgICAvPlxuICAgICAgPC9Gb3JtUm93PlxuXG4gICAgICA8Rm9ybVJvdyBsZWZ0Q29sdW1uPXsnMjAwcHgnfSBtYXJnaW49eyc0cHggMCAwJ30+XG4gICAgICAgIDxDaGVja2JveCBcbiAgICAgICAgICBsYWJlbD17J1Nob3cgQ2FwdGlvbid9XG4gICAgICAgICAgZGlzYWJsZWQ9eyEkc3RhdGUubWFya2Rvd24uaW1wbGljaXRGaWd1cmVzfVxuICAgICAgICAgIGNoZWNrZWQ9e3RydWV9XG4gICAgICAgICAgb246Y2xpY2s9eygpID0+IHtcbiAgICAgICAgICAgIHdpbmRvdy5hcGkuc2VuZCgnZGlzcGF0Y2gnLCB7XG4gICAgICAgICAgICAgIHR5cGU6ICdTRVRfTUFSS0RPV05fT1BUSU9OUycsXG4gICAgICAgICAgICAgIG1hcmtkb3duT3B0aW9uczoge1xuICAgICAgICAgICAgICAgIC4uLiRzdGF0ZS5tYXJrZG93biwgXG4gICAgICAgICAgICAgICAgaW1wbGljaXRGaWd1cmVzOiAhJHN0YXRlLm1hcmtkb3duLmltcGxpY2l0RmlndXJlc1xuICAgICAgICAgICAgICB9XG4gICAgICAgICAgICB9KVxuICAgICAgICAgIH19XG4gICAgICAgIC8+XG4gICAgICA8L0Zvcm1Sb3c+XG5cblxuICAgIHs6ZWxzZSBpZiBhY3RpdmVUYWI9PSdtZWRpYSd9IFxuXG4gICAgICA8Rm9ybVJvdyBsYWJlbD17J0ltYWdlczonfSBsZWZ0Q29sdW1uPXsnMjAwcHgnfSBtYXJnaW49eyc4cHggMCAwJ30gbXVsdGlMaW5lPXt0cnVlfSBsYWJlbFRvcE9mZnNldD17JzNweCd9PlxuICAgICAgICA8Q2hlY2tib3ggXG4gICAgICAgICAgbGFiZWw9eydBbHdheXMgY29weSBpbWFnZSBmaWxlcyBpbnRvIHByb2plY3QnfVxuICAgICAgICAgIGNoZWNrZWQ9eyRzdGF0ZS5tYXJrZG93bi5zdHJpa2V0aHJvdWdofVxuICAgICAgICAgIG9uOmNsaWNrPXsoKSA9PiB7XG4gICAgICAgICAgICB3aW5kb3cuYXBpLnNlbmQoJ2Rpc3BhdGNoJywge1xuICAgICAgICAgICAgICB0eXBlOiAnU0VUX01BUktET1dOX09QVElPTlMnXG4gICAgICAgICAgICB9KVxuICAgICAgICAgIH19XG4gICAgICAgIC8+XG4gICAgICAgIDxEZXNjcmlwdGlvbiBtYXJnaW49eyc0cHggMCAwIDIwcHgnfT5cbiAgICAgICAgICBXaGVuIHNlbGVjdGVkLCBpbWFnZSBmaWxlcyBkcm9wcGVkIGludG8gdGhlIHByb2plY3QgZnJvbSB0aGUgZmlsZSBzeXN0ZW0gd2lsbCBhbHdheXMgYmUgY29waWVkLiBPdGhlcndpc2UgdGhleSB3aWxsIGJlIG1vdmVkIGJ5IGRlZmF1bHQsIGFuZCBjb3BpZWQgb25seSBpZiB0aGUgT3B0aW9uIGtleSBpcyBoZWxkLlxuICAgICAgICA8L0Rlc2NyaXB0aW9uPiAgXG4gICAgICA8L0Zvcm1Sb3c+XG5cbiAgICB7L2lmfVxuXG4gIDwvZGl2PlxuPC9kaXY+Il0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQTJDd0IsV0FBVywwQkFBWSxDQUFDLEFBQzlDLElBQUksQUFBQyxDQUFDLEFBQ0osVUFBVSxDQUFFLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQyxXQUFXLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsV0FBVyxBQUM1RCxDQUFDLEFBQ0QsRUFBRSxBQUFDLENBQUMsQUFDRixVQUFVLENBQUUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsR0FBRyxDQUFDLEtBQUssR0FBRyxDQUFDLENBQUMsR0FBRyxDQUFDLENBQUMsR0FBRyxDQUFDLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxHQUFHLENBQUMsSUFBSSxvQkFBb0IsQ0FBQyxBQUN0RixDQUFDLEFBQ0gsQ0FBQyxBQUNELEtBQUssZUFBQyxDQUFDLEFBQ0wsS0FBSyxDQUFFLElBQUksQ0FDWCxNQUFNLENBQUUsSUFBSSxDQUNaLFFBQVEsQ0FBRSxNQUFNLEFBQ2xCLENBQUMsQUFFRCxRQUFRLGVBQUMsQ0FBQyxBQUNSLE9BQU8sQ0FBRSxJQUFJLENBQ2IsS0FBSyxDQUFFLElBQUksQ0FDWCxlQUFlLENBQUUsTUFBTSxDQUN2QixNQUFNLENBQUUsSUFBSSxDQUNaLEdBQUcsQ0FBRSxHQUFHLEFBQ1YsQ0FBQyxBQUVELFlBQVksZUFBQyxDQUFDLEFBQ1osU0FBUyxDQUFFLEtBQUssQ0FDaEIsTUFBTSxDQUFFLENBQUMsQ0FBQyxJQUFJLENBQ2QsTUFBTSxDQUFFLElBQUksQ0FDWixPQUFPLENBQUUsSUFBSSxDQUNiLE9BQU8sQ0FBRSxJQUFJLENBQ2IsY0FBYyxDQUFFLE1BQU0sQ0FDdEIsVUFBVSxDQUFFLE1BQU0sQ0FDbEIsVUFBVSxDQUFFLE1BQU0sQUFDcEIsQ0FBQyxBQUNELE1BQU0sQUFBQyx1QkFBdUIsSUFBSSxDQUFDLEFBQUMsQ0FBQyxBQUNuQyxZQUFZLGVBQUMsQ0FBQyxBQUNaLE1BQU0sQ0FBRSxXQUFXLEdBQUcsQ0FBQyxDQUN2QixVQUFVLENBQUUsSUFBSSx1QkFBdUIsQ0FBQyxBQUMxQyxDQUFDLEFBQ0gsQ0FBQyxBQUNELE1BQU0sQUFBQyx1QkFBdUIsS0FBSyxDQUFDLEFBQUMsQ0FBQyxBQUNwQyxZQUFZLGVBQUMsQ0FBQyxBQUNaLFVBQVUsQ0FBRSxJQUFJLHVCQUF1QixDQUFDLEFBQzFDLENBQUMsQUFDSCxDQUFDIn0= */";
 	append_dev(document.head, style);
 }
 
 function get_each_context(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[9] = list[i].id;
-	child_ctx[10] = list[i].title;
-	child_ctx[11] = list[i].icon;
+	child_ctx[11] = list[i].id;
+	child_ctx[12] = list[i].title;
+	child_ctx[13] = list[i].icon;
 	return child_ctx;
 }
 
@@ -2640,14 +3146,14 @@ function create_each_block(ctx) {
 	let current;
 
 	function mouseup_handler() {
-		return /*mouseup_handler*/ ctx[5](/*id*/ ctx[9]);
+		return /*mouseup_handler*/ ctx[5](/*id*/ ctx[11]);
 	}
 
 	toolbartab = new ToolbarTab({
 			props: {
-				label: /*title*/ ctx[10],
-				icon: /*icon*/ ctx[11],
-				isSelected: /*id*/ ctx[9] == /*activeTab*/ ctx[0]
+				label: /*title*/ ctx[12],
+				icon: /*icon*/ ctx[13],
+				isSelected: /*id*/ ctx[11] == /*activeTab*/ ctx[0]
 			},
 			$$inline: true
 		});
@@ -2665,7 +3171,7 @@ function create_each_block(ctx) {
 		p: function update(new_ctx, dirty) {
 			ctx = new_ctx;
 			const toolbartab_changes = {};
-			if (dirty & /*activeTab*/ 1) toolbartab_changes.isSelected = /*id*/ ctx[9] == /*activeTab*/ ctx[0];
+			if (dirty & /*activeTab*/ 1) toolbartab_changes.isSelected = /*id*/ ctx[11] == /*activeTab*/ ctx[0];
 			toolbartab.$set(toolbartab_changes);
 		},
 		i: function intro(local) {
@@ -2694,7 +3200,7 @@ function create_each_block(ctx) {
 }
 
 // (92:2) <WindowFrame>
-function create_default_slot_4(ctx) {
+function create_default_slot_8(ctx) {
 	let windowtitlebar;
 	let t;
 	let div;
@@ -2804,9 +3310,69 @@ function create_default_slot_4(ctx) {
 
 	dispatch_dev("SvelteRegisterBlock", {
 		block,
-		id: create_default_slot_4.name,
+		id: create_default_slot_8.name,
 		type: "slot",
 		source: "(92:2) <WindowFrame>",
+		ctx
+	});
+
+	return block;
+}
+
+// (185:33) 
+function create_if_block_1(ctx) {
+	let formrow;
+	let current;
+
+	formrow = new FormRow({
+			props: {
+				label: "Images:",
+				leftColumn: "200px",
+				margin: "8px 0 0",
+				multiLine: true,
+				labelTopOffset: "3px",
+				$$slots: { default: [create_default_slot_6] },
+				$$scope: { ctx }
+			},
+			$$inline: true
+		});
+
+	const block = {
+		c: function create() {
+			create_component(formrow.$$.fragment);
+		},
+		m: function mount(target, anchor) {
+			mount_component(formrow, target, anchor);
+			current = true;
+		},
+		p: function update(ctx, dirty) {
+			const formrow_changes = {};
+
+			if (dirty & /*$$scope, $state*/ 65544) {
+				formrow_changes.$$scope = { dirty, ctx };
+			}
+
+			formrow.$set(formrow_changes);
+		},
+		i: function intro(local) {
+			if (current) return;
+			transition_in(formrow.$$.fragment, local);
+			current = true;
+		},
+		o: function outro(local) {
+			transition_out(formrow.$$.fragment, local);
+			current = false;
+		},
+		d: function destroy(detaching) {
+			destroy_component(formrow, detaching);
+		}
+	};
+
+	dispatch_dev("SvelteRegisterBlock", {
+		block,
+		id: create_if_block_1.name,
+		type: "if",
+		source: "(185:33) ",
 		ctx
 	});
 
@@ -2820,9 +3386,24 @@ function create_if_block$1(ctx) {
 	let formrow1;
 	let t1;
 	let formrow2;
+	let t2;
+	let formrow3;
 	let current;
 
 	formrow0 = new FormRow({
+			props: {
+				label: "Strikethrough:",
+				leftColumn: "200px",
+				margin: "8px 0 0",
+				multiLine: true,
+				labelTopOffset: "3px",
+				$$slots: { default: [create_default_slot_4] },
+				$$scope: { ctx }
+			},
+			$$inline: true
+		});
+
+	formrow1 = new FormRow({
 			props: {
 				label: "Figures:",
 				leftColumn: "200px",
@@ -2835,7 +3416,7 @@ function create_if_block$1(ctx) {
 			$$inline: true
 		});
 
-	formrow1 = new FormRow({
+	formrow2 = new FormRow({
 			props: {
 				leftColumn: "200px",
 				margin: "8px 0 0",
@@ -2845,7 +3426,7 @@ function create_if_block$1(ctx) {
 			$$inline: true
 		});
 
-	formrow2 = new FormRow({
+	formrow3 = new FormRow({
 			props: {
 				leftColumn: "200px",
 				margin: "4px 0 0",
@@ -2862,6 +3443,8 @@ function create_if_block$1(ctx) {
 			create_component(formrow1.$$.fragment);
 			t1 = space();
 			create_component(formrow2.$$.fragment);
+			t2 = space();
+			create_component(formrow3.$$.fragment);
 		},
 		m: function mount(target, anchor) {
 			mount_component(formrow0, target, anchor);
@@ -2869,42 +3452,53 @@ function create_if_block$1(ctx) {
 			mount_component(formrow1, target, anchor);
 			insert_dev(target, t1, anchor);
 			mount_component(formrow2, target, anchor);
+			insert_dev(target, t2, anchor);
+			mount_component(formrow3, target, anchor);
 			current = true;
 		},
 		p: function update(ctx, dirty) {
 			const formrow0_changes = {};
 
-			if (dirty & /*$$scope, $state*/ 16392) {
+			if (dirty & /*$$scope, $state*/ 65544) {
 				formrow0_changes.$$scope = { dirty, ctx };
 			}
 
 			formrow0.$set(formrow0_changes);
 			const formrow1_changes = {};
 
-			if (dirty & /*$$scope, $state*/ 16392) {
+			if (dirty & /*$$scope, $state*/ 65544) {
 				formrow1_changes.$$scope = { dirty, ctx };
 			}
 
 			formrow1.$set(formrow1_changes);
 			const formrow2_changes = {};
 
-			if (dirty & /*$$scope, $state*/ 16392) {
+			if (dirty & /*$$scope, $state*/ 65544) {
 				formrow2_changes.$$scope = { dirty, ctx };
 			}
 
 			formrow2.$set(formrow2_changes);
+			const formrow3_changes = {};
+
+			if (dirty & /*$$scope, $state*/ 65544) {
+				formrow3_changes.$$scope = { dirty, ctx };
+			}
+
+			formrow3.$set(formrow3_changes);
 		},
 		i: function intro(local) {
 			if (current) return;
 			transition_in(formrow0.$$.fragment, local);
 			transition_in(formrow1.$$.fragment, local);
 			transition_in(formrow2.$$.fragment, local);
+			transition_in(formrow3.$$.fragment, local);
 			current = true;
 		},
 		o: function outro(local) {
 			transition_out(formrow0.$$.fragment, local);
 			transition_out(formrow1.$$.fragment, local);
 			transition_out(formrow2.$$.fragment, local);
+			transition_out(formrow3.$$.fragment, local);
 			current = false;
 		},
 		d: function destroy(detaching) {
@@ -2913,6 +3507,8 @@ function create_if_block$1(ctx) {
 			destroy_component(formrow1, detaching);
 			if (detaching) detach_dev(t1);
 			destroy_component(formrow2, detaching);
+			if (detaching) detach_dev(t2);
+			destroy_component(formrow3, detaching);
 		}
 	};
 
@@ -2927,13 +3523,225 @@ function create_if_block$1(ctx) {
 	return block;
 }
 
+// (197:8) <Description margin={'4px 0 0 20px'}>
+function create_default_slot_7(ctx) {
+	let t;
+
+	const block = {
+		c: function create() {
+			t = text("When selected, image files dropped into the project from the file system will always be copied. Otherwise they will be moved by default, and copied only if the Option key is held.");
+		},
+		m: function mount(target, anchor) {
+			insert_dev(target, t, anchor);
+		},
+		d: function destroy(detaching) {
+			if (detaching) detach_dev(t);
+		}
+	};
+
+	dispatch_dev("SvelteRegisterBlock", {
+		block,
+		id: create_default_slot_7.name,
+		type: "slot",
+		source: "(197:8) <Description margin={'4px 0 0 20px'}>",
+		ctx
+	});
+
+	return block;
+}
+
+// (187:6) <FormRow label={'Images:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+function create_default_slot_6(ctx) {
+	let checkbox;
+	let t;
+	let description;
+	let current;
+
+	checkbox = new Checkbox({
+			props: {
+				label: "Always copy image files into project",
+				checked: /*$state*/ ctx[3].markdown.strikethrough
+			},
+			$$inline: true
+		});
+
+	checkbox.$on("click", /*click_handler_4*/ ctx[10]);
+
+	description = new Description({
+			props: {
+				margin: "4px 0 0 20px",
+				$$slots: { default: [create_default_slot_7] },
+				$$scope: { ctx }
+			},
+			$$inline: true
+		});
+
+	const block = {
+		c: function create() {
+			create_component(checkbox.$$.fragment);
+			t = space();
+			create_component(description.$$.fragment);
+		},
+		m: function mount(target, anchor) {
+			mount_component(checkbox, target, anchor);
+			insert_dev(target, t, anchor);
+			mount_component(description, target, anchor);
+			current = true;
+		},
+		p: function update(ctx, dirty) {
+			const checkbox_changes = {};
+			if (dirty & /*$state*/ 8) checkbox_changes.checked = /*$state*/ ctx[3].markdown.strikethrough;
+			checkbox.$set(checkbox_changes);
+			const description_changes = {};
+
+			if (dirty & /*$$scope*/ 65536) {
+				description_changes.$$scope = { dirty, ctx };
+			}
+
+			description.$set(description_changes);
+		},
+		i: function intro(local) {
+			if (current) return;
+			transition_in(checkbox.$$.fragment, local);
+			transition_in(description.$$.fragment, local);
+			current = true;
+		},
+		o: function outro(local) {
+			transition_out(checkbox.$$.fragment, local);
+			transition_out(description.$$.fragment, local);
+			current = false;
+		},
+		d: function destroy(detaching) {
+			destroy_component(checkbox, detaching);
+			if (detaching) detach_dev(t);
+			destroy_component(description, detaching);
+		}
+	};
+
+	dispatch_dev("SvelteRegisterBlock", {
+		block,
+		id: create_default_slot_6.name,
+		type: "slot",
+		source: "(187:6) <FormRow label={'Images:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>",
+		ctx
+	});
+
+	return block;
+}
+
 // (124:8) <Description margin={'4px 0 0 20px'}>
+function create_default_slot_5(ctx) {
+	let t;
+
+	const block = {
+		c: function create() {
+			t = text("Use wrapping tilde characters to create strikethrough text: ~~Hello World~~.");
+		},
+		m: function mount(target, anchor) {
+			insert_dev(target, t, anchor);
+		},
+		d: function destroy(detaching) {
+			if (detaching) detach_dev(t);
+		}
+	};
+
+	dispatch_dev("SvelteRegisterBlock", {
+		block,
+		id: create_default_slot_5.name,
+		type: "slot",
+		source: "(124:8) <Description margin={'4px 0 0 20px'}>",
+		ctx
+	});
+
+	return block;
+}
+
+// (110:6) <FormRow label={'Strikethrough:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+function create_default_slot_4(ctx) {
+	let checkbox;
+	let t;
+	let description;
+	let current;
+
+	checkbox = new Checkbox({
+			props: {
+				label: "Strikethrough",
+				checked: /*$state*/ ctx[3].markdown.strikethrough
+			},
+			$$inline: true
+		});
+
+	checkbox.$on("click", /*click_handler*/ ctx[6]);
+
+	description = new Description({
+			props: {
+				margin: "4px 0 0 20px",
+				$$slots: { default: [create_default_slot_5] },
+				$$scope: { ctx }
+			},
+			$$inline: true
+		});
+
+	const block = {
+		c: function create() {
+			create_component(checkbox.$$.fragment);
+			t = space();
+			create_component(description.$$.fragment);
+		},
+		m: function mount(target, anchor) {
+			mount_component(checkbox, target, anchor);
+			insert_dev(target, t, anchor);
+			mount_component(description, target, anchor);
+			current = true;
+		},
+		p: function update(ctx, dirty) {
+			const checkbox_changes = {};
+			if (dirty & /*$state*/ 8) checkbox_changes.checked = /*$state*/ ctx[3].markdown.strikethrough;
+			checkbox.$set(checkbox_changes);
+			const description_changes = {};
+
+			if (dirty & /*$$scope*/ 65536) {
+				description_changes.$$scope = { dirty, ctx };
+			}
+
+			description.$set(description_changes);
+		},
+		i: function intro(local) {
+			if (current) return;
+			transition_in(checkbox.$$.fragment, local);
+			transition_in(description.$$.fragment, local);
+			current = true;
+		},
+		o: function outro(local) {
+			transition_out(checkbox.$$.fragment, local);
+			transition_out(description.$$.fragment, local);
+			current = false;
+		},
+		d: function destroy(detaching) {
+			destroy_component(checkbox, detaching);
+			if (detaching) detach_dev(t);
+			destroy_component(description, detaching);
+		}
+	};
+
+	dispatch_dev("SvelteRegisterBlock", {
+		block,
+		id: create_default_slot_4.name,
+		type: "slot",
+		source: "(110:6) <FormRow label={'Strikethrough:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>",
+		ctx
+	});
+
+	return block;
+}
+
+// (145:8) <Description margin={'4px 0 0 20px'}>
 function create_default_slot_3(ctx) {
 	let t;
 
 	const block = {
 		c: function create() {
-			t = text("An image with alt text on an empty line will be interpreted as a figure element. The image’s alt text will be used as the caption.");
+			t = text("An image element with alt text on an empty line will be interpreted as a figure element, and can be displayed with an inline preview. The alt text will be used as caption text.");
 		},
 		m: function mount(target, anchor) {
 			insert_dev(target, t, anchor);
@@ -2947,14 +3755,14 @@ function create_default_slot_3(ctx) {
 		block,
 		id: create_default_slot_3.name,
 		type: "slot",
-		source: "(124:8) <Description margin={'4px 0 0 20px'}>",
+		source: "(145:8) <Description margin={'4px 0 0 20px'}>",
 		ctx
 	});
 
 	return block;
 }
 
-// (110:6) <FormRow label={'Figures:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+// (131:6) <FormRow label={'Figures:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
 function create_default_slot_2(ctx) {
 	let checkbox;
 	let t;
@@ -2969,7 +3777,7 @@ function create_default_slot_2(ctx) {
 			$$inline: true
 		});
 
-	checkbox.$on("click", /*click_handler*/ ctx[6]);
+	checkbox.$on("click", /*click_handler_1*/ ctx[7]);
 
 	description = new Description({
 			props: {
@@ -2998,7 +3806,7 @@ function create_default_slot_2(ctx) {
 			checkbox.$set(checkbox_changes);
 			const description_changes = {};
 
-			if (dirty & /*$$scope*/ 16384) {
+			if (dirty & /*$$scope*/ 65536) {
 				description_changes.$$scope = { dirty, ctx };
 			}
 
@@ -3026,14 +3834,14 @@ function create_default_slot_2(ctx) {
 		block,
 		id: create_default_slot_2.name,
 		type: "slot",
-		source: "(110:6) <FormRow label={'Figures:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>",
+		source: "(131:6) <FormRow label={'Figures:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>",
 		ctx
 	});
 
 	return block;
 }
 
-// (129:6) <FormRow leftColumn={'200px'} margin={'8px 0 0'}>
+// (150:6) <FormRow leftColumn={'200px'} margin={'8px 0 0'}>
 function create_default_slot_1(ctx) {
 	let checkbox;
 	let current;
@@ -3041,60 +3849,6 @@ function create_default_slot_1(ctx) {
 	checkbox = new Checkbox({
 			props: {
 				label: "Show Thumbnail",
-				disabled: !/*$state*/ ctx[3].markdown.implicitFigures,
-				checked: true
-			},
-			$$inline: true
-		});
-
-	checkbox.$on("click", /*click_handler_1*/ ctx[7]);
-
-	const block = {
-		c: function create() {
-			create_component(checkbox.$$.fragment);
-		},
-		m: function mount(target, anchor) {
-			mount_component(checkbox, target, anchor);
-			current = true;
-		},
-		p: function update(ctx, dirty) {
-			const checkbox_changes = {};
-			if (dirty & /*$state*/ 8) checkbox_changes.disabled = !/*$state*/ ctx[3].markdown.implicitFigures;
-			checkbox.$set(checkbox_changes);
-		},
-		i: function intro(local) {
-			if (current) return;
-			transition_in(checkbox.$$.fragment, local);
-			current = true;
-		},
-		o: function outro(local) {
-			transition_out(checkbox.$$.fragment, local);
-			current = false;
-		},
-		d: function destroy(detaching) {
-			destroy_component(checkbox, detaching);
-		}
-	};
-
-	dispatch_dev("SvelteRegisterBlock", {
-		block,
-		id: create_default_slot_1.name,
-		type: "slot",
-		source: "(129:6) <FormRow leftColumn={'200px'} margin={'8px 0 0'}>",
-		ctx
-	});
-
-	return block;
-}
-
-// (146:6) <FormRow leftColumn={'200px'} margin={'4px 0 0'}>
-function create_default_slot(ctx) {
-	let checkbox;
-	let current;
-
-	checkbox = new Checkbox({
-			props: {
-				label: "Show Caption",
 				disabled: !/*$state*/ ctx[3].markdown.implicitFigures,
 				checked: true
 			},
@@ -3132,9 +3886,63 @@ function create_default_slot(ctx) {
 
 	dispatch_dev("SvelteRegisterBlock", {
 		block,
+		id: create_default_slot_1.name,
+		type: "slot",
+		source: "(150:6) <FormRow leftColumn={'200px'} margin={'8px 0 0'}>",
+		ctx
+	});
+
+	return block;
+}
+
+// (167:6) <FormRow leftColumn={'200px'} margin={'4px 0 0'}>
+function create_default_slot(ctx) {
+	let checkbox;
+	let current;
+
+	checkbox = new Checkbox({
+			props: {
+				label: "Show Caption",
+				disabled: !/*$state*/ ctx[3].markdown.implicitFigures,
+				checked: true
+			},
+			$$inline: true
+		});
+
+	checkbox.$on("click", /*click_handler_3*/ ctx[9]);
+
+	const block = {
+		c: function create() {
+			create_component(checkbox.$$.fragment);
+		},
+		m: function mount(target, anchor) {
+			mount_component(checkbox, target, anchor);
+			current = true;
+		},
+		p: function update(ctx, dirty) {
+			const checkbox_changes = {};
+			if (dirty & /*$state*/ 8) checkbox_changes.disabled = !/*$state*/ ctx[3].markdown.implicitFigures;
+			checkbox.$set(checkbox_changes);
+		},
+		i: function intro(local) {
+			if (current) return;
+			transition_in(checkbox.$$.fragment, local);
+			current = true;
+		},
+		o: function outro(local) {
+			transition_out(checkbox.$$.fragment, local);
+			current = false;
+		},
+		d: function destroy(detaching) {
+			destroy_component(checkbox, detaching);
+		}
+	};
+
+	dispatch_dev("SvelteRegisterBlock", {
+		block,
 		id: create_default_slot.name,
 		type: "slot",
-		source: "(146:6) <FormRow leftColumn={'200px'} margin={'4px 0 0'}>",
+		source: "(167:6) <FormRow leftColumn={'200px'} margin={'4px 0 0'}>",
 		ctx
 	});
 
@@ -3146,17 +3954,30 @@ function create_fragment$7(ctx) {
 	let windowframe;
 	let t;
 	let div0;
+	let current_block_type_index;
+	let if_block;
 	let current;
 
 	windowframe = new WindowFrame({
 			props: {
-				$$slots: { default: [create_default_slot_4] },
+				$$slots: { default: [create_default_slot_8] },
 				$$scope: { ctx }
 			},
 			$$inline: true
 		});
 
-	let if_block = /*activeTab*/ ctx[0] == "markup" && create_if_block$1(ctx);
+	const if_block_creators = [create_if_block$1, create_if_block_1];
+	const if_blocks = [];
+
+	function select_block_type(ctx, dirty) {
+		if (/*activeTab*/ ctx[0] == "markup") return 0;
+		if (/*activeTab*/ ctx[0] == "media") return 1;
+		return -1;
+	}
+
+	if (~(current_block_type_index = select_block_type(ctx))) {
+		if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+	}
 
 	const block = {
 		c: function create() {
@@ -3180,39 +4001,54 @@ function create_fragment$7(ctx) {
 			mount_component(windowframe, div1, null);
 			append_dev(div1, t);
 			append_dev(div1, div0);
-			if (if_block) if_block.m(div0, null);
+
+			if (~current_block_type_index) {
+				if_blocks[current_block_type_index].m(div0, null);
+			}
+
 			current = true;
 		},
 		p: function update(ctx, [dirty]) {
 			const windowframe_changes = {};
 
-			if (dirty & /*$$scope, activeTab, windowTitle*/ 16387) {
+			if (dirty & /*$$scope, activeTab, windowTitle*/ 65539) {
 				windowframe_changes.$$scope = { dirty, ctx };
 			}
 
 			windowframe.$set(windowframe_changes);
+			let previous_block_index = current_block_type_index;
+			current_block_type_index = select_block_type(ctx);
 
-			if (/*activeTab*/ ctx[0] == "markup") {
+			if (current_block_type_index === previous_block_index) {
+				if (~current_block_type_index) {
+					if_blocks[current_block_type_index].p(ctx, dirty);
+				}
+			} else {
 				if (if_block) {
-					if_block.p(ctx, dirty);
+					group_outros();
 
-					if (dirty & /*activeTab*/ 1) {
-						transition_in(if_block, 1);
+					transition_out(if_blocks[previous_block_index], 1, 1, () => {
+						if_blocks[previous_block_index] = null;
+					});
+
+					check_outros();
+				}
+
+				if (~current_block_type_index) {
+					if_block = if_blocks[current_block_type_index];
+
+					if (!if_block) {
+						if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+						if_block.c();
+					} else {
+						if_block.p(ctx, dirty);
 					}
-				} else {
-					if_block = create_if_block$1(ctx);
-					if_block.c();
+
 					transition_in(if_block, 1);
 					if_block.m(div0, null);
-				}
-			} else if (if_block) {
-				group_outros();
-
-				transition_out(if_block, 1, 1, () => {
+				} else {
 					if_block = null;
-				});
-
-				check_outros();
+				}
 			}
 
 			if (dirty & /*$isWindowFocused*/ 4) {
@@ -3233,7 +4069,10 @@ function create_fragment$7(ctx) {
 		d: function destroy(detaching) {
 			if (detaching) detach_dev(div1);
 			destroy_component(windowframe);
-			if (if_block) if_block.d();
+
+			if (~current_block_type_index) {
+				if_blocks[current_block_type_index].d();
+			}
 		}
 	};
 
@@ -3300,7 +4139,7 @@ function instance$7($$self, $$props, $$invalidate) {
 			type: "SET_MARKDOWN_OPTIONS",
 			markdownOptions: {
 				...$state.markdown,
-				implicitFigures: !$state.markdown.implicitFigures
+				strikethrough: !$state.markdown.strikethrough
 			}
 		});
 	};
@@ -3323,6 +4162,20 @@ function instance$7($$self, $$props, $$invalidate) {
 				implicitFigures: !$state.markdown.implicitFigures
 			}
 		});
+	};
+
+	const click_handler_3 = () => {
+		window.api.send("dispatch", {
+			type: "SET_MARKDOWN_OPTIONS",
+			markdownOptions: {
+				...$state.markdown,
+				implicitFigures: !$state.markdown.implicitFigures
+			}
+		});
+	};
+
+	const click_handler_4 = () => {
+		window.api.send("dispatch", { type: "SET_MARKDOWN_OPTIONS" });
 	};
 
 	$$self.$capture_state = () => ({
@@ -3369,7 +4222,9 @@ function instance$7($$self, $$props, $$invalidate) {
 		mouseup_handler,
 		click_handler,
 		click_handler_1,
-		click_handler_2
+		click_handler_2,
+		click_handler_3,
+		click_handler_4
 	];
 }
 

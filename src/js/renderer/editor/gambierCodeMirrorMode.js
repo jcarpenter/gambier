@@ -251,7 +251,13 @@ const markdownOverlay = {
  * Per: https://codemirror.net/doc/manual.html#modeapi
  */
 export function defineGambierMode() {
-  CodeMirror.defineMode("gambier", (config, parsegrConfig) => {
+  CodeMirror.defineMode("gambier", (config, modeConfig) => {
+
+    /* 
+    - config = "...a CodeMirror configuration object (the thing passed to the CodeMirror function)".
+    - modeConfig = "...an optional mode configuration object (as in the mode option), returns a mode object".
+    https://codemirror.net/doc/manual.html#modeapi
+    */
 
     const START = 0, FRONTMATTER = 1, BODY = 2
 
@@ -265,6 +271,7 @@ export function defineGambierMode() {
       strikethrough: true,
       fencedCodeBlockHighlighting: true,
       fencedCodeBlockDefaultMode: 'javascript',
+      ...modeConfig.markdownOptions
       // highlightFormatting: true,
     }), markdownOverlay)
 

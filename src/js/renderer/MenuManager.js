@@ -2,12 +2,10 @@
   Menu is a singleton, driven by:
 
   - Menu.svelte component. One per window. Created by Layout.svelte. Position, contents (etc) are dervied from...
-  
   - menu store. Created here, in MenuManager.js. Is updated by closeMenu and openMenu functions, which are by called from both the Menu component, and by...
-  
   - Components that use the Menu component, such as PopupButton. They call `openMenu` from their mousedown handlers, and pass in params, which openMenu then applies to the store.
 
-  Principles: The components react to state changes in the `menu` store. But components do not modify state. Instead they call openMenu and closeMenu, which modify state.
+  The components react to state changes in the `menu` store. But components do not modify state. Instead they call openMenu and closeMenu, which modify state.
   */
 
 

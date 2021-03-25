@@ -1,29 +1,27 @@
 <script>
+	import { files } from "../../../FilesManager";
+
 	export let url = null
-	
-	let element = null
-	let clientWidth = 0
-	let clientHeight = 0
-	let offsetWidth = 0
-	let offsetHeight = 0
-	
-	$: {
-		if (url !== null && element !== null) {
-			
-			// const viewportOffset = element.getBoundingClientRect()
-			// console.log(viewportOffset.x, viewportOffset.y)
-			// console.log(viewportOffset.width, viewportOffset.height)
-			
-			// window.api.send(
-			//     'displayRemoteWebContent',
-			//     500,
-			//     500,
-			//     200,
-			//     100,
-			//     url
-			// )
-		}
+	export let cm = null
+
+	let formattedUrl
+	let isLocalUrl
+
+	$: url, formatURL()
+
+	/**
+	 * If `url` is relative, get working absolute url 
+	 * of file in the project directory.
+	 */
+	function formatURL() {
+		if (!cm || !url) return
+		const project = window.state.projects.byId[window.id]
+		const doc = $files.byId[cm.panel.docId]
+		const docURL = new URL(`file://${doc.path}`)
+		formattedUrl = new URL(url, docURL)
+		isLocalUrl = formattedUrl.protocol == 'file:'
 	}
+
 </script>
 
 <style type="text/scss">
@@ -41,4 +39,4 @@
 
 <!-- <div bind:this={element} bind:clientWidth bind:clientHeight bind:offsetWidth bind:offsetHeight id="preview" /> -->
 
-<img src={url} />
+<img src={formattedUrl} />
