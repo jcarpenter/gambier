@@ -227,6 +227,8 @@ export const newProject = {
         title: 'Search',
         lastSelected: {},
         selected: [],
+        queryValue: '',
+        inputToFocusOnOpen: 'search',
         options: {
           isOpen: false,
           matchCase: false,

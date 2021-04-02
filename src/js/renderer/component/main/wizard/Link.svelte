@@ -5,20 +5,30 @@
   import { writeToDoc } from '../../../editor/editor-utils';
   import { state } from '../../../StateManager';
   import FormRow from '../../ui/FormRow.svelte';
-  import { onDestroy } from 'svelte';
   
   export let cm = null
   export let element = null
-
+  export let suppressWarnings = false
+  
   let text
   let url
   let title
   let clearUrlAndTitleOnDestroy = false
 
-  $: {
+  $: element, onElementUpdate()
+
+  function onElementUpdate() {
+
+    if (!element) return
+
     text = element.spans.find((f) => f.type.includes('text'))
     url = element.spans.find((f) => f.type.includes('url'))
     title = element.spans.find((f) => f.type.includes('title'))
+
+    if (!text) {
+      const index = element.markdown.indexOf('[') + 1 + element.start
+      text = { start: index, end: index, string: '' }
+    }
 
     if (!url) {
       const index = element.markdown.indexOf('](') + 2 + element.start
@@ -33,16 +43,17 @@
 
   /**
    * Handle edge case where user deletes URL and leaves Title.
-   * We don't write the change until they destroy the element.
+   * Don't write the change until they exit the wizard.
    * This avoids unexpected side effects while editing.
    * E.g. Breaking the link by having title but no URL
   */
-  onDestroy(() => {
+  export function writeDelayedChanges() {
     if (clearUrlAndTitleOnDestroy) {
       const newLink = `[${text.string}]()`
       writeToDoc(cm, newLink, element.line, element.start, element.end)
     }
-  })
+    clearUrlAndTitleOnDestroy = false
+  }
 
 </script>
 
@@ -57,27 +68,27 @@
 
 <FormRow label={'Text:'} leftColumn={'30px'} margin={'8px'} multiLine={true} labelTopOffset={'4px'} compact={true}>
   <InputText 
+    placeholder={'Required'}
+    isError={text.string == '' && !suppressWarnings}
+    autofocus={true}
     multiLine={true}
     multiLineMaxHeight='100'
-    placeholder='' 
-    width='100%'
+    width={'100%'}
     compact={true} 
-    bind:value={text.string} 
-    on:input={(evt) => 
-      writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end)
-    }
+    value={text.string}
+    on:input={(evt) => writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end) }
   />
 </FormRow>
 
 <FormRow label={'URL:'} leftColumn={'30px'} margin={'8px'} multiLine={true} labelTopOffset={'4px'} compact={true}>   
   <InputText 
+    placeholder={'Required' }
+    isError={url.string == '' && !suppressWarnings}
     multiLine={true}
-    multiLineMaxHeight='100'
-    placeholder='' 
-    width='100%' 
+    multiLineMaxHeight={'100'}
+    width={'100%' }
     compact={true} 
-    isError={url.string == ''}
-    bind:value={url.string} 
+    value={url.string}
     on:input={(evt) => {
       // Don't immediately write changes if user makes URL blank,
       // and title is not blank, or else the element will break.
@@ -116,11 +127,11 @@
         width='100%' 
         compact={true} 
         isDisabled={url.string == ''}
-        bind:value={title.string} 
+        value={title.string}
         on:input={(evt) => {
 
           const wasBlank = title.start == title.end
-          const isNowBlank = title.string.length == 0
+          const isNowBlank = evt.target.textContent.length == 0
 
           if (wasBlank) {
             // To be a valid Commonmark link title, we need to insert whitespace before the value, and wrap it in quotation marks.

@@ -5,6 +5,7 @@
   
   export let cm = null
   export let element = null
+  export let suppressWarnings = false
 
 </script>
 

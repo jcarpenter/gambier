@@ -1,5 +1,5 @@
 <script>
-  import { project } from '../StateManager'
+  import { project, sidebar } from '../StateManager'
   import { files } from '../FilesManager'
   import Background from './backgrounds/Background.svelte'
   import EditorPanels from './main/EditorPanels.svelte'
@@ -15,6 +15,7 @@
   import Files from './dev/Files.svelte'
   import State from './dev/State.svelte'
   import { setLayoutFocus } from './ui/actions';
+import { onDestroy, onMount } from 'svelte';
 
   $: directoryIsSet = $project.directory
   $: filesPopulated = $files.tree
@@ -41,6 +42,7 @@
   function onDrop() {
     window.api.send('dispatch', { type: 'PROJECT_WINDOW_DRAG_LEAVE'})
   }
+
   
 </script>
 
@@ -80,7 +82,6 @@
     <SideBar />
     <div 
       id="main" 
-      use:setLayoutFocus={{current: $project.focusedSectionId, setTo: 'main'}}
     >
       <Toolbar />
       <Separator />
@@ -96,3 +97,5 @@
 {/if}
 
 <Background />
+
+<!-- use:setLayoutFocus={{current: $project.focusedSectionId, setTo: 'main'}} -->

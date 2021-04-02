@@ -1,5 +1,5 @@
 <script>
-  import { project } from '../../StateManager';
+  import { project, sidebar } from '../../StateManager';
   import { files } from '../../FilesManager';
   import { onMount, onDestroy } from 'svelte'
 
@@ -398,6 +398,11 @@
   class:isFirstPanel
   class:isLastPanel
   bind:this={el}
+  on:click={() => {
+    if ($project.focusedSectionId !== 'editor') {
+      window.api.send('dispatch', { type: 'SET_LAYOUT_FOCUS', section: 'editor' })
+    }
+  }}
   on:mousedown={focusPanel}
   on:dragover|preventDefault={onDragOver}
   on:drop={onDrop}

@@ -43,12 +43,13 @@
     const emojiRE = /^(?:[a-z_\d+][a-z_\d+-]*|\-[a-z_\d+][a-z_\d+-]*):/
     const expandedTab = "   " // CommonMark specifies tab as 4 spaces
     const fencedCodeBlockRE = /^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/
-    const figureRE = /^![^\]]*\](\(.*?\)| ?\[.*?\])/
-    const footnoteInlineRE = /\[.+?\]/
+    // Figure demo: https://regex101.com/r/ZmYyTN/1
+    const figureRE = /^!((\[[^\]]*?\]\(.*?\))|(\[[^\]]+?\]\[[^\]]*?\]))\s?$/
+    const footnoteInlineRE = /\[.*?\]/
     const footnoteReferenceRE = /\^\S*\]/
     const footnoteReferenceDefinitionRE = /^\[\^\S*\]: /
     const hrRE = /^([*\-_])(?:\s*\1){2,}\s*$/
-    const imageRE = /\[[^\]]*\](\(.*?\)|\[.*?\])?/
+    const imageRE = /(\[[^\]]*?\]\(.*?\))|(\[[^\]]+?\]\[[^\]]*?\])/ // Inline or Reference
     const linkInlineRE = /[^\]]*?\]\(.*?\)/
     const linkReferenceDefinitionRE = /^\[[^\]]+?\]:\s*(?:<[^<>\n]*>|(?!<)[^\s]+)/
     const linkReferenceFullRE = /[^\]]+?\]\[[^\]]+\]/
@@ -135,10 +136,9 @@
       //   }
       // }
 
-      if (state.linkReferenceDefinition) state.linkReferenceDefinition = false
-      if (state.footnoteReferenceDefinition) state.footnoteReferenceDefinition = false
-
       // Reset
+      state.linkReferenceDefinition = false
+      state.footnoteReferenceDefinition = false
       state.figure = false
       state.code = 0
       state.indentedCode = false;
@@ -236,11 +236,8 @@
       } else if (!isHr && !state.setext && firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(listRE))) {
 
         // ----- List ----- //
-        var listType = match[1] ? "ol" : "ul";
-        state.listType = listType
-
+        state.list = match[1] ? "ol" : "ul";
         state.indentation = lineIndentation + stream.current().length;
-        state.list = true;
         state.quote = 0;
 
         // Add this list item's content's indentation to the stack
@@ -265,7 +262,6 @@
 
         // ----- TeX math: Display ----- //
 
-        // console.log(stream.string)
         // state.texMathDisplay = true
         // if (modeCfg.highlightFormatting) state.formatting = "texMathDisplay";
         // state.f = state.inline = texMathDisplay
@@ -493,13 +489,13 @@
       }
 
       // List
-      if (state.list !== false) {
+      if (state.list !== false && state.list !== null) {
 
-        // Set type (`ol` vs `ul`)
-        styles.push(`line-${state.listType}`)
+        // Set type from list. Will be `ol` or `ul`.
+        styles.push(`line-${state.list}`)
 
         // Set depth
-        var listMod = (state.listStack.length - 1);
+        var listMod = state.listStack.length - 1;
         switch (listMod) {
           case 0:
             styles.push('line-list-1');
@@ -813,10 +809,11 @@
       // Footnote (inline)
       if (ch === '^' && stream.match(footnoteInlineRE, false)) {
 
-        // If brackets do not contain at least one non-whitespace character, the footnote is missing content, and incomplete.
-        // if (!stream.match(/\[\S+\]/, false)) {
-        //   state.incomplete = true
-        // }
+        // If brackets do not contain at least one non-whitespace 
+        // character, mark incomplete.
+        if (!stream.match(/\[[^\]]+?\]/, false)) {
+          state.incomplete = true
+        }
 
         // Skip ahead one. This prevents link parsing from triggering.
         stream.next() // So we get the `[` in the opening `^[`
@@ -877,7 +874,7 @@
       if (ch === ']' && state.footnoteReference) {
         // Include the `:` that definitions have
         if (stream.peek() == ':') stream.next()
-        state.formatting = 'footnote-end';
+        state.formatting = 'footnote-reference-end';
         state.footnoteLabel = false
         var styles = getStyles(state);
         state.footnote = false;
@@ -1007,7 +1004,9 @@
               // E.g. `[text][label]`
               //                   ^
               state.linkLabel = false
-              state.formatting = state.image ? 'image-end' : 'link-end'
+              state.formatting = state.image ? 
+                'image-reference-full-end' : 
+                'link-reference-full-end'
               var styles = getStyles(state);
               closeLink = true
             }
@@ -1021,7 +1020,9 @@
             stream.next()
             stream.next()
             state.linkLabel = false
-            state.formatting = state.image ? 'image-end' : 'link-end'
+            state.formatting = state.image ? 
+                'image-reference-collapsed-end' : 
+                'link-reference-collapsed-end'
             var styles = getStyles(state);
             closeLink = true
 
@@ -1286,7 +1287,6 @@
       // Is there a title? 
       // Demo: https://regex101.com/r/IrMSgJ/1
       // if (ch === ' ' && stream.match(/\s*(("|').*?\2\))|(\(.*?\)\))/, false)) {
-      //   console.log("title found")
       //   stream.match(/\s*("|'|\()/) // Advance to start of title text
       //   state.formatting = true
       //   var styles = getStyles(state)
@@ -1353,7 +1353,6 @@
       state.citationKey = false
 
       // if (ch === '@'){
-      //   console.log(stream.current())
       //   state.citationKey = true
       //   return getType(state)
       // }
@@ -1513,7 +1512,6 @@
           taskClosed: false,
           taskOpen: false,
           list: false,
-          listType: '',
           listStack: [],
           quote: 0,
           trailingSpace: 0,
@@ -1588,7 +1586,6 @@
           setext: s.setext,
           taskList: s.taskList,
           list: s.list,
-          listType: s.listType,
           listStack: s.listStack.slice(0),
           quote: s.quote,
           indentedCode: s.indentedCode,
@@ -1658,14 +1655,14 @@
 
               // Footnote reference definitions can span multiple lines: "Subsequent paragraphs are indented to show that they belong to the previous footnote." — https://pandoc.org/MANUAL.html#footnotes. So if `footnote-reference-definition` state is active, and this line is indented, we add `line-footnote-reference-definition-continued` class.
 
-              // TODO: 3/24/2021: Re-enable multi-line footnote reference definitions in future.
-              // if (indentation > 0) {
-              //   if (state.footnoteReferenceDefinition) {
-              //     return 'line-footnote-reference-definition-continued content'
-              //   } else {
-              //     return null
-              //   };
-              // }
+              // TODO: 3/31/2021: Revisit this. It may be breaking things to not disable footnote reference definitions.
+              if (indentation > 0) {
+                if (state.footnoteReferenceDefinition) {
+                  return 'line-footnote-reference-definition-continued content'
+                } else {
+                  return null
+                }
+              }
             }
           }
         }

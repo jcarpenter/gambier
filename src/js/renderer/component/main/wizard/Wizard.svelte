@@ -11,14 +11,17 @@
   import { getElementAt } from '../../../editor/map';
 
 
-  export let cm = null
-  export let textMarker = null
+  export let cm = undefined
+  export let textMarker = undefined
   export let type = ''
   
-  let element = null
-  let el = null // DOM element, set with bind:this
+  let element = undefined
+  let component = undefined
+  let componentEl = undefined
+  let el = undefined // DOM element, set with bind:this
   let isVisible = false
   let isIncomplete = false
+  let suppressWarnings = false
   let leftPos = '-5000px' // Default value
   let topPos = '0px'
 
@@ -27,7 +30,7 @@
   // If yes, get the updated element.
   cm.on('changes', (cm, changes) => {
 
-    if (!isVisible) return
+    if (!isVisible || !element) return
     
     const elementWasAffected = changes.find(
       ({from, to}) =>
@@ -163,13 +166,26 @@
    * Show wizard by toggling 'isVisible' class, 
    * and setting `top` and `left` positions.
    */
-  export async function show(newTextMarker) {
+  export async function show(newTextMarker, newSuppressWarnings) {
 
     textMarker = newTextMarker
     const { from } = textMarker.find()
 
     // Get the element we're editing
     element = getElementAt(cm, from.line, from.ch + 1)
+
+    // Determine component
+    switch (element.type) {
+      case 'citation': component = Citation; break
+      case 'footnote-inline': component = Footnote; break
+      case 'footnote-reference': component = ReferenceFootnote; break
+      case 'link-inline': component = Link; break
+      case 'link-reference-collapsed':
+      case 'link-reference-full': component = ReferenceLink; break
+      case 'image-inline': component = Image; break
+      case 'image-reference-collapsed':
+      case 'image-reference-full': component = ReferenceImage; break
+    }
 
     // Update position
     // Docs: https://codemirror.net/doc/manual.html#charCoords
@@ -179,15 +195,18 @@
     }px`
     topPos = `${cm.cursorCoords(true, 'local').bottom + 10}px`
 
-    // Autoscroll to ensure wizard is visible. We need to call this manually, AFTER the wizard has repositioned itself (using `tick`), so autoscroll takes the wizard element into account. Otherwise it either doesn't fire, or fires too early (e.g. when the selection was set that triggered the wizard opening)
-    await tick()
-    cm.scrollIntoView(null)
-
     // Error
     isIncomplete = element.isIncomplete
 
     // Make visible
     isVisible = true
+
+    // Set `supressWarnings`
+    suppressWarnings = newSuppressWarnings
+
+    // Autoscroll to ensure wizard is visible. We need to call this manually, AFTER the wizard has repositioned itself (using `tick`), so autoscroll takes the wizard element into account. Otherwise it either doesn't fire, or fires too early (e.g. when the selection was set that triggered the wizard opening)
+    await tick()
+    cm.scrollIntoView(null)
 
     // Focus
     el.focus()
@@ -197,12 +216,20 @@
    * Hide wizard by toggling `isVisible` class and positioning off-screen.
    */
   function hide() {
+
+    // Not all Wizard components have a writeDelayedChanges() function.
+    if (componentEl?.writeDelayedChanges) {
+      componentEl?.writeDelayedChanges()
+    }
+
+    // component = undefined
     element = undefined
     isVisible = false
     leftPos = '-5000px' // Default value
     topPos = '0px' // Default value
+    cm.focus()
   }
-
+  
 </script>
 
 <style type="text/scss">
@@ -363,21 +390,8 @@
   on:keydown={onKeydown}
   on:focusout={onFocusout}
 >
-  {#if !element}
-    Empty!
-  {:else if element.type == 'citation'}
-    <Citation {cm} {element} />
-  {:else if element.type == 'footnote-inline'}
-    <Footnote {cm} {element} />
-  {:else if element.type == 'footnote-reference'}
-    <ReferenceFootnote {cm} {element} />
-  {:else if element.type == 'link-inline'}
-    <Link {cm} {element} />
-  {:else if element.type.includes('link-reference')}
-    <ReferenceLink {cm} {element} />
-  {:else if element.type == 'image-inline'}
-    <Image {cm} {element} />
-  {:else if element.type.includes('image-reference')}
-    <ReferenceImage {cm} {element} />
+  {#if component}
+    <svelte:component bind:this={componentEl} this={component} {cm} {element} {suppressWarnings}/>
   {/if}
+
 </div>

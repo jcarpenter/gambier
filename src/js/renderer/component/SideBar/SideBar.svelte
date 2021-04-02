@@ -11,8 +11,60 @@
   import Search from './Search.svelte'
   import Preview from './Preview.svelte'
   import { setLayoutFocus } from '../ui/actions';
+  import { onMount, onDestroy, tick } from 'svelte';
+
+  let component
+  let componentEl // tab component element
 
   $: monoColors = $state.theme.accentColor == 'mono'
+
+  $: {
+    switch ($sidebar.activeTabId) {
+      case 'project': component = Project; break
+      case 'allDocs': component = AllDocuments; break
+      case 'mostRecent': component = MostRecent; break
+      case 'tags': component = Tags; break
+      case 'media': component = Media; break
+      case 'citations': component = Citations; break
+      case 'search': component = Search; break
+    } 
+  }
+
+
+  // ------- ON MOUNT ------- //
+
+  let removeListenerMethods = []
+
+  onMount(() => {
+
+    // Setup listeners for menu commands
+
+    const findInFiles = window.api.receive('findInFiles', () => {
+      if ($sidebar.activeTabId !== 'search') {
+        window.api.send('dispatch', {
+          type: 'SHOW_SEARCH',
+          inputToFocus: 'search',
+        })
+      }
+    })
+
+    const replaceInFiles = window.api.receive('replaceInFiles', () => {
+      if ($sidebar.activeTabId !== 'search') {
+        window.api.send('dispatch', {
+          type: 'SHOW_SEARCH',
+          inputToFocus: 'replace',
+        })
+      }
+    })
+
+    removeListenerMethods.push(findInFiles, replaceInFiles)
+  })
+
+  onDestroy(() => {
+    // Remove `window.api.receive` listeners
+    removeListenerMethods.forEach((remove) => remove())
+  })
+
 
 </script>
 
@@ -94,22 +146,7 @@
 
   <Separator />
 
-  <!-- Sections -->
-  {#if $sidebar.activeTabId == 'project'}
-    <Project />
-  {:else if $sidebar.activeTabId == 'allDocs'}
-    <AllDocuments />
-  {:else if $sidebar.activeTabId == 'mostRecent'}
-    <MostRecent />
-  {:else if $sidebar.activeTabId == 'tags'}
-    <Tags />
-  {:else if $sidebar.activeTabId == 'media'}
-    <Media />
-  {:else if $sidebar.activeTabId == 'citations'}
-    <Citations />
-  {:else if $sidebar.activeTabId == 'search'}
-    <Search />
-  {/if}
+  <svelte:component bind:this={componentEl} this={component} />
 
   <!-- <Preview/> -->
 

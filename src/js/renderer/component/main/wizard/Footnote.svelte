@@ -6,10 +6,14 @@
  
   export let cm = null
   export let element = null
+  export let suppressWarnings = false
 
   let content
 
-  $: {
+  $: element, onElementUpdate()
+
+  function onElementUpdate() {
+    if (!element) return
     if (element.spans.length) {
       content = element.spans[0]
     } else {
@@ -30,17 +34,14 @@
 
 <FormRow margin={'8px 8px'}>
   <InputText
-    placeholder={''}
+    autofocus={true}
+    placeholder={'Required'}
+    isError={content.string == '' && !suppressWarnings}
     multiLine={true}
     multiLineMaxHeight={200}
     width={'100%'}
     compact={true} 
-    bind:value={content.string} 
-    on:input={(evt) => 
-      writeToDoc(
-        cm, evt.target.textContent, 
-        element.line, content.start, content.end
-      )
-    }
+    value={content.string}
+    on:input={(evt) => writeToDoc(cm, evt.target.textContent, element.line, content.start, content.end)}
   />
-  </FormRow>
+</FormRow>

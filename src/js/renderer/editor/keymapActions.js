@@ -1,7 +1,160 @@
 import { indentList, unindentList } from "./indentList"
-import { getSurroundingSpan, isLineClassesHeterogeneous, getTopAndBottomLines, getLineClasses, getLineSpans, getSpanAt, isSingleCursor } from "./editor-utils"
-import { getElementAt, getElementsAt, getLineElements } from "./map"
-import { citeEnd } from "citeproc"
+import { isLineClassesHeterogeneous, getTopAndBottomLines, getLineClasses, getLineSpans, getSpanAt, isSingleCursor, getFromAndTo, getCharAt, getModeAndState, orderOrderedList } from "./editor-utils"
+import { getElementAt, getElementsAt, getElementsInsideRange, getLineElements } from "./map"
+import { markLine } from "./mark"
+import { isValidHttpUrl, wait } from "../../shared/utils"
+
+/**
+ * Create an element of the selected type at each selection.
+ * @param {*} type - Of element. 'link inline', 'citation', etc.
+ */
+export async function makeElement(cm, type) {
+  
+  const selections = cm.listSelections()
+
+  cm.operation(() => {
+    selections.forEach(async (s) => {
+      
+      const { from, to } = getFromAndTo(s)
+      const isSingleCursor = from.line == to.line && from.ch == to.ch
+      const text = isSingleCursor ? '' : cm.getRange(from, to)
+      const elementAtSelection = !isSingleCursor && getElementsInsideRange(cm, from, to, true)
+      const clipboard = await getClipboardContents()
+      const clipboardIsUrl = isValidHttpUrl(clipboard)
+    
+      // Determine new element to write
+      let newEl = ''
+      switch (type) {
+        
+        case 'link inline': {
+          // If user has selected a bare-url element, use it as the 
+          // link url, and leave text blank. Else, if user has a url
+          // in the clipboard, use that as link url, and use selected
+          // text as the link text. Else, just use selected text as
+          // link text, and leave url blank.
+          if (elementAtSelection?.type == 'bare-url') {
+            newEl = `[](${text})`
+          } else if (clipboardIsUrl) {
+            newEl = `[${text}](${clipboard})`
+          } else {
+            newEl = `[${text}]()`
+          }
+          break
+        }
+
+        case 'image inline': {
+          // (Same as for link line, plus `!` to make it an image)
+          if (elementAtSelection?.type == 'bare-url') {
+            newEl = `![](${text})`
+          } else if (clipboardIsUrl) {
+            newEl = `![${text}](${clipboard})`
+          } else {
+            newEl = `![${text}]()`
+          }
+          break
+        }
+
+        case 'footnote inline': {
+          newEl = `^[${text}]`
+          break
+        }
+
+        case 'citation': {
+          newEl = `[@${text}]`
+          break
+        }
+      }
+
+      cm.replaceRange(newEl, from, to)
+      
+      // const isElementsAtCursor = getElementsAt()
+      // const isSelectedTextInsideAnotherElement =
+      //   !isSingleCursor &&
+      //   getElementAt(cm, from.line, from.ch) !== undefined
+
+    })
+  })
+
+  // Try to select the mark (if one was created)
+  if (!window.state.sourceMode && selections.length == 1) {
+    // Wait a beat for CM to update
+    await wait(10)
+    const { from } = getFromAndTo(selections[0])
+    const mark = cm.findMarksAt(from)[0]
+    if (mark) {
+      mark.component.openWizard(true)
+    }
+  }
+
+}
+
+// TODO: Move into utils
+async function getClipboardContents() {
+  try {
+    const text = await navigator.clipboard.readText()
+    return text
+  } catch (err) {
+    console.error('Failed to read clipboard contents: ', err)
+  }
+}
+
+
+/**
+ * Make alt-right into editable marks (e.g. links) work the same
+ * as alt-right through lines of text: jump to end of the next
+ * word on the same line.
+ * TODO: Handle multiple cursors. As-is, if there are multiple
+ * and one of them enters a mark, the others will disappear.
+ * @param {*} direction - 'left' or 'right'
+ */
+export function altArrow(cm, buttonPressed) {
+
+  const ranges = cm.listSelections()
+
+  for (const range of ranges) {
+    const isSingleCursor =
+      range.anchor.line == range.head.line &&
+      range.anchor.ch == range.head.ch
+    if (!isSingleCursor) {
+
+      return CodeMirror.Pass
+
+    } else {
+
+      const { from, to } = getFromAndTo(range)
+      const lineText = cm.getLine(from.line)
+
+      if (buttonPressed == 'right') {
+        // Find index of next instance of whitespace followed
+        // by word character, or ] or ).
+        // Demo: https://regex101.com/r/tOhVub/1
+        const indexOfEndOfNextWord = lineText.slice(from.ch).search(/\S[\s|]|\)]/)
+        if (indexOfEndOfNextWord !== -1) {
+          const mark = cm.findMarksAt({ line: from.line, ch: from.ch + indexOfEndOfNextWord + 1 })[0]
+          if (mark?.isEditable) {
+            mark.component.altArrowInto('left')
+            return
+          }
+        }
+      } else if (buttonPressed == 'left') {
+        // Find index of prev instance of whitespace followed
+        // by word character, or ] or ).
+        // Demo: https://regex101.com/r/tOhVub/1
+        const lineTextReversed = [...lineText.slice(0, from.ch)].reverse().join('')
+        const indexOfStartOfPrevWord = lineTextReversed.search(/\S[\s|]|\)]/)
+        if (indexOfStartOfPrevWord !== -1) {
+          const mark = cm.findMarksAt({ line: from.line, ch: from.ch - indexOfStartOfPrevWord - 1 })[0]
+          if (mark?.isEditable) {
+            mark.component.altArrowInto('right')
+            return
+          }
+        }
+      }
+    }
+  }
+
+  return CodeMirror.Pass
+}
 
 /**
  * Make it hard to accidentally delete marks by selecting them first. 
@@ -13,34 +166,33 @@ import { citeEnd } from "citeproc"
  */
 export function backspaceOrDelete(cm, keyPressed = '') {
 
-  const cursor = cm.getCursor()
   const ranges = cm.listSelections()
 
-  // Are there multiple selections?
+  // If there are multiple selections, or text is selected, 
+  // process as normal backspace or delete.
   const multipleSelections = ranges.length > 1
-
-  // Is a range of text selected?
-  const textIsSelected =
-    ranges[0].head.line !== ranges[0].anchor.line ||
-    ranges[0].head.ch !== ranges[0].anchor.ch
-
-  // If text is selected, process as normal backspace or delete.
+  const textIsSelected = cm.somethingSelected()
   if (multipleSelections || textIsSelected) return CodeMirror.Pass
 
-  // Else, check for and selected any adjacent marks.
-  const { line, ch } = ranges[0].head
-  const adjacentMark = cm.doc.findMarksAt({ line, ch })[0]
+  // Else, if there is an adjacent mark and we're trying to 
+  // backspace or delete it, select it instead.
+  const cursor = cm.getCursor()
+  const adjacentMark = cm.findMarksAt(cursor)[0]
   if (adjacentMark) {
-    // Get `from` and `to` objects
     const { from, to } = adjacentMark.find()
-    // Select the adjacent mark
-    cm.addSelection(
-      { line: from.line, ch: from.ch },
-      { line: to.line, ch: to.ch }
-    )
-  } else {
-    return CodeMirror.Pass
+    const cursorIsOnLeftEdge = cursor.ch == from.ch
+    const cursorIsOnRightEdge = cursor.ch == to.ch
+    if (cursorIsOnLeftEdge && keyPressed == 'delete') {
+      cm.addSelection(from, to)
+      return
+    } else if (cursorIsOnRightEdge && keyPressed == 'backspace') {
+      cm.addSelection(from, to)
+      return
+    }
   }
+
+  // Else, process keypress as normal
+  return CodeMirror.Pass
 }
 
 export function wrapText(cm, char) {
@@ -112,6 +264,7 @@ export function tab(cm, shiftKey) {
     for (var i = topLine; i <= bottomLine; i++) {
       const lineHandle = cm.getLineHandle(i)
       const lineClasses = getLineClasses(lineHandle)
+      console.log(lineHandle)
       if (lineClasses) {
         // lineClasses are formatted like `header h1` and `ol list-1`
         // The "main" style is always the first word.
@@ -325,10 +478,10 @@ export function tabToNextElement(cm) {
           // we can tell if _around_ the element by checking the 
           // from and to values.
           const isNestedInsideMark =
-            markAt !== undefined && 
+            markAt !== undefined &&
             markAt?.find().from.ch < e.start ||
             markAt?.find().to.ch > e.end
-          if (!isNestedInsideMark) return true        
+          if (!isNestedInsideMark) return true
         } else {
           return true
         }
@@ -630,6 +783,119 @@ export function toggleUnorderedList(cm) {
     }
 
     cm.replaceRange(`${charToUse} `, { line, ch: 0 })
+  }
+}
+
+
+/**
+ * If line is already ordered list, make it plain text.
+ * If line is not ordered list, make it so.
+ * If prev line was ordered list, continue it (increment, etc)
+ * If line was unordered list, block quote, etc, convert it.
+ * If next lines are ordered list, increment each.
+ * If selection spans multiple lines, process each.
+ * @param {*} cm 
+ */
+export function toggleOrderedList(cm) {
+
+  let ulLineStart = /(\s*?)(\*|\-|\+)(\s*)/
+  let olLineStart = /(\s*?)(\d)(\.|\))(\s*)/
+
+  const cursor = cm.getCursor('head')
+  const { state, mode } = getModeAndState(cm, cursor.line)
+  if (mode.name !== 'markdown') return
+
+  // If ul, convert to ol
+  if (state.list == 'ul') {
+    // Find start and end lines of the ul
+    let start = cursor.line
+    let end = cursor.line
+    
+    // Find start of `ul`
+    for (var i = cursor.line - 1; i >= 0; i--) {
+      const lineIsUl = getModeAndState(cm, i).state.list == 'ul'
+      if (lineIsUl) {
+        start = i
+      } else {
+        break
+      }
+    }
+    
+    // Find end of `ul`
+    for (var i = cursor.line + 1; i <= cm.lastLine(); i++) {
+      const lineIsUl = getModeAndState(cm, i).state.list == 'ul'
+      if (lineIsUl) {
+        end = i
+      } else {
+        break
+      }
+    }
+
+    // cm.operation(() => {
+
+      for (var i = start; i <= end; i++) {
+        let line = cm.getLine(i)
+        line = line.replace(ulLineStart, (match, p1, p2, p3) => {
+          return `${p1}1.${p3}`
+        })
+        cm.replaceRange(line, { line: i, ch: 0 }, { line: i, ch: cm.getLine(i).length }, '+input')
+      }
+
+      orderOrderedList(cm, start)
+    // })
+  }
+
+  return
+
+  const ranges = cm.listSelections()
+  
+  // For each selection...
+  for (const r of ranges) {
+    const { from, to } = getFromAndTo(r)
+    console.log(from.line, to.line)
+    
+    // For each line in the selection...
+    for (let i = from.line; i <= to.line; i++) {
+      console.log(i)
+    
+      const { state, mode } = getModeAndState(cm, i)
+      if (mode.name !== 'markdown') continue
+      
+      // If line is already ordered list, make it plain text
+      if (state.list == 'ol') {
+        const line = cm.getLine(i)
+        const charsToTrim = line.match(olLineStart)[0].length
+        cm.replaceRange('', { line: i, ch: 0 }, { line: i, ch: charsToTrim })
+        // TODO: If next lines are ol, decrement them
+        continue
+      }
+      
+      // Else, if line is not ordered list, make it so.  
+      const { state: prevLineState } = getModeAndState(cm, i-1)
+      if (prevLineState.list == 'ol') {
+        // Continue list by matching indentation and incrementing.
+        // Demo: https://regex101.com/r/TK2bzK/1
+        const prevLine = cm.getLine(from.line-1)
+        const match = prevLine.match(/(\s*?)(\d)(\.|\))(\s*)/)
+        if (match) {
+          const indent = match[1]
+          const digit = parseInt(match[2])
+          const delineator = match[3]
+          const whitespace = match[4]
+          const lineStart = `${indent}${digit+1}${delineator}${whitespace}`
+          cm.replaceRange(lineStart, { line: from.line, ch: 0 }, { line: from.line, ch: 0 })
+        } else {
+          // We can get false positives on previous line being an ol
+          // if it's actually a blank line _after_ and ol line.
+          // In which case, match will fail, and we start a new list.
+          cm.replaceRange('1. ', { line: i, ch: 0 }, { line: i, ch: 0 })
+        }
+      } else {
+        cm.replaceRange('1. ', { line: i, ch: 0 }, { line: i, ch: 0 })
+      }
+
+
+    }
   }
 }
 

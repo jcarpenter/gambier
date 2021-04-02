@@ -2,9 +2,12 @@ import { getElementAt } from "./map"
 import { markElement } from "./mark"
 
 export function onCursorActivity(cm) {
+  
+  // console.log('onCursorActivity')
+  // console.log(cm.listSelections())
 
-  const allMarks = cm.getAllMarks()
-  allMarks.forEach((m) => m.component?.onSelectionChange())
+  // const allMarks = cm.getAllMarks()
+  // allMarks.forEach((m) => m.component?.onSelectionChange())
 
   // Check for outstanding marks.
   // We use bookmark marks to flag elements that need to be

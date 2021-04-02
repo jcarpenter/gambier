@@ -28,7 +28,7 @@ export function getLineSpans(cm, lineHandle) {
   if (!lineHandle.styles?.some((s) => typeof s === 'string' && s !== '')) return spans
 
   const line = lineHandle.lineNo()
-  
+
   // Get line classes
   const lineClasses = getLineClasses(lineHandle)
 
@@ -572,11 +572,21 @@ export function getSurroundingSpan(cm) {
 // -------- GET DOCUMENT DETAILS -------- //
 
 /**
+ * Return a {state, mode} object with the inner mode and its 
+ * state for the given line number.
+ * @param {*} line - Integer. Line number. 
+ */
+export function getModeAndState(cm, line) {
+  const eolState = cm.getStateAfter(line)
+  return CodeMirror.innerMode(cm.getMode(), eolState)
+}
+
+/**
  * Sometimes we need to access CodeMirror instances from outside their parent Editor components. This is a convenience function for finding the CM instance from `windows.cmInstances` by the ID of it's associated panel, and getting it's ddata.
  * @param {*} panelId 
  */
 export function getCmDataByPanelId(panelId) {
-  const cmInstance = window.cmInstances.find((c) => c.state.panel.id == panelId)
+  const cmInstance = window.cmInstances.find((c) => c.panel.id == panelId)
   const data = cmInstance.getValue()
   return data
 }
@@ -595,7 +605,7 @@ export function getReferenceDefinitions(cm, label, type = 'link') {
   for (var i = 0; i < cm.lineCount(); i++) {
     const firstTokenType = cm.getTokenTypeAt({ line: i, ch: 0 })
     if (!firstTokenType) continue
-    if (!firstTokenType.includes(`${type}-reference-definition-start`)) continue 
+    if (!firstTokenType.includes(`${type}-reference-definition-start`)) continue
     const element = map.getElementAt(cm, i, 1)
     const elementLabel = element.spans.find((s) => s.type.includes('label'))?.string
     if (elementLabel == label) {
@@ -608,8 +618,8 @@ export function getReferenceDefinitions(cm, label, type = 'link') {
   cm.eachLine((lineHandle) => {
 
     // If line has no block styles, return
-    const lineHasBlockStyles = 
-      lineHandle.styleClasses !== undefined && 
+    const lineHasBlockStyles =
+      lineHandle.styleClasses !== undefined &&
       lineHandle.styleClasses !== null
     if (!lineHasBlockStyles) return
 
@@ -983,3 +993,43 @@ export function jumpToLine(cm, line, ch = 0) {
   cm.setCursor(line, ch)
   cm.focus()
 }
+
+
+
+// -------- MISC -------- //
+
+/**
+ * Traverse an ordered list and set the counter on each row.
+ * @param {} line - First line in the list.
+ */
+export function orderOrderedList(cm, line, origin = '+input', indent = 1) {
+  let stillInsideTree = true
+  let counter = 1
+  while (stillInsideTree) {
+    const { state, mode } = getModeAndState(cm, line)
+    const lineIsOl = state.list == 'ol'
+    const lineIndent = state.listStack.length
+    let lineText = cm.getLine(line)
+    if (!lineIsOl || !lineText || lineIndent < indent) {
+      stillInsideTree = false
+    } else if (lineIndent > indent) {
+      line = orderOrderedList(cm, line, origin, lineIndent)
+      // counter++
+      continue
+    } else {
+      let lineLength = lineText.length
+      const newLineText = lineText.replace(/(\s*?)(\d)(\.|\))(\s*)/, (match, p1, p2, p3, p4) => {
+        const newLineText = `${p1}${counter}${p3}${p4}`
+        return newLineText
+      })
+      // console.log(lineText)
+      if (newLineText !== lineText) {
+        cm.replaceRange(newLineText, { line: line, ch: 0 }, { line: line, ch: lineLength }, origin)
+      }
+      line++
+      counter++
+    }
+  }
+  return line
+}
+

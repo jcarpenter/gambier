@@ -165,6 +165,23 @@ export function isUrl(string) {
 }
 
 /**
+ * Return true if `string` is URL and protocol is http or https.
+ * Uses browser `URL` interface.
+ * @param {*} string - url to text
+ */
+export function isValidHttpUrl(string) {
+  let url;
+
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return false;
+  }
+
+  return url.protocol === "http:" || url.protocol === "https:";
+}
+
+/**
  * Return true if string has valid image file format extension
  * E.g. .jpg, .gif, .apng.
  */

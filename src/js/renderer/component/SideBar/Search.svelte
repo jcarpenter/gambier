@@ -2,7 +2,7 @@
   import { arrowUpDown } from './list/interactions';
   import { project, sidebar } from '../../StateManager'
   import { files } from '../../FilesManager'
-  import { setContext } from 'svelte';
+  import { onDestroy, onMount, setContext, tick } from 'svelte';
   import Checkbox from '../ui/Checkbox.svelte';
   import Expandable from '../ui/Expandable.svelte';
   import Header from './Header.svelte'
@@ -12,15 +12,112 @@
   import SearchResult from './list/SearchResult.svelte'
   import Separator from '../ui/Separator.svelte'
   import FormRow from '../ui/FormRow.svelte';
+  import { debounce } from 'debounce'
+  import Preview from '../main/preview/Preview.svelte';
+import { wait } from '../../../shared/utils';
 
-  let query = '' // Bound to search field
-  let replaceWith = '' // Bound to replace field
+  let queryEl = '' // Bound to Search InputText
+  let queryValue = '' // Bound to Search InputText value
+  
+  let replaceEl = '' // Bound to Replace InputText
+  let replaceValue = '' // Bound to Replace InputText valie
 
   let tabId = 'search'
   setContext('tabId', tabId);
   $: tab = $sidebar.tabsById[tabId]
 
 	$: isSidebarFocused = $project.focusedSectionId == 'sidebar'
+
+
+  // -------- ON MOUNT -------- //
+  
+  let removeListenerMethods = []
+
+  onMount(() => {
+
+    // Focus Search input when 'findInFiles' is received.
+    const findInFiles = window.api.receive('findInFiles', queryEl.focus)
+
+    // Focus Replace input when 'replaceInFiles' is received.
+    const replaceInFiles = window.api.receive('replaceInFiles', async () => {
+      
+      // Open 'Replace' expandable, if it's not already open
+      const isReplaceOpen = $sidebar.tabsById[tabId].replace.isOpen
+      if (!isReplaceOpen) {
+        window.api.send('dispatch', {
+          type: 'SIDEBAR_TOGGLE_EXPANDABLE', 
+          tabId: tabId, 
+          expandable: 'replace'
+        })
+        // Pause execution to give Replace expandable time to open
+        // (state update, transition animation, etc), then focus().
+        // NOTE: Very hacky. Relies on magic timing numbers. :p
+        await wait(200)
+      }
+      
+      // Focus Replace input right away
+      replaceEl.focus()
+      
+    })
+
+    removeListenerMethods.push(findInFiles, replaceInFiles)
+
+    // Restore the query value from state
+    queryValue = $sidebar.tabsById[tabId].queryValue
+
+    // Focus the right input
+    switch ($sidebar.tabsById[tabId].inputToFocusOnOpen) {
+      case 'search': queryEl.focus(); break
+      case 'replace': replaceEl.focus(); break
+    }
+  })
+
+  onDestroy(() => {
+    // Remove `window.api.receive` listeners
+    removeListenerMethods.forEach((remove) => remove())
+  })
+
+
+  // -------- QUERY -------- //
+  
+  $: queryValueInState = $sidebar.tabsById.search.queryValue
+  $: queryValueInState, updateQueryValueFromState()
+
+  /**
+   * When query in state changes, update local query to match.
+   * This will typically be called when user selects 'Find in Files'
+   * while content is selected in an editor. The editor instance will
+   * set the active project's `tabsById.search.queryValue` value
+   * via reducer. And we'll then catch the change here.
+   */
+  function updateQueryValueFromState() {
+    
+    // Return if Svelte not ready yet
+    if (!queryEl) return
+    
+    // Only update if they don't already match
+    if (queryValueInState !== queryValue) {   
+      queryValue = queryValueInState
+    }
+  }
+
+  $: queryValue, saveQueryValueToState()
+
+  /**
+   * Save query values to store so we if we switch away from tab
+   * momentarily, our query is still there when we switch back.
+   * Debounce so we're not updating every key stroke.
+   */
+  const saveQueryValueToState = debounce(() => {
+    const valueHasChanged = queryValue !== $sidebar.tabsById.search.queryValue
+    if (valueHasChanged) {
+      window.api.send('dispatch', {
+        type: 'SAVE_SEARCH_QUERY_VALUE', 
+        value: queryValue
+      })
+    }
+  }, 500)
+  
 
   // -------- OPTIONS -------- //
 
@@ -71,12 +168,12 @@
   let resultIds = []
   let numHits = 0 // Total # of hits across all result docs
 
-  $: $files, query, options, getResults()
+  $: $files, queryValue, options, getResults()
 
   async function getResults() {
 
     // If query is empty, set empty variables and return.
-    if (!query) {
+    if (!queryValue) {
       results = []
       resultIds = []
       numHits = 0
@@ -91,7 +188,7 @@
 
     // We pass these params to DB
     const params = {
-      query: query,
+      query: queryValue,
       path: options.lookIn == '*' ? $project.directory : $files.byId[options.lookIn].path,
       matchExactPhrase: options.matchExactPhrase
     }
@@ -101,7 +198,7 @@
     if (!dbResults) return
 
     // Save regexp to find all highlight instances in results from db. Case-insensitive.
-    const highlightRegex = new RegExp(`(<span class="highlight">.*?)(${query})(.*?)(<\/span>)`, 'gi')
+    const highlightRegex = new RegExp(`(<span class="highlight">.*?)(${queryValue})(.*?)(<\/span>)`, 'gi')
 
     // Get results from db, find matches we care about (e.g. check case, if matchCase is true)
     // and format to highlight query only, instead of whole token. We're having to work around
@@ -118,7 +215,7 @@
         
         // If matchCase is false, always add to hits
         // If matchCase is true, only add to hits if query is an exact match.
-        if (!options.matchCase || (options.matchCase && match[2] == query)) {
+        if (!options.matchCase || (options.matchCase && match[2] == queryValue)) {
 
           // Tweak formatting so highlight only applies to query string——not entire token.
           // For query = 'mark'
@@ -156,9 +253,9 @@
    * Triggered by pressing 'Replace All' button
    */
    function replaceAll(isMetaKey) {
-    if (replaceWith) {
+    if (replaceValue) {
       const filePaths = results.map((r) => r.path)
-      window.api.send('replaceAll', query, replaceWith, filePaths, options.matchCase, options.matchExactPhrase, isMetaKey)
+      window.api.send('replaceAll', queryValue, replaceValue, filePaths, options.matchCase, options.matchExactPhrase, isMetaKey)
     }
   }
 
@@ -203,11 +300,63 @@
   
   <Separator margin={'0 10px 8px'} />
   
-  <InputText icon={'img-magnifyingglass'} placeholder={'Name'} margin={'0 10px 0'} bind:value={query} compact={true} />
+  <InputText 
+    placeholder={'Name'} 
+    icon={'img-magnifyingglass'} 
+    margin={'0 10px 0'} 
+    compact={true}
+    bind:this={queryEl}
+    bind:value={queryValue} 
+  />
   
   <Separator margin={'8px 10px 0'} />
 
+
+  <!------------- REPLACE ------------->
+
+  <Expandable 
+    title={'Replace:'} 
+    maxExpandedHeight={55}
+    margin={'0 8px'} 
+    isOpen={tab.replace.isOpen} 
+    on:toggle={() => 
+      window.api.send('dispatch', {
+        type: 'SIDEBAR_TOGGLE_EXPANDABLE', 
+        tabId: tabId, 
+        expandable: 'replace'
+      })
+    }
+  >
+    {#if tab.replace.isOpen}
+      <FormRow margin={'4px 10px 8px'} outroDelay={200} compact={true}>
+        <InputText 
+          placeholder='Replace' 
+          width='100%' 
+          compact={true} 
+          bind:this={replaceEl}
+          bind:value={replaceValue} 
+          on:input={(evt) => { 
+            if (evt.key == 'Enter') {
+              replaceAll(evt.metaKey)
+            }
+          }}
+        />
+        <PushButton 
+          label="Replace All" 
+          width='120px' 
+          margin='0 0 0 5px' 
+          compact={false}
+          on:mousedown={(evt) => replaceAll(evt.metaKey)} 
+        />
+      </FormRow>
+    {/if}
+  </Expandable>
+
+  <Separator margin={'0 10px'} />
+
+
   <!------------- OPTIONS ------------->
+
   <Expandable 
     title={'Options:'} 
     maxExpandedHeight={75}
@@ -258,51 +407,9 @@
 
   <Separator margin={'0 10px'} />
 
-
-  <!------------- REPLACE ------------->
-
-  <Expandable 
-    title={'Replace:'} 
-    maxExpandedHeight={55}
-    margin={'0 8px'} 
-    isOpen={tab.replace.isOpen} 
-    on:toggle={() => 
-      window.api.send('dispatch', {
-        type: 'SIDEBAR_TOGGLE_EXPANDABLE', 
-        tabId: tabId, 
-        expandable: 'replace'
-      })
-    }
-  >
-    {#if tab.replace.isOpen}
-      <FormRow margin={'4px 10px 8px'} outroDelay={200} compact={true}>
-        <InputText 
-          placeholder='Replace' 
-          width='100%' 
-          compact={true} 
-          bind:value={replaceWith} 
-          on:input={(evt) => { 
-            if (evt.key == 'Enter') {
-              replaceAll(evt.metaKey)
-            }
-          }}
-        />
-        <PushButton 
-          label="Replace All" 
-          width='120px' 
-          margin='0 0 0 5px' 
-          compact={false}
-          on:mousedown={(evt) => replaceAll(evt.metaKey)} 
-        />
-      </FormRow>
-    {/if}
-  </Expandable>
-
-  <Separator margin={'0 10px'} />
-  
   
   <!------------- RESULTS ------------->
-  {#if query}
+  {#if queryValue}
     <div class="numberOfResults">Found {numHits} results in {results.length} documents</div>
     <Separator margin={'0 10px'} />  
   {/if}

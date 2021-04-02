@@ -4,6 +4,7 @@ import path from 'path'
 import { deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
 import { getColors } from './AppearanceManager.js'
 import matter from 'gray-matter'
+import { isValidHttpUrl } from '../shared/utils.js'
 
 export function init() {
 
@@ -25,18 +26,6 @@ export function init() {
     const win = BrowserWindow.fromWebContents(evt.sender)
     win.show()
   })
-
-  function isValidHttpUrl(string) {
-    let url;
-
-    try {
-      url = new URL(string);
-    } catch (_) {
-      return false;
-    }
-
-    return url.protocol === "http:" || url.protocol === "https:";
-  }
 
   ipcMain.on('openUrlInDefaultBrowser', (evt, url) => {
     // Check if URL is valid.

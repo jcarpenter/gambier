@@ -7,11 +7,14 @@
  
   export let cm = null
   export let element = null
+  export let suppressWarnings = false
 
   let isFull = false
   let isCollapsed = false
   let multipleDefinitionsFound = false
   let noDefinitionsFound = false
+  let clearTextOnDestroy = false
+  let clearLabelOnDestroy = false
 
   let label  
   let text
@@ -19,7 +22,11 @@
   let definitionUrl
   let definitionTitle
 
-  $: { 
+  $: element, onElementUpdate()
+
+  function onElementUpdate() {
+
+    if (!element) return
 
     isFull = element.type.includes('full')
     isCollapsed = element.type.includes('collapsed')
@@ -65,7 +72,45 @@
       }
     }
   }
+  
+  /**
+   * Handle edge case where user clears label:
+   * Don't write the change until they exit the wizard.
+   * This avoids the element/mark suddenly disappearing.
+  */
+  export function writeDelayedChanges() {
 
+    if (clearTextOnDestroy && clearLabelOnDestroy && isFull) {
+
+      writeToDoc(cm, '![][]', element.line, element.start, element.end)
+
+    } else if (clearTextOnDestroy && isFull) { 
+
+      // If full ref link has no text, 
+      // it stops being an element of any kind
+      writeToDoc(cm, `![][${label.string}]`, element.line, element.start, element.end)
+
+    } else if (clearLabelOnDestroy && isCollapsed) {
+
+      // If collapsed ref link has no label, 
+      // write empty full reference link
+      writeToDoc(cm, '![][]', element.line, element.start, element.end)
+
+    } else if (clearLabelOnDestroy && isFull) {
+
+      // If full ref link has no label, it becomes
+      // a collapsed reference link, and the text
+      // becomes that link's label. Awkard, but there's
+      // nothing we can do.
+      const newLink = `![${text.string}][]`
+      writeToDoc(cm, newLink, element.line, element.start, element.end)
+
+    }
+
+
+    clearTextOnDestroy = false
+    clearLabelOnDestroy = false
+  }
 </script>
 
 <style type="text/scss"></style>
@@ -82,24 +127,46 @@
 
   <FormRow label={'Text:'} leftColumn={'30px'} margin={'8px'} compact={true}>
     <InputText 
+      autofocus={true}
+      placeholder={'Required'}
+      isError={text.string == '' && !suppressWarnings}
       multiLine={true}
-      multiLineMaxHeight='200'
-      width='100%' 
+      multiLineMaxHeight={'200'}
+      width={'100%'}
       compact={true} 
-      bind:value={text.string} 
-      on:input={(evt) => 
-        writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end)
-      }
+      value={text.string} 
+      on:input={(evt) => {
+        // If user clears text, delay writing changes until destroy,
+        // or else the element/mark will disappear.
+        // E.g. Before: [text][label] After: [][label]
+        clearTextOnDestroy = evt.target.textContent == ""
+        if (clearTextOnDestroy) {
+          text.string = ''
+        } else {
+          writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end)
+        }     
+      }}
     />
   </FormRow>
   <FormRow label={'ID:'} leftColumn={'30px'} margin={'8px'} compact={true}>
     <InputText 
-      width='100%' 
-      compact={true} 
-      bind:value={label.string} 
-      on:input={(evt) => 
-        writeToDoc(cm, evt.target.textContent, element.line, label.start, label.end)
-      }
+      placeholder={'Required'}
+      isError={label.string == '' && !suppressWarnings}
+      width={'100%'} 
+      compact={true}
+      value={label.string} 
+      on:input={(evt) => {
+        // If user clears label, delay writing changes until destroy,
+        // or else the full reference link will immediately turn into
+        // a collapsed version. 
+        // E.g. Before: [text][label] After: [label][]
+        clearLabelOnDestroy = evt.target.textContent == ""
+        if (clearLabelOnDestroy) {
+          label.string = ''
+        } else {
+          writeToDoc(cm, evt.target.textContent, element.line, label.start, label.end)
+        }
+      }}
     />
   </FormRow>
 
@@ -109,12 +176,23 @@
 
   <FormRow label={'ID:'} leftColumn={'20px'} margin={'8px'} compact={true}>
     <InputText 
-      width='100%' 
+      autofocus={true}
+      placeholder={'Required'}
+      isError={label.string == '' && !suppressWarnings}
+      width={'100%'}
       compact={true} 
-      bind:value={label.string} 
-      on:input={(evt) => 
-        writeToDoc(cm, evt.target.textContent, element.line, label.start, label.end)
-      }
+      value={label.string} 
+      on:input={(evt) => {
+        // If user clears label, delay writing changes until destroy,
+        // or else the element/mark will immediately disappear.
+        // E.g. Before: [label][] After: [][]
+        clearLabelOnDestroy = evt.target.textContent == ""
+        if (clearLabelOnDestroy) {
+          label.string = ''
+        } else {
+          writeToDoc(cm, evt.target.textContent, element.line, label.start, label.end)
+        }
+      }}
     />
   </FormRow>
 
@@ -142,7 +220,7 @@
         editable={false}
         width='100%' 
         compact={true} 
-        bind:value={definitionUrl} 
+        value={definitionUrl} 
       />
     </FormRow>
 
@@ -156,7 +234,7 @@
         editable={false}
         width='100%' 
         compact={true} 
-        bind:value={definitionAlt} 
+        value={definitionAlt} 
       />
     </FormRow>
 
@@ -169,7 +247,7 @@
           editable={false}
           width='100%' 
           compact={true} 
-          bind:value={definitionTitle} 
+          value={definitionTitle} 
         />
       </FormRow>
     {/if}

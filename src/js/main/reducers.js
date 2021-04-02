@@ -417,6 +417,7 @@ export const update = (state, action, window) =>
 
       case 'SELECT_SIDEBAR_TAB_BY_ID': {
         project.sidebar.activeTabId = action.id
+        project.focusedSectionId = 'sidebar'
         break
       }
 
@@ -455,9 +456,39 @@ export const update = (state, action, window) =>
         break
       }
 
+      case 'SET_SEARCH_QUERY': {
+        project.sidebar.tabsById.search.queryValue = action.query
+        break
+      }
+
+      case 'SHOW_SEARCH': {
+
+        // Open sidebar > search
+        project.focusedSectionId = 'sidebar'
+        project.sidebar.activeTabId = 'search'
+        
+        // Set which input (search or replace) to focus, on open
+        if (action.inputToFocus !== undefined) {
+          const search = project.sidebar.tabsById.search
+          search.inputToFocusOnOpen = action.inputToFocus
+          
+          // Make sure Replace expandable is open
+          if (action.inputToFocus == 'replace') {
+            search.replace.isOpen = true
+          }
+        }
+        
+        break
+      }
+
       case 'SIDEBAR_SET_SEARCH_OPTIONS': {
         const tab = project.sidebar.tabsById.search
         tab.options = action.options
+        break
+      }
+
+      case 'SAVE_SEARCH_QUERY_VALUE' : {
+        project.sidebar.tabsById.search.queryValue = action.value
         break
       }
 
@@ -479,7 +510,7 @@ export const update = (state, action, window) =>
         const panel = project.panels[project.focusedPanelIndex]
         panel.docId = 'newDoc'
         // Focus the editor
-        project.focusedSectionId = 'main'
+        project.focusedSectionId = 'editor'
         // Deselect everything in active sidebar tab
         const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId]
         activeTab.selected = []

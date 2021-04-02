@@ -1,7 +1,9 @@
 <script>
   import { createEventDispatcher, tick } from 'svelte'
-  import { getFromAndTo, writeToDoc } from '../../editor/editor-utils';
+  import { getCharAt, getFromAndTo, writeToDoc } from '../../editor/editor-utils';
   import { getElementAt } from '../../editor/map';
+import { markElement } from '../../editor/mark';
+import { isWindowFocused } from '../../StateManager';
 
   export let cm
   export let selectedOptionIndex = 0
@@ -48,35 +50,21 @@
     }
   })
 
-  // Update the items as the user types
-  // (usually to narrow the scope).
-  // cm.on('beforeChange', (cm, change) => {
-  //   if (!isVisible) return
-  //   const { from, to, text, origin, update } = change
-  //   if (isVisible) {
-  //     if (origin == '+input') {
-  //       targetTo.ch += text[0].length
-  //     } else if (origin == '+delete') {
-  //       targetTo.ch = from.ch
-  //     }
-  //   }
-  //   console.log(change)
-  //   // filterItems()
-  // })
-
+  // When user types, update items and position.
   cm.on('change', (cm, change) => {
     if (!isVisible) return
     const { from, to, text, origin, update } = change
-    if (isVisible) {
-      if (origin == '+input') {
-        targetTo.ch += text[0].length
-      } else if (origin == '+delete') {
-        targetTo.ch = from.ch
-      }
+    if (origin == '+input') {
+      targetTo.ch += text[0].length
+      // console.log(targetTo)
+    } else if (origin == '+delete') {
+      targetTo.ch = from.ch
     }
     filterItems()
+    setPosition()
   })
 
+  // Hide autocomplete when cursor moves outside the brackets
   cm.on('cursorActivity', (cm) => {
     if (!isVisible) return
     const from = cm.getCursor('from')
@@ -95,26 +83,6 @@
 
   })
   
-  // Close if the cursor has left the brackets
-  // cm.on('beforeSelectionChange', (cm, change) => {
-  //   if (!isVisible) return
-  //   const { ranges, origin, update } = change
-  //   const { from, to } = getFromAndTo(ranges[0])
-
-  //   const multipleSelections = ranges.length > 1
-  //   const isOutsideLine = from.line !== targetFrom.line
-  //   const isOutsideLeftBracket = from.ch < targetFrom.ch
-  //   const isOutsideRightBracket = to.ch > targetTo.ch
-    
-  //   const shouldHide = 
-  //     multipleSelections || 
-  //     isOutsideLine || 
-  //     isOutsideLeftBracket ||
-  //     isOutsideRightBracket
-    
-  //   if (shouldHide) hide()
-  // })
-
   /**
    * Write to doc. 
    * What is written depends on the mode and the item selected.
@@ -128,27 +96,72 @@
       targetFrom.ch == targetTo.ch
     const line = targetFrom.line
 
+    // Determine write start and end points:
+    // If precedingChar matches, write one character earlier,
+    // so we overwrite that preceding character. 
+    // Or else we'll get duplicates, ala: `!![text](url)`
+    const precedingChar = getCharAt(cm, targetFrom.line, targetFrom.ch-2)
+    let writeFromCh = precedingChar == items[selectedIndex].precedingChar ?
+      targetFrom.ch - 2 :
+      targetFrom.ch - 1
+    // Fix edge case 
+    if (writeFromCh < 0) writeFromCh = 0
+    const writeToCh = targetTo.ch + 1
+        
+    // Determine string to write
+    let string = ''
     if (mode == 'elements') {
       switch (selectedItem.label) {
-        case 'Link':
-          writeToDoc(cm, `[${selectedText}]()`, line, targetFrom.ch-1, targetTo.ch+1)
-          break
-        case 'Image':
-          writeToDoc(cm, `![${selectedText}]()`, line, targetFrom.ch-1, targetTo.ch+1)
-          break
-        case 'Footnote':
-          writeToDoc(cm, `^[${selectedText}]`, line, targetFrom.ch-1, targetTo.ch+1)
-          break
-        case 'Citation':
-          writeToDoc(cm, `[@${selectedText}]`, line, targetFrom.ch-1, targetTo.ch+1)
-          break 
+        case 'Link': string = `[${selectedText}]()`; break
+        case 'Image': string = `![${selectedText}]()`; break
+        case 'Footnote': string = `^[${selectedText}]`; break
+        case 'Citation': string = `[${selectedText}]`; break
       }
+    }
+    
+    // Save the cursor position so we can restore it
+    // after writing the chanes. This is important when 
+    // we're in sourceMode. We don't want the cursor to
+    // suddenly jump away from the user.
+    const cursorPos = {...cm.getCursor('to')}
+
+    // Write the string
+    writeToDoc(cm, string, line, writeFromCh, writeToCh)
+
+    // Restore the cursor position (see why above).
+    cm.setCursor(cursorPos)
+
+    // Hide the autocomplete menu
+    hide()
+
+    // Create mark if we're not in sourceMode
+    // and the new element isMarkable
+    if (!window.state.sourceMode) {
 
       // Wait for cm to update with changes
       await tick()
+      
+      // If element was created, and is markable
+      // manually create the mark. This normally would
+      // happen automatically in onChanges, but won't
+      // because cursor is inside
 
-      // Select new element
-      const newElement = getElementAt(cm, line, targetFrom.ch)
+      const newEl = getElementAt(cm, line, writeFromCh + 1) 
+      const newElIsMarkable = newEl.mark.isMarkable
+      if (newElIsMarkable) {
+        const mark = markElement(cm, newEl)
+        mark.component.openWizard(true)
+      }
+    }
+
+
+    // Place cursor at same position it was before the change
+    // If there was a selection, place it on right side
+
+    // cm.setSelection({ line, ch: 2 }, { line, ch: 2 }) 
+    return
+    
+    if (mode == 'elements') {
 
       // Set cursor position. 
       if (selectedItem.label.equalsAny('Link')) {
@@ -200,27 +213,39 @@
    * If there are no matches, show all items
    */
   function filterItems() {
+
+    // Get text typed so far, plus surrounding characters.
     const typedText = cm.getRange(
-      { line: targetFrom.line, ch: targetFrom.ch - 2 },
+      { line: targetFrom.line, ch: targetFrom.ch - 1 },
       { line: targetTo.line, ch: targetTo.ch + 1 },
     )
-    const textMatchesAnItem = items.some((i) => i.start && typedText.startsWith(i.start))
-    if (textMatchesAnItem) {
+
+    const precedingChar = getCharAt(cm, targetFrom.line, targetFrom.ch-2)
+    
+    // Check if any items match the preceding character
+    const anItemMatchesPrecedingChar = 
+      precedingChar !== '' && 
+      items.some((i) => i.precedingChar == precedingChar)
+
+    // If yes, filter to those items that match the preceding char
+    if (anItemMatchesPrecedingChar) {
       items = getStartingItems().filter((i) => {
-        return typedText.startsWith(i.start)
+        return i.precedingChar == precedingChar
       })
-    } else {
-      items = getStartingItems()
-    }
+      return
+    } 
+    
+    // Else, show all items
+    items = getStartingItems()
   }
 
   function getStartingItems() {
     if (mode == 'elements') {
       return [
-        { label: 'Link', preview: '[...](...)', start: '' },
-        { label: 'Image', preview: '![...](...)', start: '![' },
-        { label: 'Footnote', preview: '^[...]', start: '^[' },
-        { label: 'Citation', preview: '[@...]', start: '[@' }
+        { label: 'Link', preview: '[...](...)', precedingChar: '', start: '' },
+        { label: 'Image', preview: '![...](...)', precedingChar: '!', start: '![' },
+        { label: 'Footnote', preview: '^[...]', precedingChar: '^', start: '^[' },
+        { label: 'Citation', preview: '[@...]', precedingChar: '', start: '[@' }
       ]
     } else if (mode == 'citation') {
       return [
@@ -230,22 +255,28 @@
   }
  
   /**
-   * Show the menu
+   * Show the menu. 
    * @param menuMode - String. 'element', 'citation', etc.
    */
   export function show(menuMode) {
-
     mode = menuMode
     items = getStartingItems()
     isVisible = true
     selectedIndex = 0
-    targetFrom = cm.getCursor('from')
-    targetTo = cm.getCursor('to')
-    // const { from, to } = getFromAndTo(cm.listSelections()[0])
-    // targetFrom = {...from}
-    // targetTo = {...to}
+    targetFrom = {...cm.getCursor('from')}
+    targetTo = {...cm.getCursor('to')}
     filterItems()
-    // Docs: https://codemirror.net/doc/manual.html#charCoords
+    setPosition()
+  }
+
+  /**
+   * Set absolute position values of the autocomplete element.
+   * This is called on initial show, and then every time the 
+   * user types while isVisible is true
+   * Docs: https://codemirror.net/doc/manual.html#cursorCoords
+   */
+  function setPosition() {
+    if (!isVisible) return
     const paddingOnLeftSideOfEditor = cm.display.lineSpace.offsetLeft
     leftPos = `${cm.cursorCoords(true, 'local').left + paddingOnLeftSideOfEditor}px`
     topPos = `${cm.cursorCoords(true, 'local').bottom + 14}px`

@@ -310,6 +310,15 @@ function getMenuItems() {
     }
   })
 
+  items.pasteAsPlainText = new MenuItem({
+    label: 'Paste as Plain Text',
+    accelerator: 'CmdOrCtrl+Shift+Alt+V',
+    enabled: panel !== undefined,
+    click(item, focusedWindow) {
+      focusedWindow.webContents.send('pasteAsPlainText')
+    }
+  })
+
   items.replaceInFiles = new MenuItem({
     label: 'Replace in Files',
     accelerator: 'CmdOrCtrl+Shift+H',
@@ -329,6 +338,7 @@ function getMenuItems() {
         { role: 'cut' },
         { role: 'copy' },
         { role: 'paste' },
+        items.pasteAsPlainText,
         { role: 'selectall' },
         _______________,
         items.findInFiles,

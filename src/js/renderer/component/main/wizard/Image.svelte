@@ -8,10 +8,10 @@
   import FormRow from '../../ui/FormRow.svelte';
   import { isUrl, isImagePath } from '../../../../shared/utils';
   import { debounce } from 'debounce'
-  import { onDestroy } from 'svelte';
 
   export let cm = null
   export let element = null
+  export let suppressWarnings = false
 
   let text
   let url
@@ -23,7 +23,11 @@
   let isRemoteUrl
   let isLocalUrl
 
-  $: {
+  $: element, onElementUpdate()
+
+  function onElementUpdate() {
+
+    if (!element) return
 
     text = element.spans.find((f) => f.type.includes('text'))
     url = element.spans.find((f) => f.type.includes('url'))
@@ -61,18 +65,21 @@
     }
   }, 500, true)
 
+
   /**
    * Handle edge case where user deletes URL and leaves Title.
    * We don't write the change until they destroy the element.
    * This avoids unexpected side effects while editing.
    * E.g. Breaking the link by having title but no URL
   */
-  onDestroy(() => {
+  export function writeDelayedChanges() {
     if (clearUrlAndTitleOnDestroy) {
       const newImage = `![${text.string}]()`
       writeToDoc(cm, newImage, element.line, element.start, element.end)
     }
-  })
+    clearUrlAndTitleOnDestroy = false
+  }
+
 
 </script>
 
@@ -110,22 +117,22 @@
 
 <FormRow label={'URL:'} leftColumn={'30px'} margin={'8px'} compact={true} multiLine={true} labelTopOffset={'3px'}>
   <InputText 
+    autofocus={true}
+    placeholder={'Required'}
+    isError={url.string == '' && !suppressWarnings}
     multiLine={true}
     multiLineMaxHeight='100'
     width='100%' 
     compact={true} 
-    isError={url.string == ''}
-    bind:value={url.string} 
+    value={url.string} 
     on:input={(evt) => {
       // Don't immediately write changes if user makes URL blank,
       // and title is not blank, or else the element will break.
       // E.g. ![text]( "title")
-      const urlIsBlank = evt.target.textContent == ""
-      const titleIsNotBlank = title.string !== ""
-      if (urlIsBlank && titleIsNotBlank) {
-        clearUrlAndTitleOnDestroy = true
+      clearUrlAndTitleOnDestroy = evt.target.textContent == ""
+      if (clearUrlAndTitleOnDestroy) {
+        url.string = ''
       } else {
-        clearUrlAndTitleOnDestroy = false
         writeToDoc(cm, evt.target.textContent, element.line, url.start, url.end)
       }
     }}
@@ -156,7 +163,7 @@
         width='100%' 
         compact={true} 
         isDisabled={url.string == ''}
-        bind:value={text.string} 
+        value={text.string} 
         on:input={(evt) => 
           writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end)
         }
@@ -171,11 +178,11 @@
         width='100%' 
         compact={true} 
         isDisabled={url.string == ''}
-        bind:value={title.string} 
+        value={title.string} 
         on:input={(evt) => {
           
           const wasBlank = title.start == title.end
-          const isNowBlank = title.string.length == 0
+          const isNowBlank = evt.target.textContent.length == 0
           
           if (wasBlank) {
             // To be a valid Commonmark link title, we need to insert whitespace before the value, and wrap it in quotation marks.

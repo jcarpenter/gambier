@@ -1,4 +1,5 @@
 <script>
+  import { onMount, tick } from "svelte";
   import { setSize, css } from "./actions";
 
   export let editable = true
@@ -15,22 +16,36 @@
   export let multiLineMaxHeight = '28'
   export let isDisabled = false
   export let isError = false
+  export let autofocus = false
 
-  let input = null
+  let inputEl
 
-  // function handleKeydown(evt) {
-  //   if (!focused) return
-    
-  //   // Focus on Cmd-F
-  //   if (evt.key == 'f' && evt.metaKey) {
-  //     input.select()
-  //   }
+  /**
+   * Focus the element if `autofocus` is true
+  */
+  onMount(async () => {
+    if (autofocus) focus()
+  })
 
-  //   // Select all
-  //   if (evt.metaKey && evt.key == 'a') {
-  //     input.select()
-  //   }
-  // }
+  /**
+   * Programmatically select contenteditable:
+   * Per https://stackoverflow.com/a/6150060
+   */
+  export async function focus() {
+
+    // We have to wait a tick or `value` is liable to be empty
+    await tick( )
+
+    // Select the input contents
+    const range = document.createRange()
+    range.selectNodeContents(inputEl)
+    const sel = window.getSelection()
+    sel.removeAllRanges()
+    sel.addRange(range)
+  }
+
+
+
 </script>
 
 <style type="text/scss">
@@ -255,7 +270,7 @@
       class="input"
       data-placeholder={isError ? errorPlaceholder : placeholder}
       tabindex="0"
-      bind:this={input} 
+      bind:this={inputEl} 
       bind:textContent={value} 
       on:keydown={(evt) => {
         if (evt.key == 'Enter') {
@@ -284,7 +299,7 @@
   <!-- <input 
     tabindex="0" 
     type="text" 
-    bind:this={input} 
+    bind:this={inputEl} 
     bind:value={value} 
     on:input
   /> -->

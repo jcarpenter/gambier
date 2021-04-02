@@ -80,7 +80,10 @@ export function markElement(cm, element) {
   // Set properties on the component and TextMarker
   component.textMarker = textMarker
   textMarker.component = component
+  textMarker.isEditable = element.mark.isEditable
   textMarker.replacedWith = textMarker.widgetNode.firstChild
+
+  return textMarker
 
 }
 

@@ -33,7 +33,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 //------ Whitelist channels ------//
 
 // Renderer "receives" from Main
-let validReceiveChannels = ['formatCommand', 'mainRequestsSaveFocusedPanel', 'mainRequestsSaveAsFocusedPanel', 'mainRequestsSaveAll', 'mainRequestsCloseFocusedPanel', 'mainRequestsCreateNewDocInFocusedPanel', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain']
+let validReceiveChannels = ['formatCommand', 'mainRequestsSaveFocusedPanel', 'mainRequestsSaveAsFocusedPanel', 'mainRequestsSaveAll', 'mainRequestsCloseFocusedPanel', 'mainRequestsCreateNewDocInFocusedPanel', 'stateChanged', 'statePatchesFromMain', 'filesPatchesFromMain', 'initialFilesFromMain', 'setFormat', 'findInFiles', 'replaceInFiles']
 
 // Renderer "sends" to Main
 let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch', 'replaceAll', 'saveImageFromClipboard']

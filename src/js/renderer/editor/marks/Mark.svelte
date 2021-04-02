@@ -29,16 +29,17 @@
     
     const { from, to } = textMarker.find()
     const element = getElementAt(cm, from.line, from.ch + 1)
-    isEditable = element.mark.isEditable
+    isEditable = element?.mark.isEditable
     if (!isEditable) return
 
     // Only update displayedText if there's a new value.
-    // const newDisplayedText = element[element.mark.displayedSpanName].string
-    // if (displayedText !== newDisplayedText) {
-    //   displayedText = newDisplayedText
-    // }
-    const newDisplayedText = element.spans.find((c) => c.type.includes(element.mark.displayedSpanName)).string
-    if (displayedText !== newDisplayedText) displayedText = newDisplayedText
+    // Else, if it's blank (missing), display a empty string.
+    const newDisplayedText = element.spans.find((c) => c.type.includes(element.mark.displayedSpanName))?.string
+    if (displayedText !== newDisplayedText) {
+      displayedText = newDisplayedText
+    } else if (!newDisplayedText) {
+      displayedText = ''
+    }
 
     // Wait for state changes to apply to DOM,
     // then call changed() on the textMarker.
@@ -53,16 +54,59 @@
   // --------- MANAGE SELECTIONS --------- //
 
   /**
+   * Place cursor at specified position inside
+   * the contenteditable `el` span.
+   * @param pos
+   */
+  function setCursorPosition(pos) {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.setStart(el.childNodes[0], pos);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  /**
+   * Make alt-arrowing into editable marks behave like 
+   * normal text. Is called from keymap actions when
+   * alt-left or alt-right is pressed and the previous
+   * or next word is a mark.
+   * @param fromSide - 'left' or 'right'
+   */
+  export function altArrowInto(fromSide) {
+    let cursorPos = 0
+    if (fromSide == 'left') {
+      const lastSpace = displayedText.indexOf(' ')
+      cursorPos = lastSpace > 0 ? lastSpace : displayedText.length
+    } else if (fromSide == 'right') {
+      const firstSpace = displayedText.lastIndexOf(' ')
+      cursorPos = firstSpace > 0 ? firstSpace + 1 : 0
+    }
+    setCursorPosition(cursorPos)
+    el.focus()
+  }
+
+  /**
    * When the doc selection changes (or the cursor moves), a `beforeSelectionChange` listener calls this function on each mark in the doc, and passes in the new selection origin and ranges.
    */
-  export function onSelectionChange() {
-    const selections = cm.listSelections()
-    for (const range of selections) {
+  export function onSelectionChange(origin, ranges) {
+    for (const range of ranges) {
       const { from, to } = getFromAndTo(range)
       if (isEditable) checkIfArrowedInto(origin, from, to)
       checkIfInsideSelection(from, to)
     }
   }
+
+  // export function onSelectionChange() {
+  //   const selections = cm.listSelections()
+  //   for (const range of selections) {
+  //     const { from, to } = getFromAndTo(range)
+  //     if (isEditable) checkIfArrowedInto(origin, from, to)
+  //     checkIfInsideSelection(from, to)
+  //   }
+  // }
+
 
   /**
    * If user arrows into mark, place cursor inside the mark, on the appropriate edge. Sounds obvious, but we have to implement this manually, by checking
@@ -93,12 +137,7 @@
     if (!enteredLeft && !enteredRight) return
    
     const placeCursorAt = enteredLeft ? 0 : displayedText.length
-    const range = document.createRange();
-    const sel = window.getSelection();
-    range.setStart(el.childNodes[0], placeCursorAt);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
+    setCursorPosition(placeCursorAt)
     el.focus()
   }
 
@@ -161,7 +200,7 @@
    * First set CM selection to this mark, so wizard opens over it.
    * @param evt
    */
-  export function openWizard() {
+  export function openWizard(suppressWarnings = false) {
     const { from, to } = textMarker.find()
     // Notice we seem to select from end-to-start. With `setSelection`
     // the first value is the anchor, and second is the head. So we're
@@ -170,7 +209,7 @@
     // console.log(from, to)
     cm.setSelection(from, to)
     isHighlighted = true
-    cm.wizard.show(textMarker, type)
+    cm.wizard.show(textMarker, suppressWarnings)
   }
 
 
@@ -200,58 +239,97 @@
     const { from, to } = textMarker.find()
 
     switch (evt.key) {
+
       case 'Backspace':
-      case 'Delete': 
+      case 'Delete': {
         if (isHighlighted) {
           cm.replaceRange('', from, to)
           cm.focus()
         }
         break
-      case 'ArrowLeft':
-        const atLeftEdge = window.getSelection().getRangeAt(0).endOffset == 0
-        if (atLeftEdge) {
-          cm.setCursor(from.line, from.ch)
+      }
+
+      case 'ArrowLeft': {
+
+        if (evt.metaKey) {
+
+          // Cmd-Left: send cursor to start of line
+          cm.setCursor(from.line, 0)
           cm.focus()
-          if (evt.altKey) {
-            // If alt key is pressed, trigger a second alt-left in CodeMirror, 
-            // to correctly reproduce expected behaviour (cursor jumps to 
-            // beginning of previous word.)
-            cm.triggerOnKeyDown({
-              type: 'keydown',
-              keyCode: 37,
-              altKey: true,
-              shiftKey: false,
-            })
+
+        } else {
+
+          const cursorCh = window.getSelection().anchorOffset
+          const atLeftEdge = cursorCh == 0
+          if (atLeftEdge) {
+            cm.setCursor(from.line, from.ch)
+            cm.focus()
+            if (evt.altKey) {
+              // If alt key is pressed, trigger a second alt-left in CodeMirror, 
+              // to correctly reproduce expected behaviour (cursor jumps to 
+              // beginning of previous word.)
+              cm.triggerOnKeyDown({
+                type: 'keydown',
+                keyCode: 37,
+                altKey: true,
+                shiftKey: false,
+              })
+            }
           }
         }
+
         break
-      case 'ArrowRight':
-        const atRightEdge = window.getSelection().getRangeAt(0).endOffset == el.innerText.length
-        if (atRightEdge) {
-          cm.setCursor(to.line, to.ch)
+      }
+
+      case 'ArrowRight': {
+
+        const cursorCh = window.getSelection().anchorOffset
+        const atRightEdge = cursorCh == displayedText.length
+  
+        if (evt.metaKey) {
+  
+          // Send cursor to end of line
+          const lineLength = cm.getLine(from.line).length
+          cm.setCursor(from.line, lineLength)
           cm.focus()
-          // If alt key is pressed, trigger a second alt-right in CodeMirror, 
+  
+        } else if (evt.altKey && atRightEdge) {
+          
+          // If alt key, trigger a second alt-right in CodeMirror 
           // to correctly reproduce expected behaviour (cursor jumps to 
           // end of next word.)
-          if (evt.altKey) {
-            cm.triggerOnKeyDown({
-              type: 'keydown',
-              keyCode: 39,
-              altKey: true,
-              shiftKey: false,
-            })
-          }
+          cm.setCursor(to.line, to.ch)
+          cm.triggerOnKeyDown({ type: 'keydown', keyCode: 39, altKey: true })
+  
+        } else if (evt.altKey) {
+  
+          // Else, if !altKey, check if next alt-right will place
+          // cursor at end of mark. If yes, set position manually.
+          // For some reason this doesn't happen automatically.
+          const endOfNextWord = displayedText.slice(cursorCh).search(/\S[\s|]|\)]/)
+          const wordsRemain = endOfNextWord !== -1
+          if (!wordsRemain) setCursorPosition(displayedText.length)
+  
+        } else if (atRightEdge) {
+  
+          // Arrow out right side of the mar
+          cm.focus()
+          cm.setCursor(to.line, to.ch)
+
         }
+        
         break
+      }
+
       case 'ArrowUp':
-        evt.preventDefault()
-        cm.focus()
-        cm.triggerOnKeyDown({ type: 'keydown', keyCode: 38, altKey: false, shiftKey: false,})
+        // evt.preventDefault()
+        // cm.focus()
+        cm.triggerOnKeyDown({ type: 'keydown', keyCode: 38, altKey: evt.altKey, shiftKey: false,})
         break
       case 'ArrowDown':
-        evt.preventDefault()
-        cm.focus()
-        cm.triggerOnKeyDown({ type: 'keydown', keyCode: 40, altKey: false, shiftKey: false,})
+        // evt.preventDefault()
+        // cm.focus()
+        cm.triggerOnKeyDown({ type: 'keydown', keyCode: 40, altKey: evt.altKey, shiftKey: false,})
         break
       case 'Tab':
         evt.preventDefault()
@@ -267,12 +345,16 @@
    * Write changes to the document.
    */
   function writeChanges(evt) {
-    // Determine which span to write to. Depends on type and spanName.
-    const { from, to } = textMarker.find()
+
+    const { from } = textMarker.find()
     const element = getElementAt(cm, from.line, from.ch + 1)
-    const { line, start, end } = element[element.mark.displayedSpanName]
+    
+    // Find the start and end of the correct span to write to
+    const { start, end } = element.spans.find((s) => s.type.includes(element.mark.displayedSpanName))
+    
     // Write changes
-    writeToDoc(cm, evt.target.textContent, line, start, end)
+    writeToDoc(cm, evt.target.textContent, element.line, start, end)
+    
     // Tell CodeMirror that TextMarker changed size
     textMarker.changed()
   }
@@ -293,7 +375,7 @@
     on:mousedown={selectMark}
     on:keydown={onKeyDown}
     on:click={onClick}
-    on:dblclick={openWizard}
+    on:dblclick={() => openWizard()}
     on:input={writeChanges}
   />
 {:else}

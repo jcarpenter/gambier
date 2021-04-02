@@ -49,6 +49,7 @@ export function makeEditor(parentElement) {
     // cursorScrollMargin: 20,
     // Turning on `keyMap: 'sublime'` activates -all- sublime keymaps. We instead want to pick and choose, using `extraKeys`
     // keyMap: 'sublime',
+    // https://codemirror.net/keymap/sublime.js
     extraKeys: {
       // 'Alt-T': () => console.log(getElementAt(cm, cm.getCursor().line, cm.getCursor().ch)),
       'Shift-Cmd-K': 'deleteLine',
@@ -59,14 +60,15 @@ export function makeEditor(parentElement) {
       'Alt-Down': 'swapLineDown',
       'Shift-Ctrl-Up': 'addCursorToPrevLine',
       'Shift-Ctrl-Down': 'addCursorToNextLine',
+      // https://codemirror.net/addon/edit/continuelist.js
       Enter: 'newlineAndIndentContinueMarkdownList',
       'Cmd-LeftClick': (cm, pos) => actions.wasUrlClicked(cm, pos),
       'Shift-8': () => actions.autoCloseAsterix(cm),
-      'Cmd-I': () => actions.wrapText(cm, '_'), // Underscore = Emphasis
+      // 'Cmd-I': () => actions.wrapText(cm, '_'), // Underscore = Emphasis
       'Shift--': () => actions.wrapText(cm, '_'), // Underscore = Emphasis
-      'Shift-Cmd-U': () => actions.toggleTaskChecked(cm),
-      'Shift-Cmd-H': () => actions.toggleHeader(cm),
-      'Shift-Cmd-L': () => actions.toggleUnorderedList(cm),
+      // 'Shift-Cmd-U': () => actions.toggleTaskChecked(cm),
+      // 'Shift-Cmd-H': () => actions.toggleHeader(cm),
+      // 'Shift-Cmd-L': () => actions.toggleUnorderedList(cm),
       'Cmd-Enter': () => actions.wasUrlEntered(cm),
       'Tab': () => actions.tab(cm, false),
       'Shift-Tab': () => actions.tab(cm, true),
@@ -74,6 +76,10 @@ export function makeEditor(parentElement) {
       'Shift-Alt-Tab': () => actions.tabToPrevElement(cm),
       Backspace: () => actions.backspaceOrDelete(cm, 'backspace'),
       Delete: () => actions.backspaceOrDelete(cm, 'delete'),
+      'Alt-Left': () => actions.altArrow(cm, 'left'),
+      'Alt-Right': () => actions.altArrow(cm, 'right'),
+      // 'Alt-Left': () => { cm.lastMoveType = 'Alt-Left'; return CodeMirror.Pass },
+      // 'Alt-Right': () => { cm.lastMoveType = 'Alt-Right'; return CodeMirror.Pass },
     },
   })
 
@@ -109,19 +115,91 @@ export function makeEditor(parentElement) {
   - changes
   */
 
+  // On `beforeChange`, send selection updates to marks
+  cm.on('beforeSelectionChange', (cm, change) => {
+    const { origin, ranges } = change
+    const allMarks = cm.getAllMarks()?.filter((m) => m.type !== 'bookmark')
+    allMarks.forEach((m) => m.component?.onSelectionChange(origin, ranges))
+  })
+
   cm.on('paste', onPaste)
   cm.on('cursorActivity', onCursorActivity)
   cm.on('changes', onChanges) 
-  
   cm.on('drop', onDrop)
 
-  // window.api.receive('formatCommand', (cmd) => {
-  //   const project = window.state.projects.byId[window.id]
-  //   const isFocusedPanel = cm.panel.index == project.focusedPanelIndex
-  //   if (isFocusedPanel) actions.wrapText(cm, '_')
-  // })
+
+  window.api.receive('editor-command', (command) => {
+    switch (command) {
+      case 'cut': 
+        cm.triggerOnKeyDown({
+          type: 'keydown',
+          keyCode: 88,
+          altKey: false,
+          shiftKey: false,
+          metaKey: true,
+        })
+        break
+    }
+  })
+
+  // TODO 4/1: Re-implement this 
+  // Need to set `cm.state.pasteAsPlainText` true, and then initiate the paste. I think.
+  // window.api.receive('pasteAsPlainText', () => actions.pasteAsPlainText(cm))
+
+
+  // Probably initated by `Edit > Find in Files` menu item.
+  // If there is text selected, send it to Search tab query.
+  window.api.receive('findInFiles', () => {
+    if (cm.somethingSelected()) {
+      const selection = cm.getRange(cm.getCursor('from'), cm.getCursor('to'))
+      window.api.send('dispatch', {
+        type: 'SET_SEARCH_QUERY',
+        query: selection
+      })
+    }
+  })
+
+  window.api.receive('replaceInFiles', () => {
+    if (cm.somethingSelected()) {
+      const selection = cm.getRange(cm.getCursor('from'), cm.getCursor('to'))
+      window.api.send('dispatch', {
+        type: 'SET_SEARCH_QUERY',
+        query: selection
+      })
+    }
+  })
+
+  window.api.receive('setFormat', (cmd) => {
+    if (isFocusedPanel(cm)) {
+      switch (cmd) {
+        case 'citation': actions.makeElement(cm, 'citation'); break
+        case 'code': actions.wrapText(cm, '`'); break
+        case 'emphasis': actions.wrapText(cm, '_'); break
+        case 'footnote': actions.makeElement(cm, 'footnote inline'); break
+        case 'heading': actions.toggleHeader(cm); break
+        case 'image': actions.makeElement(cm, 'image inline'); break
+        case 'link': actions.makeElement(cm, 'link inline'); break
+        case 'strong': actions.wrapText(cm, '*'); break
+        case 'ul': actions.toggleUnorderedList(cm); break
+        case 'taskList': actions.toggleUnorderedList(cm); break
+        case 'taskChecked': actions.toggleTaskChecked(cm); break
+        // case 'ol': CodeMirror.commands.newlineAndIndentContinueMarkdownList(cm); break
+        case 'ol': actions.toggleOrderedList(cm); break
+      }
+    }
+  })
 
   return cm
+}
+
+/**
+ * Utility function. Return true if panel this CM 
+ * instance belongs to is focused.
+ */
+function isFocusedPanel(cm) {
+  const project = window.state.projects.byId[window.id]
+  const isFocused = cm.panel.index == project.focusedPanelIndex
+  return isFocused
 }
 
 /**

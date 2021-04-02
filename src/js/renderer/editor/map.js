@@ -1,3 +1,6 @@
+
+
+
 /**
  * Get element at specified line and ch
  */
@@ -27,17 +30,41 @@ export function getElementsAt(cm, line, ch) {
 }
 
 /**
+ * Return element matching the exact range 
+ * @param {*} matchExactly - Bool. If true, looks for element matching
+ * exact from/to positions, and returns that element (instead of array).
+ */
+export function getElementsInsideRange(cm, from, to, matchExactly = false) {
+  const lineElements = getLineElements(cm, from.line)
+  if (matchExactly) {
+    return lineElements.find((e) =>
+      e.line == from.line &&
+      e.start == from.ch &&
+      e.end == to.ch
+    )
+  } else {
+    return lineElements.filter((e) =>
+      e.line == from.line &&
+      e.start >= from.ch &&
+      e.end <= to.ch
+    )
+  }
+}
+
+
+
+/**
  * Get array of "elements" for the line. 
  * E.g. emphasis, link-inline, image-reference-full.
  * Elements contain 1 or more child spans.
  * E.g. `url` and `title` are child spans of a link element.
- * @param {*} cm 
- * @param {*} lineHandle 
  */
 export function getLineElements(cm, line) {
 
   let elements = []
   const tokenPairs = getElementTokens(cm, line)
+
+  // console.log(tokenPairs)
 
   tokenPairs.forEach((tokenPair) => {
     const { start: startToken, end: endToken, type, tokens } = tokenPair
@@ -55,15 +82,27 @@ export function getLineElements(cm, line) {
 
     // Get child spans if type is link or image.
     // Else, define single span consisting of the text inside the `md` characters.
+
     if (type.includesAny('link', 'image', 'footnote-reference')) {
       element.spans = getChildSpans(cm, tokens)
     } else {
-      const firstNonFormattingToken = tokens.find((t) => !t.type.includes('md'))
-      const lastNonFormattingToken = [...tokens].reverse().find((t) => !t.type.includes('md'))
-      element.spans = [{
-        start: firstNonFormattingToken.start,
-        end: lastNonFormattingToken.end,
-      }]
+
+      // If element isIncomplete, create empty placeholder
+      // span that sits between the start/end md tokens.
+      // This is what wizard will target to populate.
+
+      if (element.isIncomplete) {
+        element.spans = [{ start: endToken.start, end: endToken.start }]
+      } else {
+        const firstNonFormattingToken = tokens.find((t) => !t.type.includes('md'))
+        const lastNonFormattingToken = [...tokens].reverse().find((t) => !t.type.includes('md'))
+        if (firstNonFormattingToken) {
+          element.spans = [{
+            start: firstNonFormattingToken.start,
+            end: lastNonFormattingToken.end,
+          }]
+        }
+      }
     }
 
     // Define child strings 

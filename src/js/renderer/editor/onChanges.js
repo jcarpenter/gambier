@@ -1,4 +1,4 @@
-import { getCharAt, getLineClasses, getPrevChars, getNextChars, getTextFromRange, getDocElements, setUnsavedChanges, getLineElements } from "./editor-utils"
+import { getCharAt, getLineClasses, getPrevChars, getNextChars, getTextFromRange, getDocElements, setUnsavedChanges, getLineElements, getModeAndState, orderOrderedList } from "./editor-utils"
 import { clearLineMarks, markDoc, markElement, markLine } from "./mark"
 import { getElementAt } from "./map"
 
@@ -6,6 +6,67 @@ import { getElementAt } from "./map"
  * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
  */
 export function onChanges(cm, changes) {
+
+  // console.log('onChanges')
+  console.log(changes)
+
+  /*
+  
+  Delete a line by typing backspace:
+  from.line !== to.line && origin == '+delete'
+  
+  Delete a line by typing character while line text is selected:
+  from.line !== to.line && origin == '+input'
+
+  removed.length > 1. Each removed line = 1 array item
+
+  Line was deleted, and ordered list was effected. We need to re-order it.
+
+  Line was addded, and ordered list was effected.
+
+  */
+  // console.log(changes)
+
+  changes.forEach((change) => {
+
+    const { from, to, origin, removed, text } = change
+
+    const lineWasDeleted = 
+      origin !== 'undo' &&
+      from.line !== to.line &&
+      removed.length > 1
+
+    const { state, mode } = getModeAndState(cm, change.from.line)
+
+    if (state.list == 'ol' && lineWasDeleted) {
+      
+      // Find start and end
+      let start = change.from.line
+
+      // Find start of `ul`
+      for (var i = change.from.line - 1; i >= 0; i--) {
+        const lineIsOl = getModeAndState(cm, i).state.list == 'ol'
+        if (lineIsOl) {
+          start = i
+        } else {
+          break
+        }
+      }
+
+      // Find end of `ul`
+      // for (var i = change.from.line + 1; i <= cm.lastLine(); i++) {
+      //   const lineIsOl = getModeAndState(cm, i).state.list == 'ol'
+      //   if (lineIsOl) {
+      //     end = i
+      //   } else {
+      //     break
+      //   }
+      // }
+
+      orderOrderedList(cm, start, origin) 
+    }
+  })
+
 
 
   const isMultipleChanges = changes.length > 1
@@ -29,6 +90,7 @@ export function onChanges(cm, changes) {
 
   // markDoc...
   if (isMultipleChanges || oneOfChangesSpansMultipleLines) {
+    // console.log(isMultipleChanges, oneOfChangesSpansMultipleLines)
     markDoc(cm)
     return
   }
@@ -69,9 +131,39 @@ export function onChanges(cm, changes) {
 
   // ------ If a new element was created, check if it needs a TextMarker ------ //
 
+  // When new elements are created, mark them if:
+  // 1) sourceMode is false
+  // 2) they're markable, and don't already have a mark
+  // 3) cursor is not currently inside them
+
+  // We look one character ahead of `from.ch`.
+  // This ensures we're looking inside bounds of the element if it
+  // was created by pasting or replaceRange. And it still works
+  // if the element was created by typing single characters.
+
+  // We determine if element was created by checking for an element at the change position. 
+  // When typing with single cursor, `from.ch` will be one ch -behind-
+  // If we just typed `h`, from.ch will be at the `(`.
+  // [test](h)
+  //       ^|
+
+  // When entering a selection of text (e.g. on paste, or when using autocomplete)
+  // `from.ch` will be at the start of the paste operation.
+  // If we paste `there`, from.ch will be at the space after `Hi`
+  // Hi there
+  //   ^    |
+
+  // NOTE: Brittleness of this approach is cursor has to be at element position.
+  // If their positions are decoupled (e.g. cursor position is changed before 
+  // change is written), this won't work.
+
   if (!window.state.sourceMode) {
-    const elementAtCursor = getElementAt(cm, from.line, from.ch)
+
+    // We look one character ahead of `from.ch`.
+    // See explanation above.
+    const elementAtCursor = getElementAt(cm, from.line, from.ch + 1)
     const isMarkable = elementAtCursor?.mark.isMarkable
+
     if (elementAtCursor && isMarkable) {
       const isAlreadyMarked = cm.findMarksAt({ line: from.line, ch: from.ch }).length
       const elementNeedsMark = isMarkable && !isAlreadyMarked
@@ -82,12 +174,19 @@ export function onChanges(cm, changes) {
         markElement(cm, elementAtCursor)
         return
       } else {
+
+        // If cursor is inside the element, and it needs a mark,
+        // don't mark it yet; instead add a bookmark with a 
+        // custom `isSpotToMark` property. This tells us that an
+        // element needs marking. Every time the cursor position
+        // changes, we check for these bookmarks. When we find them,
+        // if the cursor is now clear, we create the marks.
+
         const marks = cm.getAllMarks()
         const alreadyBookmarked = marks.find((m) => m.type == 'bookmark' && m.isSpotToMark)
         if (!alreadyBookmarked) {
           const bookmark = cm.setBookmark(cursor)
           bookmark.isSpotToMark = true
-          console.log(cm.getAllMarks())
         }
         return
       }
