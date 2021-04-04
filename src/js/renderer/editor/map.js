@@ -1,5 +1,14 @@
 
+export function getSpansAt(cm, line, ch) {
 
+  let spans = []
+  const elements = getElementsAt(cm, line, ch)
+  elements.forEach((e) => {
+    const matches = e.spans.filter((s) => ch >= s.start && ch <= s.end)
+    spans.push(...matches)
+  })
+  return spans
+}
 
 /**
  * Get element at specified line and ch

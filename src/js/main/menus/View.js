@@ -6,6 +6,24 @@ export const menu = new MenuItem({
   submenu: [
 
     new MenuItem({
+      label: 'Source mode',
+      id: 'view-sourceMode',
+      type: 'checkbox',
+      // checked: state.sourceMode,
+      accelerator: 'CmdOrCtrl+/',
+      click(item, focusedWindow) {
+        if (focusedWindow) {
+          global.store.dispatch({
+            type: 'SET_SOURCE_MODE',
+            enabled: !global.state().sourceMode,
+          }, focusedWindow)
+        }
+      }
+    }),
+
+    ______________________________,
+
+    new MenuItem({
       label: 'Project',
       accelerator: 'Cmd+1',
       click(item, focusedWindow) {
@@ -92,6 +110,8 @@ export function update(applicationMenu) {
   // const project = state.projects.byId[state.focusedWindowId]
   // const panel = project?.panels[project?.focusedPanelIndex]
   // const prefsIsFocused = state.focusedWindowId == 'preferences'
+
+  m.getMenuItemById('view-sourceMode').checked = state.sourceMode
 
 }
 

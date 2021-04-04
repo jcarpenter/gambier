@@ -92,7 +92,8 @@ const storeDefault = {
     strikethrough: true,
     taskLists: true,
     fencedCodeBlockHighlighting: false,
-    allowAtxHeaderWithoutSpace: false
+    allowAtxHeaderWithoutSpace: false,
+    ulMarkerChar: '*'
   },
 
   // When tabbing through document, we can control which elements are tabbable

@@ -90,6 +90,7 @@ export const menu = new MenuItem({
       id: 'format-ul',
       accelerator: 'Cmd+Shift+L',
       click(item, focusedWindow) {
+        console.log('Clicked')
         focusedWindow.webContents.send('setFormat', 'ul')
       }
     }),
@@ -117,7 +118,7 @@ export const menu = new MenuItem({
     new MenuItem({
       label: 'Toggle Checked',
       id: 'format-taskChecked',
-      accelerator: 'Cmd+Shift+U',
+      // accelerator: 'Cmd+Shift+U',
       click(item, focusedWindow) {
         focusedWindow.webContents.send('setFormat', 'taskChecked')
       }

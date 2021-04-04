@@ -1,8 +1,22 @@
-import * as actions from './keymapActions'
 import { onPaste } from './onPaste'
 import { onCursorActivity } from './onCursorActivity'
 import { onChanges } from './onChanges'
 import { onDrop } from "./onDrop"
+
+import { altArrow } from './commands/altArrow'
+import { asterix } from './commands/asterix'
+import { backspaceOrDelete } from './commands/backspaceOrDelete'
+import { makeElement } from './commands/makeElement'
+import { tab } from './commands/tab'
+import { tabToNextElement } from './commands/tabToNextElement'
+import { tabToPrevElement } from './commands/tabToPrevElement'
+import { toggleHeader } from './commands/toggleHeader'
+import { toggleList } from './commands/toggleList'
+import { toggleTaskChecked } from './commands/toggleTaskChecked'
+import { wasUrlClicked } from './commands/wasUrlClicked'
+import { wasUrlEntered } from './commands/wasUrlEntered'
+import { wrapText } from './commands/wrapText'
+
 
 export function makeEditor(parentElement) {
 
@@ -62,27 +76,20 @@ export function makeEditor(parentElement) {
       'Shift-Ctrl-Down': 'addCursorToNextLine',
       // https://codemirror.net/addon/edit/continuelist.js
       Enter: 'newlineAndIndentContinueMarkdownList',
-      'Cmd-LeftClick': (cm, pos) => actions.wasUrlClicked(cm, pos),
-      'Shift-8': () => actions.autoCloseAsterix(cm),
-      // 'Cmd-I': () => actions.wrapText(cm, '_'), // Underscore = Emphasis
-      'Shift--': () => actions.wrapText(cm, '_'), // Underscore = Emphasis
-      // 'Shift-Cmd-U': () => actions.toggleTaskChecked(cm),
-      // 'Shift-Cmd-H': () => actions.toggleHeader(cm),
-      // 'Shift-Cmd-L': () => actions.toggleUnorderedList(cm),
-      'Cmd-Enter': () => actions.wasUrlEntered(cm),
-      'Tab': () => actions.tab(cm, false),
-      'Shift-Tab': () => actions.tab(cm, true),
-      'Alt-Tab': () => actions.tabToNextElement(cm),
-      'Shift-Alt-Tab': () => actions.tabToPrevElement(cm),
-      Backspace: () => actions.backspaceOrDelete(cm, 'backspace'),
-      Delete: () => actions.backspaceOrDelete(cm, 'delete'),
-      'Alt-Left': () => actions.altArrow(cm, 'left'),
-      'Alt-Right': () => actions.altArrow(cm, 'right'),
-      // 'Alt-Left': () => { cm.lastMoveType = 'Alt-Left'; return CodeMirror.Pass },
-      // 'Alt-Right': () => { cm.lastMoveType = 'Alt-Right'; return CodeMirror.Pass },
+      'Cmd-LeftClick': (cm, pos) => wasUrlClicked(cm, pos),
+      'Shift-8': () => asterix(cm),
+      'Shift--': () => wrapText(cm, '_'), // Underscore = Emphasis
+      'Cmd-Enter': () => wasUrlEntered(cm),
+      'Tab': () => tab(cm, false),
+      'Shift-Tab': () => tab(cm, true),
+      'Alt-Tab': () => tabToNextElement(cm),
+      'Shift-Alt-Tab': () => tabToPrevElement(cm),
+      Backspace: () => backspaceOrDelete(cm, 'backspace'),
+      Delete: () => backspaceOrDelete(cm, 'delete'),
+      'Alt-Left': () => altArrow(cm, 'left'),
+      'Alt-Right': () => altArrow(cm, 'right'),
     },
   })
-
 
   // ------ SET PROPERTIES ------ //
 
@@ -128,26 +135,26 @@ export function makeEditor(parentElement) {
   cm.on('drop', onDrop)
 
 
-  window.api.receive('editor-command', (command) => {
-    switch (command) {
-      case 'cut': 
-        cm.triggerOnKeyDown({
-          type: 'keydown',
-          keyCode: 88,
-          altKey: false,
-          shiftKey: false,
-          metaKey: true,
-        })
-        break
-    }
-  })
+  // window.api.receive('editor-command', (command) => {
+  //   switch (command) {
+  //     case 'cut': 
+  //       cm.triggerOnKeyDown({
+  //         type: 'keydown',
+  //         keyCode: 88,
+  //         altKey: false,
+  //         shiftKey: false,
+  //         metaKey: true,
+  //       })
+  //       break
+  //   }
+  // })
 
   // TODO 4/1: Re-implement this 
   // Need to set `cm.state.pasteAsPlainText` true, and then initiate the paste. I think.
   // window.api.receive('pasteAsPlainText', () => actions.pasteAsPlainText(cm))
 
 
-  // Probably initated by `Edit > Find in Files` menu item.
+  // Usually initated by `Edit > Find in Files` menu item.
   // If there is text selected, send it to Search tab query.
   window.api.receive('findInFiles', () => {
     if (cm.somethingSelected()) {
@@ -172,19 +179,18 @@ export function makeEditor(parentElement) {
   window.api.receive('setFormat', (cmd) => {
     if (isFocusedPanel(cm)) {
       switch (cmd) {
-        case 'citation': actions.makeElement(cm, 'citation'); break
-        case 'code': actions.wrapText(cm, '`'); break
-        case 'emphasis': actions.wrapText(cm, '_'); break
-        case 'footnote': actions.makeElement(cm, 'footnote inline'); break
-        case 'heading': actions.toggleHeader(cm); break
-        case 'image': actions.makeElement(cm, 'image inline'); break
-        case 'link': actions.makeElement(cm, 'link inline'); break
-        case 'strong': actions.wrapText(cm, '*'); break
-        case 'ul': actions.toggleUnorderedList(cm); break
-        case 'taskList': actions.toggleUnorderedList(cm); break
-        case 'taskChecked': actions.toggleTaskChecked(cm); break
-        // case 'ol': CodeMirror.commands.newlineAndIndentContinueMarkdownList(cm); break
-        case 'ol': actions.toggleOrderedList(cm); break
+        case 'citation': makeElement(cm, 'citation'); break
+        case 'code': wrapText(cm, '`'); break
+        case 'emphasis': wrapText(cm, '_'); break
+        case 'footnote': makeElement(cm, 'footnote inline'); break
+        case 'heading': toggleHeader(cm); break
+        case 'image': makeElement(cm, 'image inline'); break
+        case 'link': makeElement(cm, 'link inline'); break
+        case 'strong': wrapText(cm, '*'); break
+        case 'ul': toggleList(cm, 'ul'); break
+        case 'ol': toggleList(cm, 'ol'); break
+        // case 'taskList': TODO; break
+        // case 'taskChecked': toggleTaskChecked(cm); break
       }
     }
   })

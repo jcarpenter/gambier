@@ -1,6 +1,7 @@
 import { setMode } from "./editor2"
 import { markDoc } from "./mark"
 import * as map from './map'
+import { blankLineRE } from "./regexp"
 
 // -------- SPANS & ELEMENTS -------- //
 
@@ -747,13 +748,11 @@ export function getTopAndBottomLines(range) {
 
 
 /**
- * Give `anchor` and `head` objects, determine which comes first in
- * the doc (top to bottom), and return from and to objects, each
- * with line and start values.
- * @param {*} anchor 
- * @param {*} head 
+ * For the given range (containing `anchor` and `pos`) objects,
+ * determine which comes first in the document, and return as 
+ * `from` and `to` objects.
  */
-export function getFromAndTo(range) {
+export function getFromAndTo(range, trimEmptyToLine = false) {
 
   const objA = range.anchor
   const objB = range.head
@@ -774,8 +773,14 @@ export function getFromAndTo(range) {
     var from = [objA, objB].find((o) => o.line == earlierLine)
     var to = [objA, objB].find((o) => o.line == laterLine)
   }
+  
+  if (from.line !== to.line && to.ch == 0 && trimEmptyToLine) {
+    to.line--
+  }
 
-  return { from, to }
+  const isMultiLine = from.line !== to.line
+
+  return { from, to, isMultiLine }
 }
 
 
@@ -998,38 +1003,145 @@ export function jumpToLine(cm, line, ch = 0) {
 
 // -------- MISC -------- //
 
+export function lineIsPlainText(cm, line) {
+  const lineClasses = getLineClasses(cm.getLineHandle(line))
+  return lineClasses == ''
+}
+
+/**
+ * Return `from` and `to` positions of the primary selection.
+ * If `trim...` params are `true`, we exclude from and/or to
+ * lines if their `ch` starts at the end or start of the line, 
+ * respectively. This catches an annoying edge case, where the
+ * user selects lines by dragging from the lines above or below.
+ * In CodeMirror it doesn't look like the initiating lines are
+ * part of the selection, but they are, which can cause 
+ * unexpected results. Trimming them solves the confusion.
+ * @param {boolean} trimEmptyFromLine
+ * @param {boolean} trimEmptyToLine
+ */
+export function getPrimarySelection(cm, trimEmptyFromLine = false, trimEmptyToLine = true) {
+
+  const from = cm.getCursor('from')
+  const to = cm.getCursor('to')
+  let isMultiLine = from.line !== to.line
+
+  if (isMultiLine && trimEmptyFromLine) {
+    if (from.ch == cm.getLine(from.line).length) {
+      from.line++
+    }
+  }
+
+  if (isMultiLine && trimEmptyToLine) {
+    if (to.ch == 0) {
+      to.line--
+    }
+  }
+
+  // Update multiline, in case we trimmed lines
+  isMultiLine = from.line !== to.line
+
+  return { from, to, isMultiLine }
+}
+
+/**
+ * Return the `start` and `end` line numbers of the list
+ * of the specified type, at the specified line (if one exists).
+ * @param {*} line - Integer. Look up and down from this line.
+ * @param {*} type - `ul` or `ol`
+ */
+export function getStartAndEndOfList(cm, line, type, stopAtBlankLines = true) {
+  
+  // Find start
+  let start = undefined
+  for (var i = line - 1; i >= 0; i--) {
+    const lineIsListOfSelectedType = getModeAndState(cm, i).state.list == type
+    const breakForBlank = stopAtBlankLines && blankLineRE.test(cm.getLine(i))
+    if (lineIsListOfSelectedType && !breakForBlank) {
+      start = i
+    } else {
+      break
+    }
+  }
+
+  // Find end
+  let end = undefined
+  for (var i = line + 1; i <= cm.lastLine(); i++) {
+    const lineIsListOfSelectedType = getModeAndState(cm, i).state.list == type
+    const breakForBlank = stopAtBlankLines && blankLineRE.test(cm.getLine(i))
+    if (lineIsListOfSelectedType && !breakForBlank) {
+      end = i
+    } else {
+      break
+    }
+  }
+
+  return { start, end }
+
+}
+
 /**
  * Traverse an ordered list and set the counter on each row.
  * @param {} line - First line in the list.
  */
-export function orderOrderedList(cm, line, origin = '+input', indent = 1) {
+export function orderOrderedList(cm, line, origin = '+input', indent = 1, startAtFirstLineOfParentList = false) {
   let stillInsideTree = true
   let counter = 1
+
+  // If true, find and set `line` to start of overall list.
+  // This ensures the entire list will be ordered
+  // (not just a child branch)
+  if (startAtFirstLineOfParentList) {
+    const { start, end } = getStartAndEndOfList(cm, line, 'ol')
+    line = start
+  }
+
+  // While we're still inside this tree, do the following...
   while (stillInsideTree) {
+
     const { state, mode } = getModeAndState(cm, line)
     const lineIsOl = state.list == 'ol'
     const lineIndent = state.listStack.length
     let lineText = cm.getLine(line)
+
     if (!lineIsOl || !lineText || lineIndent < indent) {
+
+      // Exit once we're no longer inside the tree
       stillInsideTree = false
+
     } else if (lineIndent > indent) {
+
+      // Child branch found. Order it, then skip the
+      // lines that it processed.
       line = orderOrderedList(cm, line, origin, lineIndent)
-      // counter++
       continue
+
     } else {
-      let lineLength = lineText.length
+
+      // Increment the list item
+      // Then update the `line` and `counter` variables
       const newLineText = lineText.replace(/(\s*?)(\d)(\.|\))(\s*)/, (match, p1, p2, p3, p4) => {
-        const newLineText = `${p1}${counter}${p3}${p4}`
-        return newLineText
+        return `${p1}${counter}${p3}${p4}`
       })
-      // console.log(lineText)
       if (newLineText !== lineText) {
-        cm.replaceRange(newLineText, { line: line, ch: 0 }, { line: line, ch: lineLength }, origin)
+        cm.replaceRange(newLineText, { line: line, ch: 0 }, { line: line, ch: lineText.length }, origin)
       }
       line++
       counter++
+
     }
   }
+
   return line
+}
+
+
+export async function getClipboardContents() {
+  try {
+    const text = await navigator.clipboard.readText()
+    return text
+  } catch (err) {
+    console.error('Failed to read clipboard contents: ', err)
+  }
 }
 

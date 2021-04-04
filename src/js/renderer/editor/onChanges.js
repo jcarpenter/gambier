@@ -8,7 +8,7 @@ import { getElementAt } from "./map"
 export function onChanges(cm, changes) {
 
   // console.log('onChanges')
-  console.log(changes)
+  // console.log(changes)
 
   /*
   
@@ -52,16 +52,6 @@ export function onChanges(cm, changes) {
           break
         }
       }
-
-      // Find end of `ul`
-      // for (var i = change.from.line + 1; i <= cm.lastLine(); i++) {
-      //   const lineIsOl = getModeAndState(cm, i).state.list == 'ol'
-      //   if (lineIsOl) {
-      //     end = i
-      //   } else {
-      //     break
-      //   }
-      // }
 
       orderOrderedList(cm, start, origin) 
     }
