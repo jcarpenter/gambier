@@ -17,14 +17,13 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   #addressbar {
     margin: 0 auto;
   }
 
   .searchfield {
-    @include label-normal;
+    @include system-regular-font;
     position: relative;
     background-color: rgba(0, 0, 0, 0.04);
     border-radius: 4px;
@@ -55,9 +54,9 @@
   }
 
   .magnifying-glass {
-    @include centered_mask_image;
+    @include centered-mask-image;
     @include absolute-vertical-center;
-    background-color: var(--controlTextColor);
+    background-color: var(--control-text-color);
     -webkit-mask-image: var(--img-magnifyingglass);
     position: absolute;
     width: 13px;
@@ -68,13 +67,13 @@
 
   .placeholder {
     @include absolute-vertical-center;
-    color: var(--placeholderTextColor);
+    color: var(--placeholder-text-color);
     left: 24px;
     pointer-events: none;
   }
 
   input {
-    @include label-normal;
+    @include system-regular-font;
     margin: 1px 0 0 24px;
     width: 100%;
     background: transparent;

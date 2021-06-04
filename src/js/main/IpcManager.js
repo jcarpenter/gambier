@@ -1,8 +1,7 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, screen, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
 import { readFile, writeFile, renameSync, copyFileSync, existsSync, readdirSync } from 'fs-extra'
 import path from 'path'
 import { deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
-import { getColors } from './AppearanceManager.js'
 import matter from 'gray-matter'
 import { isValidHttpUrl } from '../shared/utils.js'
 
@@ -14,12 +13,9 @@ export function init() {
   ipcMain.on('saveImageFromClipboard', async (evt) => {
     const win = BrowserWindow.fromWebContents(evt.sender)
     const project = global.state().projects.byId[win.projectId]
-    console.log(project)
-
     const img = clipboard.readImage()
     const png = img.toPNG()
     await writeFile(`${project.directory}/test.png`, png)
-    // console.log('It\'s saved!')
   })
 
   ipcMain.on('showWindow', (evt) => {
@@ -138,6 +134,26 @@ export function init() {
 
   // -------- IPC: Invoke -------- //
 
+  // Return x/y coordinates of cursor inside sender window
+  // Return null if cursor is outside the window bounds.
+  ipcMain.handle('getCursorWindowPosition', (evt) => {
+    const win = BrowserWindow.fromWebContents(evt.sender)
+    const point = screen.getCursorScreenPoint()
+    const bounds = win.getBounds()
+    const pos = {
+      x: point.x - bounds.x,
+      y: point.y - bounds.y
+    }
+
+    const cursorIsOutsideBounds = 
+      pos.x < 0 || // left of window
+      pos.y < 0 || // above window
+      pos.x > bounds.width || // right of window
+      pos.y > bounds.height // below window
+    
+    return cursorIsOutsideBounds ? null : pos
+  })
+  
   ipcMain.handle('getState', (evt) => {
     return global.state()
   })
@@ -152,11 +168,6 @@ export function init() {
   ipcMain.handle('getFileByPath', async (evt, filePath, encoding = 'utf8') => {
     let file = await readFile(filePath, encoding)
     return file
-  })
-
-  // Get system colors and return
-  ipcMain.handle('getColors', (evt, observeThemeValues = true) => {
-    return getColors(observeThemeValues)
   })
 
   ipcMain.handle('getHTMLFromClipboard', (evt) => {

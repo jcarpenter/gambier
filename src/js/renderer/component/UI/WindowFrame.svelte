@@ -12,7 +12,7 @@
     border-style: solid;
     background-color: var(--windowBackgroundColor);
     @include dark { border-color: var(--shadowColor); }
-    @include light { border-color: var(--separatorColor); }
+    @include light { border-color: var(--separator-color); }
   }
 
   // Darken when not focused

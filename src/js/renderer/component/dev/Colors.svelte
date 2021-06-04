@@ -19,7 +19,7 @@ import { onMount } from 'svelte';
     })
 
     // Get initial colors
-    const initialValues = await window.api.invoke('getColors')
+    const initialValues = await window.api.invoke('getSystemColors')
     colors = initialValues.colors
     overriddenVariables = initialValues.overriddenVariables
 
@@ -141,13 +141,14 @@ import { onMount } from 'svelte';
   }
 
   h1 {
-    @include label-large-bold;
-    color: var(--labelColor);
+    @include title1-emphasized-text;
+    color: var(--label-color);
   }
 
   h2 {
-    @include label-normal-bold;
-    color: var(--labelColor);
+    @include system-regular-font;
+    color: var(--label-color);
+    font-weight: bold;
     margin: 0;
     width: 6em; 
     display: inline;
@@ -163,7 +164,7 @@ import { onMount } from 'svelte';
   }
 
   .overriddenValues {
-    @include label-normal;
+    @include system-regular-font;
   }
 
   hr {
@@ -194,7 +195,7 @@ import { onMount } from 'svelte';
         Hovered menu items. Button accents (in it's `darker` variation).
       </SwatchLarge>
       <SwatchLarge name={'darkerControlAccentColor'} {colors} {overriddenVariables}> 
-        Used in button accents (via the `$btn-accent-bg` mixin). Darker variation of `controlAccentColor`, created by getColors().
+        Used in button accents (via the `$btn-accent-bg` mixin). Darker variation of `controlAccentColor`, created by getSystemColors().
       </SwatchLarge>
       <SwatchLarge name={'selectedContentBackgroundColor'} {colors} {overriddenVariables}> 
         Selected list item backgrounds.

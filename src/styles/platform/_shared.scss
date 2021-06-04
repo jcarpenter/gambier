@@ -1,0 +1,34 @@
+@use "../_helpers/mediaqueries" as *;
+
+body {
+
+    @media (prefers-color-scheme: light) {
+        --foregroundColor: 0, 0, 0;
+        --backgroundColor: 255, 255, 255;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        --foregroundColor: 255, 255, 255;
+        --backgroundColor: 0, 0, 0;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    height: 100vh;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+#layout {
+    height: 100%;
+    background-color: var(--windowBackgroundColor);
+}

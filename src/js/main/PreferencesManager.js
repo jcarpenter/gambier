@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import path from 'path'
 import { stateHasChanged, wait } from '../shared/utils'
-import { getColors } from './AppearanceManager'
+import url from 'url'
 
 const preferencesWindowConfig = {
   show: false,
@@ -10,7 +10,7 @@ const preferencesWindowConfig = {
   height: 480,
   zoomFactor: 1.0,
   titleBarStyle: 'hidden',
-  resizable: false,
+  // resizable: false,
   webPreferences: {
     // Security:
     allowRunningInsecureContent: false,
@@ -46,11 +46,13 @@ async function open() {
 
   const win = new BrowserWindow(preferencesWindowConfig)
 
-  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
-  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
-  const backgroundColor = getColors(false).colors.windowBackgroundColor.slice(0, -2)
-  win.setBackgroundColor(backgroundColor)
-
+  // Set window background color.
+  // TODO: Setting backgroundColor is currently broken. 
+  // Background always renders as black, regardless of the value. 
+  // Bug: https://github.com/electron/electron/issues/26842
+  const backgroundColor = global.state().systemColors.windowBackgroundColor
+  if (backgroundColor) win.setBackgroundColor(backgroundColor)
+  
   win.once('ready-to-show', () => {
     win.show()
   })
@@ -89,14 +91,22 @@ async function open() {
 
   if (!app.isPackaged) {
     win.webContents.openDevTools();
-    win.setBounds({ width: 800 })
+    win.setBounds({ width: 1000 })
   }
 
   // Load index.html
-  await win.loadFile(path.join(__dirname, 'preferences.html'), {
+  // await win.loadFile(path.join(__dirname, 'preferences.html'), {
+  //   query: {
+  //     id: win.projectId
+  //   },
+  // })
+  await win.loadURL(url.format({
+    pathname: 'preferences.html',
+    protocol: 'file:',
+    slashes: true,
     query: {
       id: win.projectId
-    },
-  })
+    }
+  }))
 }
 

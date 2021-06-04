@@ -7,12 +7,11 @@ import Preferences from './component/preferences/Preferences.svelte'
 async function init() {
 
   // Get initial state and files
-  const initialState = await window.api.invoke('getState')
-  const initialColors = await window.api.invoke('getColors', false)
+  const state = await window.api.invoke('getState')
 
   // Set initial values
-  StateManager.init(initialState)
-  ThemeManager.init(initialState, initialColors)
+  StateManager.init(state)  
+  ThemeManager.init(state)
 
   // Create layout
   const layout = new Preferences({

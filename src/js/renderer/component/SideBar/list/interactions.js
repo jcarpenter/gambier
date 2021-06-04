@@ -234,7 +234,7 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
 
   } else {
 
-    const isDoc = files.byId[id].type == 'doc'
+    const isDoc = files.byId[id]?.type == 'doc'
     
     // Open doc
     if (isDoc) {

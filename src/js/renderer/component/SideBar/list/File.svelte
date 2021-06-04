@@ -2,7 +2,7 @@
   import { createEventDispatcher, afterUpdate } from 'svelte'
   import { state, project, sidebar, isWindowFocused } from '../../../StateManager'
   import { files } from '../../../FilesManager'
-  import { css } from '../../ui/actions'
+  import { setAsCustomPropOnNode } from '../../ui/actions'
   import {onMousedown, toggleExpanded, onMouseup} from './interactions'
   import DisclosureButton from '../../ui/DisclosureButton.svelte'
   import { getContext } from 'svelte';
@@ -26,11 +26,19 @@
   $: isHighlighted = ($isWindowFocused && isSelected && isSectionFocused && !isWindowDraggedOver) || isDragTarget
   $: isHighlightedInBg = ($isWindowFocused && isSelected && !isSectionFocused) || (isSelected && !$isWindowFocused) || (isSelected && isWindowDraggedOver && !isDragTarget)
 
-  // On drag start, if the dragged file is a doc, set it's id as a dataTransfer item. We use a custom `text/docid`. Per: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/Drag_operations#dragdata
+  /**
+   * On drag start, if the dragged file is a doc, set it's 
+   * id as a dataTransfer item. We use custom `text/docid`.
+   * Per: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/Drag_operations#dragdata
+   * @param domEvent
+   */
   function onDragStart(domEvent) {
     const file = $files.byId[id]
+    // console.log(file)
     if (file.type == 'doc') {
       domEvent.dataTransfer.setData('text/docid', id);
+    } else if (file.type == 'img') {
+      domEvent.dataTransfer.setData('text/fileid', id);
     }
   }
 
@@ -46,9 +54,9 @@
     height: 28px;
 
     .icon {
-      @include centered_mask_image;
+      @include centered-mask-image;
       @include absolute-vertical-center;
-      background-color: var(--iconAccentColor);
+      background-color: var(--nav-icon-color);
       left: calc(calc(var(--leftOffset) * 1px) + 20px);
       width: 14px;
       height: 14px;
@@ -56,9 +64,9 @@
     }
 
     .label {
-      @include label-normal;
+      @include system-regular-font;
       @include absolute-vertical-center;
-      color: var(--labelColor);
+      color: var(--label-color);
       left: calc(calc(var(--leftOffset) * 1px) + 42px);
       white-space: nowrap;
       pointer-events: none;
@@ -66,8 +74,8 @@
 
     .counter {
       @include absolute-vertical-center;
-      @include label-normal;
-      color: var(--tertiaryLabelColor);
+      @include system-regular-font;
+      color: var(--tertiary-label-color);
       position: absolute;
       right: 7px;
       pointer-events: none;
@@ -92,14 +100,14 @@
   }
 
   .file.isHighlighted {
-    background-color: var(--selectedContentBackgroundColor);
+    background-color: var(--selected-list-item-color);
 
     .disclosure [role='button'],
     .icon {
-      background-color: var(--selectedMenuItemTextColor);
+      background-color: var(--selected-menuitem-text-color);
     }
     .label {
-      color: var(--selectedMenuItemTextColor);
+      color: var(--selected-menuitem-text-color);
     }
     .counter {
       color: var(--controlColor);
@@ -116,14 +124,14 @@
   // .file.isWindowDraggedOver.isDragTarget,
   // .file.isSelected.isSectionFocused.isWindowFocused:not(.isWindowDraggedOver) {
     
-  //   background-color: var(--selectedContentBackgroundColor);
+  //   background-color: var(--selected-list-item-color);
 
   //   .disclosure [role='button'],
   //   .icon {
-  //     background-color: var(--selectedMenuItemTextColor);
+  //     background-color: var(--selected-menuitem-text-color);
   //   }
   //   .label {
-  //     color: var(--selectedMenuItemTextColor);
+  //     color: var(--selected-menuitem-text-color);
   //   }
   //   .counter {
   //     color: var(--controlColor);
@@ -146,7 +154,7 @@
 <!-- use:dragIntoFolder={{isFolder: isExpandable, folderPath: file.path}} -->
 {#if file}
   <div
-    use:css={{ leftOffset }}
+    use:setAsCustomPropOnNode={{ leftOffset }}
     class="file {file.type}"
     class:isHighlighted
     class:isHighlightedInBg
@@ -168,7 +176,7 @@
         left={leftOffset + 3}
         rotation={isFolder ? 0 : -90}
         opacity={0.85}
-        iconColor={isHighlighted ? 'selectedMenuItemTextColor' : 'controlTextColor'}
+        iconColor={isHighlighted ? 'selected-menuitem-text-color' : 'control-text-color'}
         on:toggle={() => toggleExpanded(id, isFolder, tab, tabId)} 
       />
 

@@ -36,8 +36,17 @@ export async function mapDocument (filepath, parentId, nestDepth, stats = undefi
 	// gray-matter `isEmpty` property returns "true if front-matter is empty".
 	const hasFrontMatter = !gm.isEmpty
 	if (hasFrontMatter) {
+		
 		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
 		doc.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : []
+		
+		// If tags is a single string, convert to array
+		// We want to support single tag format, ala `tags: Kitten`
+		// because it's supported by eleventy: 
+		// https://www.11ty.dev/docs/collections/#a-single-tag-cat
+		if (typeof doc.tags === 'string') {
+			doc.tags = [doc.tags]
+		}
 	}
 
 	// Set title, if present. E.g. "Sea Level Rise"

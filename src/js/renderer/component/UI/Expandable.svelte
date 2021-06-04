@@ -1,5 +1,5 @@
 <script>
-  import { css, setSize } from '../ui/actions'
+  import { setAsCustomPropOnNode, setSize } from '../ui/actions'
   import DisclosureButton from './DisclosureButton.svelte';
 
   export let title = 'Title'
@@ -46,8 +46,9 @@
     // outline: 1px solid black;
 
     h1 {
-      @include label-normal-small-bold;
-      color: var(--labelColor);
+      @include system-small-font;
+      font-weight: bold;
+      color: var(--label-color);
       font-weight: bold;
       flex-grow: 1;
       margin: 0;
@@ -63,7 +64,7 @@
 <div 
   class="expandable" 
   class:isOpen 
-  use:css={{ maxExpandedHeight }}
+  use:setAsCustomPropOnNode={{ maxExpandedHeight }}
 >
   <header use:setSize={{margin}}>
     <DisclosureButton

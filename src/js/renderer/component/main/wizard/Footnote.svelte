@@ -3,7 +3,8 @@
   import { writeToDoc } from '../../../editor/editor-utils';
   import FormRow from '../../ui/FormRow.svelte';
   import InputText from '../../ui/InputText.svelte';
- 
+  import { store2 } from '../../../WizardManager';
+
   export let cm = null
   export let element = null
   export let suppressWarnings = false
@@ -34,7 +35,7 @@
 
 <FormRow margin={'8px 8px'}>
   <InputText
-    autofocus={true}
+    autofocus={$store2.openedBy.hover == false}
     placeholder={'Required'}
     isError={content.string == '' && !suppressWarnings}
     multiLine={true}

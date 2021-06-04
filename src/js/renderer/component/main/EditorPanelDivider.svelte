@@ -32,7 +32,7 @@
   .divider {
     height: 100%;
     width: 1px;
-    background: var(--separatorColor);
+    background: var(--separator-color);
     position: relative;
   }
   

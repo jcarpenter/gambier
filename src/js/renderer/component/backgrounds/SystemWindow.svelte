@@ -4,7 +4,7 @@
 
 <style type="text/scss">
   .background {
-    @include background_layout;
+    @include background-layout;
     background-color: var(--windowBackgroundColor);
   }
 </style>

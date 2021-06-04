@@ -75,12 +75,9 @@ export class Watcher {
     this.window.webContents.send('initialFilesFromMain', this.files)
 
     // Tell reducers when first project map is complete, 
-    // and pass along first file. Reducer then sets this as
-    // file that the focused panel should display.
-    const firstDocId = this.files.allIds.find((id) => {
-      const file = this.files.byId[id]
-      return file.type == 'doc'
-    })
+    // and pass along first file. If a file as not been 
+    // selected yet, reducer selects this.
+    const firstDocId = this.files.allIds.find((id) => this.files.byId[id].type == 'doc')
 
     global.store.dispatch({
       type: 'PROJECT_FILES_MAPPED',

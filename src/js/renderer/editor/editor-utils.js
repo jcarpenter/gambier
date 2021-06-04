@@ -1,572 +1,8 @@
 import { setMode } from "./editor2"
 import { markDoc } from "./mark"
 import * as map from './map'
-import { blankLineRE } from "./regexp"
-
-// -------- SPANS & ELEMENTS -------- //
-
-export function getDocElements(cm) {
-  const elements = []
-  cm.eachLine((lineHandle) => {
-    const lineElements = getLineElements(cm, lineHandle)
-    elements.push(...lineElements)
-  })
-  return elements
-}
-
-/**
- * Return array of "spans" for the line.
- * Each also contains details about the parent "element" it 
- * belongs to (e.g. url spans might belong to link element).
- * Spans correspond with the spans in the rendered HTML output. 
- * NOTE: We parse these from `lineHandle.styles`, which is a  strangely-formatted (but very useful) array of classes (e.g. `link inline text`) and the token number they end on. The format is number-followed-by-string——e.g. `24, "link inline text", 35, "link inline url"`——where `24` is the ending character of `link inline text`, and the starting character of `link inline url`. This array can also contain empty strings (e.g. "") and multiple consecutive numbers, which we need to ignore when parsing (they seem to belong to empty tokens).
- */
-export function getLineSpans(cm, lineHandle) {
-
-  let spans = []
-
-  // If lineHandle has no styles, return empty array
-  if (!lineHandle.styles?.some((s) => typeof s === 'string' && s !== '')) return spans
-
-  const line = lineHandle.lineNo()
-
-  // Get line classes
-  const lineClasses = getLineClasses(lineHandle)
-
-  // ---------- Get spans from lineHandle "styles" ---------- //
-
-  lineHandle.styles.forEach((s, index) => {
-
-    // Check if style has anything we care about
-    if (typeof s === 'string' && s !== '') {
-
-      // Two numbers preceding a class string and seperated by null, are the class's `start` and `end` values. Given `4, null, 6, "md footnote reference"`, 4 = start and 6 = end of "md footnote reference". `end` = the most-immediately preceding number (not string) in the array, before the class (s). `start` = the second-most-immediately preceding number
-
-      let start = null
-      let end = 0
-      let counter = index
-
-      while (start == null) {
-        counter--
-        if (typeof lineHandle.styles[counter] == 'number') {
-          if (end == 0) {
-            end = lineHandle.styles[counter]
-          } else {
-            // Fix for very annoying `lineHandle.styles` quirk: If a style starts at the first character of a line (0), the sequence of numbers looks like: `N, 3, "inline footnote malformed md"`, where `N` is the number of times the document has been loaded (very weird). In that case, we just set the first number to zero.
-            start = counter == 0 ? 0 : lineHandle.styles[counter]
-            // start = (counter == 0 && (lineHandle.styles[counter] == 1 || lineHandle.styles[counter] == 2)) ? 0 : lineHandle.styles[counter]
-          }
-        }
-      }
-
-      // Create the style object
-      const span = {
-        string: getTextFromRange(cm, line, start, end),
-        line,
-        start,
-        end,
-        classes: s.split(' '),
-        lineClasses,
-      }
-
-      // Is span markdown formatting?
-      span.isFormatting = span.classes.includes('md')
-
-      spans.push(span)
-    }
-  })
-
-
-  // ---------- Get few more spans manually ---------- //
-
-  // Some spans we need aren't present in the lineHandle styles 
-  // (because they're not in the markdown). So we add them manually.
-  // Or modify them, if necessary.
-
-  // We iterate over a duplicate of the spans array, so we can mutate the original.
-  spans.slice().forEach((s, index) => {
-
-    // Capture the content of the header.
-    // Everything after the "#" characters and subsequent whitespace.
-    if (s.classes.includes('header-start')) {
-      const start = s.start + s.string.length
-      const end = cm.getLine(s.line).length
-      var newSpan = {
-        string: getTextFromRange(cm, s.line, start, end),
-        line: s.line,
-        start,
-        end,
-        classes: [],
-        lineClasses: s.lineClasses,
-      }
-    }
-
-    // If span is found, insert it after the current item
-    if (newSpan) {
-      spans.splice(index + 1, 0, newSpan)
-    }
-  })
-
-  return spans
-}
-
-/** 
- * For the given line, return line classes. E.g. 'header'
-*/
-export function getLineClasses(lineHandle) {
-  return lineHandle.styleClasses ?
-    lineHandle.styleClasses.textClass :
-    ""
-}
-
-/**
- * Get array of "elements" for the line. 
- * Elements are made of one or more spans.
- * E.g. `url` and `title` are child spans of a link element.
- * CodeMirror markdown mode returns spans, but does not understand
- * elements. So we map the elements by reading the spans.
- * @param {*} cm 
- * @param {*} lineHandle 
- */
-export function getLineElements(cm, lineHandle) {
-
-  let spans = getLineSpans(cm, lineHandle)
-  let elements = []
-
-  // If no spans, return empty array
-  if (!spans) return
-
-  for (const [index, s] of spans.entries()) {
-
-    // We only care about 'start' spans. E.g. 'link-start'
-    const isStartOfParentEl = s.classes.some((c) => c.includesAny('-start', 'bare-url', 'task'))
-
-    if (!isStartOfParentEl) continue
-
-    // ---------- Stub out the object ---------- //
-
-    // We'll set `type` and end `below`
-    let element = {
-      type: '', // TBD
-      line: s.line,
-      start: s.start,
-      classes: s.classes.filter((c) => !c.includes('-start') && c !== 'md'),
-      end: 0, // TBD,
-      isIncomplete: s.classes.includes('incomplete'),
-      children: [],
-      isNew: false
-    }
-
-    elements.push(element)
-
-    // ---------- Set `type` and find `end` ---------- //
-
-    if (s.classes.includes('bare-url')) {
-
-      element.type = 'bare-url'
-      element.end = s.end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      const start = element.start
-      const end = element.end
-      const string = element.markdown
-      element.content = { start, end, string }
-
-    } else if (s.classes.includes('citation-start')) {
-
-      element.type = 'citation'
-      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('citation-end')).end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: true, isEditable: false }
-      // Get content
-      const start = element.start + 1
-      const end = element.end - 1
-      const string = getTextFromRange(cm, element.line, start, end)
-      element.content = { start, end, string }
-
-    } else if (s.classes.includes('email-in-brackets-start')) {
-
-      element.type = 'email-in-brackets'
-      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('email-in-brackets-end')).end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      const start = element.start + 1
-      const end = element.end - 1
-      const string = getTextFromRange(cm, element.line, start, end)
-      element.content = { start, end, string }
-
-    } else if (s.classes.includes('em')) {
-
-      element.type = 'emphasis'
-      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('em-end')).end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      const start = element.start + 1
-      const end = element.end - 1
-      const string = getTextFromRange(cm, element.line, start, end)
-      element.content = { start, end, string }
-
-    } else if (s.classes.includes('footnote-start')) {
-
-      const isInline = s.classes.includes('inline')
-      element.type = isInline ?
-        'footnote-inline' :
-        'footnote-reference'
-      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('footnote-end')).end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: true, isEditable: false }
-      // Get content
-      if (element.type == 'footnote-inline') {
-        const start = element.start + element.markdown.indexOf('[') + 1
-        const end = element.start + element.markdown.lastIndexOf(']')
-        const string = getTextFromRange(cm, element.line, start, end)
-        element.content = { start, end, string }
-      }
-
-    } else if (s.classes.hasAll('footnote', 'reference-definition-anchor-start')) {
-
-      element.type = 'footnote-reference-definition'
-      element.end = cm.getLine(element.line).length
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      // TODO
-
-    } else if (s.lineClasses.includes('header')) {
-
-      element.type = 'header'
-      element.markdown = cm.getLine(element.line)
-      element.end = element.markdown.length
-      element.mark = { isMarkable: false, isEditable: false }
-      element.content = {
-        start: element.start,
-        end: element.end,
-        string: element.markdown
-      }
-
-    } else if (s.classes.includes('link-start')) {
-
-      const isImage = s.classes.includes('image')
-      const isInline = s.classes.includes('inline')
-      element.type = isInline ?
-        isImage ? 'image-inline' : 'link-inline' :
-        isImage ? 'image-reference' : 'link-reference'
-
-      // If it's reference, determine what style
-      if (element.type.includes('reference')) {
-        if (s.classes.includes('full')) {
-          element.type = element.type.concat('-full')
-        } else if (s.classes.includes('collapsed')) {
-          element.type = element.type.concat('-collapsed')
-        } else if (s.classes.includes('shortcut')) {
-          element.type = element.type.concat('-shortcut')
-        }
-      }
-
-      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('link-end')).end
-
-      if (isImage) {
-        // For images, the preceding span is `!` character.
-        // Decrement `start` by 1 so we capture it.
-        element.start--
-        // And set `parentEl` of it's span.
-        spans[index - 1].element = element
-      }
-
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-
-      // Set mark details
-      element.mark = { isMarkable: true, isEditable: isImage ? false : true }
-      if (!isImage) {
-        // Specify what span the mark should show
-        if (element.type.includesAny('shortcut', 'collapsed')) {
-          element.mark.displayedSpanName = 'label'
-        } else {
-          element.mark.displayedSpanName = 'text'
-        }
-      }
-
-      // Get content
-      element.content = {
-        start: element.start,
-        end: element.end,
-        string: element.markdown
-      }
-
-    } else if (s.classes.hasAll('link', 'reference-definition-anchor-start')) {
-
-      element.type = 'link-reference-definition'
-      element.end = cm.getLine(element.line).length
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      // TODO
-
-    } else if (s.classes.includes('url-in-brackets-start')) {
-
-      element.type = 'url-in-brackets'
-      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('url-in-brackets-end')).end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      // TODO
-
-    } else if (s.classes.includes('strong')) {
-
-      element.type = 'strong'
-      element.end = spans.slice(index + 1).find((sp) => sp.classes.includes('strong-end')).end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      const start = element.start + 2
-      const end = element.end - 2
-      const string = getTextFromRange(cm, element.line, start, end)
-      element.content = { start, end, string }
-
-    } else if (s.classes.includes('task')) {
-
-      // Bit hacky:
-      // Set start back 2 characters, to ensure that mark replacement
-      // also replaces the preceding `- ` characters.
-      // Before: `[x] ` After: `- [x] `
-      element.isClosed = s.classes.includes('task-closed')
-      element.start = s.start - 2
-      element.type = 'task'
-      element.end = s.end
-      element.markdown = getTextFromRange(cm, element.line, element.start, element.end)
-      element.mark = { isMarkable: false, isEditable: false }
-      // Get content
-      // TODO
-    }
-
-
-    // ---------- Get children ---------- //
-
-    if (element.type == 'email-in-brackets') {
-
-      // The email address is everything between the brackets
-      const start = element.start + 1
-      const end = element.end - 1
-      const string = getTextFromRange(cm, element.line, start, end)
-      element.url = { start, end, string }
-
-    } else if (element.type == 'footnote-reference') {
-
-      const label = spans.slice(index + 1).find((s) => s.classes.includes('label') && s.end <= element.end)
-      if (label) {
-        element.label = {
-          start: label.start,
-          end: label.end,
-          string: getTextFromRange(cm, element.line, label.start, label.end)
-        }
-      }
-
-    } else if (element.type == 'footnote-reference-definition') {
-
-      const label = spans.slice(index + 1).find((s) => s.classes.includes('label') && s.end <= element.end)
-      if (label) {
-        element.label = {
-          start: label.start,
-          end: label.end,
-          string: getTextFromRange(cm, element.line, label.start, label.end)
-        }
-      }
-
-      // This is a weird one. We don't actually wrap the content in a span. So we get the content by capturing everything between the end of the anchor, and the end of the line.
-      const endOfTheAnchor = spans.slice(index + 1).find((s) => s.classes.includes('reference-definition-anchor-end')).end
-      const endOfTheLine = element.end
-      element.content = {
-        start: endOfTheAnchor,
-        end: endOfTheLine,
-        string: getTextFromRange(cm, element.line, endOfTheAnchor, endOfTheLine)
-      }
-
-    } else if (element.type.includesAny('link', 'image')) {
-
-      // If the element is incomplete, with spans missing (e.g no URL entered)
-      // we still create the property, with empty string, and correct start/end ch.
-
-      const text = spans.slice(index + 1).find((s) => s.classes.includes('text') && s.end <= element.end)
-      if (text) {
-        element.text = {
-          start: text.start,
-          end: text.end,
-          string: getTextFromRange(cm, element.line, text.start, text.end),
-        }
-      } else if (element.type.equalsAny('link-inline', 'image-inline')) {
-        element.text = {
-          start: element.start + element.markdown.indexOf('[') + 1,
-          end: element.start + element.markdown.indexOf('[') + 1,
-          string: '',
-        }
-      }
-      element.children.push(text)
-
-      const url = spans.slice(index + 1).find((s) => s.classes.includes('url') && s.end <= element.end)
-      if (url) {
-        element.url = {
-          start: url.start,
-          end: url.end,
-          string: getTextFromRange(cm, element.line, url.start, url.end),
-        }
-      } else if (element.type.equalsAny('link-inline', 'image-inline')) {
-        element.url = {
-          start: element.start + element.markdown.indexOf('(') + 1,
-          end: element.start + element.markdown.indexOf('(') + 1,
-          string: ''
-        }
-      }
-      element.children.push(url)
-
-      const title = spans.slice(index + 1).find((s) => s.classes.includes('title') && s.end <= element.end)
-      if (title) {
-        // Get string w/o the preceding whitespace and wrapping characters: ", ', (
-        // Before: ` "Computers"` After: `Computers`.
-        // We always strip 1 or more from start (whitespace can vary), // and 1 from the end.
-        // Spec: https://spec.commonmark.org/0.18/#link-title
-        const wrappedString = getTextFromRange(cm, element.line, title.start, title.end)
-        const openingCharactersLength = wrappedString.match(/\s+("|'|\()/)[0].length
-        element.title = {
-          start: title.start + openingCharactersLength,
-          end: title.end - 1,
-          string: wrappedString.slice(openingCharactersLength, wrappedString.length - 1)
-        }
-      } else if (element.type.equalsAny('link-inline', 'image-inline')) {
-        element.title = {
-          start: element.url.end,
-          end: element.url.end,
-          string: ''
-        }
-      }
-
-      if (element.type.includesAny('link-reference', 'image-reference')) {
-
-        const label = spans.slice(index + 1).find((s) => s.classes.includes('label') && s.end <= element.end)
-        if (label) {
-          element.label = {
-            start: label.start,
-            end: label.end,
-            string: getTextFromRange(cm, element.line, label.start, label.end),
-          }
-        } else {
-          // TODO: This needs to differ, based on full vs collapsed
-          // element.label = {
-          //   start: element.start + element.markdown.indexOf('[') + 1,
-          //   end:  element.start + element.markdown.indexOf(']'),
-          // }
-        }
-        element.children.push(element.label)
-      }
-
-      // if (label) {
-      //   element.label = {
-      //     start: label.start,
-      //     end: label.end,
-      //     string: getTextFromRange(cm, element.line, label.start, label.end)
-      //   }
-      // }
-
-
-    } else if (element.type == 'url-in-brackets') {
-
-      // The URL is everything between the brackets
-      const urlStart = element.start + 1
-      const urlEnd = spans.slice(index + 1).find((s) => s.classes.includes('url-in-brackets-end')).end - 1
-      element.url = {
-        start: urlStart,
-        end: urlEnd,
-        string: getTextFromRange(cm, element.line, urlStart, urlEnd)
-      }
-    }
-
-    // ---------- If there's a marker, get it ---------- //
-
-    // if (element.isMarked) {
-    //   element.mark = cm.findMarksAt(
-    //     { line: element.line, ch: element.start }
-    //   )[0]
-    // }
-
-    // Add child spans to element
-    element.spans = spans.slice(index).filter((s) => element.start <= s.start && s.end <= element.end)
-  }
-
-
-
-
-
-
-  // // Filter to non-formatting spans, with elements
-  // spans = spans.filter((s) => s.element)
-
-  // // Get elements from spans
-  // let elements = spans.map((s) => s.element)
-
-  // elements = elements.filter((e, index) => {
-  //   const prevEl = elements[index - 1]
-  //   const sameAsPrevEl = e.start == prevEl?.start
-  //   return sameAsPrevEl ? false : true
-  // })
-
-  return elements
-}
-
-
-/**
- * Get span at specified line and ch
- * Exclude formatting.
- */
-export function getSpanAt(cm, line, ch) {
-  const lineSpans = getLineSpans(cm, cm.getLineHandle(line))
-  const span = lineSpans.find((s) =>
-    s.line == line &&
-    s.start < ch &&
-    ch < s.end &&
-    !s.isFormatting
-  )
-  return span
-}
-
-
-/**
- * Get element at specified line and ch
- */
-export function getElementAt(cm, line, ch) {
-  const lineHandle = cm.getLineHandle(line)
-  const lineElements = getLineElements(cm, lineHandle)
-  const element = lineElements.find((e) =>
-    e.line == line &&
-    e.start < ch &&
-    ch < e.end
-  )
-  return element
-}
-
-
-/**
- * Get the surrounding span, if the cursor is a single cursor
- * (there's no selected text), and is inside a selectable span.
- */
-export function getSurroundingSpan(cm) {
-
-  let span
-
-  const activeSelections = cm.listSelections()
-  const isSingleCursor =
-    activeSelections.length == 1 &&
-    activeSelections[0].anchor.line == activeSelections[0].head.line &&
-    activeSelections[0].anchor.ch == activeSelections[0].head.ch
-
-  if (isSingleCursor) {
-    const cursor = activeSelections[0].anchor
-    span = getSpanAt(cm, cursor.line, cursor.ch)
-  }
-
-  return span
-}
+import { blankLineRE, listStartRE, headerStartRE, blockQuoteStartRE } from "./regexp"
+import { cmpPos, Pos } from "codemirror"
 
 
 
@@ -615,49 +51,6 @@ export function getReferenceDefinitions(cm, label, type = 'link') {
   }
 
   return definitionsMatchingLabel
-
-  cm.eachLine((lineHandle) => {
-
-    // If line has no block styles, return
-    const lineHasBlockStyles =
-      lineHandle.styleClasses !== undefined &&
-      lineHandle.styleClasses !== null
-    if (!lineHasBlockStyles) return
-
-    // If blockStyles doesn't have reference definition, 
-    // of the correct type, return.
-    // lineHandles contain a list of block-level classes in the 
-    // (confusingly-named) `stylesClasses.textClass` property.
-    const blockStyles = lineHandle.styleClasses.textClass
-    if (!blockStyles.includes(`${type}-reference-definition`)) return
-
-    const definition = getLineSpans(cm, lineHandle).find((s) => s.element.label.string == label)?.element
-
-    if (definition) {
-      definitionsMatchingLabel.push(definition)
-    }
-  })
-
-  return definitionsMatchingLabel
-}
-
-
-/**
- * Get title w/o the preceding whitespace and wrapping characters.
- * Before: ` "Computers"` After: `Computers`.
- * We always strip 1 or more characters from start, and 1 from end.
- * CommonMark spec: https://spec.commonmark.org/0.18/#link-title
- */
-export function getTitleWithoutWrappingCharacters(line, start, end, string) {
-
-  const openingCharactersLength = string.match(/\s+("|'|\()/)[0].length
-
-  return {
-    line,
-    start: start + openingCharactersLength,
-    end: end - 1,
-    string: string.slice(openingCharactersLength, string.length - 1)
-  }
 }
 
 
@@ -666,7 +59,7 @@ export function getTitleWithoutWrappingCharacters(line, start, end, string) {
  */
 export function isList(cm, line) {
   const lineHandle = cm.getLineHandle(line)
-  const lineIsList = getLineClasses(lineHandle).includes('list')
+  const lineIsList = map.getLineClasses(lineHandle).includes('list')
   return lineIsList
 }
 
@@ -687,7 +80,7 @@ export function isLineClassesHeterogeneous(cm, range) {
   const lineClassesInsideRange = []
   for (var i = topLine; i <= bottomLine; i++) {
     const lineHandle = cm.getLineHandle(i)
-    const lineClasses = getLineClasses(lineHandle)
+    const lineClasses = map.getLineClasses(lineHandle)
     if (lineClasses) {
       // lineClasses are formatted like `header h1` and `ol list-1`
       // The "main" style is always the first word.
@@ -711,43 +104,6 @@ export function isLineClassesHeterogeneous(cm, range) {
 
 
 /**
- * Get the top and bottom line values from a `range`
- * Determine which of `range.anchor` and `range.head` comes first
- * in the doc (is top), and which is bottom, and return their
- * line values.
- */
-export function getTopAndBottomLines(range) {
-
-  // First check if the range is just a single cursor
-  // If yes, topLine and bottomLine are the same, so return
-  const isSingleCursor =
-    range.anchor.ch == range.head.ch &&
-    range.anchor.line == range.head.line
-  if (isSingleCursor) {
-    const line = range.anchor.line
-    return { topLine: line, bottomLine: line }
-  }
-
-  // Else, determine which is top and bottom lines
-  const objA = range.anchor
-  const objB = range.head
-  const topLine = Math.min(objA.line, objB.line)
-  let bottomLine = Math.max(objA.line, objB.line)
-
-  // Check if bottom line selection ends on the first character.
-  // This happens when we select the entire previous line.
-  // CodeMirror adds the next line to the selection. But it doesn't
-  // look selected to the user, and if it increments, it's confusing.
-  // So we check for this condition, and if true, remove the last line.
-  const bottomObj = [objA, objB].find(({ line }) => line == bottomLine)
-  if (bottomObj.ch == 0) {
-    bottomLine--
-  }
-  return { topLine, bottomLine }
-}
-
-
-/**
  * For the given range (containing `anchor` and `pos`) objects,
  * determine which comes first in the document, and return as 
  * `from` and `to` objects.
@@ -756,15 +112,26 @@ export function getFromAndTo(range, trimEmptyToLine = false) {
 
   const objA = range.anchor
   const objB = range.head
-  const linesAreSame = objA.line == objB.line
+  const { anchor, head } = range
+  const sameLine = anchor.line == head.line
 
-  if (linesAreSame) {
+  if (sameLine) {
     // Selection is inside same line:
     // Compare the characters
-    const earlierCh = Math.min(objA.ch, objB.ch)
-    const laterCh = Math.max(objA.ch, objB.ch)
-    var from = [objA, objB].find((o) => o.ch == earlierCh)
-    var to = [objA, objB].find((o) => o.ch == laterCh)
+
+    const test = CodeMirror.cmpPos(range.anchor, range.head)
+    if (test <= 0) {
+      var from = anchor
+      var to = head
+    } else {
+      var from = head
+      var to = anchor
+    }
+
+    // const earlierCh = Math.min(objA.ch, objB.ch)
+    // const laterCh = Math.max(objA.ch, objB.ch)
+    // var from = [objA, objB].find((o) => o.ch == earlierCh)
+    // var to = [objA, objB].find((o) => o.ch == laterCh)
   } else {
     // Selection is across multiple lines:
     // Compare the lines
@@ -773,31 +140,21 @@ export function getFromAndTo(range, trimEmptyToLine = false) {
     var from = [objA, objB].find((o) => o.line == earlierLine)
     var to = [objA, objB].find((o) => o.line == laterLine)
   }
-  
+
   if (from.line !== to.line && to.ch == 0 && trimEmptyToLine) {
     to.line--
   }
 
   const isMultiLine = from.line !== to.line
+  const isSingleCursor = !isMultiLine && from.ch == to.ch
 
-  return { from, to, isMultiLine }
+  return { from, to, isMultiLine, isSingleCursor }
 }
 
 
 
 // -------- READ/WRITE STRINGS FROM DOC -------- //
 
-/**
- * Return true if there's only one cursor, and no text selected.
- */
-export function isSingleCursor(cm) {
-  const selections = cm.listSelections()
-  const isSingleCursor =
-    selections.length == 1 &&
-    selections[0].anchor.line == selections[0].head.line &&
-    selections[0].anchor.ch == selections[0].head.ch
-  return isSingleCursor
-}
 
 /**
  * Return a single character at the specified position
@@ -809,12 +166,14 @@ export function getCharAt(cm, line, ch = 0) {
   )
 }
 
+
 /**
  * A _slighty_ more compact snippet for getting text from a range.
  */
 export function getTextFromRange(cm, line, start, end) {
   return cm.getRange({ line: line, ch: start }, { line: line, ch: end })
 }
+
 
 /**
  * Return N characters immediately preceding the `fromPos` value.
@@ -830,6 +189,7 @@ export function getPrevChars(cm, numSkipBehind, numToGet, fromPos,) {
   )
 }
 
+
 /**
  * Return N characters immediately following the `fromPos` value.
  * @param {*} cm 
@@ -844,6 +204,9 @@ export function getNextChars(cm, numSkipAhead, numToGet, fromPos) {
   )
 }
 
+
+// -------- WRITE -------- //
+
 /**
  * Write input value to cm.
  */
@@ -855,6 +218,112 @@ export function writeToDoc(cm, value, line, start, end) {
     '+input'
   )
 }
+
+
+/**
+ * Write multiple edits to doc then set selections.
+ * Ensures changes apply to correct characters when making
+ * by applying changes bottom to top, right to left. Otherwise,
+ * earlier edits would change the doc "out from underneath"
+ * later edits, which would then be appled to the wrong chars.
+ * `cm.replaceSelections` does this also, but doesn't give us
+ * fine grained control over 1) what is replaced (e.g. when what
+ * is selected and what we want to replace don't match 1:1), 
+ * and 2) what is selected after the changes are made.
+ * The `select.type` option of edits supports the following:
+ * - 'around': Select the new text, minus (optional) insets.
+ * - 'start': Place cursor at start of change
+ * - 'end': Place cursor at end of change
+ * @param {array} edits - Array of { text, from, to, select } edits.
+ * @param {string} origin - Defaults to '+input'
+ */
+export function writeMultipleEdits(cm, edits, origin = '+input') {
+
+  let selections = []
+
+  cm.operation(() => {
+
+    // Apply edits from right-to-left, bottom-to-top of doc.
+    // This way we don't need to update the position of
+    // the changes as we go.
+    edits.sort((a, b) => {
+      return CodeMirror.cmpPos(b.from, a.from);
+    })
+
+    edits.forEach((edit) => {
+
+      const { text, from, to, select } = edit
+
+      // Apply the changes
+      cm.replaceRange(text, from, to, origin)
+
+      // Create a change object to use with `CodeMirror.changeEnd`
+      // It needs a `text` object where `text` is split into an 
+      // array of line.
+      const editorChange = { text: text.split('\n'), from, to }
+
+      // Adjust other selections, based on change made
+      // If they're before the change, they won't be effected.
+      selections.forEach((s) => {
+        s.anchor = adjustPosForChange(s.anchor, editorChange)
+        s.head = adjustPosForChange(s.head, editorChange)
+      })
+
+      // Push the selection for this change, per the `select` 
+      // option of the edit. 
+
+      const toPosAfterChange = CodeMirror.changeEnd(editorChange)
+
+      switch (select.type) {
+        case 'cursor': {
+          selections.push({
+            anchor: Pos(from.line, from.ch + select.ch),
+            head: Pos(from.line, from.ch + select.ch)
+          })
+          break
+        }
+        case 'range': {
+          selections.push({
+            anchor: select.from,
+            head: select.to
+          })
+          break
+        }
+        case 'start': {
+          selections.push({
+            anchor: from,
+            head: from
+          })
+          break
+        }
+        case 'end': {
+          const end = CodeMirror.changeEnd(editorChange)
+          selections.push({ anchor: toPosAfterChange, head: toPosAfterChange })
+          break
+        }
+        case 'around':
+        default: {
+          const insetLeft = select.inset ? select.inset[0] : 0
+          const insetRight = select.inset ? select.inset[1] : 0
+          selections.push({
+            anchor: Pos(from.line, from.ch + insetLeft),
+            head: Pos(toPosAfterChange.line, toPosAfterChange.ch - insetRight)
+          })
+          break
+        }
+      }
+
+    })
+
+    // Apply the updated selections
+    cm.setSelections(selections)
+
+  })
+}
+
+
+
+
 
 
 // -------- SAVE, OPEN, CLOSE -------- //
@@ -902,6 +371,8 @@ export function loadEmptyDoc(cm) {
  */
 export async function loadDoc(cm, doc) {
 
+  // console.log('loadDoc: cm.panel: ', cm.panel)
+
   if (!cm || !doc) return
 
   // Get the doc text
@@ -925,6 +396,8 @@ export async function loadDoc(cm, doc) {
 
   // Map, mark and focus the editor
   markDoc(cm)
+
+  cm.refresh()
 
   // setCursor(cm)
 }
@@ -1003,8 +476,77 @@ export function jumpToLine(cm, line, ch = 0) {
 
 // -------- MISC -------- //
 
+/**
+ * Adjusts a given position taking a given replaceRange-type edit into account. If the position is within the original edit range (start and end inclusive), it gets pushed to the end of the content that replaced the range. Otherwise, if it's after the edit, it gets adjusted so it refers to the same character it did before the edit.
+ * Same as CodeMirror.adjustForChange(), but that's a private function that Marijn dos not want to expose publicly.
+ * @param {object} pos - { line: 12, ch: 5 }
+ * @param {object} change - { text: ['Hello', 'World'], from, to }
+ */
+export function adjustPosForChange(pos, change) {
+
+  // If pos is before start of change, return pos unchanged.
+  // Hello dinos        ch = 2
+  //   ^   |   |
+  // Hello mammalia     ch = 2
+  //   ^   |      | 
+  if (CodeMirror.cmpPos(pos, change.from) < 0) {
+    return pos
+  }
+
+  // Else, if pos is inside the change from/to, return the end 
+  // of the change range, after the change is applied.
+  // Hello dinos        ch = 8
+  //       | ^ |
+  // Hello mammalia     ch = 14
+  //       |      |^ 
+  // if (CodeMirror.cmpPos(pos, change.to) <= 0) {
+  //     return CodeMirror.changeEnd(change)
+  // }
+
+  // Else, if pos is inside the change from/to, 
+  // do nothing (return pos unchanged)
+  if (CodeMirror.cmpPos(pos, change.to) <= 0) {
+    return pos
+  }
+
+  // Else, if pos is after the change, return the position after
+  // the change is applied.
+  // Hello dinos        ch = 11
+  //       |   |^
+  // Hello mammalia     ch = 14
+  //       |      |^ 
+  let line = pos.line + change.text.length - (change.to.line - change.from.line) - 1
+  let ch = pos.ch
+  if (pos.line === change.to.line) {
+    // If pos is on same line as `to`, update the ch value.
+    ch += CodeMirror.changeEnd(change).ch - change.to.ch
+  }
+  return { line, ch }
+}
+
+/**
+ * If line has any block formatting (e.g. header, list)
+ * return line text, minus the block formatting. Useful when
+ * we're converting between different block types.
+ * @param {*} cm 
+ * @param {integer} line - Line number
+ */
+export function getLineTextWithoutBlockFormatting(cm, line, state = undefined) {
+  let text = cm.getLine(line)
+  if (!state) state = getModeAndState(cm, line).state
+  if (state.header) {
+    return text.replace(headerStartRE, '')
+  } else if (state.list) {
+    return text.replace(listStartRE, '')
+  } else if (state.quote) {
+    return text.replace(blockQuoteStartRE, '')
+  } else {
+    return text // unchanged
+  }
+}
+
 export function lineIsPlainText(cm, line) {
-  const lineClasses = getLineClasses(cm.getLineHandle(line))
+  const lineClasses = map.getLineClasses(cm.getLineHandle(line))
   return lineClasses == ''
 }
 
@@ -1051,10 +593,10 @@ export function getPrimarySelection(cm, trimEmptyFromLine = false, trimEmptyToLi
  * @param {*} type - `ul` or `ol`
  */
 export function getStartAndEndOfList(cm, line, type, stopAtBlankLines = true) {
-  
+
   // Find start
   let start = undefined
-  for (var i = line - 1; i >= 0; i--) {
+  for (var i = line; i >= 0; i--) {
     const lineIsListOfSelectedType = getModeAndState(cm, i).state.list == type
     const breakForBlank = stopAtBlankLines && blankLineRE.test(cm.getLine(i))
     if (lineIsListOfSelectedType && !breakForBlank) {
@@ -1066,7 +608,7 @@ export function getStartAndEndOfList(cm, line, type, stopAtBlankLines = true) {
 
   // Find end
   let end = undefined
-  for (var i = line + 1; i <= cm.lastLine(); i++) {
+  for (var i = line; i <= cm.lastLine(); i++) {
     const lineIsListOfSelectedType = getModeAndState(cm, i).state.list == type
     const breakForBlank = stopAtBlankLines && blankLineRE.test(cm.getLine(i))
     if (lineIsListOfSelectedType && !breakForBlank) {
@@ -1145,3 +687,53 @@ export async function getClipboardContents() {
   }
 }
 
+
+/**
+ * Return local system file path with `file:///` scheme.
+ * Used primarily for loading project assets like images.
+ * Handles input paths that 1) are relative to parent doc,
+ * 2) are relative to project directory, or 3) that include 
+ * project directory.
+ * - Local and relative to parent doc:  `../Images/graph.png`
+ * - Local and relative to project: 		`/Images/graph.png`
+ * - Include project directory:         `Users/josh/Desktop/Notes/Images/graph.png`
+ * - Returns: `file:///Users/josh/Desktop/Notes/Images/graph.png`
+ * @param inputPath - 
+ */
+export function getLocalPathWithFileScheme(cm, inputPath) {
+
+  let filePath = ''
+  const project = window.state.projects.byId[window.id]
+
+  // First determine user intention:
+  // If path starts with `/`, we interpret it as an 
+  // absolute path. Which in context of our app, means
+  // relative to project directory.
+  const isAbsolute = inputPath.charAt(0) === '/'
+
+  if (isAbsolute) {
+    filePath = new URL(`file://${project.directory}${inputPath}`).toString()
+  } else {
+    // Generate relative path using
+    const doc = window.files.byId[cm.panel.docId]
+    // const docPath = new URL()
+    filePath = new URL(inputPath, `file://${doc.path}`).toString()
+  }
+
+  return filePath
+}
+
+/**
+ * Intercept paste event and convert the pasted text into
+ * plain text, without line breaks. Called from 
+ * contenteditables. We want to paste as plain
+ * text into them.
+ * From: https://stackoverflow.com/a/12028136
+ * @param {*} evt - Paste DOM event
+ */
+export function pasteAsPlainText(evt) {
+  evt.preventDefault()
+  let text = evt.clipboardData.getData('text/plain')
+  text = text.replace(/(\r\n|\n|\r)/gm, '')
+  document.execCommand("insertText", false, text)
+}

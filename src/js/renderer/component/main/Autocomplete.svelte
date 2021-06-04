@@ -2,11 +2,11 @@
   import { createEventDispatcher, tick } from 'svelte'
   import { getCharAt, getFromAndTo, writeToDoc } from '../../editor/editor-utils';
   import { getElementAt } from '../../editor/map';
-import { markElement } from '../../editor/mark';
-import { isWindowFocused } from '../../StateManager';
+  import { markElement } from '../../editor/mark';
+  import { isWindowFocused } from '../../StateManager';
 
   export let cm
-  export let selectedOptionIndex = 0
+  // export let selectedOptionIndex = 0
 
   let isVisible = false
   let leftPos = '-5000px' // Default value
@@ -297,7 +297,7 @@ import { isWindowFocused } from '../../StateManager';
 
 <style type="text/scss">
   ul {
-    @include label-normal-small;
+    @include system-small-font;
     backdrop-filter: blur(8px);
     position: fixed;
     user-select: none;
@@ -309,7 +309,7 @@ import { isWindowFocused } from '../../StateManager';
     margin: 0;
     width: 200px;
     padding: 0;
-    background: var(--menuBackgroundColor);
+    background: var(--menu-background);
     @include dark { 
       border: 1px solid white(0.2);
       box-shadow:
@@ -338,16 +338,16 @@ import { isWindowFocused } from '../../StateManager';
   li.selected {
     background-color: var(--controlAccentColor);
     .label {
-      color: var(--selectedMenuItemTextColor);
+      color: var(--selected-menuitem-text-color);
     }
     .preview {
-      color: var(--selectedMenuItemTextColor);
+      color: var(--selected-menuitem-text-color);
       opacity: 0.7;
     }
   }
 
   .label {
-    color: var(--labelColor);
+    color: var(--label-color);
     flex-grow: 1;
     margin: -1px 0 0 0;
   }
@@ -355,7 +355,7 @@ import { isWindowFocused } from '../../StateManager';
   .preview {
     @include code-typography;
     flex-shrink: 0;
-    color: var(--secondaryLabelColor);
+    color: var(--secondary-label-color);
   }
 </style>
 

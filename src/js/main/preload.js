@@ -39,7 +39,7 @@ let validReceiveChannels = ['formatCommand', 'mainRequestsSaveFocusedPanel', 'ma
 let validSendChannels = ['safelyCloseWindow', 'saveWindowStateToDisk', 'openUrlInDefaultBrowser', 'hideWindow', 'showWindow', 'dispatch', 'replaceAll', 'saveImageFromClipboard']
 
 // Round trip: Renderer --> Main --> Renderer
-let validInvokeChannels = ['moveOrCopyFileIntoProject', 'getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb', 'getColors']
+let validInvokeChannels = ['getCursorWindowPosition', 'moveOrCopyFileIntoProject', 'getValidatedPathOrURL', 'getResolvedPath', 'getParsedPath', 'ifPathExists', 'getCitations', 'getFileByPath', 'getFileById', 'pathJoin', 'getHTMLFromClipboard', 'getFormatOfClipboard', 'getState', 'getFiles', 'queryDb']
 
 
 //------ Receive, Send, Invoke ------//

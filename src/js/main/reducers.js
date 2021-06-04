@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog } from 'electron'
+import { BrowserWindow, dialog, systemPreferences } from 'electron'
 import produce, { enablePatches } from 'immer'
 import { newProject, newPanel } from './Store.js'
 import { accessSync, renameSync, existsSync, readdirSync } from 'fs-extra'
@@ -14,7 +14,6 @@ export const update = (state, action, window) =>
   produce(state, (draft) => {
 
     // Set a few useful, commonly-used variables
-    // const project = window?.projectId !== undefined ? draft.projects.byId[window.projectId] : undefined
     const project = draft.projects.byId[window?.projectId]
 
     switch (action.type) {
@@ -26,6 +25,15 @@ export const update = (state, action, window) =>
 
         // Update appStatus 
         draft.appStatus = 'coldStarting'
+
+        // Set platform, if it's blank
+        if (!draft.platform) {
+          if (process.platform === 'darwin') {
+            draft.platform = 'mac'
+          } else if (process.platform === 'win32') {
+            draft.platform = 'win'
+          }
+        }
 
         if (draft.projects.allIds.length) {
           draft.projects.allIds.forEach((id) => {
@@ -51,9 +59,14 @@ export const update = (state, action, window) =>
           draft.projects.allIds = Object.keys(draft.projects.byId)
         }
 
-        // Re-apply theme values (they may change, during development)
-        // If theme has not yet been define, use the default.
-        applyTheme(draft, draft.theme.id)
+        // Set keyboard nav
+        draft.system.keyboardNavEnabled = systemPreferences.getUserDefault('AppleKeyboardUIMode', 'boolean')
+
+        // If theme has not yet been defined, use the default (first one).
+        if (!draft.appTheme.id) {
+          draft.appTheme = { ...themes.byId[themes.allIds[0]] }
+          draft.editorTheme.id = draft.appTheme.preferredEditorTheme
+        }
 
         // If there are no projects, create a new empty one.
         if (!draft.projects.allIds.length) {
@@ -121,8 +134,8 @@ export const update = (state, action, window) =>
 
       // THEME
 
-      case 'SET_ACCENT_COLOR': {
-        draft.theme.accentColor = action.name
+      case 'SAVE_SYSTEM_COLORS': {
+        draft.systemColors = action.colors
         break
       }
 
@@ -133,7 +146,8 @@ export const update = (state, action, window) =>
       }
 
       case 'SET_APP_THEME': {
-        applyTheme(draft, action.id)
+        draft.appTheme = { ...action.theme }
+        // applyTheme(draft, action.id)
         break
       }
 
@@ -142,8 +156,8 @@ export const update = (state, action, window) =>
         break
       }
 
-      case 'SET_EDITOR_THEME': {
-        draft.theme.editorTheme = action.name
+      case 'SET_EDITOR_THEME_BY_ID': {
+        draft.editorTheme.id = action.id
         break
       }
 
@@ -171,6 +185,13 @@ export const update = (state, action, window) =>
         break
       }
 
+      // SYSTEM VALUES
+
+      case 'SET_SYSTEM_VALUES': {
+        draft.system = action.values
+        break
+      }
+
       // CHROMIUM VALUES
 
       case 'SAVE_CHROMIUM_VALUES': {
@@ -178,10 +199,77 @@ export const update = (state, action, window) =>
         break
       }
 
-      // ------------------------ MARKDOWN ------------------------ //
+      // TYPOGRAPHY
+
+      // Font size
+      case 'SET_EDITOR_FONT_SIZE': {
+        const { min, max } = draft.editorFont
+        if (action.value >= min && action.value <= max) {
+          draft.editorFont.size = action.value
+        }
+        break
+      }
+
+      case 'INCREASE_EDITOR_FONT_SIZE': {
+        if (draft.editorFont.size < draft.editorFont.max) {
+          draft.editorFont.size += draft.editorFont.increment
+        }
+        break
+      }
+
+      case 'DECREASE_EDITOR_FONT_SIZE': {
+        if (draft.editorFont.size > draft.editorFont.min) {
+          draft.editorFont.size -= draft.editorFont.increment
+        }
+        break
+      }
+
+      // Line height
+      case 'SET_EDITOR_LINE_HEIGHT': {
+        const { min, max } = draft.editorLineHeight
+        if (action.value >= min && action.value <= max) {
+          draft.editorLineHeight.size = action.value
+        }
+        break
+      }
+
+      case 'INCREASE_EDITOR_LINE_HEIGHT': {
+        if (draft.editorLineHeight.size < draft.editorLineHeight.max) {
+          let newSize = (draft.editorLineHeight.size * 10 + draft.editorLineHeight.increment * 10) / 10
+          draft.editorLineHeight.size = newSize
+        }
+        break
+      }
+
+      case 'DECREASE_EDITOR_LINE_HEIGHT': {
+        if (draft.editorLineHeight.size > draft.editorLineHeight.min) {
+          let newSize = (draft.editorLineHeight.size * 10 - draft.editorLineHeight.increment * 10) / 10
+          draft.editorLineHeight.size = newSize
+        }
+        break
+      }
+
+      // Max line width
+      case 'SET_EDITOR_MAX_LINE_WIDTH': {
+        const { min, max } = draft.editorMaxLineWidth
+        if (action.value >= min && action.value <= max) {
+          draft.editorMaxLineWidth.size = action.value
+        }
+        break
+      }
+
+      // DEVELOPER OPTIONS
+      
+      case 'SET_DEVELOPER_OPTIONS': {
+        draft.developer = action.options
+        break
+      }
+
+
+      // MARKDOWN
 
       case 'SET_MARKDOWN_OPTIONS': {
-        draft.markdown = action.markdownOptions
+        draft.markdown = action.options
         break
       }
 
@@ -227,14 +315,31 @@ export const update = (state, action, window) =>
       }
 
       case 'PROJECT_FILES_MAPPED': {
-        // If project directory contains docs, select the first one.
-        if (action.firstDocId) {
 
-          // Load doc in editor
+        // If nothing is selected in the project yet, select
+        // the first doc. Most likely to happen when user
+        // specifies new project directory (e.g. first run).
+
+        // Get the active sidebar tab.
+        // If undefined, set to 'project'
+        const activeSidebarTab = project.sidebar.tabsById[project.sidebar.activeTabId]
+        if (activeSidebarTab == undefined) {
+          project.sidebar.activeTabId == 'project'
+          activeSidebarTab = project.sidebar.tabsById.project
+        }
+
+        const nothingIsSelected = activeSidebarTab.selected.length == 0
+
+        // If nothing is selected, select first doc in the project
+        if (nothingIsSelected && action.firstDocId) {
+
+          // Load doc in panel
           project.panels[0].docId = action.firstDocId
 
-          // Select doc in sidebar 
-          project.sidebar.tabsById.project.selected = [action.firstDocId]
+          // Select doc in the active project sidebar tab 
+          activeSidebarTab.lastSelected = action.firstDocId
+          activeSidebarTab.selected = [action.firstDocId]
+
         }
         break
       }
@@ -451,8 +556,11 @@ export const update = (state, action, window) =>
       }
 
       case 'SIDEBAR_SELECT_TAGS': {
-        const tab = project.sidebar.tabsById[action.tabId]
-        tab.selectedTags = action.tags
+        // Switch to Tags tab, if we're not already viewing it
+        project.sidebar.activeTabId = 'tags'
+        // Set tags to `tags` argument. 
+        // Should be an array of strings, eg: ["climate", "water"]
+        project.sidebar.tabsById.tags.selectedTags = action.tags
         break
       }
 
@@ -466,18 +574,18 @@ export const update = (state, action, window) =>
         // Open sidebar > search
         project.focusedSectionId = 'sidebar'
         project.sidebar.activeTabId = 'search'
-        
+
         // Set which input (search or replace) to focus, on open
         if (action.inputToFocus !== undefined) {
           const search = project.sidebar.tabsById.search
           search.inputToFocusOnOpen = action.inputToFocus
-          
+
           // Make sure Replace expandable is open
           if (action.inputToFocus == 'replace') {
             search.replace.isOpen = true
           }
         }
-        
+
         break
       }
 
@@ -487,7 +595,7 @@ export const update = (state, action, window) =>
         break
       }
 
-      case 'SAVE_SEARCH_QUERY_VALUE' : {
+      case 'SAVE_SEARCH_QUERY_VALUE': {
         project.sidebar.tabsById.search.queryValue = action.value
         break
       }
@@ -680,6 +788,11 @@ export const update = (state, action, window) =>
         break
       }
 
+      case 'SET_FRONT_MATTER_COLLAPSED': {
+        draft.frontMatterCollapsed = action.value
+        break
+      }
+
       case 'SET_UNSAVED_CHANGES': {
         const panel = project.panels[action.panelIndex]
         panel.unsavedChanges = action.value
@@ -727,6 +840,33 @@ export const update = (state, action, window) =>
         draft.wizard.showOptionalImageFields = action.value
         break
       }
+
+      // LIGHTBOX
+
+      case 'OPEN_LIGHTBOX': {
+        draft.lightbox.open = true
+        draft.lightbox.selectedIndex = action.selectedIndex
+        draft.lightbox.images = action.images
+        break
+      }
+
+      case 'CLOSE_LIGHTBOX': {
+        draft.lightbox.open = false
+        draft.lightbox.selectedIndex = 0
+        draft.lightbox.images = []
+        break
+      }
+
+      case 'LIGHTBOX_PREV': {
+        draft.lightbox.selectedIndex -= 1
+        break
+      }
+      
+      case 'LIGHTBOX_NEXT': {
+        draft.lightbox.selectedIndex += 1
+        break
+      }
+
     }
   }, (patches) => {
     // Update `global.patches`
@@ -773,7 +913,6 @@ function closePanel(project, panelIndex) {
  * Get current theme and copy values to draft.theme properties.
  */
 function applyTheme(draft, id) {
-  console.log(id)
   const { backgroundComponent, baseColorScheme, colorOverrides, editorTheme } = themes.byId[id]
   draft.theme.id = id
   draft.theme.baseColorScheme = baseColorScheme

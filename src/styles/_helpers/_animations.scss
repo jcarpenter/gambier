@@ -1,0 +1,49 @@
+@use "colors";
+
+// -------------- Animation -------------- //
+
+// Focus ring
+
+@mixin focusRingAnimation($platform: 'mac') {
+    animation-fill-mode: forwards;
+    @if $platform == 'mac' {
+        animation-name: focusRingAnimationKeyframesMac;
+        animation-duration: 0.3s;
+    } @else if $platform == 'win' {
+        // TODO
+    }
+}
+
+@keyframes focusRingAnimationKeyframesMac {
+    from {
+        box-shadow: 0 0 0 25px transparent;
+    }
+    to {
+        box-shadow: 0 0 0 3.5px var(--focus-ring-color);
+    }
+}
+
+// Drag over
+
+@mixin dragOverAnimation($platform: 'mac') {
+    animation-fill-mode: forwards;
+    @if $platform == 'mac' {
+        animation-name: dragOverAnimationKeyframesMac;
+        animation-duration: 0.1s;
+    } @else if $platform == 'win' {
+        // TODO
+    }
+}
+
+@keyframes dragOverAnimationKeyframesMac {
+    from {
+        box-shadow: inset 0 0 0 0 transparent;
+        background: transparent;
+    }
+    to {
+        box-shadow: inset 0 0 0 4px var(--focus-ring-color);
+        background: hsla(var(--accentH), var(--accentS), var(--accentL), 0.2);
+    }
+}
+
+

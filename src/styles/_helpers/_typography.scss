@@ -1,0 +1,331 @@
+// -------------- UI typography mixins -------------- //
+
+// "UI" styles correspond with macOS Dynamic System Fonts. These are 
+// variants of the system font that match the typography seen in system-
+// provided controls, such as buttons, text fields, etc.
+
+// The two most commonly-used UI font sizes in the macOS UI are 13 and 
+// 11px. They appear in buttons (13) text fields (13), sidebar section 
+// titles (11), etc. In either bold or regular weights. XCode calls these 
+// "System Regular" and "System Small", so we follow that naming.
+
+// MacOS provides other common UI font configurations as "Dynamic System
+// Fonts". These are exposed as methods of NSFont. The HIG has the list:
+// https://developer.apple.com/design/human-interface-guidelines/macos/visual-design/typography/
+// In practice, most match System Regular or Small, so we don't bother
+// to replicate them here.
+
+// On mac, corresponds with NSFont.systemFont:
+// https://developer.apple.com/documentation/appkit/nsfont/1530094-systemfont
+@mixin system-regular-font($platform: 'mac') {
+    font-family: system-ui;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: 15px;
+    letter-spacing: -0.08px;
+    @if $platform == 'mac' {
+        // TODO
+    } @else if $platform == 'win' {
+        // TODO
+    }
+}
+
+// On mac, corresponds with NSFont.smallSystemFontSize:
+// https://developer.apple.com/documentation/appkit/nsfont/1535612-smallsystemfontsize
+@mixin system-small-font($platform: 'mac') {
+    font-family: system-ui;
+    font-weight: normal;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 0.07px;
+    // letter-spacing: 0px;
+    @if $platform == 'mac' {
+        // TODO
+    } @else if $platform == 'win' {
+        // TODO
+    }
+}
+
+// On mac, corresponds with NSFont.toolTipsFont
+// "Returns the font used for tool tips labels"
+// https://developer.apple.com/documentation/appkit/nsfont/1527704-tooltipsfont
+
+@mixin tool-tips-font($platform: 'mac') {
+    font-weight: normal;
+    font-family: system-ui;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 0.07px;
+    @if $platform == 'mac' {
+        // TODO
+    } @else if $platform == 'win' {
+        // TODO
+    }
+}
+
+
+// -------------- Text typography mixins -------------- //
+
+// "Text" styles correspond with macOS NSFont.TextStyle options
+// These are typically used in non-interactive UI elements, such
+// as the messages in dialogues or alerts.
+// https://developer.apple.com/design/human-interface-guidelines/macos/visual-design/typography/
+// https://developer.apple.com/documentation/appkit/nsfont/textstyle
+
+@mixin large-title-text {
+    font-family: 'SF Pro Display';
+    font-weight: normal;
+    font-size: 26px;
+    letter-spacing: 0.34px;
+    line-height: 32px;
+}
+
+@mixin large-title-emphasized-text {
+    font-family: 'SF Pro Display';
+    font-weight: bold;
+    font-size: 26px;
+    letter-spacing: 0.34px;
+    line-height: 32px;
+}
+
+@mixin title1-text {
+    font-family: 'SF Pro Display';
+    font-size: 22px;
+    letter-spacing: 0.35px;
+    line-height: 26px;
+}
+
+@mixin title1-emphasized-text {
+    font-family: 'SF Pro Display';
+    font-weight: bold;
+    font-size: 22px;
+    letter-spacing: 0.35px;
+    line-height: 26px;
+}
+
+@mixin title2-text {
+    font-family: 'SF Pro Display';
+    font-size: 17px;
+    letter-spacing: -0.41px;
+    line-height: 22px;
+}
+
+@mixin title2-emphasized-text {
+    font-family: 'SF Pro Display';
+    font-weight: bold;
+    font-size: 17px;
+    letter-spacing: -0.41px;
+    line-height: 22px;
+}
+
+@mixin title3-text {
+    font-family: 'SF Pro Display';
+    font-size: 15px;
+    letter-spacing: -0.24px;
+    line-height: 20px;
+}
+
+@mixin title3-emphasized-text {
+    font-family: 'SF Pro Display';
+    font-weight: 600; // Semibold
+    font-size: 15px;
+    letter-spacing: -0.24px;
+    line-height: 20px;
+}
+
+@mixin headline-text {
+    font-family: system-ui;
+    font-weight: bold;
+    font-size: 13px;
+    color: rgba(0,0,0,0.85);
+    letter-spacing: -0.08px;
+    line-height: 16px;  
+}
+
+@mixin headline-emphasized-text {
+    font-family: system-ui;
+    font-weight: 800; // Heavy
+    font-size: 13px; 
+    letter-spacing: -0.08px;
+    line-height: 16px;
+}
+
+
+@mixin body-text {
+    font-family: system-ui;
+    font-size: 13px;
+    letter-spacing: -0.08px;
+    line-height: 16px;
+}
+
+@mixin body-emphasized-text {
+    font-family: system-ui;
+    font-weight: 600; // Semibold
+    font-size: 13px;
+    letter-spacing: -0.08px;
+    line-height: 16px;
+}
+
+@mixin callout-text {
+    font-family: system-ui;
+    font-size: 12px;
+    letter-spacing: 0;
+    line-height: 15px;
+}
+
+@mixin callout-emphasized-text {
+    font-family: system-ui;
+    font-weight: 600; // Semibold
+    font-size: 12px;
+    letter-spacing: 0;
+    line-height: 15px;
+}
+
+@mixin subheadline-text {
+    font-family: system-ui;
+    font-size: 11px;
+    letter-spacing: 0;
+    line-height: 14px;
+}
+
+@mixin subheadline-emphasized-text {
+    font-family: system-ui;
+    font-weight: 600; // Semibold
+    font-size: 11px;
+    letter-spacing: 0;
+    line-height: 14px;
+}
+
+@mixin footnote-text {
+    font-family: system-ui;
+    font-size: 10px;
+    letter-spacing: 0;
+    line-height: 13px;
+}
+
+@mixin footnote-emphasized-text {
+    font-family: system-ui;
+    font-weight: 600; // Semibold
+    font-size: 10px;
+    letter-spacing: 0;
+    line-height: 13px;
+}
+
+@mixin caption1-text {
+    font-family: system-ui;
+    font-size: 10px;
+    letter-spacing: 0;
+    line-height: 13px;
+}
+
+@mixin caption1-emphasized-text {
+    font-family: system-ui;
+    font-weight: 500; // Medium
+    font-size: 10px;
+    letter-spacing: 0;
+    line-height: 13px;
+}
+
+// Don't need. Is identical to caption1.
+// @mixin caption2-text {
+//     font-family: system-ui;
+//     font-size: 10px;
+//     letter-spacing: 0;
+//     line-height: 13px;
+
+// @mixin caption2-emphasized-text {
+//     font-family: system-ui;
+//     font-weight: 500; // Medium
+//     font-size: 10px;
+//     letter-spacing: 0;
+//     line-height: 13px;
+// }
+
+
+
+
+
+
+@mixin code-typography($platform: 'mac') {
+    @if $platform == 'mac' {
+        font-family: 'SFMono-Regular';
+        font-size: calc(var(--editor-fontsize) * 0.85);
+        letter-spacing: -0.01em;
+    } @else if $platform == 'win' {
+        // TODO
+    }
+}
+
+
+// UNUSED
+
+// // Used for the content of controls
+// @mixin controlContentFont {
+//     font: caption;
+//     font-size: 12px;
+//     line-height: 14.1px;
+// }
+
+// // Used for standard interface labels
+// @mixin labelFont {
+//     font: caption;
+//     font-size: 10px;
+//     line-height: 11.8px;
+// }
+
+// // Used for menu items
+// @mixin menuFont {
+//     font: caption;
+//     font-size: 10px;
+//     line-height: 11.8px;
+// }
+
+// // Used for menu bar items
+// @mixin menuBarFont {
+//     font: caption;
+//     font-size: 14px;
+//     line-height: 16.5px;
+// }
+
+// // Used for standard interface items, such as button labels and menu items
+// @mixin messageFont {
+//     font: caption;
+//     font-size: 13px;
+//     line-height: 15.3px;
+// }
+
+// // Used for window title bars
+// @mixin titleBarFont {
+//     font: caption;
+//     font-size: 13px;
+//     line-height: 15.3px;
+// }
+
+// // Used for default for documents and other text under the user’s control (that is, text whose font the user can normally change).
+// @mixin userFont {
+//     font-family: 'Helvetica';
+//     font-size: 12px;
+//     line-height: 12px;
+// }
+
+// // Used by default for documents and other text under the user’s control (that is, text whose font the user can normally change), when that font should be fixed-pitch.
+// @mixin userFixedPitchFont {
+//     font-family: 'Menlo-Regular';
+//     font-size: 11px;
+//     line-height: 12.8px;
+// }
+
+// // The standard system font in boldface type
+// @mixin boldSystemFont {
+//     font: caption;
+//     font-weight: bold;
+//     font-size: 13.0px;
+//     line-height: 15.3px;
+// }
+
+// // The standard system font
+// @mixin systemFont {
+//     font: caption;
+//     font-size: 13.0px;
+//     line-height: 15.3px;
+// }

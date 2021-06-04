@@ -1,10 +1,14 @@
 import { MenuItem } from "electron";
 import { ______________________________ } from './Separator.js'
 
-export const menu = new MenuItem({
-  label: 'Window',
-  submenu: []
-})
+export function create() {
+
+  return new MenuItem({
+    label: 'Window',
+    submenu: []
+  })
+}
+
 
 export function update(applicationMenu) {
   const m = applicationMenu

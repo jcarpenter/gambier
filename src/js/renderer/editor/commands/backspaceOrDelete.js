@@ -16,11 +16,11 @@ export function backspaceOrDelete(cm, keyPressed = '') {
   const textIsSelected = cm.somethingSelected()
   if (multipleSelections || textIsSelected) return CodeMirror.Pass
 
-  // Else, if there is an adjacent mark and we're trying to 
-  // backspace or delete it, select it instead.
+  // Else, if there is an adjacent mark, and it's NOT a bookmark,
+  // select it instead of backspace or deleting it.
   const cursor = cm.getCursor()
   const adjacentMark = cm.findMarksAt(cursor)[0]
-  if (adjacentMark) {
+  if (adjacentMark && adjacentMark.type !== 'bookmark') {
     const { from, to } = adjacentMark.find()
     const cursorIsOnLeftEdge = cursor.ch == from.ch
     const cursorIsOnRightEdge = cursor.ch == to.ch

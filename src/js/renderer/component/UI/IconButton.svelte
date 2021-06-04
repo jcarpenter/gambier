@@ -1,20 +1,24 @@
 <script>
-  import { isWindowFocused } from "../../StateManager";
+  import { isWindowFocused, state } from "../../StateManager";
   import { menu, openMenu } from "../../MenuManager";
   import { setTooltip } from "../../TooltipManager";
-  import { css, setSize } from "./actions";
+  import { setAsCustomPropOnNode, setSize } from "./actions";
   import { nanoid } from 'nanoid/non-secure'
   import { createEventDispatcher } from 'svelte';
 
+  $: tabindex = $state.system.keyboardNavEnabled ? 0 : -1
+
   const dispatch = createEventDispatcher();
 
-  export let icon = 'img-photo'
-  export let tooltip = undefined
+  export let icon = 'img-photo' // CSS url, or name of CSS variable that defines icon.
+  export let tooltip = undefined // E.g. 'Select syntax'
   export let compact = false
   export let disabled = false
   export let padding = '0 10px'
   export let margin = '0'
   export let iconScale = 1 // Use to tweak size of icon
+  export let showBackgroundOnHover = true // Use to disable showing background on hover
+  export let showBackgroundOnClick = true // Use to disable showing background on hover
 
   // ------ Menu-related variables ------ //
 
@@ -42,10 +46,24 @@
 </script>
 
 <style type="text/scss">
-  
-  // ------ Layout: Normal ------ //
 
-  button {
+  // NOTE: 4/16/2021: On Windows, I don't see icon buttons
+  // that open menus. But I assume it's okay to use them, 
+  // so long as they match the system style.
+  
+  // TODO: 4/16/2021: Mac vs Windows styling. 
+  // For now this is mac-only.
+
+  // :global(.mac) {
+  //   // TODO
+  // }
+
+  // :global(.win) {
+  //   // TODO
+  // }
+
+  
+  .iconButton {
     -webkit-app-region: no-drag;
     display: inline-flex;
     vertical-align: top;
@@ -53,14 +71,15 @@
     justify-content: center;
     outline: none;
     border: 0;
-    outline: 0;
     min-width: 28px;
     min-height: 28px;
-    border-radius: $border-radius-normal;
+    border-radius: var(--button-border-radius);
     flex: none;
-
+    background: none;
+    
     .icon {
-      @include centered_mask_image;
+      @include centered-mask-image;
+      background: foregroundColor(0.6);
       pointer-events: none;
       width: 18px;
       height: 18px;
@@ -68,18 +87,17 @@
     }
   
     .caret {
-      @include centered_mask_image;
+      @include centered-mask-image;
+      background: foregroundColor(0.6);
       pointer-events: none; 
       margin: 0 -2px 0 8px;
       width: 8px;
       height: 8px;
-      -webkit-mask-image: var(--img-chevron-down-heavy);
+      -webkit-mask-image: var(--iconbutton-chevron-icon);
     }
   }
 
-  // ------ Layout: Compact ------ //
-
-  button.compact {
+  .iconButton.compact {
     min-width: 24px;
     min-height: 24px;
     .icon {
@@ -88,57 +106,55 @@
     }
   }
 
-  // ------ Default ------ //
-  button {
-    background: none;
-    .icon,
+  .iconButton.menuOpen, 
+  .iconButton:enabled:hover {
     .caret {
-      background: rgba(var(--foregroundColor), 0.6);
-    }
-  }
-  
-  // ------ Hover ------ //
-  // Show background and brighten caret on hover (and when menu is open)
-  button.menuOpen, 
-  button:not(.disabled):hover {
-    background: rgba(var(--foregroundColor), 0.04);
-    .caret {
-      background: var(--labelColor);
+      background: var(--label-color);
     }
   }
 
-  // ------ Active ------ //
-  // Active styles apply when button is pressed
-  button:not(.disabled):active {
-    background: rgba(var(--foregroundColor), 0.08);
+  .iconButton.showBackgroundOnHover:enabled:hover {
+    background: foregroundColor(0.04);
   }
 
-  // ------ Disabled ------ //
-  // Faded out
-  button.disabled {
+  .iconButton:focus {
+    @include focusRingAnimation;
+  }
+
+  .iconButton.showBackgroundOnClick:enabled:active {
+    background: foregroundColor(0.08);
+  }
+
+  .iconButton:disabled {
     opacity: 0.35;
   }
 
-  // ------ Window not focused ------ //
-    // Faded out
-  button:not(.windowFocused) {
+  .iconButton.windowHidden {
     opacity: 0.5;
   }
+
+
+
 </style>
 
 {#if items}
 
   <button 
+    class="iconButton"
     class:compact 
-    class:disabled
+    disabled={disabled}
+    tabindex={tabindex}
+    class:showBackgroundOnHover
+    class:showBackgroundOnClick
+    class:windowHidden={!$isWindowFocused}
     class:menuOpen={$menu.isOpen && $menu.id == id}
-    class:windowFocused={$isWindowFocused}
-    use:css={{iconScale}}
+    use:setAsCustomPropOnNode={{iconScale}}
     use:setSize={{margin, padding}}
     use:setTooltip={{text: tooltip, enabled: !disabled}} 
-    on:mousedown={(domEvent) => {
+    on:mousedown|preventDefault={(evt) => {
       if (disabled) return
-      openMenu(domEvent.target, {
+      dispatch('mousedown', evt.detail)
+      openMenu(evt.target, {
         id: id,
         items: items,
         type: 'pulldown',
@@ -146,24 +162,38 @@
         compact: compact
       })
     }}
+    on:keydown={(evt) => {
+      if (evt.code == 'Space') {
+        openMenu(evt.target, {
+          id: id,
+          items: items,
+          type: 'pulldown',
+          width: menuWidth,
+          compact: compact
+        })
+      }
+    }}
   >
     <div class="icon" style={`-webkit-mask-image: var(--${icon});`} />
     {#if showCaret}
       <div class="caret" />
-  {/if}
+    {/if}
   </button>
 
 {:else}
 
-  <button 
+  <button
+    class="iconButton"
     class:compact 
-    class:disabled
-    class:windowFocused={$isWindowFocused}
-    use:css={{iconScale}}
+    disabled={disabled}
+    tabindex={tabindex}
+    class:showBackgroundOnHover
+    class:showBackgroundOnClick
+    class:windowHidden={!$isWindowFocused}
+    use:setAsCustomPropOnNode={{iconScale}}
     use:setSize={{margin, padding}}
     use:setTooltip={{text: tooltip, enabled: !disabled}} 
-    tabindex="0" 
-    on:mousedown
+    on:mousedown|preventDefault
     on:mouseup
   >
     <div class="icon" style={`-webkit-mask-image: var(--${icon});`} />

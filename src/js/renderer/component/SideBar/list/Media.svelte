@@ -21,7 +21,6 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../../styles/_mixins.scss';
 		
 	.media {
 		contain: strict;
@@ -31,7 +30,7 @@
 		padding: 7px 0.75em;
 		width: 100%;
 		height: 68px;
-    border-bottom: 1px solid var(--separatorColor);
+    border-bottom: 1px solid var(--separator-color);
     display: flex;
   }
   
@@ -59,8 +58,9 @@
   }
 	
 	.filename {
-		@include label-normal-bold;
-		color: var(--labelColor);
+		@include system-regular-font;
+		font-weight: bold;
+		color: var(--label-color);
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;
@@ -68,8 +68,8 @@
 	}
 
 	.metadata {
-		@include label-normal;
-		color: var(--secondaryLabelColor);
+		@include system-regular-font;
+		color: var(--secondary-label-color);
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 3;
@@ -90,7 +90,7 @@
 			color: var(--controlColor);
 		}
 		&.isSidebarFocused {
-		  background-color: var(--selectedContentBackgroundColor);
+		  background-color: var(--selected-list-item-color);
 		}
 	
 		// Selected, and parent list NOT focused

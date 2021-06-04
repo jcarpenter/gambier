@@ -5,7 +5,7 @@
  
   let component
 
-  $: componentName = $state.theme.backgroundComponent.name
+  $: componentName = $state.appTheme.backgroundComponent.name
   $: componentName, setBackground()
 
   function setBackground() {

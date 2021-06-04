@@ -76,17 +76,17 @@
   }
 
   h1 {
-    @include label-large-bold;
+    @include title1-emphasized-text;
     color: var(--labelColor);
   }
 
   h2 {
-    @include label-normal;
-    color: var(--secondaryLabelColor);
+    @include system-regular-font;
+    color: var(--secondary-label-color);
   }
 
   .stateTable {
-    border: 1px solid var(--tertiaryLabelColor);
+    border: 1px solid var(--tertiary-label-color);
     border-radius: 4px;
     padding: 0.4em 0.4em;
     margin-bottom: 1em;
@@ -95,7 +95,8 @@
       color: var(--labelColor);
       display: block;
       padding: 0;
-      @include label-normal-small-bold;
+      @include system-small-font;
+      font-weight: bold;
       margin: 0 0 1em;
     }
   }
@@ -118,7 +119,7 @@
   }
 
   .label {
-    @include label-normal;
+    @include system-regular-font;
     // outline: 1px solid blue;
     position: absolute;
     left: -8px;
@@ -190,7 +191,7 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
     </FormRow>
 
     <FormRow label={'Disabled:'} {maxWidth} {leftColumn} {gap} {margin} multiLine={true} labelTopOffset={'7px'}>
-      <InputText placeholder={'I am disabled'} width={'300px'} style='inline' isDisabled={true} />
+      <InputText placeholder={'I am disabled'} width={'300px'} style='inline' disabled={true} />
     </FormRow>
 
     <FormRow label={'Error:'} {maxWidth} {leftColumn} {gap} {margin} multiLine={true} labelTopOffset={'7px'}>
@@ -242,6 +243,12 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
       <PopupButton items={popupMenuItems} width={'110px'} disabled={true} />
     </FormRow>
 
+    <FormRow label={'With description:'} {maxWidth} {leftColumn} gap={0} {margin}>
+      <PopupButton items={popupMenuItems} width={'110px'}>
+        <span slot="description">this is the description slot.</span>
+      </PopupButton>
+    </FormRow>
+
     <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       <PopupButton items={popupMenuItems} width={'110px'} compact={true} />
       <PopupButton items={popupMenuItems} width={'110px'} disabled={true} compact={true} />
@@ -271,13 +278,13 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
   <section>
     <FormRow label={'PushButton:'} {maxWidth} {leftColumn} {gap} {margin}>
       <PushButton label="Normal" width='110px' />
-      <PushButton label="Emphasized" emphasized={true} width='110px' />
+      <!-- <PushButton label="Emphasized" emphasized={true} width='110px' /> -->
       <PushButton label="Disabled" disabled={true} width='110px' />
     </FormRow>
 
     <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       <PushButton label="Normal" width='110px' compact={true} />
-      <PushButton label="Emphasized" emphasized={true} width='110px' compact={true} />
+      <!-- <PushButton label="Emphasized" emphasized={true} width='110px' compact={true} /> -->
       <PushButton label="Disabled" disabled={true} width='110px' compact={true} />
     </FormRow>
   </section>
@@ -296,6 +303,12 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
     <FormRow label={'Compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
       {#each radioList.items as item}
         <RadioButton bind:group={radioList.selected} value={item.id} label={item.label} compact={true} />
+      {/each}
+    </FormRow>
+
+    <FormRow label={'Disabled:'} {maxWidth} {leftColumn} {gap} {margin}>
+      {#each radioList.items as item}
+        <RadioButton bind:group={radioList.selected} value={item.id} label={item.label} disabled={true} />
       {/each}
     </FormRow>
   </section>

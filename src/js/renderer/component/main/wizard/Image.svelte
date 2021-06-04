@@ -53,9 +53,16 @@
   }
 
   const checkUrl = debounce(() => {
-    // Return if url is missing or unchanged
-    if (!url.string || url.string == formattedUrl) return
+    
+    // If url has not changed, return
+    if (url.string == formattedUrl) return
+
+    // Update formattedUrl
     formattedUrl = url.string
+    
+    // If url is blank, return
+    if (formattedUrl == '') return
+
     const hasExtension = formattedUrl.lastIndexOf('.') > 0 
     if (!hasExtension) return
     isValidImagePath = isImagePath(formattedUrl)
@@ -103,11 +110,7 @@
 <!------ PREVIEW ------>
 
 <div class="preview">
-  {#if url.string && isValidImagePath}
-    <ImagePreview url={url.string} {cm} />
-  {:else}
-    Image picker
-  {/if}
+  <ImagePreview userSpecifiedUrl={url.string} {cm} {element} objectFit={"contain"} padding={'0px'} />
 </div>
 
 <Separator margin={'0 0 8px'} />
@@ -162,7 +165,7 @@
         multiLineMaxHeight='100'
         width='100%' 
         compact={true} 
-        isDisabled={url.string == ''}
+        disabled={url.string == ''}
         value={text.string} 
         on:input={(evt) => 
           writeToDoc(cm, evt.target.textContent, element.line, text.start, text.end)
@@ -177,7 +180,7 @@
         multiLineMaxHeight='100'
         width='100%' 
         compact={true} 
-        isDisabled={url.string == ''}
+        disabled={url.string == ''}
         value={title.string} 
         on:input={(evt) => {
           

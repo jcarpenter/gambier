@@ -1,5 +1,5 @@
 <script>
-  import { isWindowFocused } from "../../StateManager";
+  import { isWindowFocused, state } from "../../StateManager";
   import { setSize } from "./actions";
 
   export let label = ''
@@ -11,6 +11,8 @@
   export let disabled = false
   export let width = '40px'
   export let margin = '0'
+
+  $: tabindex = $state.system.keyboardNavEnabled && !disabled ? 0 : -1
 
   $: value, onValueChanged() 
   
@@ -57,7 +59,7 @@
     }
 
     input {
-      @include label-normal;
+      @include system-regular-font;
       margin: 0;
       height: 20px;
       outline: none;
@@ -80,8 +82,8 @@
       border-radius: 5.5px 5.5px 0 0;
       // Icon
       &::before {
+        @include centered-mask-image;
         content: '';
-        @include centered_mask_image;
         width: 100%;
         height: 100%;
         position: absolute;
@@ -90,7 +92,7 @@
         transform: rotateZ(180deg) scale(0.7);
         transform-origin: center;
         -webkit-mask-size: 10px;
-        -webkit-mask-image: var(--img-chevron-down-heavy);
+        -webkit-mask-image: var(--stepper-chevron-icon);
       }
       // Separator
       &::after {
@@ -108,8 +110,8 @@
     }
 
     .label {
-      @include label-normal;
-      color: var(--labelColor);
+      @include system-regular-font;
+      color: var(--label-color);
       transform: translate(0, 3px);
       user-select: none;
       margin-left: 5px;
@@ -123,8 +125,16 @@
   input {
     // Dark box. White label
     border: none;
+
+    @include light {
+      background: backgroundColor(1);
+      box-shadow: 
+        inset 0 -1px 0 0 black(0.15), // Bottom shadow
+        inset 0 0 0 0.5px black(0.15); // Border
+    }
+    
     @include dark {
-      color: var(--textColor);
+      color: var(--text-color);
       background: foregroundColor(0.07);
       // border: 1px solid white(0.1);
       // box-shadow: inset 0 0 0 1px white(0.1);
@@ -132,13 +142,6 @@
         inset 0 -1px 0 0 white(0.075), // Bottom highlight
         inset 0 0 0 0.5px white(0.1), // Border
         inset 0 1px 0.5px 0 black(0.15); // Top shadow
-    }
-
-    @include light {
-      background: foregroundColor(1);
-      box-shadow: 
-        inset 0 -1px 0 0 black(0.15), // Bottom shadow
-        inset 0 0 0 0.5px black(0.15); // Border
     }
   }
 
@@ -148,7 +151,7 @@
 
   button { 
     @include dark {
-      background: var(--buttonBackgroundColor);
+      background: var(--button-background);
       &::before { background: white; }
       &::after { box-shadow: inset 0 -0.5px 0 0 black(0.16); }
     }
@@ -157,11 +160,11 @@
       // Light is white, with subtle shadow gradient at base.
       background: 
         linear-gradient(black(0) 75%, black(0.08) 99%), // Shadow gradient
-        var(--buttonBackgroundColor);
+        var(--button-background);
       box-shadow: 
         inset 0 0.5px 0 0.5px black(0.1),
         inset 0 0 0 0.5px black(0.2);
-      &::before { background: var(--labelColor); }
+      &::before { background: var(--label-color); }
       // Separator in light mode is defined by box-shadow on overall element.
       // &::after { box-shadow: inset 0 0 0 0 white(0.5); }
     }
@@ -179,7 +182,7 @@
   .input:focus-within {
     border-radius: 1px;
     &::after {
-      @include focusFieldAnimation; 
+      @include focusRingAnimation; 
     }
   }
 
@@ -212,14 +215,22 @@
   class:compact
   class:windowFocused={$isWindowFocused} 
   class:disabled
+  class:windowHidden={!$isWindowFocused}
   use:setSize={{margin}}
+  on:mousedown|preventDefault 
   >
   <span class="input">
-    <input type="text" bind:value use:setSize={{width}}>
+    <input 
+      type="text" 
+      disabled={disabled} 
+      tabindex={tabindex}
+      bind:value 
+      use:setSize={{width}}
+    >
   </span>
   <span class="buttons">
-    <button class="up" on:click={up}></button>
-    <button class="down" on:click={down}></button>
+    <button class="up" disabled={disabled} tabindex=-1 on:click={up}></button>
+    <button class="down" disabled={disabled} tabindex=-1 on:click={down}></button>
   </span>
   <span class="label">{label}</span>
 </label>

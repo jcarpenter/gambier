@@ -1,0 +1,274 @@
+@use "../_helpers/helpers" as *;
+@use "codemirror";
+@use "shared";
+@use "sass:color";
+
+body {
+    /* -------------- Easing -------------- */
+
+    // Taken from Material Design
+    // Per: https://material.io/design/motion/speed.html#easing
+
+    // 4/15 Seem to be unused?
+    // --standard-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    // --decelerate-ease: cubic-bezier(0, 0, 0.2, 1);
+
+    /* -------------- Images -------------- */
+
+    --menu-checkmark-img: url(img/ui/checkmark.heavy.svg);
+
+    --nav-project-icon: url(img/ui/folder.svg);
+    --nav-project-active-icon: url(img/ui/folder.fill.svg);
+    --nav-allDocs-icon: url(img/ui/doc.on.doc.svg);
+    --nav-allDocs-active-icon: url(img/ui/doc.on.doc.fill.svg);
+    --nav-mostRecent-icon: url(img/ui/clock.svg);
+    --nav-mostRecent-active-icon: url(img/ui/clock.fill.svg);
+    --nav-tags-icon: url(img/ui/tag.svg);
+    --nav-tags-active-icon: url(img/ui/tag.fill.svg);
+    --nav-media-icon: url(img/ui/photo.svg);
+    --nav-media-active-icon: url(img/ui/photo.fill.svg);
+    --nav-citations-icon: url(img/ui/quote.bubble.svg);
+    --nav-citations-active-icon: url(img/ui/quote.bubble.fill.svg);
+    --nav-search-icon: url(img/ui/magnifyingglass.svg);
+    --nav-search-active-icon: url(img/ui/magnifyingglass.svg);
+
+    // Button icons
+    --block-options-expand-icon: url(img/ui/chevron.down.medium.semibold.svg);
+    --checkbox-icon: url(img/ui/checkmark.heavy.svg);
+    --disclosure-chevron-icon: url(img/ui/chevron.down.heavy.svg);
+    --iconbutton-chevron-icon: url(img/ui/chevron.down.heavy.svg);
+    --imagepreview-blank-icon: url(img/ui/rectangle.dashed.medium.regular.svg);
+    --imagepreview-error-icon: url(img/ui/custom/image-not-found.svg);
+    --input-error-icon: url(img/ui/exclamationmark.circle.fill.svg);
+    --lightbox-close-icon: url(img/ui/xmark.medium.regular.svg);
+    --lightbox-prev-icon: url(img/ui/chevron.backward.large.light.svg);
+    --popupButton-icon: url(img/ui/chevron.up.down.svg);
+    --prefs-tab-citations-icon: url(img/ui/quote.bubble.medium.regular.svg);
+    --prefs-tab-general-icon: url(img/ui/gearshape.svg);
+    --prefs-tab-markdown-icon: url(img/ui/textformat.medium.regular.svg);
+    --prefs-tab-media-icon: url(img/ui/photo.medium.regular.svg);
+    --prefs-tab-theme-icon: url(img/ui/paintpalette.medium.regular.svg);
+    --pulldownButton-icon: url(img/ui/chevron.down.heavy.svg);
+    --sortmenu-icon: url(img/ui/arrow.up.arrow.down.svg);
+    --stepper-chevron-icon: url(img/ui/chevron.down.heavy.svg);
+
+
+
+    
+    // --img-arrow-up-arrow-down: url(img/ui/arrow.up.arrow.down.svg);
+    // --img-checkmark-heavy: url(img/ui/checkmark.heavy.svg);
+    // --img-checkmark: url(img/ui/checkmark.svg);
+    // --img-chevron-right: url(img/ui/chevron.right.svg);
+    --img-chevron-down-bold: url(img/ui/chevron.down.bold.svg);
+    --img-chevron-down-heavy: url(img/ui/chevron.down.heavy.svg);
+    --img-chevron-up-down: url(img/ui/chevron.up.down.svg);
+    --img-clock-fill: url(img/ui/clock.fill.svg);
+    --img-clock: url(img/ui/clock.svg);
+    --img-doc-on-doc-fill: url(img/ui/doc.on.doc.fill.svg);
+    --img-doc-on-doc: url(img/ui/doc.on.doc.svg);
+    --img-doc-text: url(img/ui/doc.text.svg);
+    --img-exclamationmark-circle-fill: url(img/ui/exclamationmark.circle.fill.svg);
+    --img-folder: url(img/ui/folder.svg);
+    --img-folder-fill: url(img/ui/folder.fill.svg);
+    --img-gearshape: url(img/ui/gearshape.svg);
+    --img-magnifyingglass: url(img/ui/magnifyingglass.svg);
+    --img-photo-fill: url(img/ui/photo.fill.svg);
+    --img-photo: url(img/ui/photo.svg);
+    --img-photo-medium-regular: url(img/ui/photo.medium.regular.svg);
+    --img-play-rectangle-fill: url(img/ui/play.rectangle.fill.svg);
+    --img-play-rectangle: url(img/ui/play.rectangle.svg);
+    --img-quote-bubble-fill: url(img/ui/quote.bubble.fill.svg);
+    --img-quote-bubble: url(img/ui/quote.bubble.svg);
+    --img-quote-bubble-medium-regular: url(img/ui/quote.bubble.medium.regular.svg);
+    --img-rectangle-grid-2x2: url(img/ui/rectangle.grid.2x2.svg);
+    --img-sidebar-left: url(img/ui/sidebar.left.svg);
+    --img-square-split-2x1-medium-regular: url(img/ui/square.split.2x1.medium.regular.svg);
+    --img-tag-fill: url(img/ui/tag.fill.svg);
+    --img-tag: url(img/ui/tag.svg);
+    --img-textformat-medium-regular: url(img/ui/textformat.medium.regular.svg);
+    --img-xmark-medium-regular: url(img/ui/xmark.medium.regular.svg);
+
+    /* -------------- Border radius -------------- */
+
+    --button-border-radius: 5.5px;
+    --button-border-radius-compact: 4px;
+    --menu-border-radius: 5.5px;
+    --menu-border-radius-compact: 3.5px;
+
+    /* -------------- Light Colors -------------- */
+
+    @include light {
+        
+        /* ------ Accent-influenced ------ */
+
+        // Direct equivalents of Mac system colors:
+
+        // User's system accent color preference
+        // Mac equivalent: controlAccentColor
+        --accent-color: #{accent()};
+
+        // Highlight around focused controls
+        // Mac equivalent: keyboardFocusIndicatorColor
+        --focus-ring-color: #{accent($light: -2%, $alpha: 0.5)};
+
+        // Selected list/menu items
+        // Mac equivalent: selectedContentBackgroundColor
+        --selected-list-item-color: #{accent($sat: +3%, $light: -6%)};
+
+        // Background of selected text
+        // Mac equivalent: selectedTextBackgroundColor
+        --selected-text-background: #{accent($sat: +3%, $light: +35%)};
+
+        // Unique to Gambier:
+
+        // Color of navigation UI icons
+        // Mac equivalent: N/A
+        --nav-icon-color: #{accent()};
+
+        /* ------ Accent-influenced ------ */
+
+        --lightbox-icon-color: #fff;
+
+        /* ------ Buttons ------ */
+
+        --button-label-color: #000000d8;
+        --button-background: #ffffffff;
+        // Outline, Drop shadow
+        --button-boxshadow: 0 0 0 0.5px #{black(0.08)}, 0 0.5px 1px 0.5px #{black(0.1)};
+
+        --inset-button-background: #ffffffff;
+        // Outline, Drop shadow
+        --inset-button-boxshadow: inset 0 1.5px 1px 0 #{black(0.1)}, inset 0 0 0 0.5px #{black(0.2)};
+
+        /* ------ Labels ------ */
+
+        --label-color: #000000d8;
+        --secondary-label-color: #0000007f;
+        --tertiary-label-color: #00000042;
+
+        /* ------ Text ------ */
+
+        --text-color: #000000ff;
+        --placeholder-text-color: #0000003f;
+        --selected-menuitem-text-color: #ffffffff;
+        --control-text-color: #000000d8;
+
+        /* ------ Misc ------ */
+
+        --menu-background: hsla(0, 0%, 95%, 0.8);
+        --error-color: #fa6e50;
+
+        /* ------ Unused (from mac) ------ */
+
+        // Controls that are being clicked or dragged
+        // Mac equivalent: selectedControlColor
+        // NOT USED
+        --selected-control-color: #{accent($sat: +3%, $light: +35%)};
+
+        --controlColor: #ffffffff;
+        --controlBackgroundColor: #ffffffff;
+        --alternateSelectedControlTextColor: #ffffffff;
+
+        --disabledControlTextColor: #0000003f;
+        --findHighlightColor: #ffff00ff;
+        --gridColor: #e6e6e6ff;
+        --headerTextColor: #000000d8;
+        --highlightColor: #ffffffff;
+        --linkColor: #0068daff;
+        --quaternaryLabelColor: #00000019;
+        --selectedControlTextColor: #000000d8;
+        --selectedTextColor: #000000ff;
+        --separator-color: #00000019;
+        --shadowColor: #000000ff;
+        --textBackgroundColor: #ffffffff;
+        --unemphasizedSelectedContentBackgroundColor: #dcdcdcff;
+        --unemphasizedSelectedTextBackgroundColor: #dcdcdcff;
+        --unemphasizedSelectedTextColor: #000000ff;
+        --windowBackgroundColor: #ecececff;
+        --windowFrameTextColor: #000000d8;
+    }
+
+    /* -------------- Dark Colors -------------- */
+
+    @include dark {
+        /* ------ Accent-influenced ------ */
+
+        // User's system accent color preference
+        --accent-color: #{accent()};
+
+        // Color of navigation UI icons
+        --nav-icon-color: #{accent()};
+
+        // Highlight around focused controls
+        --focus-ring-color: #{accent($light: -2%, $alpha: 0.5)};
+
+        // Selected list/menu items
+        --selected-list-item-color: #{accent($sat: +3%, $light: -6%)};
+
+        // Background of selected text
+        --selected-text-background: #{accent($sat: +3%, $light: +35%)};
+
+        /* ------ Controls ------ */
+
+        --button-label-color: #ffffffd8;
+        --button-background: #555656ff;
+        // Top bevel, Outline, Drop shadow
+        --button-boxshadow: inset 0 0.5px 0 0 #{white(0.25)}, 0 0 0 0.5px #{black(0.15)}, 0 1px 1px 0 #{black(0.15)};
+
+        --inset-button-background: linear-gradient(hsla(0, 0%, 0%, 0.2), hsla(0, 0%, 0%, 0)), var(--button-background);
+        // Top bevel, Outline
+        --inset-button-boxshadow: inset 0 1px 0 0 #{white(0.15)}, 0 0 0 0.5px #{black(0.15)};
+
+        /* ------ Labels ------ */
+
+        --label-color: #ffffffd8;
+        --secondary-label-color: #ffffff8c;
+        --tertiary-label-color: #ffffff3f;
+
+        /* ------ Text ------ */
+
+        --text-color: #ffffffff;
+        --placeholder-text-color: #ffffff3f;
+        --selected-menuitem-text-color: #ffffffff;
+        --control-text-color: #ffffffd8;
+
+        /* ------ Misc ------ */
+
+        --menu-background: hsla(0, 0%, 17%, 0.9);
+        --error-color: #fa6e50;
+
+        /* ------ OLD (to be converted) ------ */
+
+        // Controls that are being clicked or dragged
+        // Mac equivalent: selectedControlColor
+        // NOT USED
+        --selected-control-color: #{accent($sat: +3%, $light: +35%)};
+
+        --alternateSelectedControlTextColor: rgb(92, 84, 84);
+        --controlBackgroundColor: #1e1e1eff;
+        --controlColor: #ffffff3f;
+        --disabledControlTextColor: #ffffff3f;
+        --findHighlightColor: #ffff00ff;
+        --gridColor: #ffffff19;
+        --headerTextColor: #ffffffff;
+        --highlightColor: #b4b4b4ff;
+        --label-color: #ffffffd8;
+        --linkColor: #419cffff;
+        --placeholder-text-color: #ffffff3f;
+        --quaternaryLabelColor: #ffffff19;
+        --secondary-label-color: #ffffff8c;
+        --selectedControlTextColor: #ffffffd8;
+        --selected-menuitem-text-color: #ffffffff;
+        --selectedTextColor: #ffffffff;
+        --separator-color: #ffffff19;
+        --shadowColor: #000000ff;
+        --tertiary-label-color: #ffffff3f;
+        --textBackgroundColor: #1e1e1eff;
+        --text-color: #ffffffff;
+        --unemphasizedSelectedContentBackgroundColor: #464646ff;
+        --unemphasizedSelectedTextBackgroundColor: #464646ff;
+        --unemphasizedSelectedTextColor: #ffffffff;
+        --windowBackgroundColor: #323232ff;
+        --windowFrameTextColor: #ffffffd8;
+    }
+}

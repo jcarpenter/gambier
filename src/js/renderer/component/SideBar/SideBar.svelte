@@ -16,8 +16,6 @@
   let component
   let componentEl // tab component element
 
-  $: monoColors = $state.theme.accentColor == 'mono'
-
   $: {
     switch ($sidebar.activeTabId) {
       case 'project': component = Project; break
@@ -80,15 +78,11 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid var(--separatorColor);
+    border-right: 1px solid var(--separator-color);
 
     & > div {
       max-height: 100%;
     }
-  }
-
-  .monoColors {
-    // filter: saturate(0%);
   }
 
   #top-area {
@@ -98,17 +92,15 @@
   }
 
   #tabs {
-    // position: fixed;
-    height: 30px;
+    height: 32px;
     flex: none;
     display: flex;
     justify-content: center;
-
+    
     ul {
-      padding: 0;
-      margin: 0;
-      list-style-type: none;
+      @include list-reset;
       display: flex;
+      gap: 6px;
       flex-direction: row;
       align-items: center;
     }
@@ -126,8 +118,7 @@
 
 <div 
   id ="sidebar" 
-  style="--state-sideBarWidth: 250px" 
-  class:monoColors
+  style="--state-sideBarWidth: 252px" 
   use:setLayoutFocus={{current: $project.focusedSectionId, setTo: 'sidebar'}}
 >
   

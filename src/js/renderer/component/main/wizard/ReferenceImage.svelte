@@ -208,7 +208,7 @@
   {:else}
 
     <div class="preview">
-      <ImagePreview url={definitionUrl} {cm} />
+      <ImagePreview userSpecifiedUrl={definitionUrl} {cm} {element} />
     </div>
 
     <Separator margin={'4px 0 '} />

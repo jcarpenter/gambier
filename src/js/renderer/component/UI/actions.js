@@ -1,13 +1,16 @@
 /**
- * Pass dynamic values to CSS through CSS variables.
+ * Write CSS custom property values to style attribute of `node`.
+ * E.g. If `properties` is `wizardOffset` and value is 5, node
+ * is rendered as <div style="--wizardOffset: 5;">.
+ * 
  * From: https://www.kirillvasiltsov.com/writing/unlocking-the-power-of-svelte-actions/
- * @param {*} node 
- * @param {*} properties - Name of CSS variable we want to set
+ * @param {*} node - DOM element to write custom properties to.
+ * @param {objet} properties - E.g.: `{ wizardOffset: 5,  bounceScale: 2 }.`
  */
-export function css(node, properties) {
+export function setAsCustomPropOnNode(node, properties) {
   function setProperties() {
-    for (const prop of Object.keys(properties)) {
-      node.style.setProperty(`--${prop}`, properties[prop]);
+    for (const customPropertyName of Object.keys(properties)) {
+      node.style.setProperty(`--${customPropertyName}`, properties[customPropertyName]);
     }
   }
 
@@ -28,8 +31,9 @@ export function css(node, properties) {
  */
 export function setSize(node, props) {
 
-  function setStyles({ width, height, margin, padding }) {
+  function setStyles({ width, minWidth, height, margin, padding }) {
     node.style.width = width;
+    node.style['min-width'] = minWidth;
     node.style.height = height;
     node.style.margin = margin;
     node.style.padding = padding;  

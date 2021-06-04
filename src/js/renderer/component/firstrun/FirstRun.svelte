@@ -23,13 +23,13 @@ function drop(evt) {
   }
 
   h1 {
-    @include label-large-bold;
-    color: var(--labelColor);
+    @include title1-emphasized-text;
+    color: var(--label-color);
   }
 
   h2 {
-    @include label-normal;
-    color: var(--secondaryLabelColor);
+    @include system-regular-font;
+    color: var(--secondary-label-color);
   }
 
 </style>

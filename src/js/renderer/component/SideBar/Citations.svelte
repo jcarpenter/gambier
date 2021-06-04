@@ -23,10 +23,9 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   .selectCitationsPrompt {
-    @include label-normal;
+    @include system-regular-font;
     padding: 0 10px;
   }
 </style>

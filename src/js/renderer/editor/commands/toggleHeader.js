@@ -1,66 +1,90 @@
-import { getLineClasses } from "../editor-utils"
+import { getMode, Pos } from "codemirror"
+import { getFromAndTo, getModeAndState, writeMultipleEdits } from "../editor-utils"
 
 /**
  * Toggle header by adding/removing # characters at start of line.
- * TODO: Update to new state-based system, add markdown check, etc.
+ * If range includes a selection (is not single cursor), we work 
+ * on the anchor line.
  */
 export function toggleHeader(cm) {
 
-  const { line, ch } = cm.getCursor()
-  const lineHandle = cm.getLineHandle(line)
-  const lineIsHeader = getLineClasses(lineHandle).includes('header')
+  const ranges = cm.listSelections()
+  let edits = []
 
-  if (lineIsHeader) {
-    /* 
-    Remove header characters: 
-    */
+  for (const r of ranges) {
 
-    // First span is the formatting characters
-    // Delete from the `start` to the `end` points.
-    const spans = getLineSpans(cm, lineHandle)
-    const { start, end } = spans[0]
-    cm.replaceRange('',
-      { line, ch: start },
-      { line, ch: end }
-    )
-  } else {
-    /*
-    Make line a header:
-    Always match level of preceding header:
-    If we toggle header on a line that follows an H3,
-    make the toggled line also an H3.
-    Exception: There should only be one H1 per doc.
-    If toggled line follows H1, make it an H2.
-    Else, there is no header in the doc yet, make it H1.
-    */
+    const { line, ch } = r.anchor
+    const { state, mode } = getModeAndState(cm, line)
+    const { from, to, isMultiLine, isSingleCursor } = getFromAndTo(r, true)
+    if (mode.name !== 'markdown') continue
 
-    // Find preceding header depth
-    let precedingHeaderDepth = 0
-    for (var i = line; i >= 0; i--) {
-      const lineHandle = cm.getLineHandle(i)
-      const lineClasses = getLineClasses(lineHandle)
-      if (lineClasses.includes('header')) {
-        precedingHeaderDepth = lineClasses.match(/h(\d)/)[1]
-        precedingHeaderDepth = parseInt(precedingHeaderDepth)
-        break
+    if (state.header) {
+
+      // Remove header characters,
+      // https://regex101.com/r/YRtKTX/1
+      const lineText = cm.getLine(line)
+      const text = lineText.replace(/^#+\s*/, '')
+      const diffLength = lineText.length - text.length
+      edits.push({ 
+        text,
+        from: Pos(line, 0), 
+        to: Pos(line, lineText.length), 
+        select: { 
+          type: 'range', 
+          from: Pos(from.line, from.ch - diffLength),
+          to: Pos(to.line, to.ch - diffLength),
+        } 
+      })
+
+    } else {
+
+      // Make line a header:
+      // Always match level of preceding header:
+      // If we toggle header on a line that follows an H3,
+      // make the toggled line also an H3.
+      // Exception: There should only be one H1 per doc.
+      // If toggled line follows H1, make it an H2.
+      // Else, there is no header in the doc yet, make it H1.
+
+      let precedingHeaderDepth = 0
+      for (var i = line; i >= 0; i--) {
+        const { state, mode } = getModeAndState(cm, i)
+        if (mode.name !== 'markdown') continue
+        if (state.header) {
+          precedingHeaderDepth = state.header
+          break
+        }
       }
-    }
 
-    // Construct characters to insert at start of line:
-    // one or more hashes followed by a space.
-    let insertAtStartOfLine = ''
-    switch (precedingHeaderDepth) {
-      case 0:
-        insertAtStartOfLine = '# '
-        break
-      case 1:
-        insertAtStartOfLine = '## '
-        break
-      default:
-        insertAtStartOfLine = '#'.repeat(precedingHeaderDepth) + ' '
-    }
+      // Construct characters to insert at start of line:
+      // one or more hashes followed by a space.
+      let insertAtStartOfLine = ''
+      switch (precedingHeaderDepth) {
+        case 0:
+          insertAtStartOfLine = '# '
+          break
+        case 1:
+          insertAtStartOfLine = '## '
+          break
+        default:
+          insertAtStartOfLine = '#'.repeat(precedingHeaderDepth) + ' '
+      }
 
-    // Insert hash(es) and space at start of the line
-    cm.replaceRange(insertAtStartOfLine, { line, ch: 0 })
+      edits.push({ 
+        text: insertAtStartOfLine,
+        from: Pos(line, 0), 
+        to: Pos(line, 0), 
+        select: { 
+          type: 'range', 
+          from: Pos(from.line, from.ch + insertAtStartOfLine.length),
+          to: Pos(to.line, to.ch + insertAtStartOfLine.length),
+        } 
+      })
+
+    }
   }
+
+  writeMultipleEdits(cm, edits)
 }
+
+

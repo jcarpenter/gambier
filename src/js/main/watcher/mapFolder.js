@@ -3,7 +3,6 @@ import path from 'path'
 import { mapDocument } from './mapDocument'
 import { mapMedia } from './mapMedia'
 import { isDoc, isMedia, getMediaType } from '../../shared/utils.js'
-// import colors from 'colors'
 
 
 /**

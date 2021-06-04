@@ -20,7 +20,7 @@
         var found = CodeMirror.findModeByName(name);
         if (found) name = found.mime || found.mimes[0];
       }
-      var mode = CodeMirror.getMode(cmCfg, name);
+      var mode = CodeMirror.getMode(cmCfg, { name });
       return mode.name == "null" ? null : mode;
     }
 
@@ -28,9 +28,6 @@
     // Excess `>` will emit `error` token.
     if (modeCfg.maxBlockquoteDepth === undefined)
       modeCfg.maxBlockquoteDepth = 0;
-
-    if (modeCfg.fencedCodeBlockDefaultMode === undefined)
-      modeCfg.fencedCodeBlockDefaultMode = '';
 
     if (modeCfg.xml === undefined)
       modeCfg.xml = true;
@@ -56,7 +53,8 @@
     const linkReferenceCollapsedRE = /[^\]]+?\]\[\]/
     const linkReferenceShortcutRE = /[^\]@]+?\](?!\[|\()/
     const listRE = /^(?:[*\-+]|^[0-9]+([.)]))\s+/
-    const markdownFormattingCharactersRE = /^[^#!\[\]*_\\<>^` "'(~:$]+/
+    const textRE = /^[^#!\[\]*_\\<>^` "'(~:$]+/
+    const taskListRE = /^\[(x| )\](?=\s)/i
     const texMathRE = /^\$\$$/
     const urlInBracketsRE = /^(https?|ftps?):\/\/(?:[^\\>]|\\.)+>/
 
@@ -80,6 +78,15 @@
 
     // Blocks
 
+    /**
+     * Called by `token` function at start of new line, when 
+     * regexp determines line contains only whitespace. Unfortunately
+     * it is not called on completely empty lines. I tried to find
+     * why, and I think it has to do with the parent `overlay.js`,
+     * which has opinions about how "blankLines" should be handled.
+     * @param {*} state 
+     * @returns 
+     */
     function blankLine(state) {
 
       // Reset link states
@@ -160,6 +167,7 @@
               // less than the first list's indent -> the line is no longer a list
             } else {
               state.list = false;
+              state.taskList = false;
             }
           }
           if (state.list !== false) {
@@ -207,7 +215,7 @@
 
         // -----  Block quote ----- //
         state.quote = firstTokenOnLine ? 1 : state.quote + 1;
-        state.formatting = true
+        state.formatting = 'quote-start'
         stream.eatSpace();
         return getStyles(state);
 
@@ -249,18 +257,20 @@
         state.code = false;
         state.strikethrough = false;
 
-        // Check if task list. If true, check if item is "open" `- [ ]` or "closed" - [x]
-        if (stream.match(/^\[(x| )\](?=\s)/i, false)) {
+        // Check if task list. If true, check if item is "open" `[ ]` or "closed" `[x]`
+        if (stream.match(taskListRE, false)) {
           state.taskList = true
         }
 
-        state.formatting = true
+        state.formatting = 'list-marker'
 
         return getStyles(state);
 
       } else if (firstTokenOnLine && !state.texMathDisplay && (match = stream.match(texMathRE, true))) {
 
         // ----- TeX math: Display ----- //
+
+        // Docs: https://pandoc.org/MANUAL.html#math
 
         // state.texMathDisplay = true
         // if (modeCfg.highlightFormatting) state.formatting = "texMathDisplay";
@@ -278,15 +288,14 @@
 
         // TODO: Add an option here, to enable support only if user has `modeCfg.texMath` true or some such. See `Fenced code block` section below for example of how to format that.
 
-        state.texMathDisplay = true
-
         state.localMode = getMode('stex');
 
         if (state.localMode) state.localState = CodeMirror.startState(state.localMode);
 
         state.f = state.block = local;
 
-        state.formatting = true
+        state.texMathDisplay = true
+        state.formatting = 'line-texmath-display-start'
         state.code = -1
 
         return getStyles(state);
@@ -297,34 +306,39 @@
         // ----- Fenced code block ----- //
 
         state.quote = 0;
+
+        // Define the end of the fenced code block we're going to look for,
+        // based on the start (`match[1]`).
         state.fencedEndRE = new RegExp(match[1] + "+ *$");
 
-        // Try switching mode:
+        // Try switching modes:
 
+        // First, get the _name_ of the mode we want to use:
         // `match[2]` is the characters following the opening 3 characters
         // The CommonMark spec calls this the "info string".
-        // This string specifies the format of the fenced code block.
+        // This string specifies the intended format of the code block.
         // E.g. ```html or ```js
         var infoString = match[2]
-        switch (infoString) {
-          case 'html':
-            infoString = 'htmlmixed'
-            break;
-          case 'js':
-            infoString = 'javascript'
-            break;
-        }
 
-        state.localMode = modeCfg.fencedCodeBlockHighlighting && getMode(infoString || modeCfg.fencedCodeBlockDefaultMode);
+        // Next, get the mode.
+        // If infoString is blank, we use JS mode.
+        // Else, if infoString is valid mode name (meaning it matches one of names 
+        // enumerated in meta.js, and is loaded by index.html), we get the mode 
+        // from `getMode`.
+        // Else, if infoString is NOT a valid mode name, we get back `null` from
+        // getMode, which results in the fenced code block contents being styled
+        // as plain text.
 
-        if (state.localMode) state.localState = CodeMirror.startState(state.localMode);
+        state.localMode = infoString ? getMode(infoString) : getMode('js')
+        if (state.localMode) state.localState = CodeMirror.startState(state.localMode)
 
-        state.f = state.block = local;
+        state.f = state.block = local
 
-        state.formatting = true
+        state.fencedcodeblock = true
+        state.formatting = 'line-fencedcodeblock-start'
         state.code = -1
 
-        return getStyles(state);
+        return getStyles(state)
 
       } else if (
 
@@ -398,11 +412,25 @@
       var hasExitedList = state.indentation < currListInd;
       var maxFencedEndInd = currListInd + 3;
 
-      // Fenced code block: Check if end
-      if (state.fencedEndRE && state.indentation <= maxFencedEndInd && (hasExitedList || stream.match(state.fencedEndRE))) {
-        state.formatting = true
+      if (state.texMathDisplay && stream.match(texMathRE)) {
+
+        // We've reached end of TeXMath display block.
+        // Docs: https://pandoc.org/MANUAL.html#math
+
+        state.formatting = 'line-texmath-display-end'
+        var styles = getStyles(state)
+        state.texMathDisplay = false
+        state.localMode = null
+        state.f = state.block = blockNormal;
+        return styles
+
+      } else if (state.fencedEndRE && state.indentation <= maxFencedEndInd && (hasExitedList || stream.match(state.fencedEndRE))) {
+
+        // We've reached the end of a fenced code block
+        state.formatting = 'line-fencedcodeblock-end'
         var styles;
         if (!hasExitedList) styles = getStyles(state)
+        state.fencedcodeblock = false
         state.localMode = state.localState = null;
         state.block = blockNormal;
         state.f = inlineNormal;
@@ -411,16 +439,36 @@
         state.thisLine.fencedCodeEnd = true;
         if (hasExitedList) return switchBlock(stream, state, state.block);
         return styles;
+
       } else if (state.localMode) {
-        return state.localMode.token(stream, state.localState);
+
+        // Another mode is handling parsing. Probably inside a
+        // fenced code block. We add a matching line style.
+        let token = state.localMode.token(stream, state.localState);
+
+        if (state.fencedcodeblock) {
+          token = `${token} line-fencedcodeblock`
+        } else if (state.texMathDisplay) {
+          token = `${token} line-texmath-display`
+        }
+
+        return token
+
       } else {
+
+        // Not sure when this is triggered...
         stream.skipToEnd();
-        return 'code';
+        if (state.fencedcodeblock) {
+          return 'line-fencedcodeblock'
+        } else {
+          return 'code';
+        }
       }
     }
 
     function getStyles(state) {
       var styles = [];
+
 
       if (state.footnoteReferenceDefinition) styles.push('line-footnote-reference-definition')
       if (state.footnoteReferenceDefinitionContent) styles.push('content')
@@ -467,6 +515,7 @@
       if (state.em) styles.push('emphasis')
       if (state.emailInBrackets) styles.push('email-in-brackets')
       if (state.emoji) styles.push('emoji')
+      if (state.fencedcodeblock) styles.push('line-fencedcodeblock')
       if (state.header) styles.push('line-header', "line-h" + state.header)
       if (state.incomplete) styles.push('incomplete')
       if (state.strikethrough) styles.push('strikethrough')
@@ -525,6 +574,9 @@
       }
 
       // Josh 2/19/2021: Commented out these styles, as we don't need them in the editor
+      // Josh 5/6/2021: I believe they allow us to style trailing spaces. 
+      // Per: https://stackoverflow.com/questions/15806062/can-codemirror-show-markdown-line-breaks
+
       // if (state.trailingSpaceNewLine) {
       //   styles.push("trailing-space-new-line");
       // } else if (state.trailingSpace) {
@@ -568,19 +620,43 @@
     }
 
     /**
-     * Advanced stream to next instance of a markdown formatting character.
-     * If no markdown characters exist, return `undefined`.
+     * Advance stream through plain text characters.
+     * If stream is at a markdown character, return `undefined`.
      * @param {*} stream 
      * @param {*} state 
      */
     function handleText(stream, state) {
 
-      // The following if statement finds and moves to the end of 1-to-infinity text characters.
-      // Characters in the [^...] set are markdown formatting characters.
-      // Characters NOT in the [^...] set are processed as text.
-      if (stream.match(markdownFormattingCharactersRE, true)) {
-        return getStyles(state);
+      // If we want to check for bare urls, this is the place to do it.
+      // Otherwise comment this out, and use the simpler version below.
+
+      if (stream.match(textRE, false)) {
+
+        if (state.urlInBrackets) {
+          // Advance past URL inside brackets
+          stream.match(/[^>]+/, true)
+          return getStyles(state)
+        }
+
+        // Automatic links (aka bare urls)
+        // This is an odd place to find and flag these, but I couldn't figure out how to make it work in inlineNormal. The code is adapted from GitHub-Flavored mode: https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L99
+        const isBareUrl = !state.link && !state.image && !state.urlInBrackets && !state.emailInBrackets && !state.linkReferenceDefinition && stream.match(urlRE)
+
+        if (isBareUrl) {
+          state.bareUrl = true
+          var styles = getStyles(state)
+          state.bareUrl = false
+          return styles
+        } else {
+          stream.match(textRE)
+          return getStyles(state);
+        }
       }
+
+      // if (stream.match(textRE, true)) {
+      //   return getStyles(state);
+      // }
+
       return undefined;
     }
 
@@ -591,32 +667,42 @@
      */
     function inlineNormal(stream, state) {
 
-      // Call the state.text function (handleText)
-      // It advances stream to the next markdown character.
-      // Check if there's a line style(s). E.g. `line-header line-h1`
-      // If true, return that style. Don't proceed to process rest.
+      // Advanced stream past plain text characters.
+      // If state.text returns...
+      // - style, it means it's advanced the stream over plain text characters.
+      // - undefined, it means it's found the next markdown character.
       var style = state.text(stream, state);
-      if (typeof style !== 'undefined')
-        return style;
-
-      // List
-      // if (state.list) { // List marker (*, +, -, 1., etc)
-      //   state.list = null;
-      //   return getStyles(state);
-      // }
+      if (typeof style !== 'undefined') {
+        // Plain text characters found. Exit early.
+        return style
+      }
 
       if (state.taskList && stream.match(/^\[/i)) {
         state.taskClosed = stream.peek() == 'x'
         state.taskOpen = !state.taskClosed
         stream.match(/^(?:x| )\]\s*/, true)
         var styles = getStyles(state)
+        state.taskList = false
         state.taskClosed = false
         state.taskOpen = false
-        state.taskList = false
+        state.list = null;
+
+        // 4/8/2021: Commented this out here, and instead we set false
+        // when we also set state.list false, so that whole line gets
+        // state.taskList = true, and not just a few inline characters.
+        // Important becausee we want to check state.taskList in 
+        // Codemirror while doing layout (etc).
+        // state.taskList = false 
         return styles
       }
 
-      // Header
+      // List
+      if (state.list) { // List marker (*, +, -, 1., etc)
+        state.list = null;
+        return getStyles(state);
+      }
+
+      // Header. Starting `###` characters.
       if (state.header && stream.match(/^#+$/, true)) {
         state.formatting = true
         return getStyles(state);
@@ -624,6 +710,7 @@
 
       // Advance character
       var ch = stream.next();
+
 
       // Matches link titles present on next line (original comment)
       // NOTE: Never gets called? linkTitle recognition is failing? (Jul 20)
@@ -645,11 +732,10 @@
       if (ch === '<' && stream.match(urlInBracketsRE, false)) {
         state.urlInBrackets = true
         state.formatting = 'url-in-brackets-start'
-        // state.link = true
         return getStyles(state);
       }
 
-      if (state.urlInBrackets && ch === '>') {
+      if (state.urlInBrackets && ch == '>') {
         state.formatting = 'url-in-brackets-end'
         var styles = getStyles(state)
         state.formatting = false
@@ -657,28 +743,23 @@
         return styles
       }
 
+
       // Autolink-in-brackets Email
       // E.g. `<steve@apple.com>`
       if (ch === '<' && stream.match(emailInBracketsRE, false)) {
-        state.formatting = 'email-in-brackets-start'
         state.emailInBrackets = true
+        state.formatting = 'email-in-brackets-start'
         return getStyles(state);
       }
 
-      if (state.emailInBrackets) {
-        if (ch !== '>') {
-          // Jump to end of URL
-          stream.match(/^[^>]+/, true)
-          return getStyles(state)
-        } else {
-          // Close the autolink
-          state.formatting = 'email-in-brackets-end'
-          var styles = getStyles(state)
-          state.formatting = false
-          state.emailInBrackets = false
-          return styles
-        }
+      if (state.emailInBrackets && ch == '>') {
+        state.formatting = 'email-in-brackets-end'
+        var styles = getStyles(state)
+        state.formatting = false
+        state.emailInBrackets = false
+        return styles
       }
+
 
       // Citation
       // Demo: https://regex101.com/r/Pv10hL/2
@@ -755,7 +836,7 @@
       if (ch === "*" || ch === "_") {
         var len = 1
         var before = stream.pos == 1 ? " " : stream.string.charAt(stream.pos - 2)
-        while (len < 3 && stream.eat(ch)) len++
+        while (len < 2 && stream.eat(ch)) len++
         var after = stream.peek() || " "
         // See http://spec.commonmark.org/0.27/#emphasis-and-strong-emphasis
         var leftFlanking = !/\s/.test(after) && (!punctuation.test(after) || /\s/.test(before) || punctuation.test(before))
@@ -1004,8 +1085,8 @@
               // E.g. `[text][label]`
               //                   ^
               state.linkLabel = false
-              state.formatting = state.image ? 
-                'image-reference-full-end' : 
+              state.formatting = state.image ?
+                'image-reference-full-end' :
                 'link-reference-full-end'
               var styles = getStyles(state);
               closeLink = true
@@ -1020,9 +1101,9 @@
             stream.next()
             stream.next()
             state.linkLabel = false
-            state.formatting = state.image ? 
-                'image-reference-collapsed-end' : 
-                'link-reference-collapsed-end'
+            state.formatting = state.image ?
+              'image-reference-collapsed-end' :
+              'link-reference-collapsed-end'
             var styles = getStyles(state);
             closeLink = true
 
@@ -1467,6 +1548,8 @@
           inline: inlineNormal,
           text: handleText,
 
+          fencedcodeblock: false,
+
           footnote: false,
           footnoteInline: false,
           footnoteLabel: false,
@@ -1541,6 +1624,8 @@
           inline: s.inline,
           text: s.text,
 
+          fencedcodeblock: s.fencedcodeblock,
+
           footnote: s.footnote,
           footnoteInline: s.footnoteInline,
           footnoteLabel: s.footnoteLabel,
@@ -1600,6 +1685,17 @@
         };
       },
 
+      /**
+       * Token is called first.
+       * If we detect it's new line, we run some new line logic.
+       * - If line contains only whitespace, skip it.
+       * - Else, assign state.f to the block function, and call it.
+       *   Block function is usually blockNormal, or possibly html.
+       * Once blockNormal runs
+       * @param {*} stream 
+       * @param {*} state 
+       * @returns 
+       */
       token: function (stream, state) {
 
         // Reset state.formatting
@@ -1607,7 +1703,8 @@
 
         // New line found
         // This is a good place to perform line checks.
-        if (stream != state.thisLine.stream) {
+        const newLineFound = stream != state.thisLine.stream
+        if (newLineFound) {
 
           // Update state
           state.header = 0;
@@ -1620,6 +1717,9 @@
           //   return null;
           // }
 
+          // NOTE: This only fires if the line has at least one whitespace character.
+          // It does NOT fire if the line is actually blank. 
+          // See comment on blankLine function for more information.
           if (stream.match(/^\s*$/, true)) {
             blankLine(state);
             return null;
@@ -1632,23 +1732,21 @@
           state.trailingSpace = 0;
           state.trailingSpaceNewLine = false;
 
-          // Check if we're in TeX mode ($$...$$)
-          // It's started in blockNormal, and we check for the end characters here.
-          if (state.texMathDisplay) {
-            if (stream.match(texMathRE)) {
-              var styles = getStyles(state)
-              state.texMathDisplay = false
-              state.localMode = null
-              state.f = state.block = blockNormal;
-              return styles
-            } else {
-              return getStyles(state)
-            }
-          }
 
+          // If `!state.localState`, it means markdown is handling parsing.
+          // If it's defined, it means another mode is. E.g. JavaScript mode
+          // inside a fenced code block.
           if (!state.localState) {
+
+            // Set state.f to whatever state.block is
+            // (so it runs once at start of each line)
             state.f = state.block;
+
+            // If state.block is not html...
             if (state.f != htmlBlock) {
+
+              // Determine line indentation (initial whitespace)
+              // and skip to end of that whitespace.
               var indentation = stream.match(/^\s*/, true)[0].replace(/\t/g, expandedTab).length;
               state.indentation = indentation;
               state.indentationDiff = null;
@@ -1660,24 +1758,18 @@
                 if (state.footnoteReferenceDefinition) {
                   return 'line-footnote-reference-definition-continued content'
                 } else {
-                  return null
+                  // Add 'indent' class. We can then use this to fine tune 
+                  // the rendered width of our indentation, using css.
+                  return 'indent'
+                  // return null
                 }
               }
             }
           }
         }
 
-        // Automatic links (aka bare urls)
-        // This is an odd place to find and flag these, but I couldn't figure out how to make it work in inlineNormal. The code is adapted from GitHub-Flavored mode: https://github.com/codemirror/CodeMirror/blob/master/mode/gfm/gfm.js#L99
-        if (!state.link && !state.image && !state.urlInBrackets && !state.emailInBrackets && !state.linkReferenceDefinition && stream.match(urlRE)) {
-          // state.link = true
-          state.bareUrl = true
-          var styles = getStyles(state)
-          // state.link = false
-          state.bareUrl = false
-          return styles
-        }
-
+        // Call state.f. This will point to either 
+        // blockNormal or inlineNormal. If it's
         return state.f(stream, state);
       },
 

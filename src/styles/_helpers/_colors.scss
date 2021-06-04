@@ -1,0 +1,83 @@
+// -------------- Color functions -------------- //
+// Short-hand concise functions for colors.
+// Use like: `background-color: white(0.2);`
+
+@function accent($hue:0, $sat:0%, $light:0%, $alpha:1) {
+    @return hsla(calc(var(--accentH) + #{$hue}), calc(var(--accentS) + #{$sat}), calc(var(--accentL) + #{$light}), #{$alpha});
+}
+
+@function foregroundColor($alpha) {
+    @return rgba(var(--foregroundColor), $alpha);
+}
+
+@function backgroundColor($alpha) {
+    @return rgba(var(--backgroundColor), $alpha);
+}
+
+@function white($alpha) {
+    @return rgba(255, 255, 255, $alpha);
+}
+
+@function black($alpha) {
+    @return rgba(0, 0, 0, $alpha);
+}
+
+@function gray($lightness, $alpha) {
+    @return hsla(0, 0%, $lightness, $alpha);
+}
+
+
+// // User's system accent color preference
+// $accentColor: accent();
+
+// // Color of navigation UI icons
+// $navIconColor: accent();
+
+// // Highlight around focused controls
+// $focusRingColor: accent($light: -2%, $alpha: 0.6);
+
+// // Selected list/menu items
+// $selectedListItemColor: accent($sat: +3%, $light: -6%);
+
+// // Controls that are being clicked or dragged
+// $selectedControlColor: accent($sat: +3%, $light: +35%);
+
+// // Background of selected text
+// $selectedTextBackground: accent($sat: +3%, $light: +35%);
+
+
+// -------------- OLD -------------- //
+// Variables for common styles in UI elements.
+// E.g. gradient backgrounds for buttons.
+// Useful because 1) they're concise, and 2) make re-use easy.
+
+// Slight white gradient over `darkerControlAccentColor`
+$btn-accent-bg: linear-gradient(white(0.15), white(0)), var(--darkerControlAccentColor);
+
+// STANDARD BUTTONS: Push, popup, pulldown, etc.
+
+$dark-btn-bg: var(--button-background);
+$dark-btn-outline: inset 0 0.5px 0 0 white(0.25),
+    // Top bevel
+    0 0 0 0.5px black(0.15),
+    // Outline
+    0 1px 1px 0 black(0.15); // Drop shadow
+
+$light-btn-bg: var(--button-background);
+// was 'white'
+$light-btn-outline: 0 0 0 0.5px black(0.08),
+    // Outline
+    0 0.5px 1px 0.5px black(0.1); // Drop shadow
+
+// INSET BUTTONS: Radio, checkbox, etc.
+
+$dark-inset-btn-bg: linear-gradient(hsla(0, 0%, 100%, 0.27), hsla(0, 0%, 100%, 0.38)), var(--button-background);
+$dark-inset-btn-outline: inset 0 1px 0 0 white(0.15),
+    // Top bevel
+    0 0 0 0.5px black(0.15); // Outline
+
+$light-inset-btn-bg: var(--button-background);
+// was 'white'
+$light-inset-btn-outline: inset 0 1.5px 1px 0 black(0.1),
+    // Top inner shadow,
+    inset 0 0 0 0.5px black(0.2); // Outline

@@ -1,3 +1,46 @@
+import { Pos } from "codemirror"
+import { findLastIndex } from "../../shared/utils"
+
+
+export const markableElements = [
+  'citation',
+  'figure',
+  'footnote-inline',
+  'footnote-reference',
+  'image-inline',
+  'image-reference-collapsed',
+  'image-reference-full',
+  'link-inline',
+  'link-reference-collapsed',
+  'link-reference-full',
+  'task'
+]
+
+/**
+ * Return string containing the line classes for the given line.
+ * Returns "header h1", "ul list-2", etc.
+ * Or blank string if the line does not have classes.
+ */
+export function getLineClasses(lineHandle) {
+  return lineHandle.styleClasses ? lineHandle.styleClasses.textClass : ''
+}
+
+/**
+ * Return array of all the elements in the doc.
+  * @param {string} type - Optional. Only return elements of this type. E.g. "figure". 
+ */
+export function getDocElements(cm, type = undefined) {
+
+  let elements = []
+
+  // Get elements line by line
+  for (var i = 0; i < cm.lineCount(); i++) {
+    const lineElements = getLineElements(cm, i, type)
+    if (lineElements.length) elements.push(...lineElements)
+  }
+
+  return elements
+}
 
 export function getSpansAt(cm, line, ch) {
 
@@ -11,48 +54,52 @@ export function getSpansAt(cm, line, ch) {
 }
 
 /**
- * Get element at specified line and ch
+ * Get first element found at specified line and ch
+ * @param {string} type - Optional. Only return element of this type. E.g. "strong". 
+ * @param {boolean} inclusive - Optional. If true, ch values that match e.start or e.end will be valid. Else, if false (default), ch values must fall _inside_ e.start and e.end.
  */
-export function getElementAt(cm, line, ch) {
-  const lineElements = getLineElements(cm, line)
-  const element = lineElements.find((e) =>
+export function getElementAt(cm, line, ch, type = undefined, inclusive = false) {
+  const lineElements = getLineElements(cm, line, type)
+  return lineElements.find((e) =>
     e.line == line &&
-    e.start < ch &&
-    e.end > ch
+    (inclusive ? e.start <= ch : e.start < ch) &&
+    (inclusive ? e.end >= ch : e.end > ch)
   )
-  return element
 }
 
 /**
  * Same as above, but return an array of all elements found.
  * Useful when we want to check for nested elements.
  * As in case of footnotes containing other elements.
+ * @param {string} type - Optonal. Only return elements of this type. E.g. "strong". 
  */
-export function getElementsAt(cm, line, ch) {
-  const lineElements = getLineElements(cm, line)
-  const elements = lineElements.filter((e) =>
+export function getElementsAt(cm, line, ch, type = undefined) {
+
+  let elements = getLineElements(cm, line, type).filter((e) =>
     e.line == line &&
     e.start < ch &&
-    e.end > ch
+    e.end > ch &&
+    (e.type == type || type == undefined)
   )
+
   return elements
 }
 
 /**
- * Return element matching the exact range 
- * @param {*} matchExactly - Bool. If true, looks for element matching
+ * Return elements inside the range.
+ * @param {boolean} matchExactly - If true, looks for element matching
  * exact from/to positions, and returns that element (instead of array).
  */
 export function getElementsInsideRange(cm, from, to, matchExactly = false) {
-  const lineElements = getLineElements(cm, from.line)
   if (matchExactly) {
-    return lineElements.find((e) =>
+    return getLineElements(cm, from.line).find((e) =>
       e.line == from.line &&
+      e.line == to.line &&
       e.start == from.ch &&
       e.end == to.ch
     )
   } else {
-    return lineElements.filter((e) =>
+    return getLineElements(cm, from.line).filter((e) =>
       e.line == from.line &&
       e.start >= from.ch &&
       e.end <= to.ch
@@ -60,24 +107,49 @@ export function getElementsInsideRange(cm, from, to, matchExactly = false) {
   }
 }
 
+/**
+ * Return styled element (strong, emphasis, code, etc)
+ * that matches range `from` and `to` exactly. Ignoring
+ * wrapping markdown formatting characters. E.g:
+ * Hello **world**.
+ *         |---|
+ */
+export function getStyledElementAtRange(cm, from, to, type = undefined) {
+
+  let element = getLineElements(cm, from.line).find((e) =>
+    e.line == from.line &&
+    e.line == to.line &&
+    e.spans[0].start == from.ch &&
+    e.spans[0].end == to.ch
+  )
+
+  if (type && element.type !== type) element = undefined
+
+  return element
+
+}
+
 
 
 /**
  * Get array of "elements" for the line. 
  * E.g. emphasis, link-inline, image-reference-full.
+ * We build them up from tokens.
  * Elements contain 1 or more child spans.
  * E.g. `url` and `title` are child spans of a link element.
  */
-export function getLineElements(cm, line) {
+export function getLineElements(cm, line, type = undefined) {
 
   let elements = []
   const tokenPairs = getElementTokens(cm, line)
 
-  // console.log(tokenPairs)
+  // console.log('-------')
+  // if (tokenPairs.length) console.log(tokenPairs)
 
   tokenPairs.forEach((tokenPair) => {
     const { start: startToken, end: endToken, type, tokens } = tokenPair
-    const markdown = cm.getRange({ line, ch: startToken.start }, { line, ch: endToken.end })
+    const markdown = cm.getRange(Pos(line, startToken.start), Pos(line, endToken.end))
+
     const classes = startToken.type.split(' ').filter((c) => !c.includesAny('md', '-start'))
     const element = {
       start: startToken.start,
@@ -87,6 +159,14 @@ export function getLineElements(cm, line) {
       markdown,
       classes,
       isIncomplete: classes.includes('incomplete')
+    }
+
+    // Figure: Check if images are actually figures.
+    // (they're on their own lines.)
+    // If yes, set type to 'figure'
+    if (classes.includes('line-figure')) {
+      // element.type = `${element.type} figure`
+      element.type = `figure`
     }
 
     // Get child spans if type is link or image.
@@ -114,24 +194,29 @@ export function getLineElements(cm, line) {
       }
     }
 
-    // Define child strings 
-    // E.g. Child string of **hello world** is "hello world".
-    element.spans.forEach((s) => {
+    // Get span's strings. E.g. Child string of URL 
+    // in [Apple](http://apple.com) is "http://apple.com".
+    element.spans?.forEach((s) => {
+      // Set `string`
       s.string = markdown.slice(
         s.start - element.start,
         s.start - element.start + (s.end - s.start)
       )
+      // Set `line`
+      s.line = element.line
     })
 
     // Define mark details
 
     element.mark = {
-      isMarkable: type.equalsAny('link-inline', 'link-reference-full', 'link-reference-collapsed', 'image-inline', 'image-reference-full', 'image-reference-collapsed', 'footnote-inline', 'footnote-reference', 'citation'),
-      isEditable: type.includesAny('link'),
+      isMarkable: element.type.equalsAny(...markableElements) || element.type.includes('figure'),
+      // isMarkable: element.type.equalsAny('link-inline', 'link-reference-full', 'link-reference-collapsed', 'image-inline', 'image-reference-full', 'image-reference-collapsed', 'footnote-inline', 'footnote-reference', 'citation') || element.type.includes('figure'),
+      isEditable: element.type.includesAny('link', 'figure'),
+      hasWizard: !element.type.includes('task'),
     }
 
     // Define mark.displaySpanName
-    if (element.type.includes('link')) {
+    if (element.mark.isEditable) {
       if (element.type.includesAny('shortcut', 'collapsed')) {
         element.mark.displayedSpanName = 'label'
       } else {
@@ -142,32 +227,56 @@ export function getLineElements(cm, line) {
     elements.push(element)
   })
 
+  // Filter by optional `type` argument if it was provided
+  if (type) {
+    elements = elements.filter((e) => e.type.includes(type))
+  }
+
+  // if (elements.length) elements.forEach((e) => console.log(e))
+
   return elements
 }
 
 
-export function getElementTokens(cm, line) {
 
-  // For given line, go through tokens, and find tokens that start elements.
-  // For each of the starts, find the end token.
+
+
+
+
+/**
+ * For given line, go through tokens, and find tokens that start elements.
+ * For each of the starts, find the end token.
+ * @param {*} cm 
+ * @param {*} line 
+ * @param {*} lineTokens - Can pass in. Else will get. 
+ * @returns 
+ */
+export function getElementTokens(cm, line, lineTokens = undefined) {
+
   let startEndTokenPairs = []
-  const lineTokens = cm.getLineTokens(line).filter((t) => t.type !== null)
+  if (!lineTokens) {
+    lineTokens = cm.getLineTokens(line).filter((t) => t.type !== null)
+  }
+
+  // if (lineTokens.length) console.log(lineTokens)
 
   for (var i = 0; i < lineTokens.length; i++) {
 
+    // Find start token
     const t = lineTokens[i]
     const prevT = lineTokens[i - 1]
     const isStartToken =
-      t.type.includes('-start') && !prevT?.type.includes('-start') ||
+      t.type.includes('-start') && !prevT?.type.includes('-start') && !t.type.includes('frontmatter') ||
       t.type == 'bare-url' && prevT?.type !== 'bare-url' ||
-      t.type == 'task' && prevT?.type !== 'task'
+      t.type.includes('task') && !prevT?.type.includes('task') ||
+      t.type.includes('tag', 'frontmatter') && !t.type.includesAny('meta', 'atom')
 
     if (!isStartToken) continue
 
+    // Find matching end token
     if (t.type.includes('-start')) {
       const startType = t.type.match(/[^\s]*?-start/)[0]
       const endType = startType.replace('-start', '-end')
-      // console.log(endType)
       let endIndex = lineTokens.slice(i).findIndex((t, index) => {
         const nextEl = lineTokens.slice(i)[index + 1]
         // Find last token with correct end type.
@@ -186,6 +295,7 @@ export function getElementTokens(cm, line) {
         tokens: lineTokens.slice(i, endIndex + 1)
       })
     } else if (t.type == 'bare-url') {
+
       let endIndex = lineTokens.slice(i).findIndex((t) => !t.type.includes('bare-url'))
       endIndex = endIndex == -1 ?
         endIndex = lineTokens.length - 1 :
@@ -196,14 +306,26 @@ export function getElementTokens(cm, line) {
         type: 'bare-url',
         tokens: lineTokens.slice(i, endIndex + 1)
       })
-    } else if (t.type == 'task') {
-      const endIndex = lineTokens.slice(i).findIndex((t) => !t.type.includes('task')) + i - 1
+
+    } else if (t.type.includes('task')) {
+
+      const endIndex = findLastIndex(lineTokens, (t) => t.type.includes('task'))
       startEndTokenPairs.push({
         start: t,
         end: lineTokens[endIndex],
         type: 'task',
         tokens: lineTokens.slice(i, endIndex + 1)
       })
+
+    } else if (t.type.includesAll('tag', 'frontmatter')) {
+
+      startEndTokenPairs.push({
+        start: t,
+        end: t,
+        type: 'frontmatter-tag',
+        tokens: [t]
+      })
+
     }
   }
 
@@ -216,7 +338,7 @@ export function getElementTokens(cm, line) {
  * Applies to compound elements like links, which have title, url, etc.
  * Each return object has `start`, `end`, and `type`.
  */
-export function getChildSpans(cm, tokens) {
+function getChildSpans(cm, tokens) {
   let spans = []
   tokens = tokens.filter((t) => !t.type.includes('md'))
   var i = 0

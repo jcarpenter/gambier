@@ -14,9 +14,7 @@ export function altArrow(cm, buttonPressed) {
 
   for (const range of ranges) {
     
-    const isSingleCursor =
-      range.anchor.line == range.head.line &&
-      range.anchor.ch == range.head.ch
+    const { from, to, isMultiLine, isSingleCursor } = getFromAndTo(range)
 
     if (!isSingleCursor) {
 
@@ -24,7 +22,6 @@ export function altArrow(cm, buttonPressed) {
 
     } else {
 
-      const { from, to } = getFromAndTo(range)
       const lineText = cm.getLine(from.line)
 
       if (buttonPressed == 'right') {

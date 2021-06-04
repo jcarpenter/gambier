@@ -1,0 +1,194 @@
+@use 'animations' as *;
+@use 'colors' as *;
+@use 'layout' as *;
+@use 'mediaqueries' as *;
+@use 'typography' as *;
+
+@mixin inset-button($platform: 'mac') {
+  @if $platform == 'mac' {
+    display: inline-flex;
+    vertical-align: top;
+    gap: 0 5px;
+    min-height: 20px;
+
+    .inputWrapper {
+      display: flex;
+    }
+
+    // Hide the native input, but keep it accessible to enable focus state, etc. We use `+` sibling selector to style the `.control` element when this is :active or :checked.
+    input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      margin: 0;
+    }
+
+    .control {
+      // display: block; // Was used instead of grid for RadioButton
+      background: var(--inset-button-background);
+      box-shadow: var(--inset-button-boxshadow);
+      display: grid;
+      place-items: center;
+      transform: translate(0, 3px);
+      width: 14px;
+      height: 14px;
+      // border-radius: 50%; // Set in component
+      // Focus ring
+      // &::after {
+      //   content: '';
+      //   position: absolute;
+      //   border-radius: inherit;
+      //   top: 0;
+      //   left: 0;
+      //   width: 100%;
+      //   height: 100%;
+      // }
+
+      // Dot or Check: Define in component
+    }
+
+    .label {
+      @include system-regular-font;
+      transform: translate(0, 3px);
+      color: var(--label-color);
+      user-select: none;
+    }
+  } @else if $platform == 'win' {
+    // TODO
+  }
+}
+
+@mixin inset-button-compact($platform: 'mac') {
+  @if $platform == 'mac' {
+    .control {
+      width: 12px;
+      height: 12px;
+      // border-radius: 2.5px;  // Set in component
+      transform: translate(0, 2px);
+    }
+    .label {
+      @include system-small-font;
+      transform: translate(0, 1.5px);
+    }
+  } @else if $platform == 'win' {
+    // TODO
+  }
+}
+
+@mixin inset-button-focus($platform: 'mac') {
+  @if $platform == 'mac' {
+    // Hide focus outlin on parent
+    outline: none;
+    // Show focus ring on control
+    .control {
+      @include focusRingAnimation($platform);
+    }
+  } @else if $platform == 'win' {
+    // TODO
+  }
+}
+
+@mixin inset-button-checked($platform: 'mac') {
+  @if $platform == 'mac' {
+    .control {
+      // Slight gradient over accent-color
+      // (same as _buttons.scss)
+      background: linear-gradient(white(0.18), white(0)), var(--accent-color);
+
+      // Hide outline
+      @include light {
+        box-shadow: none;
+      }
+
+      // Slight bevel on top edge, and dark outline.
+      @include dark {
+        box-shadow: inset 0 0.5px 0 0 white(0.3),
+          // Bevel
+          0 0 0 0.5px black(0.2); // Outline
+      }
+
+      // Icon is always white (in both light and dark modes)
+      &::before {
+        background: white;
+        opacity: 1;
+      }
+    }
+  } @else if $platform == 'win' {
+    // TODO
+  }
+}
+
+@mixin inset-button-active($platform: 'mac') {
+  @if $platform == 'mac' {
+    // .control {
+    //   // Darken background (but not the dot)
+    //   @include light {
+    //     filter: brightness(0.95);
+    //   }
+    //   // Same as not checked (above)
+    //   @include dark {
+    //     filter: brightness(1.25);
+    //   }
+    // }
+
+    &:not(.checked) .control {
+      @include light {
+        filter: brightness(0.95);
+      }
+      @include dark {
+        filter: brightness(1.25);
+      }
+    }
+
+    &.checked .control {
+      // Darken background (but not the dot/icon)
+      @include light {
+        background: linear-gradient(black(0.15), black(0.15)), var(--accent-color);
+      }
+      // Same as not checked (above)
+      @include dark {
+        filter: brightness(1.25);
+      }
+    }
+  } @else if $platform == 'win' {
+  }
+}
+
+@mixin inset-button-disabled($platform: 'mac') {
+  @if $platform == 'mac' {
+    pointer-events: none;
+    .control {
+      opacity: 0.65;
+      &::before {
+        opacity: 0.75;
+      }
+    }
+    &.checked .control {
+      background: var(--inset-button-background);
+      box-shadow: var(--inset-button-boxshadow);
+      &::before {
+        background: var(--label-color);
+      }
+    }
+    .label {
+      opacity: 0.35;
+    }
+  } @else if $platform == 'win' {
+  }
+}
+
+@mixin inset-button-windowHidden($platform: 'mac') {
+  @if $platform == 'mac' {
+    // Desaturate the checked .control
+    // and make the dot dark
+    &.checked .control {
+      background: var(--inset-button-background);
+      box-shadow: var(--inset-button-boxshadow);
+      &::before {
+        background: var(--label-color);
+      }
+    }
+  } @else if $platform == 'win' {
+    // TODO
+  }
+}

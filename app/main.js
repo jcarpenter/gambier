@@ -16,6 +16,8 @@ var chokidar = require('chokidar');
 var removeMd = require('remove-markdown');
 var sizeOf = require('image-size');
 var debounce = require('debounce');
+var url = require('url');
+require('os');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -29,79 +31,78 @@ var matter__default = /*#__PURE__*/_interopDefaultLegacy(matter);
 var chokidar__default = /*#__PURE__*/_interopDefaultLegacy(chokidar);
 var removeMd__default = /*#__PURE__*/_interopDefaultLegacy(removeMd);
 var sizeOf__default = /*#__PURE__*/_interopDefaultLegacy(sizeOf);
+var url__default = /*#__PURE__*/_interopDefaultLegacy(url);
 
 const themes = {
-  default: 'gibsons',
-  
   allIds: ['gibsons', 'sechelt'],
-  
   byId: {
 
     //------ GIBSONS ------//
 
     gibsons: {
       name: 'Gibsons',
+      id: 'gibsons',
+      preferredEditorTheme: 'gambier',
       backgroundComponent: { name: 'SystemWindow', options: {} },
-      baseColorScheme: 'match-app',
-      colorOverrides: [],
-      editorTheme: 'gambier',
+      // baseColorScheme: 'match-app',
+      // colorOverrides: [],
     },
     
     //------ SECHELT ------//
 
     sechelt: {
       name: 'Sechelt',
+      id: 'sechelt',
+      preferredEditorTheme: 'gambier',
       backgroundComponent: { name: 'Midnight', options: {} },
-      baseColorScheme: 'dark',
-      colorOverrides: [
-        { 
-          variable: 'buttonBackgroundColor', 
-          newValue: '#FFFFFF40',
-          withMode: 'always',
-        },
-        { 
-          variable: 'controlAccentColor',
-          newValue: '#3E85F5',
-          withMode: 'always',
-        },
-        { 
-          variable: 'iconAccentColor',
-          newValue: '#FFF',
-          withMode: 'always',
-        },
-        { 
-          variable: 'menuBackgroundColor',
-          newValue: 'hsla(218, 69%, 20%, 0.95)',
-          withMode: 'always',
-        },
-        { 
-          variable: 'placeholderTextColor',
-          newValue: 'hsla(0, 0%, 100%, 0.4)',
-          withMode: 'always',
-        },
-        { 
-          variable: 'selectedContentBackgroundColor',
-          newValue: chroma__default['default']('#3E85F5').darken().hex(),
-          withMode: 'always',
-        },
-        // { // TODO
-        //   variable: 'selectedTextBackgroundColor',
-        //   newValue: chroma('#3E85F5').darken().hex(),
-        //   withMode: 'always',
-        // },
-      ],
-      editorTheme: 'gambier',
+      // baseColorScheme: 'dark',
+      // colorOverrides: [
+      //   { 
+      //     variable: 'buttonBackgroundColor', 
+      //     newValue: '#FFFFFF40',
+      //     withMode: 'always',
+      //   },
+      //   { 
+      //     variable: 'controlAccentColor',
+      //     newValue: '#3E85F5',
+      //     withMode: 'always',
+      //   },
+      //   { 
+      //     variable: 'iconAccentColor',
+      //     newValue: '#FFF',
+      //     withMode: 'always',
+      //   },
+      //   { 
+      //     variable: 'menuBackgroundColor',
+      //     newValue: 'hsla(218, 69%, 20%, 0.95)',
+      //     withMode: 'always',
+      //   },
+      //   { 
+      //     variable: 'placeholderTextColor',
+      //     newValue: 'hsla(0, 0%, 100%, 0.4)',
+      //     withMode: 'always',
+      //   },
+      //   { 
+      //     variable: 'selectedContentBackgroundColor',
+      //     newValue: chroma('#3E85F5').darken().hex(),
+      //     withMode: 'always',
+      //   },
+      //   // { // TODO
+      //   //   variable: 'selectedTextBackgroundColor',
+      //   //   newValue: chroma('#3E85F5').darken().hex(),
+      //   //   withMode: 'always',
+      //   // },
+      // ],
     }
   },
 };
 
 produce.enablePatches();
 
-const update = (state, action, window) =>
+const update$5 = (state, action, window) =>
   produce__default['default'](state, (draft) => {
 
     // Set a few useful, commonly-used variables
-    // const project = window?.projectId !== undefined ? draft.projects.byId[window.projectId] : undefined
     const project = draft.projects.byId[window?.projectId];
 
     switch (action.type) {
@@ -113,6 +114,15 @@ const update = (state, action, window) =>
 
         // Update appStatus 
         draft.appStatus = 'coldStarting';
+
+        // Set platform, if it's blank
+        if (!draft.platform) {
+          if (process.platform === 'darwin') {
+            draft.platform = 'mac';
+          } else if (process.platform === 'win32') {
+            draft.platform = 'win';
+          }
+        }
 
         if (draft.projects.allIds.length) {
           draft.projects.allIds.forEach((id) => {
@@ -138,9 +148,14 @@ const update = (state, action, window) =>
           draft.projects.allIds = Object.keys(draft.projects.byId);
         }
 
-        // Re-apply theme values (they may change, during development)
-        // If theme has not yet been define, use the default.
-        applyTheme(draft, draft.theme.id);
+        // Set keyboard nav
+        draft.system.keyboardNavEnabled = electron.systemPreferences.getUserDefault('AppleKeyboardUIMode', 'boolean');
+
+        // If theme has not yet been defined, use the default (first one).
+        if (!draft.appTheme.id) {
+          draft.appTheme = { ...themes.byId[themes.allIds[0]] };
+          draft.editorTheme.id = draft.appTheme.preferredEditorTheme;
+        }
 
         // If there are no projects, create a new empty one.
         if (!draft.projects.allIds.length) {
@@ -208,8 +223,8 @@ const update = (state, action, window) =>
 
       // THEME
 
-      case 'SET_ACCENT_COLOR': {
-        draft.theme.accentColor = action.name;
+      case 'SAVE_SYSTEM_COLORS': {
+        draft.systemColors = action.colors;
         break
       }
 
@@ -220,7 +235,8 @@ const update = (state, action, window) =>
       }
 
       case 'SET_APP_THEME': {
-        applyTheme(draft, action.id);
+        draft.appTheme = { ...action.theme };
+        // applyTheme(draft, action.id)
         break
       }
 
@@ -229,8 +245,8 @@ const update = (state, action, window) =>
         break
       }
 
-      case 'SET_EDITOR_THEME': {
-        draft.theme.editorTheme = action.name;
+      case 'SET_EDITOR_THEME_BY_ID': {
+        draft.editorTheme.id = action.id;
         break
       }
 
@@ -258,6 +274,13 @@ const update = (state, action, window) =>
         break
       }
 
+      // SYSTEM VALUES
+
+      case 'SET_SYSTEM_VALUES': {
+        draft.system = action.values;
+        break
+      }
+
       // CHROMIUM VALUES
 
       case 'SAVE_CHROMIUM_VALUES': {
@@ -265,10 +288,77 @@ const update = (state, action, window) =>
         break
       }
 
-      // ------------------------ MARKDOWN ------------------------ //
+      // TYPOGRAPHY
+
+      // Font size
+      case 'SET_EDITOR_FONT_SIZE': {
+        const { min, max } = draft.editorFont;
+        if (action.value >= min && action.value <= max) {
+          draft.editorFont.size = action.value;
+        }
+        break
+      }
+
+      case 'INCREASE_EDITOR_FONT_SIZE': {
+        if (draft.editorFont.size < draft.editorFont.max) {
+          draft.editorFont.size += draft.editorFont.increment;
+        }
+        break
+      }
+
+      case 'DECREASE_EDITOR_FONT_SIZE': {
+        if (draft.editorFont.size > draft.editorFont.min) {
+          draft.editorFont.size -= draft.editorFont.increment;
+        }
+        break
+      }
+
+      // Line height
+      case 'SET_EDITOR_LINE_HEIGHT': {
+        const { min, max } = draft.editorLineHeight;
+        if (action.value >= min && action.value <= max) {
+          draft.editorLineHeight.size = action.value;
+        }
+        break
+      }
+
+      case 'INCREASE_EDITOR_LINE_HEIGHT': {
+        if (draft.editorLineHeight.size < draft.editorLineHeight.max) {
+          let newSize = (draft.editorLineHeight.size * 10 + draft.editorLineHeight.increment * 10) / 10;
+          draft.editorLineHeight.size = newSize;
+        }
+        break
+      }
+
+      case 'DECREASE_EDITOR_LINE_HEIGHT': {
+        if (draft.editorLineHeight.size > draft.editorLineHeight.min) {
+          let newSize = (draft.editorLineHeight.size * 10 - draft.editorLineHeight.increment * 10) / 10;
+          draft.editorLineHeight.size = newSize;
+        }
+        break
+      }
+
+      // Max line width
+      case 'SET_EDITOR_MAX_LINE_WIDTH': {
+        const { min, max } = draft.editorMaxLineWidth;
+        if (action.value >= min && action.value <= max) {
+          draft.editorMaxLineWidth.size = action.value;
+        }
+        break
+      }
+
+      // DEVELOPER OPTIONS
+      
+      case 'SET_DEVELOPER_OPTIONS': {
+        draft.developer = action.options;
+        break
+      }
+
+
+      // MARKDOWN
 
       case 'SET_MARKDOWN_OPTIONS': {
-        draft.markdown = action.markdownOptions;
+        draft.markdown = action.options;
         break
       }
 
@@ -312,14 +402,31 @@ const update = (state, action, window) =>
       }
 
       case 'PROJECT_FILES_MAPPED': {
-        // If project directory contains docs, select the first one.
-        if (action.firstDocId) {
 
-          // Load doc in editor
+        // If nothing is selected in the project yet, select
+        // the first doc. Most likely to happen when user
+        // specifies new project directory (e.g. first run).
+
+        // Get the active sidebar tab.
+        // If undefined, set to 'project'
+        const activeSidebarTab = project.sidebar.tabsById[project.sidebar.activeTabId];
+        if (activeSidebarTab == undefined) {
+          project.sidebar.activeTabId == 'project';
+          activeSidebarTab = project.sidebar.tabsById.project;
+        }
+
+        const nothingIsSelected = activeSidebarTab.selected.length == 0;
+
+        // If nothing is selected, select first doc in the project
+        if (nothingIsSelected && action.firstDocId) {
+
+          // Load doc in panel
           project.panels[0].docId = action.firstDocId;
 
-          // Select doc in sidebar 
-          project.sidebar.tabsById.project.selected = [action.firstDocId];
+          // Select doc in the active project sidebar tab 
+          activeSidebarTab.lastSelected = action.firstDocId;
+          activeSidebarTab.selected = [action.firstDocId];
+
         }
         break
       }
@@ -536,8 +643,11 @@ const update = (state, action, window) =>
       }
 
       case 'SIDEBAR_SELECT_TAGS': {
-        const tab = project.sidebar.tabsById[action.tabId];
-        tab.selectedTags = action.tags;
+        // Switch to Tags tab, if we're not already viewing it
+        project.sidebar.activeTabId = 'tags';
+        // Set tags to `tags` argument. 
+        // Should be an array of strings, eg: ["climate", "water"]
+        project.sidebar.tabsById.tags.selectedTags = action.tags;
         break
       }
 
@@ -551,18 +661,18 @@ const update = (state, action, window) =>
         // Open sidebar > search
         project.focusedSectionId = 'sidebar';
         project.sidebar.activeTabId = 'search';
-        
+
         // Set which input (search or replace) to focus, on open
         if (action.inputToFocus !== undefined) {
           const search = project.sidebar.tabsById.search;
           search.inputToFocusOnOpen = action.inputToFocus;
-          
+
           // Make sure Replace expandable is open
           if (action.inputToFocus == 'replace') {
             search.replace.isOpen = true;
           }
         }
-        
+
         break
       }
 
@@ -572,7 +682,7 @@ const update = (state, action, window) =>
         break
       }
 
-      case 'SAVE_SEARCH_QUERY_VALUE' : {
+      case 'SAVE_SEARCH_QUERY_VALUE': {
         project.sidebar.tabsById.search.queryValue = action.value;
         break
       }
@@ -759,6 +869,11 @@ const update = (state, action, window) =>
         break
       }
 
+      case 'SET_FRONT_MATTER_COLLAPSED': {
+        draft.frontMatterCollapsed = action.value;
+        break
+      }
+
       case 'SET_UNSAVED_CHANGES': {
         const panel = project.panels[action.panelIndex];
         panel.unsavedChanges = action.value;
@@ -806,6 +921,33 @@ const update = (state, action, window) =>
         draft.wizard.showOptionalImageFields = action.value;
         break
       }
+
+      // LIGHTBOX
+
+      case 'OPEN_LIGHTBOX': {
+        draft.lightbox.open = true;
+        draft.lightbox.selectedIndex = action.selectedIndex;
+        draft.lightbox.images = action.images;
+        break
+      }
+
+      case 'CLOSE_LIGHTBOX': {
+        draft.lightbox.open = false;
+        draft.lightbox.selectedIndex = 0;
+        draft.lightbox.images = [];
+        break
+      }
+
+      case 'LIGHTBOX_PREV': {
+        draft.lightbox.selectedIndex -= 1;
+        break
+      }
+      
+      case 'LIGHTBOX_NEXT': {
+        draft.lightbox.selectedIndex += 1;
+        break
+      }
+
     }
   }, (patches) => {
     // Update `global.patches`
@@ -849,19 +991,6 @@ function closePanel(project, panelIndex) {
 }
 
 /**
- * Get current theme and copy values to draft.theme properties.
- */
-function applyTheme(draft, id) {
-  console.log(id);
-  const { backgroundComponent, baseColorScheme, colorOverrides, editorTheme } = themes.byId[id];
-  draft.theme.id = id;
-  draft.theme.baseColorScheme = baseColorScheme;
-  draft.theme.backgroundComponent = backgroundComponent;
-  draft.theme.colorOverrides = colorOverrides;
-  draft.theme.editorTheme = editorTheme;
-}
-
-/**
  * Check that directory exists, and we can write to it.
  * @param {} directory - System path to check
  */
@@ -892,7 +1021,7 @@ class Store extends ElectronStore__default['default'] {
 
     // Get next state. 
     // `update` function also updates `global.patches`.
-    const nextState = update(store.store, action, window);
+    const nextState = update$5(store.store, action, window);
 
     // Apply next state to Store
     this.set(nextState);
@@ -917,17 +1046,73 @@ const storeDefault = {
 
   // ----------- APP ----------- //
 
+  platform: '', // 'mac' or 'windows'
+
   appStatus: 'open',
 
   darkMode: 'match-system',
 
-  // See Theme.js for how themes are define
-  theme: {
-    id: 'gibsons',
-    baseColorScheme: 'match-app', // 'dark', 'light', or 'match-app'
-    colorOverrides: [],
-    backgroundComponent: {},
-    editorTheme: ''
+  appTheme: {
+    id: ''
+  },
+
+  editorTheme: {
+    id: '',
+    installed: [
+      { name: "Gambier", id: "gambier" }
+    ]
+  },
+
+  // Array of system colors. E.g.
+  // accentColor: "#007aff"
+  systemColors: {
+  },
+
+  developer: {
+    showGrid: false
+  },
+  // See Theme.js for how themes are defined
+  // theme: {
+  // appTheme: 'gibsons',
+  // baseColorScheme: 'match-app', // 'dark', 'light', or 'match-app'
+  // editorTheme: '',
+  // backgroundComponent: {},
+  // colorOverrides: [],
+  // installedAppThemes: [
+
+  // ],
+  // installedEditorThemes: [
+  //   { name: "Gambier", id: "gambier" }
+  // ]
+  // },
+
+  editorFont: {
+    default: 14,
+    size: 14,
+    min: 12,
+    max: 18,
+    increment: 1
+  },
+
+  editorLineHeight: {
+    default: 1.5,
+    size: 1.5,
+    min: 1.2,
+    max: 2.0,
+    increment: 0.1,
+  },
+
+  editorMaxLineWidth: {
+    default: 40,
+    size: 40,
+    min: 30,
+    max: 50,
+    increment: 2,
+  },
+
+  system: {
+    // macos: We check using `systemPreferences.getUserDefault(AppleKeyboardUIMode, integer)`
+    keyboardNavEnabled: false
   },
 
   chromium: {
@@ -938,12 +1123,20 @@ const storeDefault = {
     isReducedMotion: false,
   },
 
+  lightbox: {
+    open: false,
+    selectedIndex: 0,
+    images: []
+  },
+
   wizard: {
     showOptionalLinkFields: false,
     showOptionalImageFields: false
   },
 
   sourceMode: false,
+
+  frontMatterCollapsed: false,
 
   focusedWindowId: 0,
 
@@ -961,7 +1154,10 @@ const storeDefault = {
     strikethrough: true,
     taskLists: true,
     fencedCodeBlockHighlighting: false,
-    allowAtxHeaderWithoutSpace: false
+    allowAtxHeaderWithoutSpace: false,
+    ulMarkerChar: '*',
+    strongChar: '**',
+    emphasisChar: '_'
   },
 
   // When tabbing through document, we can control which elements are tabbable
@@ -986,7 +1182,7 @@ const storeDefault = {
 
   // Set of objects where key is doc id, and cursor position is 
   // recorded in `line` and `ch` properties.
-  cursorPositionHistory: { },
+  cursorPositionHistory: {},
 
   // ----------- PROJECTS ----------- //
 
@@ -1012,7 +1208,7 @@ const newProject = {
 
   // Used to associate windows with projects. Generated by nanoid.
   // id: '',
-  
+
   window: {
     // Used to associate windows with projects
     id: 0,
@@ -1029,7 +1225,7 @@ const newProject = {
   citations: '',
 
   focusedSectionId: 'sidebar',
-  
+
   // Index of focused panel
   focusedPanelIndex: 0,
 
@@ -1120,7 +1316,7 @@ const newProject = {
  * Return true if array has ALL of the items
  * @param  {...any} items - One or more strings
  */
-Array.prototype.hasAll = function(...items) {
+Array.prototype.hasAll = function (...items) {
   return items.every((i) => this.includes(i))
 };
 
@@ -1128,7 +1324,7 @@ Array.prototype.hasAll = function(...items) {
  * Return true if array has ANY of the items
  * @param  {...any} items - One or more strings
  */
-Array.prototype.hasAny = function(...items) {
+Array.prototype.hasAny = function (...items) {
   return items.some((i) => this.includes(i))
 };
 
@@ -1137,7 +1333,7 @@ Array.prototype.hasAny = function(...items) {
  * E.g. Returns true if item is `-span` and string is `text-span`
  * @param  {...any} items - One or more strings
  */
-String.prototype.includesAny = function(...items) {
+String.prototype.includesAny = function (...items) {
   return items.some((i) => this.includes(i))
 };
 
@@ -1147,30 +1343,30 @@ String.prototype.includesAny = function(...items) {
  * are "reference" and "full"
  * @param  {...any} items - One or more strings
  */
-String.prototype.includesAll = function(...items) {
+String.prototype.includesAll = function (...items) {
   return items.every((i) => this.includes(i))
 };
 
 /**
  * Return true if string equals any of the items.
- * E.g. Returns true if item is `-span` and string is `text-span`
+ * E.g. Returns true if item is `hello` and string is `hello`
  * @param  {...any} items - One or more strings
  */
-String.prototype.equalsAny = function(...items) {
-  return items.some((i) => this === i)
+String.prototype.equalsAny = function (...items) {
+  return items.some((i) => i === this)
 };
 
 /**
  * Return first character of string
  */
-String.prototype.firstChar = function() {
+String.prototype.firstChar = function () {
   return this.charAt(0)
 };
 
 /**
  * Return last character of string
  */
-String.prototype.lastChar = function() {
+String.prototype.lastChar = function () {
   return this.charAt(this.length - 1)
 };
 
@@ -1194,8 +1390,8 @@ async function wait(ms) {
   });
 }
 
-function findInTree (tree, value, key = 'id', reverse = false) {
-  const stack = [ tree[0] ];
+function findInTree(tree, value, key = 'id', reverse = false) {
+  const stack = [tree[0]];
   while (stack.length) {
     const node = stack[reverse ? 'pop' : 'shift']();
     if (node[key] === value) return node
@@ -1269,15 +1465,15 @@ function getMediaType(extension) {
  * @param {*} [toValue] - Optional value to check prop against
  */
 function stateHasChanged(patches, props, toValue = '') {
-	return patches.some((patch) => {
+  return patches.some((patch) => {
 
-  	const pathAsString = patch.path.toString();
-		const checkMultipleProps = Array.isArray(props);
+    const pathAsString = patch.path.toString();
+    const checkMultipleProps = Array.isArray(props);
 
-		const hasChanged = checkMultipleProps ?
-    	props.every((key) => pathAsString.includes(key)) :
+    const hasChanged = checkMultipleProps ?
+      props.every((key) => pathAsString.includes(key)) :
       pathAsString.includes(props);
-    
+
     // If optional 'toValue' argument is specified, check it.
     // Else, only check `hasChanged`
     if (toValue) {
@@ -1298,7 +1494,7 @@ function stateHasChanged(patches, props, toValue = '') {
  * @param {*} objFrom 
  */
 function propHasChangedTo(keysAsString, value, objTo, objFrom) {
-  if (!keysAsString || !value ) {
+  if (!keysAsString || !value) {
     // If either required arguments are missing or empty, return undefined
     return undefined
   } else {
@@ -1346,13 +1542,20 @@ function extractKeysFromString(keyAsString) {
  * @param {*} pathArr 
  */
 const getNestedObject = (nestedObj, pathArr) => {
-	return pathArr.reduce((obj, key) =>
-		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+  return pathArr.reduce((obj, key) =>
+    (obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
 };
 
-function init() {
+const isMac$1 = process.platform == 'darwin';
+process.platform == 'win32';
 
-  // When nativeTheme changes for any reason, get updated colors.
+/**
+ * Setup listeners and get initial values.
+ */
+function init$4() {
+
+  // When nativeTheme changes for any reason, save to state the
+  // new nativeTheme values, and system colors.
   // 'updated' fires when something tells Chromium to update visual settings.
   // Can be triggered by app logic, or from the OS:
   // 1) By app: App manually sets `nativeTheme.themeSource` to 'dark'.
@@ -1360,18 +1563,20 @@ function init() {
   //    from OS that OS appearance has changed, and `nativeTheme.themeSource` 
   //    is 'system', so Chromium accepts the change.
   electron.nativeTheme.on('updated', () => {
+    console.log('updated');
     saveChromiumValues();
-    // sendUpdatedColorsToRenderProcess()
+    saveSystemColors();
   });
 
-  // When `theme.darkMode` changes, update Chrome nativeTheme.themeSource.
+  // systemPreferences.on('accent-color-changed', () => {
+  //   saveSystemColors()
+  // } 
+
+  // When user makes changes to View > Dark Mode option, set the 
+  // `nativeTheme.themeSource` value on Chromium to match.
   global.store.onDidAnyChange((state, oldState) => {
-
     const darkModeChanged = stateHasChanged(global.patches, "darkMode");
-
-    if (darkModeChanged) {
-      setNativeTheme(false);
-    } 
+    if (darkModeChanged) setNativeTheme(false);
   });
 
   // Set native UI to theme value in store
@@ -1409,6 +1614,45 @@ function setNativeTheme(isFirstRun) {
 }
 
 /**
+ * Save various system colors to state.
+ * Accent color is the most important.
+ * TODO: Once getColor() alpha and darkMode issues are fixed, retrieve
+ * accent-influenced colors from system (at least on Mac. Windows TBD.)
+ */
+async function saveSystemColors() {
+
+  let systemColors = {};
+
+  // User-defined accent color as 8-digit hex: #007AFFFF
+  const accentColor = electron.systemPreferences.getAccentColor();
+  systemColors.accentColor = `#${accentColor}`;
+  // Hue: 280
+  systemColors.accentH = chroma__default['default'](accentColor).hsl()[0];
+  // Saturation: 50%
+  systemColors.accentS = `${chroma__default['default'](accentColor).hsl()[1] * 100}%`;
+  // Lightness: 50
+  systemColors.accentL = `${chroma__default['default'](accentColor).hsl()[2] * 100}%`;
+
+  if (isMac$1) {
+    systemColors.windowBackgroundColor = electron.nativeTheme.shouldUseDarkColors ? '#323232' : '#ECECEC';
+  }
+
+  // console.log('selectedControlColor', systemPreferences.getColor('selected-control'))
+
+  await global.store.dispatch({ 
+    type: 'SAVE_SYSTEM_COLORS', 
+    colors: systemColors
+  });
+
+  // const colors = global.state().chromium.isDarkMode ?
+  //   getDarkColors() :
+  //   getLightColors()
+  // return colors
+}
+
+
+
+/**
  * Save Chromium appearance-related values to store. Note: nativeTheme properties  will usually match the OS, because they're usually set by the OS. But in some cases, they will differ. If the user chooses `View > Appearance > Light` while the OS is in dark mode, for example. 
  */
 function saveChromiumValues() {
@@ -1422,415 +1666,6 @@ function saveChromiumValues() {
       isReducedMotion: electron.systemPreferences.getAnimationSettings().prefersReducedMotion
     }
   });
-}
-
-/** 
- * Send update colors to webContents. 
- * Use colorOverrides, except for preferences window 
- * (it should always match the system / default app look).
-// */
-// function sendUpdatedColorsToRenderProcess() {
-//   BrowserWindow.getAllWindows().forEach((win) => {
-//     const useColorOverrides = win.projectId == 'preferences' ? false : true
-//     console.log(win.projectId, useColorOverrides)
-//     const { colors, overriddenVariables } = getColors(useColorOverrides)
-//     win.webContents.send('updatedSystemColors', colors, overriddenVariables)
-//   })
-// }
-
-
-
-
-
-
-// -------- COLORS -------- //
-
-/**
- * Return an object with list of named colors. 
- * These are turned into CSS variables by the render process.
- * Colors start off taken from the operating system, and (optionally)
- * overrides are applied by the loaded theme.
- * @param {*} observeThemeValues - If true, adhere to theme overrides.
- */
-function getColors(observeThemeValues = true) {
-
-  let colors = {};
-  let overriddenVariables = [];
-  const state = global.state();
-  const theme = state.theme;
-
-  // Get initial colors. By default, we match what Chromium's state.
-  // E.g. If Chromium isDarkMode is true, we return dark colors.
-  // Themes can override this with `theme.baseColorScheme` value.
-  // If `observeThemeValues` is true, we use this value.
-  if (!observeThemeValues) {
-    colors = state.chromium.isDarkMode ? getDarkColors() : getLightColors();
-  } else {
-    switch (theme.baseColorScheme) {
-      case 'match-app':
-        if (state.chromium.isDarkMode) {
-          colors = getDarkColors();
-        } else {
-          colors = getLightColors();
-        }
-        break
-      case 'dark':
-        colors = getDarkColors();
-        break
-      case 'light':
-        colors = getLightColors();
-        break
-    }
-  }
-    
-
-  // Apply color overrides. Themes can specify overrides for
-  // individual color variables. `withMode` specifies when they
-  // apply. Always, or only when app is in light or dark mode.
-  if (observeThemeValues) {
-    theme.colorOverrides.forEach(({ variable, newValue, withMode }) => {
-
-      const appliesToCurrentMode =
-        withMode == 'always' ||
-        withMode == 'dark' && state.chromium.isDarkMode ||
-        withMode == 'light' && !state.chromium.isDarkMode;
-
-      if (appliesToCurrentMode) {
-        colors[variable] = newValue;
-        overriddenVariables.push(variable);
-        // If overrides sets `controlAccentColor` variable (and only it), 
-        // we need to also generate the darker variation.
-        if (variable == 'controlAccentColor') {
-          colors.darkerControlAccentColor = getDarkerAccentColor(colors.controlAccentColor);
-        }
-      }
-    });
-  }
-
-  return {
-    colors,
-    overriddenVariables
-  }
-}
-
-function getDarkColors() {
-  return {
-
-    // Gambier-specific colors
-    foregroundColor: '255, 255, 255',
-    backgroundColor: '0, 0, 0',
-    buttonBackgroundColor: '#5B5B5BFF',
-    menuBackgroundColor: 'hsla(0, 0%, 17%, 0.9)',
-    errorColor: '#FA6E50',
-
-    // macOS "Dynamic colors":
-    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
-    ...getAccentColors(true),
-    alternateSelectedControlTextColor: '#FFFFFFFF',
-    controlBackgroundColor: '#1E1E1EFF',
-    controlColor: '#FFFFFF3F',
-    controlTextColor: '#FFFFFFD8',
-    disabledControlTextColor: '#FFFFFF3F',
-    findHighlightColor: '#FFFF00FF',
-    gridColor: '#FFFFFF19',
-    headerTextColor: '#FFFFFFFF',
-    highlightColor: '#B4B4B4FF',
-    labelColor: '#FFFFFFD8',
-    linkColor: '#419CFFFF',
-    placeholderTextColor: '#FFFFFF3F',
-    quaternaryLabelColor: '#FFFFFF19',
-    secondaryLabelColor: '#FFFFFF8C',
-    selectedControlTextColor: '#FFFFFFD8',
-    selectedMenuItemTextColor: '#FFFFFFFF',
-    selectedTextColor: '#FFFFFFFF',
-    separatorColor: '#FFFFFF19',
-    shadowColor: '#000000FF',
-    tertiaryLabelColor: '#FFFFFF3F',
-    textBackgroundColor: '#1E1E1EFF',
-    textColor: '#FFFFFFFF',
-    unemphasizedSelectedContentBackgroundColor: '#464646FF',
-    unemphasizedSelectedTextBackgroundColor: '#464646FF',
-    unemphasizedSelectedTextColor: '#FFFFFFFF',
-    windowBackgroundColor: '#323232FF',
-    windowFrameTextColor: '#FFFFFFD8',
-
-    // macOS "System colors:
-    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#system-colors
-    // systemBlue: '#0A84FFFF',
-    // systemBrown: '#AC8E68FF',
-    // systemGray: '#98989DFF',
-    // systemGreen: '#32D74BFF',
-    // systemIndigo: '#5E5CE6FF',
-    // systemOrange: '#FF9F0AFF',
-    // systemPink: '#FF375FFF',
-    // systemPurple: '#BF5AF2FF',
-    // systemRed: '#FF453AFF',
-    // systemTeal: '#64D2FFFF',
-    // systemYellow: '#FFD60AFF',
-  }
-}
-
-function getLightColors() {
-  return {
-
-    // Gambier-specific colors
-    foregroundColor: '0, 0, 0',
-    backgroundColor: '255, 255, 255',
-    buttonBackgroundColor: '#FFFFFFFF',
-    menuBackgroundColor: 'hsla(0, 0%, 95%, 0.8)',
-    errorColor: '#FA6E50',
-
-    // macOS "Dynamic colors":
-    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
-    ...getAccentColors(false),
-    alternateSelectedControlTextColor: '#FFFFFFFF',
-    controlBackgroundColor: '#FFFFFFFF',
-    controlColor: '#FFFFFFFF',
-    controlTextColor: '#000000D8',
-    disabledControlTextColor: '#0000003F',
-    findHighlightColor: '#FFFF00FF',
-    gridColor: '#E6E6E6FF',
-    headerTextColor: '#000000D8',
-    highlightColor: '#FFFFFFFF',
-    labelColor: '#000000D8',
-    linkColor: '#0068DAFF',
-    placeholderTextColor: '#0000003F',
-    quaternaryLabelColor: '#00000019',
-    secondaryLabelColor: '#0000007F',
-    selectedControlTextColor: '#000000D8',
-    selectedMenuItemTextColor: '#FFFFFFFF',
-    selectedTextColor: '#000000FF',
-    separatorColor: '#00000019',
-    shadowColor: '#000000FF',
-    tertiaryLabelColor: '#00000042',
-    textBackgroundColor: '#FFFFFFFF',
-    textColor: '#000000FF',
-    unemphasizedSelectedContentBackgroundColor: '#DCDCDCFF',
-    unemphasizedSelectedTextBackgroundColor: '#DCDCDCFF',
-    unemphasizedSelectedTextColor: '#000000FF',
-    windowBackgroundColor: '#ECECECFF',
-    windowFrameTextColor: '#000000D8',
-
-    // macOS "System colors:
-    // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#system-colors
-    // systemBlue: '#007AFFFF',
-    // systemBrown: '#A2845EFF',
-    // systemGray: '#8E8E93FF',
-    // systemGreen: '#28CD41FF',
-    // systemIndigo: '#5856D6FF',
-    // systemOrange: '#FF9500FF',
-    // systemPink: '#FF2D55FF',
-    // systemPurple: '#AF52DEFF',
-    // systemRed: '#FF3B30FF',
-    // systemTeal: '#55BEF0FF',
-    // systemYellow: '#FFCC00FF',
-  }
-}
-
-/**
- * TEMPORARY: Electron returns incorrect values for controlAccentColor. So we have to hard-code the correct values. Filed issue here: https://github.com/electron/electron/issues/27048
- */
-function getAccentColors(isDarkMode) {
-
-  const allegedAccentColor = `#${electron.systemPreferences.getAccentColor().toUpperCase()}`;
-
-  switch (allegedAccentColor) {
-
-    // ------------ BLUE ------------ //
-    case '#0A5FFFFF':
-      if (isDarkMode) {
-        return {
-          iconAccentColor: '#007AFFFF',
-          controlAccentColor: '#007AFFFF',
-          darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
-          keyboardFocusIndicatorColor: '#1AA9FF4C',
-          selectedContentBackgroundColor: '#0058D0FF',
-          selectedControlColor: '#3F638BFF',
-          selectedTextBackgroundColor: '#3F638BFF',
-        }
-      } else {
-        return {
-          iconAccentColor: '#007AFFFF',
-          controlAccentColor: '#007AFFFF',
-          darkerControlAccentColor: getDarkerAccentColor('#007AFFFF'),
-          keyboardFocusIndicatorColor: '#0067F43F',
-          selectedContentBackgroundColor: '#0063E1FF',
-          selectedControlColor: '#B3D7FFFF',
-          selectedTextBackgroundColor: '#B3D7FFFF',
-        }
-      }
-
-    // ------------ PURPLE ------------ //
-    case '#923796FF': // Dark
-      return {
-        iconAccentColor: '#A550A7FF',
-        controlAccentColor: '#A550A7FF',
-        darkerControlAccentColor: getDarkerAccentColor('#A550A7FF'),
-        keyboardFocusIndicatorColor: '#DB78DE4C',
-        selectedContentBackgroundColor: '#7F3280FF',
-        selectedControlColor: '#705670FF',
-        selectedTextBackgroundColor: '#705670FF',
-      }
-    case '#812684FF': // Light
-      return {
-        iconAccentColor: '#953D96FF',
-        controlAccentColor: '#953D96FF',
-        darkerControlAccentColor: getDarkerAccentColor('#953D96FF'),
-        keyboardFocusIndicatorColor: '#8326843F',
-        selectedContentBackgroundColor: '#7D2A7EFF',
-        selectedControlColor: '#DFC5DFFF',
-        selectedTextBackgroundColor: '#DFC5DFFF',
-      }
-
-    // ------------ PINK ------------ //
-    case '#F2318DFF':
-      if (isDarkMode) {
-        return {
-          iconAccentColor: '#F74F9EFF',
-          controlAccentColor: '#F74F9EFF',
-          darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
-          keyboardFocusIndicatorColor: '#FF76D34C',
-          selectedContentBackgroundColor: '#C83179FF',
-          selectedControlColor: '#88566EFF',
-          selectedTextBackgroundColor: '#88566EFF',
-        }
-      } else {
-        return {
-          iconAccentColor: '#F74F9EFF',
-          controlAccentColor: '#F74F9EFF',
-          darkerControlAccentColor: getDarkerAccentColor('#F74F9EFF'),
-          keyboardFocusIndicatorColor: '#EB398D3F',
-          selectedContentBackgroundColor: '#D93B85FF',
-          selectedControlColor: '#FCCAE2FF',
-          selectedTextBackgroundColor: '#FCCAE2FF',
-        }
-      }
-
-    // ------------ RED ------------ //
-    case '#FC3845FF': // Dark
-      return {
-        iconAccentColor: '#FF5257FF',
-        controlAccentColor: '#FF5257FF',
-        darkerControlAccentColor: getDarkerAccentColor('#FF5257FF'),
-        keyboardFocusIndicatorColor: '#FF7A804C',
-        selectedContentBackgroundColor: '#D03439FF',
-        selectedControlColor: '#8B5758FF',
-        selectedTextBackgroundColor: '#8B5758FF',
-      }
-    case '#D62130FF': // Light
-      return {
-        iconAccentColor: '#E0383EFF',
-        controlAccentColor: '#E0383EFF',
-        darkerControlAccentColor: getDarkerAccentColor('#E0383EFF'),
-        keyboardFocusIndicatorColor: '#D320273F',
-        selectedContentBackgroundColor: '#C3252BFF',
-        selectedControlColor: '#F5C3C5FF',
-        selectedTextBackgroundColor: '#F5C3C5FF',
-      }
-
-
-    // ------------ ORANGE ------------ //
-    case '#F36D16FF':
-      if (isDarkMode) {
-        return {
-          iconAccentColor: '#F7821BFF',
-          controlAccentColor: '#F7821BFF',
-          darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
-          keyboardFocusIndicatorColor: '#FFB2394C',
-          selectedContentBackgroundColor: '#C86003FF',
-          selectedControlColor: '#886547FF',
-          selectedTextBackgroundColor: '#886547FF',
-        }
-      } else {
-        return {
-          iconAccentColor: '#F7821BFF',
-          controlAccentColor: '#F7821BFF',
-          darkerControlAccentColor: getDarkerAccentColor('#F7821BFF'),
-          keyboardFocusIndicatorColor: '#EB6F023F',
-          selectedContentBackgroundColor: '#D96B0AFF',
-          selectedControlColor: '#FCD9BBFF',
-          selectedTextBackgroundColor: '#FCD9BBFF',
-        }
-      }
-
-    // ------------ YELLOW ------------ //
-    case '#FEBC09FF': // Dark
-      return {
-        iconAccentColor: '#FFC600FF',
-        controlAccentColor: '#FFC600FF',
-        darkerControlAccentColor: getDarkerAccentColor('#FFC600FF'),
-        keyboardFocusIndicatorColor: '#FFFF1A4C',
-        selectedContentBackgroundColor: '#D09C00FF',
-        selectedControlColor: '#8B7A3FFF',
-        selectedTextBackgroundColor: '#8B7A3FFF',
-      }
-    case '#FEBD1EFF': // Light
-      return {
-        iconAccentColor: '#FFC726FF',
-        controlAccentColor: '#FFC726FF',
-        darkerControlAccentColor: getDarkerAccentColor('#FFC726FF'),
-        keyboardFocusIndicatorColor: '#F4B80D3F',
-        selectedContentBackgroundColor: '#E1AC14FF',
-        selectedControlColor: '#FFEEBEFF',
-        selectedTextBackgroundColor: '#FFEEBEFF',
-      }
-
-    // ------------ GREEN ------------ //
-    case '#53B036FF':
-      if (isDarkMode) {
-        return {
-          iconAccentColor: '#62BA46FF',
-          controlAccentColor: '#62BA46FF',
-          darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
-          keyboardFocusIndicatorColor: '#8DF46C4C',
-          selectedContentBackgroundColor: '#42912AFF',
-          selectedControlColor: '#5C7653FF',
-          selectedTextBackgroundColor: '#5C7653FF',
-        }
-      } else {
-        return {
-          iconAccentColor: '#62BA46FF',
-          controlAccentColor: '#62BA46FF',
-          darkerControlAccentColor: getDarkerAccentColor('#62BA46FF'),
-          keyboardFocusIndicatorColor: '#4DAB2F3F',
-          selectedContentBackgroundColor: '#4DA032FF',
-          selectedControlColor: '#D0EAC7FF',
-          selectedTextBackgroundColor: '#D0EAC7FF',
-        }
-      }
-
-    // ------------ GRAPHITE ------------ //
-    case '#797979FF': // Dark
-      return {
-        iconAccentColor: '#8C8C8CFF',
-        controlAccentColor: '#8C8C8CFF',
-        darkerControlAccentColor: getDarkerAccentColor('#8C8C8CFF'),
-        keyboardFocusIndicatorColor: '#C3C3C37F',
-        selectedContentBackgroundColor: '#686868FF',
-        selectedControlColor: '#FFFFFF3F',
-        selectedTextBackgroundColor: '#FFFFFF3F',
-      }
-    case '#868686FF': // Light
-      return {
-        iconAccentColor: '#989898FF',
-        controlAccentColor: '#989898FF',
-        darkerControlAccentColor: getDarkerAccentColor('#989898FF'),
-        controlAccentColor: '#989898FF',
-        keyboardFocusIndicatorColor: '#99999EFF',
-        selectedContentBackgroundColor: '#808080FF',
-        selectedControlColor: '#E0E0E0FF',
-        selectedTextBackgroundColor: '#E0E0E0FF',
-      }
-  }
-}
-
-/**
- * Create slightly darker and more saturated version of `controlAccentColor` 
- * by using chroma library.
- * @param {*} accentColor 
- */
-function getDarkerAccentColor(accentColor) {
-  return chroma__default['default'].blend(accentColor, '#EEEEEE', 'burn').desaturate(0).hex();
 }
 
 class DbManager {
@@ -2034,7 +1869,7 @@ async function selectCitationsFileFromDialog () {
   }
 }
 
-function init$1() {
+function init$3() {
 
 
   // -------- IPC: Renderer "sends" to Main -------- //
@@ -2042,12 +1877,9 @@ function init$1() {
   electron.ipcMain.on('saveImageFromClipboard', async (evt) => {
     const win = electron.BrowserWindow.fromWebContents(evt.sender);
     const project = global.state().projects.byId[win.projectId];
-    console.log(project);
-
     const img = electron.clipboard.readImage();
     const png = img.toPNG();
     await fsExtra.writeFile(`${project.directory}/test.png`, png);
-    // console.log('It\'s saved!')
   });
 
   electron.ipcMain.on('showWindow', (evt) => {
@@ -2166,6 +1998,26 @@ function init$1() {
 
   // -------- IPC: Invoke -------- //
 
+  // Return x/y coordinates of cursor inside sender window
+  // Return null if cursor is outside the window bounds.
+  electron.ipcMain.handle('getCursorWindowPosition', (evt) => {
+    const win = electron.BrowserWindow.fromWebContents(evt.sender);
+    const point = electron.screen.getCursorScreenPoint();
+    const bounds = win.getBounds();
+    const pos = {
+      x: point.x - bounds.x,
+      y: point.y - bounds.y
+    };
+
+    const cursorIsOutsideBounds = 
+      pos.x < 0 || // left of window
+      pos.y < 0 || // above window
+      pos.x > bounds.width || // right of window
+      pos.y > bounds.height; // below window
+    
+    return cursorIsOutsideBounds ? null : pos
+  });
+  
   electron.ipcMain.handle('getState', (evt) => {
     return global.state()
   });
@@ -2180,11 +2032,6 @@ function init$1() {
   electron.ipcMain.handle('getFileByPath', async (evt, filePath, encoding = 'utf8') => {
     let file = await fsExtra.readFile(filePath, encoding);
     return file
-  });
-
-  // Get system colors and return
-  electron.ipcMain.handle('getColors', (evt, observeThemeValues = true) => {
-    return getColors(observeThemeValues)
   });
 
   electron.ipcMain.handle('getHTMLFromClipboard', (evt) => {
@@ -2567,40 +2414,41 @@ function getIncrementedFileName(origPath) {
 
 const ______________________________ = new electron.MenuItem({ type: 'separator' });
 
-const preferences = new electron.MenuItem({
-  id: 'app-preferences',
-  label: 'Preferences...',
-  accelerator: 'CmdOrCtrl+,',
-  click() {
-    const state = global.state();
-    const prefsIsAlreadyOpen = state.prefs.isOpen;
-    const prefsIsNotFocused = state.focusedWindowId !== 'preferences';
-    if (prefsIsAlreadyOpen) {
-      if (prefsIsNotFocused) {
-        global.store.dispatch({ type: 'FOCUS_PREFERENCES_WINDOW' });
-      }
-    } else {
-      global.store.dispatch({ type: 'OPEN_PREFERENCES' });
-    }
-  }
-});
-
-const menu = new electron.MenuItem({
-  label: electron.app.name,
-  submenu: [
-    { role: 'about' },
-    ______________________________,
-    preferences,
-    ______________________________,
-    { role: 'services', submenu: [] },
-    ______________________________,
-    { role: 'hide' },
-    { role: 'hideothers' },
-    { role: 'unhide' },
-    ______________________________,
-    { role: 'quit' }
-  ]
-});
+function create$5() {
+ 
+  return new electron.MenuItem({
+    label: electron.app.name,
+    submenu: [
+      { role: 'about' },
+      ______________________________,
+      new electron.MenuItem({
+        id: 'app-preferences',
+        label: 'Preferences...',
+        accelerator: 'CmdOrCtrl+,',
+        click() {
+          const state = global.state();
+          const prefsIsAlreadyOpen = state.prefs.isOpen;
+          const prefsIsNotFocused = state.focusedWindowId !== 'preferences';
+          if (prefsIsAlreadyOpen) {
+            if (prefsIsNotFocused) {
+              global.store.dispatch({ type: 'FOCUS_PREFERENCES_WINDOW' });
+            }
+          } else {
+            global.store.dispatch({ type: 'OPEN_PREFERENCES' });
+          }
+        }
+      }),
+      ______________________________,
+      { role: 'services', submenu: [] },
+      ______________________________,
+      { role: 'hide' },
+      { role: 'hideothers' },
+      { role: 'unhide' },
+      ______________________________,
+      { role: 'quit' }
+    ]
+  })
+}
 
 function isMoveToTrashEnabled() {
   const state = global.state();
@@ -2611,159 +2459,161 @@ function isMoveToTrashEnabled() {
   return sideBarIsOpen && fileIsSelectedInSidebar
 }
 
+function create$4() {
 
-const menu$1 = new electron.MenuItem({
-  label: 'File',
-  submenu: [
-
-    new electron.MenuItem({
-      label: 'New Document',
-      id: 'file-newDocument',
-      accelerator: 'CmdOrCtrl+N',
-      async click(item, focusedWindow) {
-        focusedWindow.webContents.send('mainRequestsCreateNewDocInFocusedPanel');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'New Editor',
-      id: 'file-newEditor',
-      accelerator: 'CmdOrCtrl+T',
-      async click(item, focusedWindow) {
+  return new electron.MenuItem({
+    label: 'File',
+    submenu: [
+  
+      new electron.MenuItem({
+        label: 'New Document',
+        id: 'file-newDocument',
+        accelerator: 'CmdOrCtrl+N',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('mainRequestsCreateNewDocInFocusedPanel');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'New Editor',
+        id: 'file-newEditor',
+        accelerator: 'CmdOrCtrl+T',
+        async click(item, focusedWindow) {
+          
+          const state = global.state();
+          const project = state.projects.byId[state.focusedWindowId];
         
-        const state = global.state();
-        const project = state.projects.byId[state.focusedWindowId];
+          // Create new panel to right of the current focused panel
+          global.store.dispatch({
+            type: 'OPEN_NEW_PANEL',
+            docId: 'newDoc',
+            panelIndex: project.focusedPanelIndex + 1
+          }, focusedWindow);
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'New Window',
+        id: 'file-newWindow',
+        enabled: true,
+        accelerator: 'CmdOrCtrl+Shift+N',
+        async click(item, focusedWindow) {
+          global.store.dispatch({ type: 'CREATE_NEW_PROJECT' });
+        }
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Open Project...',
+        id: 'file-openProject',
+        accelerator: 'CmdOrCtrl+Shift+O',
+        async click(item, focusedWindow) {
+          global.store.dispatch(await selectProjectDirectoryFromDialog(), focusedWindow);
+        }
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Save',
+        id: 'file-save',
+        accelerator: 'CmdOrCtrl+S',
+        click(item, focusedWindow) {
+          const state = global.state();
+          const project = state.projects.byId[state.focusedWindowId];
+          const panel = project?.panels[project?.focusedPanelIndex];
+          if (panel?.unsavedChanges) {
+            focusedWindow.webContents.send('mainRequestsSaveFocusedPanel');
+          }
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Save As',
+        id: 'file-saveAs',
+        accelerator: 'CmdOrCtrl+Shift+S',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('mainRequestsSaveAsFocusedPanel');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Save All',
+        id: 'file-saveAll',
+        accelerator: 'CmdOrCtrl+Alt+S',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('mainRequestsSaveAll');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Move to Trash',
+        id: 'file-moveToTrash',
+        accelerator: 'CmdOrCtrl+Backspace',
+        async click(item, focusedWindow) {
       
-        // Create new panel to right of the current focused panel
-        global.store.dispatch({
-          type: 'OPEN_NEW_PANEL',
-          docId: 'newDoc',
-          panelIndex: project.focusedPanelIndex + 1
-        }, focusedWindow);
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'New Window',
-      id: 'file-newWindow',
-      enabled: true,
-      accelerator: 'CmdOrCtrl+Shift+N',
-      async click(item, focusedWindow) {
-        global.store.dispatch({ type: 'CREATE_NEW_PROJECT' });
-      }
-    }),
-
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Open Project...',
-      id: 'file-openProject',
-      accelerator: 'CmdOrCtrl+Shift+O',
-      async click(item, focusedWindow) {
-        global.store.dispatch(await selectProjectDirectoryFromDialog(), focusedWindow);
-      }
-    }),
-
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Save',
-      id: 'file-save',
-      accelerator: 'CmdOrCtrl+S',
-      click(item, focusedWindow) {
-        const state = global.state();
-        const project = state.projects.byId[state.focusedWindowId];
-        const panel = project?.panels[project?.focusedPanelIndex];
-        console.log(panel);
-        if (panel?.unsavedChanges) {
-          focusedWindow.webContents.send('mainRequestsSaveFocusedPanel');
+          // Get selected file paths
+          const state = global.state();
+          const project = state.projects.byId[state.focusedWindowId];
+          const watcher = global.watchers.find((w) => w.id == focusedWindow.projectId);
+  
+          const activeSidebarTab = project.sidebar.tabsById[project.sidebar.activeTabId];
+          let filePathsToDelete = [];
+          activeSidebarTab.selected.forEach((id) => {
+            const filepath = watcher.files.byId[id]?.path;
+            filePathsToDelete.push(filepath);
+          });
+      
+          // Delete
+          await Promise.all(
+            filePathsToDelete.map(async (filepath) => {
+              await remove(filepath);
+            })
+          );
         }
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Save As',
-      id: 'file-saveAs',
-      accelerator: 'CmdOrCtrl+Shift+S',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('mainRequestsSaveAsFocusedPanel');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Save All',
-      id: 'file-saveAll',
-      accelerator: 'CmdOrCtrl+Alt+S',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('mainRequestsSaveAll');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Move to Trash',
-      id: 'file-moveToTrash',
-      accelerator: 'CmdOrCtrl+Backspace',
-      async click(item, focusedWindow) {
-    
-        // Get selected file paths
-        const state = global.state();
-        const project = state.projects.byId[state.focusedWindowId];
-        const watcher = global.watchers.find((w) => w.id == focusedWindow.projectId);
-
-        const activeSidebarTab = project.sidebar.tabsById[project.sidebar.activeTabId];
-        let filePathsToDelete = [];
-        activeSidebarTab.selected.forEach((id) => {
-          const filepath = watcher.files.byId[id]?.path;
-          filePathsToDelete.push(filepath);
-        });
-    
-        // Delete
-        await Promise.all(
-          filePathsToDelete.map(async (filepath) => {
-            await remove(filepath);
-          })
-        );
-      }
-    }),
-
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Close Editor',
-      id: 'file-closeEditor',
-      accelerator: 'CmdOrCtrl+W',
-      click(item, focusedWindow) {
-    
-        const state = global.state();
-        const project = state.projects.byId[state.focusedWindowId];
-        const prefsIsFocused = state.focusedWindowId == 'preferences';  
-
-        // In dev mode, we can get into state where there's no focused window, and/or no project. I think it may happen when dev tools is open in a panel. Check before proceeding, or we'll get errors.
-        if (!focusedWindow || !project) return
-    
-        // If prefs is open, Cmd-W should close it.
-        // Else, if there are multiple panels open, close focused one. 
-        if (prefsIsFocused) {
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Close Editor',
+        id: 'file-closeEditor',
+        accelerator: 'CmdOrCtrl+W',
+        click(item, focusedWindow) {
+      
+          const state = global.state();
+          const project = state.projects.byId[state.focusedWindowId];
+          const prefsIsFocused = state.focusedWindowId == 'preferences';  
+  
+          // In dev mode, we can get into state where there's no focused window, and/or no project. I think it may happen when dev tools is open in a panel. Check before proceeding, or we'll get errors.
+          if (!focusedWindow || !project) return
+      
+          // If prefs is open, Cmd-W should close it.
+          // Else, if there are multiple panels open, close focused one. 
+          if (prefsIsFocused) {
+            focusedWindow.close();
+          } else if (project.panels.length >= 1) {
+            focusedWindow.webContents.send('mainRequestsCloseFocusedPanel');
+          }
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Close Window',
+        id: 'file-closeWindow',
+        accelerator: 'CmdOrCtrl+Shift+W',
+        click(item, focusedWindow) {
           focusedWindow.close();
-        } else if (project.panels.length >= 1) {
-          focusedWindow.webContents.send('mainRequestsCloseFocusedPanel');
         }
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Close Window',
-      id: 'file-closeWindow',
-      accelerator: 'CmdOrCtrl+Shift+W',
-      click(item, focusedWindow) {
-        focusedWindow.close();
-      }
-    })
-  ]
-});
+      })
+    ]
+  })
+}
 
 
-function update$1(applicationMenu) {
+
+function update$4(applicationMenu) {
 
   const m = applicationMenu;
   const state = global.state();
@@ -2789,115 +2639,117 @@ function update$1(applicationMenu) {
 
 }
 
-function onStateChanged(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
+function onStateChanged$4(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
 
   // We care about:
   // Prefs is focused?
   // Panel changed?
   // Sidebar is open?
   // fileIsSelectedInSidebar?
-  update$1(applicationMenu);
+  update$4(applicationMenu);
 }
 
-const menu$2 = new electron.MenuItem({
-  label: 'Edit',
-  submenu: [
+function create$3() {
 
-    new electron.MenuItem({
-      label: 'Undo',
-      id: 'edit-undo',
-      accelerator: 'CmdOrCtrl+Z',
-      selector: 'undo:'
-    }),
-
-    new electron.MenuItem({
-      label: 'Redo',
-      id: 'edit-redo',
-      accelerator: 'CmdOrCtrl+Shift+Z',
-      selector: 'redo:'
-    }),
-
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Cut',
-      id: 'edit-cut',
-      accelerator: 'CmdOrCtrl+X',
-      selector: 'cut:'
-    }),
-
-    new electron.MenuItem({
-      label: 'Copy',
-      id: 'edit-copy',
-      accelerator: 'CmdOrCtrl+C',
-      selector: 'copy:'
-    }),
-
-    new electron.MenuItem({
-      label: 'Paste',
-      id: 'edit-paste',
-      accelerator: 'CmdOrCtrl+V',
-      selector: 'paste:'
-    }),
-
-    new electron.MenuItem({
-      label: 'Paste as Plain Text',
-      id: 'edit-pasteAsPlainText',
-      accelerator: 'CmdOrCtrl+Shift+Alt+V',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('pasteAsPlainText');
+  return new electron.MenuItem({
+    label: 'Edit',
+    submenu: [
+  
+      new electron.MenuItem({
+        label: 'Undo',
+        id: 'edit-undo',
+        accelerator: 'CmdOrCtrl+Z',
+        selector: 'undo:'
+      }),
+  
+      new electron.MenuItem({
+        label: 'Redo',
+        id: 'edit-redo',
+        accelerator: 'CmdOrCtrl+Shift+Z',
+        selector: 'redo:'
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Cut',
+        id: 'edit-cut',
+        accelerator: 'CmdOrCtrl+X',
+        selector: 'cut:'
+      }),
+  
+      new electron.MenuItem({
+        label: 'Copy',
+        id: 'edit-copy',
+        accelerator: 'CmdOrCtrl+C',
+        selector: 'copy:'
+      }),
+  
+      new electron.MenuItem({
+        label: 'Paste',
+        id: 'edit-paste',
+        accelerator: 'CmdOrCtrl+V',
+        selector: 'paste:'
+      }),
+  
+      new electron.MenuItem({
+        label: 'Paste as Plain Text',
+        id: 'edit-pasteAsPlainText',
+        accelerator: 'CmdOrCtrl+Shift+Alt+V',
+        selector: 'paste:',
+      }),
+  
+      new electron.MenuItem({
+        label: 'Select All',
+        id: 'edit-selectAll',
+        accelerator: 'CmdOrCtrl+A',
+        selector: 'selectAll:'
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Find in Files',
+        id: 'edit-findInFiles',
+        accelerator: 'CmdOrCtrl+Shift+F',
+        click(item, focusedWindow) {
+          // Tell Search tab to open. And if there's text selected in 
+          // the active editor instance, make it the query value.
+          focusedWindow.webContents.send('findInFiles');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Replace in Files',
+        id: 'edit-replaceInFiles',
+        accelerator: 'CmdOrCtrl+Shift+R',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('replaceInFiles');
+        }
+      }),
+  
+      ______________________________,
+  
+      {
+        label: 'Speech',
+        submenu: [
+          { role: 'startspeaking' },
+          { role: 'stopspeaking' }
+        ]
       }
-    }),
+  
+    ]
+  })
+}
 
-    new electron.MenuItem({
-      label: 'Select All',
-      id: 'edit-selectAll',
-      accelerator: 'CmdOrCtrl+A',
-      selector: 'selectAll:'
-    }),
 
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Find in Files',
-      id: 'edit-findInFiles',
-      accelerator: 'CmdOrCtrl+Shift+F',
-      click(item, focusedWindow) {
-        // Tell Search tab to open. And if there's text selected in 
-        // the active editor instance, make it the query value.
-        focusedWindow.webContents.send('findInFiles');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Replace in Files',
-      id: 'edit-replaceInFiles',
-      accelerator: 'CmdOrCtrl+Shift+R',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('replaceInFiles');
-      }
-    }),
-
-    ______________________________,
-
-    {
-      label: 'Speech',
-      submenu: [
-        { role: 'startspeaking' },
-        { role: 'stopspeaking' }
-      ]
-    }
-
-  ]
-});
-
-function update$2(applicationMenu) {
+function update$3(applicationMenu) {
   const m = applicationMenu;
   const state = global.state();
   const project = state.projects.byId[state.focusedWindowId];
   const panel = project?.panels[project?.focusedPanelIndex];
   const focusedSectionId = project?.focusedSectionId;
-  const prefsIsFocused = state.focusedWindowId == 'preferences';  
+  state.focusedWindowId == 'preferences';  
 
   const aProjectWindowIsFocused = project !== undefined;
   const isAPanelFocused = panel && focusedSectionId == 'editor';
@@ -2916,138 +2768,151 @@ function update$2(applicationMenu) {
 
 }
 
-function onStateChanged$1(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update$2(applicationMenu);
+function onStateChanged$3(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
+  update$3(applicationMenu);
 }
 
-const menu$3 = new electron.MenuItem({
-  label: 'Format',
-  submenu: [
+function create$2() {
 
-    new electron.MenuItem({
-      label: 'Heading',
-      id: 'format-heading',
-      accelerator: 'Cmd+Shift+H',
-      // registerAccelerator: false,
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'heading');
-      }
-    }),
+  return new electron.MenuItem({
+    label: 'Format',
+    submenu: [
+  
+      new electron.MenuItem({
+        label: 'Heading',
+        id: 'format-heading',
+        accelerator: 'Cmd+Shift+H',
+        // registerAccelerator: false,
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'heading');
+        }
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Strong',
+        id: 'format-strong',
+        accelerator: 'Cmd+B',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'strong');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Emphasis',
+        id: 'format-emphasis',
+        accelerator: 'Cmd+I',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'emphasis');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Code',
+        id: 'format-code',
+        accelerator: 'Cmd+Shift+D',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'code');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Strikethrough',
+        id: 'format-strikethrough',
+        accelerator: 'Cmd+Shift+X',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'strikethrough');
+        }
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Link',
+        id: 'format-link',
+        accelerator: 'Cmd+K',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'link');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Image',
+        id: 'format-image',
+        accelerator: 'Cmd+G',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'image');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Footnote',
+        id: 'format-footnote',
+        accelerator: 'Cmd+Alt+T', // TODO: Figure something better
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'footnote');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Citation',
+        id: 'format-citation',
+        accelerator: 'Cmd+Shift+C',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'citation');
+        }
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Unordered List',
+        id: 'format-ul',
+        accelerator: 'Cmd+Shift+L',
+        click(item, focusedWindow) {
+          console.log('Clicked');
+          focusedWindow.webContents.send('setFormat', 'ul');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Ordered List',
+        id: 'format-ol',
+        accelerator: 'Cmd+Alt+L',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'ol');
+        }
+      }),
+  
+      ______________________________,
+  
+      new electron.MenuItem({
+        label: 'Task List',
+        id: 'format-taskList',
+        accelerator: 'Cmd+Shift+T',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'taskList');
+        }
+      }),
+  
+      new electron.MenuItem({
+        label: 'Toggle Checked',
+        id: 'format-taskChecked',
+        accelerator: 'Alt+Enter',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'taskChecked');
+        }
+      }),
+  
+      ______________________________,
+  
+    ]
+  })
+}
 
-    new electron.MenuItem({
-      label: 'Strong',
-      id: 'format-strong',
-      accelerator: 'Cmd+B',
-      // registerAccelerator: false,
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'strong');
-      }
-    }),
 
-    new electron.MenuItem({
-      label: 'Emphasis',
-      id: 'format-emphasis',
-      accelerator: 'Cmd+I',
-      // registerAccelerator: false,
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'emphasis');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Code',
-      id: 'format-code',
-      // accelerator: 'Cmd+I',
-      // registerAccelerator: false,
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'code');
-      }
-    }),
-
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Link',
-      id: 'format-link',
-      accelerator: 'Cmd+K',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'link');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Image',
-      id: 'format-image',
-      accelerator: 'Cmd+G',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'image');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Footnote',
-      id: 'format-footnote',
-      accelerator: 'Cmd+Alt+T', // TODO: Figure something better
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'footnote');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Citation',
-      id: 'format-citation',
-      accelerator: 'Cmd+Shift+C',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'citation');
-      }
-    }),
-
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Unordered List',
-      id: 'format-ul',
-      accelerator: 'Cmd+Shift+L',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'ul');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Ordererd List',
-      id: 'format-ol',
-      accelerator: 'Cmd+Alt+L',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'ol');
-      }
-    }),
-
-    ______________________________,
-
-    new electron.MenuItem({
-      label: 'Task List',
-      id: 'format-taskList',
-      accelerator: 'Cmd+Shift+T',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'taskList');
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Toggle Checked',
-      id: 'format-taskChecked',
-      accelerator: 'Cmd+Shift+U',
-      click(item, focusedWindow) {
-        focusedWindow.webContents.send('setFormat', 'taskChecked');
-      }
-    }),
-
-    ______________________________,
-
-  ]
-});
-
-function update$3(applicationMenu) {
+function update$2(applicationMenu) {
 
   const m = applicationMenu;
   const state = global.state();
@@ -3056,9 +2921,12 @@ function update$3(applicationMenu) {
   const isAPanelFocused = panel && project?.focusedSectionId == 'editor';
 
   m.getMenuItemById('format-heading').enabled = isAPanelFocused;
+  
   m.getMenuItemById('format-strong').enabled = isAPanelFocused;
   m.getMenuItemById('format-emphasis').enabled = isAPanelFocused;
   m.getMenuItemById('format-code').enabled = isAPanelFocused;
+  m.getMenuItemById('format-strikethrough').enabled = isAPanelFocused;
+  m.getMenuItemById('format-strikethrough').visible = state.markdown.strikethrough;
   
   m.getMenuItemById('format-link').enabled = isAPanelFocused;
   m.getMenuItemById('format-image').enabled = isAPanelFocused;
@@ -3074,111 +2942,414 @@ function update$3(applicationMenu) {
 }
 
 function onStateChanged$2(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update$3(applicationMenu);
-}
-
-const menu$4 = new electron.MenuItem({
-  label: 'View',
-  submenu: [
-
-    new electron.MenuItem({
-      label: 'Project',
-      accelerator: 'Cmd+1',
-      click(item, focusedWindow) {
-        global.store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_ID',
-          id: 'project'
-        }, focusedWindow);
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Documents',
-      accelerator: 'Cmd+2',
-      click(item, focusedWindow) {
-        global.store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_ID',
-          id: 'allDocs'
-        }, focusedWindow);
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Most Recent',
-      accelerator: 'Cmd+3',
-      click(item, focusedWindow) {
-        global.store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_ID',
-          id: 'mostRecent'
-        }, focusedWindow);
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Tags',
-      accelerator: 'Cmd+4',
-      click(item, focusedWindow) {
-        global.store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_ID',
-          id: 'tags'
-        }, focusedWindow);
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Media',
-      accelerator: 'Cmd+5',
-      click(item, focusedWindow) {
-        global.store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_ID',
-          id: 'media'
-        }, focusedWindow);
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Citations',
-      accelerator: 'Cmd+6',
-      click(item, focusedWindow) {
-        global.store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_ID',
-          id: 'citations'
-        }, focusedWindow);
-      }
-    }),
-
-    new electron.MenuItem({
-      label: 'Search',
-      accelerator: 'Cmd+7',
-      click(item, focusedWindow) {
-        global.store.dispatch({
-          type: 'SELECT_SIDEBAR_TAB_BY_ID',
-          id: 'search'
-        }, focusedWindow);
-      }
-    }),
-
-  ]
-});
-
-const menu$5 = new electron.MenuItem({
-  label: 'Window',
-  submenu: []
-});
-
-function update$4(applicationMenu) {
-  const state = global.state();
-  const project = state.projects.byId[state.focusedWindowId];
-  const panel = project?.panels[project?.focusedPanelIndex];
-  const prefsIsFocused = state.focusedWindowId == 'preferences';  
-
-}
-
-function onStateChanged$3(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update$4();
+  update$2(applicationMenu);
 }
 
 const isMac = process.platform === 'darwin';
+
+function create$1() {
+
+  return new electron.MenuItem({
+    label: 'View',
+    submenu: [
+
+      new electron.MenuItem({
+        label: 'Source mode',
+        id: 'view-sourceMode',
+        type: 'checkbox',
+        accelerator: 'CmdOrCtrl+/',
+        click(item, focusedWindow) {
+          if (focusedWindow) {
+            global.store.dispatch({
+              type: 'SET_SOURCE_MODE',
+              enabled: !global.state().sourceMode,
+            }, focusedWindow);
+          }
+        }
+      }),
+
+      ______________________________,
+
+      new electron.MenuItem({
+        label: 'Project',
+        id: 'view-project',
+        type: 'checkbox',
+        accelerator: 'Cmd+1',
+        click(item, focusedWindow) {
+          global.store.dispatch({
+            type: 'SELECT_SIDEBAR_TAB_BY_ID',
+            id: 'project'
+          }, focusedWindow);
+        }
+      }),
+
+      new electron.MenuItem({
+        label: 'Documents',
+        id: 'view-allDocs',
+        type: 'checkbox',
+        accelerator: 'Cmd+2',
+        click(item, focusedWindow) {
+          global.store.dispatch({
+            type: 'SELECT_SIDEBAR_TAB_BY_ID',
+            id: 'allDocs'
+          }, focusedWindow);
+        }
+      }),
+
+      new electron.MenuItem({
+        label: 'Most Recent',
+        id: 'view-mostRecent',
+        type: 'checkbox',
+        accelerator: 'Cmd+3',
+        click(item, focusedWindow) {
+          global.store.dispatch({
+            type: 'SELECT_SIDEBAR_TAB_BY_ID',
+            id: 'mostRecent'
+          }, focusedWindow);
+        }
+      }),
+
+      new electron.MenuItem({
+        label: 'Tags',
+        id: 'view-tags',
+        type: 'checkbox',
+        accelerator: 'Cmd+4',
+        click(item, focusedWindow) {
+          global.store.dispatch({
+            type: 'SELECT_SIDEBAR_TAB_BY_ID',
+            id: 'tags'
+          }, focusedWindow);
+        }
+      }),
+
+      new electron.MenuItem({
+        label: 'Media',
+        id: 'view-media',
+        type: 'checkbox',
+        accelerator: 'Cmd+5',
+        click(item, focusedWindow) {
+          global.store.dispatch({
+            type: 'SELECT_SIDEBAR_TAB_BY_ID',
+            id: 'media'
+          }, focusedWindow);
+        }
+      }),
+
+      new electron.MenuItem({
+        label: 'Citations',
+        id: 'view-citations',
+        type: 'checkbox',
+        accelerator: 'Cmd+6',
+        click(item, focusedWindow) {
+          global.store.dispatch({
+            type: 'SELECT_SIDEBAR_TAB_BY_ID',
+            id: 'citations'
+          }, focusedWindow);
+        }
+      }),
+
+      new electron.MenuItem({
+        label: 'Search',
+        id: 'view-search',
+        type: 'checkbox',
+        accelerator: 'Cmd+7',
+        click(item, focusedWindow) {
+          global.store.dispatch({
+            type: 'SELECT_SIDEBAR_TAB_BY_ID',
+            id: 'search'
+          }, focusedWindow);
+        }
+      }),
+
+      ______________________________,
+
+      new electron.MenuItem({
+        label: 'Font Size',
+        submenu: [
+          new electron.MenuItem({
+            label: 'Default',
+            id: 'view-fontsize-default',
+            accelerator: 'CmdOrCtrl+0',
+            click() {
+              global.store.dispatch({ 
+                type: 'SET_EDITOR_FONT_SIZE', 
+                value: global.state().editorFont.default
+              });
+            }
+          }),
+          ______________________________,
+          new electron.MenuItem({
+            label: 'Increase',
+            id: 'view-fontsize-increase',
+            accelerator: 'CmdOrCtrl+=',
+            click() {
+              global.store.dispatch({ type: 'INCREASE_EDITOR_FONT_SIZE' });
+            }
+          }),
+          new electron.MenuItem({
+            label: 'Decrease',
+            id: 'view-fontsize-decrease',
+            accelerator: 'CmdOrCtrl+-',
+            click() {
+              global.store.dispatch({ type: 'DECREASE_EDITOR_FONT_SIZE' });
+            }
+          })
+        ]
+      }),
+
+      // TODO: Am hiding these commands for now, because of Electron bug.
+      // Labels are incorrect if accelerator uses Shift and `-` or `=` 
+      // keys. For example, `Cmd+Shift+0` accelerator should display 
+      // as `⇪⌘0`. Instead it’s `⌘)`. Will expose in Prefs instead.
+
+      // new MenuItem({
+      //   label: 'Line Height',
+      //   submenu: [
+      //     new MenuItem({
+      //       label: 'Default',
+      //       id: 'view-lineheight-default',
+      //       accelerator: 'CmdOrCtrl+Shift+0',
+      //       click() {
+      //         global.store.dispatch({ type: 'SET_DEFAULT_EDITOR_LINE_HEIGHT' })
+      //       }
+      //     }),
+      //     ______________________________,
+      //     new MenuItem({
+      //       label: 'Increase',
+      //       id: 'view-lineheight-increase',
+      //       accelerator: 'CmdOrCtrl+Shift+=',
+      //       click() {
+      //         global.store.dispatch({ type: 'INCREASE_EDITOR_LINE_HEIGHT' })
+      //       }
+      //     }),
+      //     new MenuItem({
+      //       label: 'Decrease',
+      //       id: 'view-lineheight-decrease',
+      //       accelerator: 'CmdOrCtrl+Shift+-',
+      //       click() {
+      //         global.store.dispatch({ type: 'DECREASE_EDITOR_LINE_HEIGHT' })
+      //       }
+      //     })
+      //   ]
+      // }),
+
+      ______________________________,
+
+
+      new electron.MenuItem({
+        label: 'App Theme',
+        id: 'view-appTheme',
+        submenu: themes.allIds.map((id) => {
+          const t = themes.byId[id];
+          return new electron.MenuItem({
+            label: t.name,
+            id: `view-appTheme-${id}`,
+            type: 'checkbox',
+            checked: global.state().appTheme.id == id,
+            click() {
+              global.store.dispatch({ type: 'SET_APP_THEME', id });
+            }
+          })
+        })
+      }),
+
+      // new MenuItem({
+      //   label: 'Accent Color',
+      //   submenu: [
+      //     new MenuItem({
+      //       label: 'Match System',
+      //       type: 'checkbox',
+      //       checked: global.state().appTheme.accentColor == 'match-system',
+      //       click() {
+      //         global.store.dispatch({ type: 'SET_ACCENT_COLOR', name: 'match-system', })
+      //       }
+      //     }),
+      //     ______________________________,
+      //   ]
+      // }),
+
+      // new MenuItem({
+      //   label: 'Background',
+      //   submenu: [
+      //     new MenuItem({
+      //       label: 'Placeholder',
+      //       type: 'checkbox',
+      //       checked: global.state().appTheme.background == 'placeholder',
+      //       click() {
+      //         global.store.dispatch({ type: 'SET_BACKGROUND', name: 'placeholder', })
+      //       }
+      //     }),
+      //   ]
+      // }),
+
+      new electron.MenuItem({
+        label: 'Dark Mode',
+        submenu: [
+          new electron.MenuItem({
+            label: 'Match System',
+            type: 'checkbox',
+            checked: global.state().darkMode == 'match-system',
+            click() {
+              global.store.dispatch({ type: 'SET_DARK_MODE', value: 'match-system', });
+            }
+          }),
+          ______________________________,
+          new electron.MenuItem({
+            label: 'Dark',
+            type: 'checkbox',
+            checked: global.state().darkMode == 'dark',
+            click() {
+              global.store.dispatch({ type: 'SET_DARK_MODE', value: 'dark' });
+            }
+          }),
+          new electron.MenuItem({
+            label: 'Light',
+            type: 'checkbox',
+            checked: global.state().darkMode == 'light',
+            click() {
+              global.store.dispatch({ type: 'SET_DARK_MODE', value: 'light' });
+            }
+          })
+        ]
+      }),
+
+      new electron.MenuItem({
+        label: 'Editor Theme',
+        id: 'view-editorTheme',
+        submenu: global.state().editorTheme.installed.map((t) => {
+          return new electron.MenuItem({
+            label: t.name,
+            id: `view-editorTheme-${t.id}`,
+            type: 'checkbox',
+            checked: global.state().editorTheme.id == t.id,
+            click(item) {
+              if (!item.checked) {
+                global.store.dispatch({ type: 'SET_EDITOR_THEME_BY_ID', name: t.id });
+              }
+            }
+          })
+        })
+      }),
+
+      ...electron.app.isPackaged ? [] : [
+        ______________________________,
+        new electron.MenuItem({
+          label: 'Developer',
+          submenu: [
+            new electron.MenuItem({
+              label: 'Toggle Developer Tools',
+              accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+              role: 'toggleDevTools',
+            }),
+            new electron.MenuItem({
+              label: 'Reload',
+              accelerator: 'CmdOrCtrl+R',
+              role: 'reload'
+            }),
+            new electron.MenuItem({
+              label: 'Toggle Grid',
+              accelerator: 'CmdOrCtrl+Alt+G',
+              click() {
+                global.store.dispatch({ 
+                  type: 'SET_DEVELOPER_OPTIONS', 
+                  options: {
+                    ...global.state().developer, 
+                    showGrid: !global.state().developer.showGrid
+                  }
+                });
+              }
+            })
+          ]
+        })
+      ],
+
+    ]
+  })
+}
+
+
+
+function update$1(appMenu) {
+
+  const m = appMenu;
+  const state = global.state();
+  const project = state.projects.byId[state.focusedWindowId];
+  project?.panels[project?.focusedPanelIndex];
+  state.focusedWindowId == 'preferences';
+
+  m.getMenuItemById('view-sourceMode').checked = state.sourceMode;
+
+  const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search'];
+  sidebarTabs.forEach((id) => {
+    const item = m.getMenuItemById(`view-${id}`);
+    item.enabled = project !== undefined;
+    item.checked = project?.sidebar.activeTabId == id;
+  });
+
+  // View > App Menu submenu: set `checked`
+  m.getMenuItemById('view-appTheme').submenu.items.forEach((item) => {
+    const id = item.id.replace('view-appTheme-', '');
+    item.checked = id == state.appTheme.id;
+  });
+
+  m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max;
+  m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min;
+  
+  // m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
+  // m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
+
+  // View > Editor Theme submenu: set `checked`
+  // m.getMenuItemById('view-editorTheme').submenu.items.forEach((item) => {
+  //   const id = item.id.replace('view-editorTheme-', '')
+  //   item.checked = id == state.editorTheme.id
+  // })
+
+}
+
+function onStateChanged$1(state, oldState, project, panel, prefsIsFocused, appMenu) {
+
+  if (state.appStatus == 'coldStarting') {
+    update$1();
+    return
+  }
+
+  const oldProject = oldState.projects.byId[oldState.focusedWindowId];
+
+  const changes = [
+    state.focusedWindowId !== oldState.focusedWindowId,
+    state.appTheme.id !== oldState.appTheme.id,
+    state.editorTheme.id !== oldState.editorTheme.id,
+    state.sourceMode !== oldState.sourceMode,
+    state.editorFont.size !== oldState.editorFont.size,
+    state.editorLineHeight.size !== oldState.editorLineHeight.size,
+    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId
+  ];
+
+  if (changes.includes(true)) {
+    update$1(appMenu);
+  }
+}
+
+function create() {
+
+  return new electron.MenuItem({
+    label: 'Window',
+    submenu: []
+  })
+}
+
+
+function update(applicationMenu) {
+  const state = global.state();
+  const project = state.projects.byId[state.focusedWindowId];
+  project?.panels[project?.focusedPanelIndex];
+  state.focusedWindowId == 'preferences';  
+
+}
+
+function onStateChanged(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
+  update();
+}
 
 /**
  * On startup, create initial menu bar, and create change listeners.
@@ -3187,47 +3358,20 @@ const isMac = process.platform === 'darwin';
  */
 function init$2() {
 
-  // ------ SETUP CHANGE LISTENERS ------ //
-
-  // We need to rebuild the menu whenever any of the follow change,
-  // because they drive one or more menu items' `enabled` states.
-
-  // global.store.onDidAnyChange((state, oldState) => {
-
-  //   const somethingWeCareAboutHasChanged = 
-  //     // Focused window
-  //     stateHasChanged(global.patches, "focusedWindowId") ||
-  //     // Focused panel
-  //     stateHasChanged(global.patches, ["projects", "byId", "focusedPanelIndex"]) ||
-  //     // Source mode
-  //     stateHasChanged(global.patches, "sourceMode") ||
-  //     // Appearance
-  //     stateHasChanged(global.patches, "theme") ||
-  //     stateHasChanged(global.patches, "chromium")
-
-  //   if (somethingWeCareAboutHasChanged) {
-  //     Menu.setApplicationMenu(getMenu())
-  //   }
-  // })
-  
-  
-
-  // ------ DO INITIAL SETUP ------ //
-
   // Create menu
-  const menu$6 = new electron.Menu();
-  menu$6.append(menu);
-  menu$6.append(menu$1);
-  menu$6.append(menu$2);
-  menu$6.append(menu$3);
-  menu$6.append(menu$4);
-  menu$6.append(menu$5);
-  electron.Menu.setApplicationMenu(menu$6);
-  update$1(menu$6);
-  update$2(menu$6);
+  const menu = new electron.Menu();
+  menu.append(create$5());
+  menu.append(create$4());
+  menu.append(create$3());
+  menu.append(create$2());
+  menu.append(create$1());
+  menu.append(create());
+  electron.Menu.setApplicationMenu(menu);
+  update$4(menu);
+  update$3(menu);
   // viewMenu.update(menu)
-  update$3(menu$6);
-  update$4();
+  update$2(menu);
+  update();
 
   // On state change, prompt 
   global.store.onDidAnyChange((state, oldState) => {
@@ -3235,13 +3379,12 @@ function init$2() {
     const project = state.projects.byId[state.focusedWindowId];
     const panel = project?.panels[project?.focusedPanelIndex];
     const prefsIsFocused = state.focusedWindowId == 'preferences';  
-    onStateChanged(state, oldState, project, panel, prefsIsFocused, menu$6);
-    onStateChanged$1(state, oldState, project, panel, prefsIsFocused, menu$6);
-    // viewMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
-    onStateChanged$2(state, oldState, project, panel, prefsIsFocused, menu$6);
-    onStateChanged$3();
-  });
-  
+    onStateChanged$4(state, oldState, project, panel, prefsIsFocused, menu);
+    onStateChanged$3(state, oldState, project, panel, prefsIsFocused, menu);
+    onStateChanged$1(state, oldState, project, panel, prefsIsFocused, menu);
+    onStateChanged$2(state, oldState, project, panel, prefsIsFocused, menu);
+    onStateChanged();
+  });  
 }
 
 /**
@@ -3277,8 +3420,17 @@ async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
 	// gray-matter `isEmpty` property returns "true if front-matter is empty".
 	const hasFrontMatter = !gm.isEmpty;
 	if (hasFrontMatter) {
+		
 		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
 		doc.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
+		
+		// If tags is a single string, convert to array
+		// We want to support single tag format, ala `tags: Kitten`
+		// because it's supported by eleventy: 
+		// https://www.11ty.dev/docs/collections/#a-single-tag-cat
+		if (typeof doc.tags === 'string') {
+			doc.tags = [doc.tags];
+		}
 	}
 
 	// Set title, if present. E.g. "Sea Level Rise"
@@ -3399,9 +3551,6 @@ async function mapMedia (filepath, parentId, nestDepth, stats = undefined) {
 		dimensions: { width: width, height: height },
 	}
 }
-
-// import colors from 'colors'
-
 
 /**
  * For specified folder path, map the folder and it's child  
@@ -3589,12 +3738,9 @@ class Watcher {
     this.window.webContents.send('initialFilesFromMain', this.files);
 
     // Tell reducers when first project map is complete, 
-    // and pass along first file. Reducer then sets this as
-    // file that the focused panel should display.
-    const firstDocId = this.files.allIds.find((id) => {
-      const file = this.files.byId[id];
-      return file.type == 'doc'
-    });
+    // and pass along first file. If a file as not been 
+    // selected yet, reducer selects this.
+    const firstDocId = this.files.allIds.find((id) => this.files.byId[id].type == 'doc');
 
     global.store.dispatch({
       type: 'PROJECT_FILES_MAPPED',
@@ -3859,10 +4005,12 @@ async function createWindow(id, project) {
   const win = new electron.BrowserWindow(browserWindowConfig);
   win.projectId = id;
 
-  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
-  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
-  const backgroundColor = getColors().colors.windowBackgroundColor.slice(0, -2);
-  win.setBackgroundColor(backgroundColor);
+  // Set window background color.
+  // TODO: Setting backgroundColor is currently broken. 
+  // Background always renders as black, regardless of the value. 
+  // Bug: https://github.com/electron/electron/issues/26842
+  const backgroundColor = global.state().systemColors.windowBackgroundColor;
+  if (backgroundColor) win.setBackgroundColor(backgroundColor);
 
   const isNewProject = project.directory == '';
 
@@ -3961,13 +4109,22 @@ async function createWindow(id, project) {
 
   // Open DevTools
   if (!electron.app.isPackaged) win.webContents.openDevTools();
+ 
+  // Load index.html (old way)
+  // await win.loadFile(path.join(__dirname, 'index.html'), {
+  
+  // Load local index.html file
+  // "Electron by default allows local resources to be accessed by render processes only when their html files are loaded from local sources with the file:// protocol for security reasons."
 
-  // Load index.html
-  await win.loadFile(path__default['default'].join(__dirname, 'index.html'), {
+  await win.loadURL(url__default['default'].format({
+    pathname: 'index.html',
+    protocol: 'file:',
+    slashes: true,
     query: {
       id: win.projectId
-    },
-  });
+    }
+  }));
+
 
   // Save window bounds
   saveWindowBoundsToState(win);
@@ -3995,7 +4152,7 @@ function saveWindowBoundsToState(win) {
 //   byId: {}
 // }
 
-function init$3() {
+function init$1() {
 
   // ------ SETUP CHANGE LISTENERS ------ //
 
@@ -4122,7 +4279,7 @@ const preferencesWindowConfig = {
   height: 480,
   zoomFactor: 1.0,
   titleBarStyle: 'hidden',
-  resizable: false,
+  // resizable: false,
   webPreferences: {
     // Security:
     allowRunningInsecureContent: false,
@@ -4141,7 +4298,7 @@ const preferencesWindowConfig = {
   }
 };
 
-function init$4() {
+function init() {
 
   // ------ SETUP CHANGE LISTENERS ------ //
 
@@ -4158,11 +4315,13 @@ async function open() {
 
   const win = new electron.BrowserWindow(preferencesWindowConfig);
 
-  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
-  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
-  const backgroundColor = getColors(false).colors.windowBackgroundColor.slice(0, -2);
-  win.setBackgroundColor(backgroundColor);
-
+  // Set window background color.
+  // TODO: Setting backgroundColor is currently broken. 
+  // Background always renders as black, regardless of the value. 
+  // Bug: https://github.com/electron/electron/issues/26842
+  const backgroundColor = global.state().systemColors.windowBackgroundColor;
+  if (backgroundColor) win.setBackgroundColor(backgroundColor);
+  
   win.once('ready-to-show', () => {
     win.show();
   });
@@ -4201,15 +4360,23 @@ async function open() {
 
   if (!electron.app.isPackaged) {
     win.webContents.openDevTools();
-    win.setBounds({ width: 800 });
+    win.setBounds({ width: 1000 });
   }
 
   // Load index.html
-  await win.loadFile(path__default['default'].join(__dirname, 'preferences.html'), {
+  // await win.loadFile(path.join(__dirname, 'preferences.html'), {
+  //   query: {
+  //     id: win.projectId
+  //   },
+  // })
+  await win.loadURL(url__default['default'].format({
+    pathname: 'preferences.html',
+    protocol: 'file:',
+    slashes: true,
     query: {
       id: win.projectId
-    },
-  });
+    }
+  }));
 }
 
 // External dependencies
@@ -4227,11 +4394,11 @@ electron.app.commandLine.appendSwitch('enable-transparent-visuals');
 
 if (!electron.app.isPackaged) {
 
-  const watchAndReload = [
+  const thingsToWatchForReload = [
     path__default['default'].join(__dirname, '**/*.js'),
-    path__default['default'].join(__dirname, '**/*.html'),
+    // path.join(__dirname, '**/*.html'),
     path__default['default'].join(__dirname, '**/*.css'),
-    path__default['default'].join(__dirname, '**/*.xml')
+    // path.join(__dirname, '**/*.xml')
     // 'main.js',
     // '**/*.js',
     // '**/*.html',
@@ -4241,18 +4408,35 @@ if (!electron.app.isPackaged) {
     // '**/*.jpg',
   ];
 
-  require('electron-reload')(watchAndReload, {
+  // We use `electron-reload` package to do a hard reset of electron
+  // every time a file changes.
+  require('electron-reload')(thingsToWatchForReload, {
+
     // awaitWriteFinish: {
     //   stabilityThreshold: 10,
     //   pollInterval: 50
     // },
+
+    // We reset electron each time (starting a new electron process, and
+    // not just restarting web contents, which the default) by specifying 
+    // the path to the electron package.
     electron: path__default['default'].join(__dirname, '../node_modules', '.bin', 'electron'),
+
+    // "If your app overrides some of the default quit or close actions 
+    // (e.g. closing the last app window hides the window instead of 
+    // quitting the app) then the default electron-reload hard restart 
+    // could leave you with multiple instances of your app running. In 
+    // these cases you can change the default hard restart action from 
+    // app.quit() to app.exit() by specifying the hard reset method in 
+    // the electron-reload options"
+    // https://www.npmjs.com/package/electron-reload
     // hardResetMethod: 'exit',
+
     argv: ['--inspect=5858', '--enable-transparent-visuals'],
   });
 
-  console.log('// - - - - - - - - - - - - - - -');
-  console.log(`Gambier. Electron ${process.versions.electron}. Chrome ${process.versions['chrome']}`);
+  console.log('// - - - - - - - - - - - - - - - //');
+  console.log(`Gambier... Electron ${process.versions.electron}. Chrome ${process.versions['chrome']}`);
 }
 
 
@@ -4302,18 +4486,82 @@ global.db = new DbManager();
 electron.app.whenReady()
   .then(async () => {
 
+
+    // Catch when user toggles macOS keyboard navigation by 
+    // listening to system changes.
+    electron.systemPreferences.subscribeNotification('com.apple.KeyboardUIModeDidChange', async (evt, userInfo, object) => {
+      await global.store.dispatch({
+        type: 'SET_SYSTEM_VALUES',
+        values: {
+          ...global.state().system,
+          keyboardNavEnabled: electron.systemPreferences.getUserDefault('AppleKeyboardUIMode', 'boolean')
+        }
+      });
+    });
+
+    // Ensure app assets load reliably from both absolute and
+    // relative urls by intercepting, determining if the request
+    // is for an app asset (it doesn't start with `Users`, in
+    // case of macOS), and if so, inserting app path at start.
+    // Before we added this, absolute paths to app assets would
+    // fail.
+    // Before: `file:///img/arrow.svg`
+    // After: `file:///Users/josh/Desktop/gambier/img/arrow.svg`
+    electron.protocol.interceptFileProtocol('file', (request, callback) => {
+
+      // console.log(request)
+      
+      // If the request url starts with `file:///Users`, it's
+      // not a request for an app asset, so we don't need to
+      // append the app path. This happens when user loads an 
+      // image from the project, for example. We just cleanup
+      // the request url.
+      const isRequestForAppAsset = !request.url.startsWith('file:///Users/');
+      if (!isRequestForAppAsset) {
+        
+        // Clean up the request url by removing the file prefix
+        // and replacing ascii spaces with real spaces:
+        // Before: file:///Users/josh/Desktop/Notes/climate%20graph.jpg
+        // After:  /Users/josh/Desktop/Notes/climate graph.jpg
+        let url = request.url.substr('file://'.length);
+        url = path__default['default'].normalize(url);
+        url = url.replaceAll('%20', ' ');
+        // console.log(url)
+        callback({ path: url });
+        return
+      }
+
+      let url = request.url.substr('file'.length + 1);
+
+      // Build complete path for node require function
+      url = path__default['default'].join(__dirname, url);
+
+      const containsQuery = url.includes('?');
+      if (containsQuery) {
+        url = url.substring(0, url.lastIndexOf('?'));
+      }
+
+      // Replace backslashes by forward slashes (windows)
+      url = path__default['default'].normalize(url);
+      
+      // console.log(url)
+
+      callback({ path: url });
+
+    });
+
     // Create IPC listeners/handlers
-    init$1();
+    init$3();
 
     // Setup preferences manager
-    init$4();
+    init();
+
+    // Prep state as necessary. E.g. Prune projects with bad directories.
+    await global.store.dispatch({ type: 'START_COLD_START' });
 
     // Setup menu bar
     init$2();
 
-    // Prep state as necessary. E.g. Prune projects with bad directories.
-    await global.store.dispatch({ type: 'START_COLD_START' });
-    
     // const appThemeIsNotDefined = !global.state().theme.id
     // if (appThemeIsNotDefined) {
     //   await global.store.dispatch({ 
@@ -4323,10 +4571,10 @@ electron.app.whenReady()
     // }
 
     // Get initial system appearance values
-    init();
+    init$4();
 
     // Create windows and watchers for projects
-    init$3();
+    init$1();
 
     // App startup complete!
     await global.store.dispatch({ type: 'FINISH_COLD_START' });
@@ -4384,7 +4632,7 @@ electron.app.on('window-all-closed', async () => {
 
   const appWantsToQuit = global.state().appStatus == 'wantsToQuit';
   const isNotMacApp = process.platform !== 'darwin';
-  
+
   // "On macOS it is common for applications and their menu bar to stay active until the user quits explicitly with Cmd + Q" — https://www.geeksforgeeks.org/save-files-in-electronjs/
   if (appWantsToQuit || isNotMacApp) {
     await global.store.dispatch({

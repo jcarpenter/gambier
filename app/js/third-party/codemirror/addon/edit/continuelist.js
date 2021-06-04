@@ -25,7 +25,19 @@
       var eolState = cm.getStateAfter(pos.line);
       var inner = CodeMirror.innerMode(cm.getMode(), eolState);
       if (inner.mode.name !== "markdown") {
-        cm.execCommand("newlineAndIndent");
+        
+        // NOTE: Josh 5/22/2021: Added YAML list support.
+        // If mode is YAML and user is editing list, continue it
+        // if (inner.mode.name == 'yaml') {
+        //   console.log(inner.state)
+        // }
+        console.log(inner)
+        if (inner.mode.name == 'yaml' && inner.state.list || inner.state.listEnd) {
+          cm.replaceRange('\n- ', pos, pos)
+        } else {
+          cm.execCommand("newlineAndIndent");
+        }
+
         return;
       } else {
         eolState = inner.state;

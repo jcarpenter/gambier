@@ -1,6 +1,9 @@
 <script>
   import { onMount, tick } from "svelte";
-  import { setSize, css } from "./actions";
+  import { selectInputContents } from "../../../shared/utils";
+  import { pasteAsPlainText } from "../../editor/editor-utils";
+  import { state } from "../../StateManager";
+  import { setAsCustomPropOnNode, setSize } from "./actions";
 
   export let editable = true
   export let placeholder = ''
@@ -14,37 +17,40 @@
   export let compact = false
   export let multiLine = false
   export let multiLineMaxHeight = '28'
-  export let isDisabled = false
+  export let disabled = false
   export let isError = false
   export let autofocus = false
 
+  $: tabindex = $state.system.keyboardNavEnabled ? 0 : -1
+
   let inputEl
+
+  // We use the following boolean to determine whether the
+  // input was focused by a click, or a tab. So we can select 
+  // text on tab, and place cursor on click.
+  let wasFocusedByClick = false
 
   /**
    * Focus the element if `autofocus` is true
+   * User in Wizard, for example, so input is
+   * focused and contents selected automatically,
+   * ready to be edited.
   */
   onMount(async () => {
     if (autofocus) focus()
   })
 
   /**
-   * Programmatically select contenteditable:
+   * Enables consuming components to call
+   * focus on this InpuText (which will also
+   * select the contents).
    * Per https://stackoverflow.com/a/6150060
    */
   export async function focus() {
-
     // We have to wait a tick or `value` is liable to be empty
     await tick( )
-
-    // Select the input contents
-    const range = document.createRange()
-    range.selectNodeContents(inputEl)
-    const sel = window.getSelection()
-    sel.removeAllRanges()
-    sel.addRange(range)
+    inputEl.focus()
   }
-
-
 
 </script>
 
@@ -53,9 +59,9 @@
   // ------ Layout: Normal ------ //
 
   .inputText {
-    @include label-normal;
+    @include system-regular-font;
     position: relative;
-    border-radius: $border-radius-normal;
+    border-radius: var(--button-border-radius);
     min-height: 28px;
     display: inline-flex;
     flex-direction: row;
@@ -64,19 +70,19 @@
     // flex-grow: 1;
 
     &:focus-within {
-      @include focusFieldAnimation
+      @include focusRingAnimation
     }
   }
 
   .icon, .errorIcon {
-    @include centered_mask_image;
+    @include centered-mask-image;
     min-width: 13px;
     height: 13px;
     margin-right: 3px;
   }
 
   .input {
-    @include label-normal;
+    @include system-regular-font;
     margin-top: 1px;
     width: 100%;
     background: transparent;
@@ -127,10 +133,10 @@
 
   .inputText.compact {
     
-    @include label-normal-small;
+    @include system-small-font;
     min-height: 20px;
     line-height: 20px;
-    border-radius: $border-radius-compact;
+    border-radius: var(--button-border-radius-compact);
     padding: 0 3px 0 4px;
 
     .icon, .errorIcon {
@@ -141,7 +147,7 @@
     }
 
     .input {
-      @include label-normal-small;
+      @include system-small-font;
       margin-top: 0;
       line-height: 20px;
     }
@@ -162,30 +168,30 @@
   .inputText.inline {
     
     .icon {
-      background-color: var(--controlTextColor);
+      background-color: var(--control-text-color);
       opacity: 0.8; 
     }
 
     .errorIcon {
-      background-color: var(--errorColor);
-      -webkit-mask-image: var(--img-exclamationmark-circle-fill);
+      background-color: var(--error-color);
+      -webkit-mask-image: var(--input-error-icon);
     }
   
     .input {
-      color: var(--textColor);
+      color: var(--text-color);
     }
   }
 
   .showPlaceholder .input::after {
-    color: var(--placeholderTextColor);
+    color: var(--placeholder-text-color);
   }
 
   .showPlaceholder.isError .input::after {
-    color: var(--errorColor);
+    color: var(--error-color);
     opacity: 0.6;
   }
 
-  .isDisabled {
+  .disabled {
     background-color: transparent !important;
     .input {
       opacity: 0.8;
@@ -193,7 +199,7 @@
   }
 
   .inputText:not(:focus-within).isError {
-    box-shadow: inset 0 0 0 1px var(--errorColor) !important;
+    box-shadow: inset 0 0 0 1px var(--error-color) !important;
   }
 
   // -------- STYLE: 'SIDEBAR' & 'INLINE' -------- //
@@ -233,8 +239,6 @@
   // -------- STYLE: 'INLINE' -------- //
 
 
-
-
 </style>
 
 <!-- <svelte:window on:keydown={handleKeydown} /> -->
@@ -245,9 +249,9 @@
   class:multiLine
   class:compact 
   class:isError
-  class:isDisabled
+  class:disabled
   class:showPlaceholder={!value}
-  use:css={{multiLineMaxHeight}}
+  use:setAsCustomPropOnNode={{multiLineMaxHeight}}
   use:setSize={{width, margin}}
   >
 
@@ -264,12 +268,13 @@
   Editable: If field is editable and not disabled.
   Not editable: 
   -->
-  {#if editable && !isDisabled}
+  {#if editable && !disabled}
     <div 
-      contenteditable
       class="input"
+      contenteditable
+      spellcheck="false"
       data-placeholder={isError ? errorPlaceholder : placeholder}
-      tabindex="0"
+      tabindex={tabindex}
       bind:this={inputEl} 
       bind:textContent={value} 
       on:keydown={(evt) => {
@@ -278,6 +283,27 @@
         }
       }}
       on:input
+      on:paste={pasteAsPlainText}
+      on:mousedown={(evt) => {
+        // If user clicks on input while it's not focused
+        // set `wasFocusedByClick` true. So we can use
+        // it inside on:focus
+        const isFocused = document.activeElement == evt.target
+        if (!isFocused) wasFocusedByClick = true
+      }}
+      on:focus={(evt) => {
+        if (wasFocusedByClick) {
+          // Means it was focused by a cursor click.
+          // So we do nothing, and the default behaviour
+          // will happen (place cursor, don't select text).
+        } else {
+          // Means it was focused by `tab` press, or by a 
+          // consuming component. So we select the text.
+          selectInputContents(evt.target)
+        }
+        // Reset the checker
+        wasFocusedByClick = false
+      }}
     />
   {:else}
     <div 

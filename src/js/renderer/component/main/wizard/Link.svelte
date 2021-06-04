@@ -5,7 +5,8 @@
   import { writeToDoc } from '../../../editor/editor-utils';
   import { state } from '../../../StateManager';
   import FormRow from '../../ui/FormRow.svelte';
-  
+  import { store2 } from '../../../WizardManager';
+
   export let cm = null
   export let element = null
   export let suppressWarnings = false
@@ -14,7 +15,7 @@
   let url
   let title
   let clearUrlAndTitleOnDestroy = false
-
+  
   $: element, onElementUpdate()
 
   function onElementUpdate() {
@@ -39,6 +40,9 @@
       const index = element.markdown.lastIndexOf(')') + element.start
       title = { start: index, end: index, string: '' }
     }
+
+    // Set autofocus
+
   }
 
   /**
@@ -70,7 +74,7 @@
   <InputText 
     placeholder={'Required'}
     isError={text.string == '' && !suppressWarnings}
-    autofocus={true}
+    autofocus={$store2.openedBy.hover == false}
     multiLine={true}
     multiLineMaxHeight='100'
     width={'100%'}
@@ -126,7 +130,7 @@
         multiLineMaxHeight='100'
         width='100%' 
         compact={true} 
-        isDisabled={url.string == ''}
+        disabled={url.string == ''}
         value={title.string}
         on:input={(evt) => {
 

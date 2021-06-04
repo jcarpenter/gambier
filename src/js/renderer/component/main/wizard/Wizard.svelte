@@ -1,5 +1,5 @@
 <script>  
-  import { tick } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import Citation from './Citation.svelte'
   import Footnote from './Footnote.svelte'
   import ReferenceFootnote from './ReferenceFootnote.svelte'
@@ -7,31 +7,203 @@
   import ReferenceLink from './ReferenceLink.svelte';
   import Image from './Image.svelte'
   import ReferenceImage from './ReferenceImage.svelte';
-  import { getLineSpans } from '../../../editor/editor-utils';
   import { getElementAt } from '../../../editor/map';
+  import FrontmatterTagPreview from './FrontmatterTagPreview.svelte';
+  import UrlPreview from './UrlPreview.svelte';
+  import { store2 } from '../../../WizardManager'
+  import { setAsCustomPropOnNode } from '../../ui/actions';
+import { min } from 'moment';
 
+  let domEl // DOM element of this Wizard
+  let component // The child component to render
+  let componentInstance // The rendered child component
+  let element // Target element (in Gambier parlance) 
+  let textMarker // TextMarker located at from/to pos of the element.
+  let cm = null // CM instance we're editing
+  // let panelId = ''
 
-  export let cm = undefined
-  export let textMarker = undefined
-  export let type = ''
+  // Same as above: we check on `mouseleave` to help
+  // decide whether or not to close the wizard.
+
+  // How many pixels to offset the wizard vertically from the 
+  // target DOM element (e.g. inline link mark).
+  let wizardOffset = 5 
   
-  let element = undefined
-  let component = undefined
-  let componentEl = undefined
-  let el = undefined // DOM element, set with bind:this
-  let isVisible = false
-  let isIncomplete = false
-  let suppressWarnings = false
-  let leftPos = '-5000px' // Default value
-  let topPos = '0px'
+  // Min width of the wizard. If 0, content determines 
+  // the rendered width. Varies based on the component
+  // being rendered. E.g. Most editable components like
+  // Link are 20em, but UrlPreview is 0.
+  let minWidth = 0
+
+  // ------- LISTEN FOR STORE CHANGES ------ //
+
+  // React the changes on store2
+  // $: ({suppressWarnings} = $store2)
+
+  // When CM changes, we update cm listeners (e.g. changes, scroll)/
+  // let panelId = $store2.panelId
+  // $: console.log(panelId)
+  $: $store2.panelId, onCmChanged()
+
+  // Close wizard if isVisible changes
+  $: if (!$store2.isVisible) onWizardClosed()
+
+  // Focus wizard when it becomes visible, 
+  // IF it was opened by tab or click.
+  $: if ($store2.isVisible) {
+    if ($store2.openedBy.tabOrClick) {
+      domEl.focus({preventScroll: true}) 
+    }
+  }
+
+  // When target DOM element changes, we update the position
+  $: $store2.domElement, updatePosition()
+
+  // When target element changes, we update the component (and other things).
+  $: $store2.element, onElementChanged()
 
 
-  // On changes, check if target element was affected.
-  // If yes, get the updated element.
-  cm.on('changes', (cm, changes) => {
+  // ------- HANDLERS ------ //
 
-    if (!isVisible || !element) return
+  /**
+   * When CM instance changes, update CM listeners.
+   * We use these to update self when scroll or element changes.
+   */
+  function onCmChanged() {
+
+    if (!$store2.panelId) return
     
+    // Remove listeners from outgoing cm instance
+    cm?.off('changes', onChanges)
+    cm?.off('scroll', onScroll)
+
+    // Update cm variable
+    cm = $store2.cm
+
+    // Add listeners to new cm instance 
+    cm.on('changes', onChanges)
+    cm.on('scroll', onScroll)
+  }
+
+  /**
+   * When element changes, we update several values,
+   * and determine the component to render.
+   */
+  async function onElementChanged() {
+
+    // console.trace('onElementChanged: $store2.element', $store2.element)
+
+    if (!$store2.element) return
+
+    // Update local element value
+    element = $store2.element
+
+    // Determine which component to render...
+    // Depends on 1) element type, and 2) how the wizard was opened.
+    // E.g. if we alt-tab to an inline link mark, the
+    // wizard opens and shows the Link component editing UI.
+    // Else, if we cmd-hover that inline link mark, we the
+    // wizard opens and shows a URL preview.
+    
+    // The type of the target element
+    const type = element.type
+    
+    // How was the wizard opened?
+    const { tabOrClick, hover, metaKey, altKey } = $store2.openedBy
+
+    if (type == 'citation') {
+
+      // TODO
+      component = Citation
+
+    } else if (type == 'footnote-inline' && (tabOrClick || hover)) {
+
+      component = Footnote
+
+    } else if (type == 'frontmatter-tag' && (hover && metaKey)) {
+      
+      // Show prompt to search for other tags
+      // Show preview of link URL
+      component = UrlPreview
+      await tick()
+      componentInstance.url = `Search docs tagged ${element.markdown}`
+
+    } else if (type == 'link-inline' && (hover && metaKey)) {
+      
+      // Show preview of link URL
+      component = UrlPreview
+      await tick()
+      componentInstance.url = 'Open ' + element.spans.find(({type}) => type.includes('url'))?.string
+
+    } else if (type == 'link-inline' && (tabOrClick || hover)) {
+
+      // Show link wizard
+      component = Link
+
+    } else if (type == 'link-inline' && (hover && metaKey)) {
+      
+      // Show preview of link URL
+      component = UrlPreview
+      await tick()
+      componentInstance.url = element.spans.find(({type}) => type.includes('url'))?.string
+
+    } else if (type.equalsAny('link-reference-collapsed', 'link-reference-full') && (tabOrClick || hover)) {
+
+      // Show reference link wizard
+      component = ReferenceLink
+
+    } else if (type.equalsAny('figure', 'image-inline') && (tabOrClick || hover)) {
+
+      // Show inline image wizard
+      component = Image
+
+    } else if (type.equalsAny('image-reference-collapsed', 'image-reference-full') && (tabOrClick || hover)) {
+
+      // Show reference image wizard
+      component = ReferenceImage;
+
+    }
+
+    // Set minWidth based on component
+    if (component == UrlPreview) {
+      minWidth = 0
+    } else {
+      minWidth = '20em'
+    }
+
+    // Autoscroll to ensure wizard is visible. We need to call this manually, AFTER the wizard has repositioned itself (using `tick`), so autoscroll takes the wizard element into account. Otherwise it either doesn't fire, or fires too early (e.g. when the selection was set that triggered the wizard opening)
+    // await tick()
+    // cm.scrollIntoView(null)
+
+  }
+
+  function onWizardClosed() {
+
+    // Clear the local variable
+    element = null
+
+    // Write pending changes (if child Wizard component does not alread
+    // handle this internally.
+    if (componentInstance?.writeDelayedChanges) {
+      componentInstance?.writeDelayedChanges()
+    }
+    
+    // Refocus cm
+    // cm?.focus()
+  }
+
+  /**
+   * When 'changes' event is fired by CM instance, check
+   * if the target element was affected. If yes, update the
+   * wizard to match.
+   * @param cm - CodeMirror instance
+   * @param changes - Changes, batched per operation
+   */
+  function onChanges(cm, changes) {
+
+    if (!$store2.isVisible || !element) return
+    
+    // Check if element was affected
     const elementWasAffected = changes.find(
       ({from, to}) =>
         from.line == element.line &&
@@ -40,35 +212,36 @@
         element.end >= to.ch
     ) !== undefined
 
-    // Get the updated target element.
+    // Get the updated target element and marker
     // We assume line and start will be the same, before and after.
     // NOTE: This may not always be true! This is a potential bug source.
     if (elementWasAffected) {
-      // if (!textMarker) {
-      // }
-      textMarker = cm.findMarksAt({ line: element.line, ch: element.start })
-      // const { from } = textMarker.find()
+      // textMarker = cm.findMarksAt({ line: element.line, ch: element.start })
       element = getElementAt(cm, element.line, element.start + 1)
-      
-      if (!element) hide()
-    }
-  })
 
-
-  // ------- EVENT HANDLERS ------ //
-
-  function onFocusout(evt) {
-    if (!el.contains(evt.relatedTarget)) {
-      hide()
+      // Hide the wizard if the element was deleted
+      if (!element) store2.close()
     }
   }
+
+  /**
+   * When the CM instance scrolls, update if the wizard 
+   * position (if the wizard is open).
+   */
+  function onScroll() {
+    if (!$store2.isVisible || !element) return
+    updatePosition()
+  }
+
 
   /**
    * Handle tabbing and backspace/delete
    * @param evt
    */
   function onKeydown(evt) {
-    const fieldsAreNotFocused = document.activeElement == el
+        
+    const fieldsAreNotFocused = document.activeElement == domEl
+
     if (evt.key == 'Tab' && !evt.altKey) {
       tab(evt)
     } else if (evt.key == 'Tab' && evt.altKey) {
@@ -117,7 +290,7 @@
   function tab(evt) {
     evt.preventDefault()
     const focusables = Array.from(
-      el.querySelectorAll(`[contenteditable]:not([tabindex="-1"])`)
+      domEl.querySelectorAll(`[contenteditable]:not([tabindex="-1"])`)
     )
     const indexOfFocused = focusables.indexOf(document.activeElement)
     const nothingFocused = indexOfFocused == -1
@@ -163,76 +336,36 @@
   }
 
   /**
-   * Show wizard by toggling 'isVisible' class, 
-   * and setting `top` and `left` positions.
+   * Update position of Wizard using `cm.charCoords`
+   * Docs: https://codemirror.net/doc/manual.html#charCoords
    */
-  export async function show(newTextMarker, newSuppressWarnings) {
+  function updatePosition() {
 
-    textMarker = newTextMarker
-    const { from } = textMarker.find()
+    // TODO: Need to get the element
+    // const rect = textMarker.replacedWith.getBoundingClientRect() 
+    if (!$store2.domElement) return
+    const rect = $store2.domElement.getBoundingClientRect() 
+    domEl.style.left = `${rect.left}px` 
+    domEl.style.top = `${rect.top - wizardOffset}px`
 
-    // Get the element we're editing
-    element = getElementAt(cm, from.line, from.ch + 1)
-
-    // Determine component
-    switch (element.type) {
-      case 'citation': component = Citation; break
-      case 'footnote-inline': component = Footnote; break
-      case 'footnote-reference': component = ReferenceFootnote; break
-      case 'link-inline': component = Link; break
-      case 'link-reference-collapsed':
-      case 'link-reference-full': component = ReferenceLink; break
-      case 'image-inline': component = Image; break
-      case 'image-reference-collapsed':
-      case 'image-reference-full': component = ReferenceImage; break
-    }
-
-    // Update position
-    // Docs: https://codemirror.net/doc/manual.html#charCoords
-    const paddingOnLeftSideOfEditor = cm.display.lineSpace.offsetLeft
-    leftPos = `${
-      cm.cursorCoords(true, 'local').left + paddingOnLeftSideOfEditor
-    }px`
-    topPos = `${cm.cursorCoords(true, 'local').bottom + 10}px`
-
-    // Error
-    isIncomplete = element.isIncomplete
-
-    // Make visible
-    isVisible = true
-
-    // Set `supressWarnings`
-    suppressWarnings = newSuppressWarnings
-
-    // Autoscroll to ensure wizard is visible. We need to call this manually, AFTER the wizard has repositioned itself (using `tick`), so autoscroll takes the wizard element into account. Otherwise it either doesn't fire, or fires too early (e.g. when the selection was set that triggered the wizard opening)
-    await tick()
-    cm.scrollIntoView(null)
-
-    // Focus
-    el.focus()
+    // el.style.left = `${cm.cursorCoords(true, 'window').left}px`
+    // el.style.top = `${cm.cursorCoords(true, 'window').bottom}px`
   }
 
-  /**
-   * Hide wizard by toggling `isVisible` class and positioning off-screen.
-   */
-  function hide() {
-
-    // Not all Wizard components have a writeDelayedChanges() function.
-    if (componentEl?.writeDelayedChanges) {
-      componentEl?.writeDelayedChanges()
-    }
-
-    // component = undefined
-    element = undefined
-    isVisible = false
-    leftPos = '-5000px' // Default value
-    topPos = '0px' // Default value
-    cm.focus()
-  }
-  
 </script>
 
 <style type="text/scss">
+  
+  
+  #wizard.isVisible:focus-within {
+    outline: 2px solid green !important;
+  }
+
+  #wizard.isVisible:not(:focus-within) {
+    outline: 2px solid black;
+  }
+
+
   #wizard {
     --notch-size: 0.6em;
     --popup-distance: -0.5em;
@@ -240,30 +373,37 @@
     --hide: 0.05s;
     --delay: 0.5s;
 
-    @include label-normal;
+    @include system-regular-font;
     background-color: var(--windowBackgroundColor);
     box-shadow: 0 0 20px 2px rgba(0, 0, 0, 0.2);
     border: var(--wizard-border-thickness) solid var(--wizard-border-color);
     border-radius: var(--wizard-border-radius);
-    color: var(--labelColor);
-    opacity: 0;
+    color: var(--label-color);
+    // opacity: 1;
     // padding: 0 0 4px 0;
     padding: 0;
     position: absolute;
-    transform: translate(0%, 10px);
+    transform: translate(0, -100%);
     transition-delay: 0.5s;
     transition-timing-function: ease-out;
     transition: opacity 0.05s;
     white-space: normal;
-    width: 20em;
-    z-index: 100;
+    min-width: var(--minWidth);
+    // width: 20em;
+    z-index: 10;
+    height: auto;
     
-    transition: max-height 250ms ease-out;
-    max-height: 1000px;
+    // transition: max-height 250ms ease-out;
+    // max-height: 1000px;
+
+    &:not(.isVisible) {
+      display: none;
+    }
 
     &.isVisible {
+      display: block;
       outline: none;
-      opacity: 1;
+      // opacity: 1;
       transition: opacity 0.05s;
       transition-timing-function: ease-in;
     }
@@ -271,29 +411,6 @@
     &.error {
       border: 1px solid var(--wizard-error);
     }
-
-    // #contents {
-    //   &.reference {
-    //     margin-bottom: 0.5em;
-    //     background-color: rgba(0, 0, 0, 0.05);
-    //     padding: 0.5em;
-    //     border-radius: 0.2em;
-    //   }
-
-    //   :disabled {
-    //     // pointer-events: none; // TODO: Disable text selection alsopointer-events: none; // TODO: Disable text selection also
-    //     opacity: 0.5;
-    //   }
-    // }
-
-    // input {
-    //   border-radius: 0.15em;
-    //   width: 100%;
-
-    //   &:not([required]) {
-    //     // opacity: 0.5;
-    //   }
-    // }
 
     /* Notch */
     // &::before {
@@ -328,6 +445,24 @@
     //         transform: translate(-50%, -50%) rotate(45deg);
     //     }
     // }
+
+    // This psuedo-element adds invisible "padding" to bottom
+    // of the wizard. This ensures that surface of the wizard
+    // is contiguous with the mark that opens it. Which helps
+    // prevent the wizard from closing unintentionally when 
+    // the user opens it by hovering a mark, and then moves
+    // the cursor from mark to wizard, across a small visual 
+    // gap of the same height as this pseudo-element.
+    &::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      background: transparent;
+      height: calc(var(--wizardOffset) * 1px + 2px);
+      bottom: 0;
+      left: 0;
+      transform: translateY(100%);
+    }
   }
 
   // Style headers inside child components (Link, Image, etc)
@@ -346,8 +481,9 @@
   }
 
   #wizard > :global(header h1) {
-    @include label-normal-small-bold;
-    color: var(--labelColor);
+    @include system-small-font;
+    font-weight: bold;
+    color: var(--label-color);
     flex-grow: 1;
     margin: 0;
     padding: 0;
@@ -360,17 +496,18 @@
   }
   
   #wizard :global(.error-message) {
-    @include label-normal-small;
-    color: var(--secondaryLabelColor);
+    @include system-small-font;
+    color: var(--secondary-label-color);
     margin: 4px; // Nudge into alignment with fields
   }
 
   #wizard :global(.error-message .id) {
-    color: var(--labelColor);
+    color: var(--label-color);
   }
   
   #wizard :global(h2) {
-    @include label-normal-small-bold;
+    @include system-small-font;
+    font-weight: bold;
     margin: 0;
   }
 
@@ -380,18 +517,62 @@
 <svelte:options accessors={true} />
 <div 
   id="wizard"
-  bind:this={el}
-  style="left:{leftPos}; top:{topPos};"
-  class="below"
-  class:isVisible
-  class:isIncomplete
+  bind:this={domEl}
+  use:setAsCustomPropOnNode={{wizardOffset, minWidth}}
+  class:isVisible={$store2.isVisible}
+  class:isIncomplete={element?.isIncomplete}
   tabindex="-1"
   on:mousedown|stopPropagation
   on:keydown={onKeydown}
-  on:focusout={onFocusout}
+  on:focusout={(evt) => {
+    if (!domEl.contains(evt.relatedTarget)) {
+      store2.close()
+    }
+  }}
+  on:mouseenter={() => {
+    // Close wizard if user opens it with metaKey then mouses over.
+    // Meta-key incarnations of wizard are not meant to be interacted
+    // with directly (goes the current thinking)
+    if ($store2.openedBy.metaKey) {
+      store2.close()
+    }
+  }}
+  on:mouseleave={(evt) => {
+
+    const isFocused = domEl.contains(document.activeElement)
+
+    // if (!isFocused && $store2.openedBy.altKey && evt.altKey) {
+    if (!isFocused && $store2.openedBy.altKey) {
+    
+      // If user opened wizard by hovering mark with alt-key,
+      // pressed, and user has not interacted with the wizard,
+      // close the wizard.
+      store2.close()
+
+    } else if ($store2.openedBy.metaKey) {
+
+      // If user opened wizard by hovering mark with meta-key,
+      // close the wizard on mouse leave. This is a bit more aggressive
+      // than the alt key.
+      store2.close()
+
+    } else if (!isFocused && !$store2.openedBy.metaKey && !$store2.openedBy.altKey) {
+
+      // Else, if user opened wizard by hovering mark _without_
+      // modifier keys, and user has not interacted with the 
+      // wizard, close the wizard.
+      store2.close()
+    }
+  }}
 >
-  {#if component}
-    <svelte:component bind:this={componentEl} this={component} {cm} {element} {suppressWarnings}/>
+  {#if element && component}
+    <svelte:component 
+      this={component} 
+      bind:this={componentInstance} 
+      {cm} 
+      {element} 
+      suppressWarnings={$store2.suppressWarnings}
+    />
   {/if}
 
 </div>

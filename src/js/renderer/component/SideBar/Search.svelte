@@ -16,11 +16,11 @@
   import Preview from '../main/preview/Preview.svelte';
 import { wait } from '../../../shared/utils';
 
-  let queryEl = '' // Bound to Search InputText
+  let queryInput = '' // Bound to Search InputText
   let queryValue = '' // Bound to Search InputText value
   
-  let replaceEl = '' // Bound to Replace InputText
-  let replaceValue = '' // Bound to Replace InputText valie
+  let replaceInput = '' // Bound to Replace InputText
+  let replaceValue = '' // Bound to Replace InputText value
 
   let tabId = 'search'
   setContext('tabId', tabId);
@@ -36,7 +36,7 @@ import { wait } from '../../../shared/utils';
   onMount(() => {
 
     // Focus Search input when 'findInFiles' is received.
-    const findInFiles = window.api.receive('findInFiles', queryEl.focus)
+    const findInFiles = window.api.receive('findInFiles', queryInput.focus)
 
     // Focus Replace input when 'replaceInFiles' is received.
     const replaceInFiles = window.api.receive('replaceInFiles', async () => {
@@ -56,7 +56,7 @@ import { wait } from '../../../shared/utils';
       }
       
       // Focus Replace input right away
-      replaceEl.focus()
+      replaceInput.focus()
       
     })
 
@@ -67,8 +67,8 @@ import { wait } from '../../../shared/utils';
 
     // Focus the right input
     switch ($sidebar.tabsById[tabId].inputToFocusOnOpen) {
-      case 'search': queryEl.focus(); break
-      case 'replace': replaceEl.focus(); break
+      case 'search': queryInput.focus(); break
+      case 'replace': replaceInput.focus(); break
     }
   })
 
@@ -93,7 +93,7 @@ import { wait } from '../../../shared/utils';
   function updateQueryValueFromState() {
     
     // Return if Svelte not ready yet
-    if (!queryEl) return
+    if (!queryInput) return
     
     // Only update if they don't already match
     if (queryValueInState !== queryValue) {   
@@ -264,8 +264,8 @@ import { wait } from '../../../shared/utils';
 <style type="text/scss">
 
   .numberOfResults {
-    @include label-normal-small;
-    color: var(--labelColor);
+    @include system-small-font;
+    color: var(--label-color);
     min-height: 25px;
     white-space: nowrap;
     overflow: hidden;
@@ -305,7 +305,7 @@ import { wait } from '../../../shared/utils';
     icon={'img-magnifyingglass'} 
     margin={'0 10px 0'} 
     compact={true}
-    bind:this={queryEl}
+    bind:this={queryInput}
     bind:value={queryValue} 
   />
   
@@ -333,7 +333,7 @@ import { wait } from '../../../shared/utils';
           placeholder='Replace' 
           width='100%' 
           compact={true} 
-          bind:this={replaceEl}
+          bind:this={replaceInput}
           bind:value={replaceValue} 
           on:input={(evt) => { 
             if (evt.key == 'Enter') {

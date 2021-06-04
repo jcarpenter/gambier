@@ -5,18 +5,19 @@
 
 <style type="text/scss">
   header {
-    padding: 0 10px;
+    padding: 0 12px;
     display: flex;
     position: relative;
     flex-direction: row;
     align-items: center;
-    height: 30px;
+    height: 31px;
     flex: none;
     user-select: none;
 
     h1 {
-      @include label-normal-bold;
-      color: var(--labelColor);
+      @include system-regular-font;
+      font-weight: bold;
+      color: var(--label-color);
       flex-grow: 1;
       margin: 0;
       padding: 0;

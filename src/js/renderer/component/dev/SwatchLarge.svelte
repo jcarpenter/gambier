@@ -1,5 +1,5 @@
 <script>
-  import { css } from "../ui/actions";
+  import { setAsCustomPropOnNode } from "../ui/actions";
 
 	export let name = ''
   export let colors = {}
@@ -10,10 +10,9 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   .isOverridden {
-    @include label-normal-small;
+    @include system-small-font;
     color: salmon;
   }
 
@@ -51,7 +50,7 @@
       width: 100%;
       height: 2em;
       display: flex;
-      @include label-normal;
+      @include system-regular-font;
       color: var(--color);
       align-items: center;
       justify-content: center;
@@ -65,8 +64,8 @@
     }
 
     h1 {
-      @include label-normal-small;
-      color: var(--labelColor);
+      @include system-small-font;
+      color: var(--label-color);
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -74,8 +73,8 @@
     }
       
     .comment {
-      @include label-normal-small;
-      color: var(--secondaryLabelColor);
+      @include system-small-font;
+      color: var(--secondary-label-color);
       overflow: hidden;
       white-space: normal;
     }
@@ -83,7 +82,7 @@
 	
 </style>
 
-<div use:css={{color}}>
+<div use:setAsCustomPropOnNode={{color}}>
   <div class="swatch">
     <div class="color"></div>
     <div class="grid"></div>

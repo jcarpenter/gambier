@@ -31,12 +31,13 @@
 		padding: 7px 0.75em;
 		width: 100%;
 		height: 80px;
-		border-bottom: 1px solid var(--separatorColor);
+		border-bottom: 1px solid var(--separator-color);
 	}
 	
 	.title {
-		@include label-normal-bold;
-		color: var(--labelColor);
+		@include system-regular-font;
+		font-weight: bold;
+		color: var(--label-color);
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;
@@ -50,8 +51,8 @@
 	}
 
 	.excerpt {
-		@include label-normal;
-		color: var(--secondaryLabelColor);
+		@include system-regular-font;
+		color: var(--secondary-label-color);
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 3;
@@ -81,10 +82,10 @@
 		height: 79px; // height minus 1, to create 1px gap below
 		margin-bottom: 1px;
 		.title, .excerpt {
-			color: var(--selectedMenuItemTextColor);
+			color: var(--selected-menuitem-text-color);
 		}
 		&.isSidebarFocused {
-		  background-color: var(--selectedContentBackgroundColor);
+		  background-color: var(--selected-list-item-color);
 		}
 	
 		// Selected, and parent list NOT focused

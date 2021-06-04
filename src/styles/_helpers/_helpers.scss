@@ -1,0 +1,33 @@
+@forward "animations";
+@forward "buttons";
+@forward "colors";
+@forward "insetButtons";
+@forward "layout";
+@forward "mediaqueries";
+@forward "typography";
+@forward "reset";
+
+
+
+// -------------- Materials -------------- //
+
+// These are CSS equivalents to Apple's macOS materials. Materials "...define the amounts of translucency, blurring, and vibrancy applied to your interface.". Basically they are recipes of other macOS settings, e.g. degree of blurring, color, etc.
+// UI docs: https://developer.apple.com/design/human-interface-guidelines/macos/visual-design/translucency/
+// List of macOS materials: https://developer.apple.com/documentation/appkit/nsvisualeffectview/material
+
+// @mixin material-menu {
+//     backdrop-filter: blur(8px);
+//     background-color: var(--menuMaterialColor);
+// }
+
+// -------------- Patterns -------------- //
+
+// From: https://gist.github.com/dfrankland/f6fed3e3ccc42e3de482b324126f9542
+@mixin bg-checkerboard {
+    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%),
+        linear-gradient(135deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%),
+        linear-gradient(135deg, transparent 75%, #ccc 75%);
+    background-size: 10px 10px; /* Must be a square */
+    background-position: 0 0, 5px 0, 5px -5px, 0px 5px; /* Must be half of one side of the square */
+}
+

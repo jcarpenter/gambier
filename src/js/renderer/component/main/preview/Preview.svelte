@@ -48,6 +48,14 @@
 </script>
 
 <style type="text/scss">
+  #preview {
+    // width: 20em;
+    // height: 20em;
+    // background: rgba(200, 200, 100, 0.5);
+    // position: absolute;
+    // left: 0;
+    // top: 70em;
+  }
 </style>
 
 <svelte:options accessors={true} />

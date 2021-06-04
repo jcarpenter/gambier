@@ -1,6 +1,8 @@
 <script>
-  import { css, setSize } from "./actions";
+  import { setAsCustomPropOnNode, setSize } from "./actions";
   import { fade } from 'svelte/transition';
+import AddressBar from "../main/AddressBar.svelte";
+import AllDocuments from "../sidebar/AllDocuments.svelte";
   
   export let maxWidth = '100%'
   export let leftColumn = '' // '100px'
@@ -22,12 +24,12 @@
   export let label = ''
   export let labelWidth = '46'
   export let labelMargin = '0'
-  
+
   // By adding an outro delay, we enable Expandable components
   // time to animate their closing. It's hacky, but it works.
   // By default it's zero (no delay).
-  export let outroDelay = 0
   export let outroDuration = 0
+  export let outroDelay = 0
 
 </script>
 
@@ -48,6 +50,7 @@
     gap: var(--gap);
     flex-wrap: nowrap;
     flex-grow: 1;
+    align-items: center;
   }
 
   .multiLine .items {
@@ -55,11 +58,11 @@
   }
   
   .leftColumn {
-    @include label-normal;
+    @include system-regular-font;
     user-select: none;
     flex-basis: var(--leftColumn);
     text-align: right;
-    color: var(--labelColor);
+    color: var(--label-color);
     flex-shrink: 0;
     padding-top: var(--labelTopOffset);
     padding-right: 8px; // Always 8px
@@ -68,33 +71,69 @@
   }
 
   .compact .leftColumn {
-    @include label-normal-small;
+    @include system-small-font;
     padding-top: var(--labelTopOffset);
     padding-right: 5px; // Always 5px
   }
 
-  .no-transition {
-    animation: none !important;
-  }
+  // TODO: Does not work.
+  // .no-transition {
+  //   animation: none !important;
+  //   transition: none !important;
+  // }
 </style>
 
-<div 
-  class="row" 
-  use:setSize={{margin}} 
-  use:css={{maxWidth, leftColumn, labelTopOffset, gap}}
-  class:multiLine
-  class:compact
-  out:fade|local={{
-    duration: outroDuration,
-    delay: outroDelay
-  }}
->
-  {#if leftColumn}
-    <span class="leftColumn">
-      {label}
+
+<!-- 
+TODO: The only difference between these two is `out:fade`. 
+The only way to fully disable `out:fade` is to omit it.
+Even if duration is zero, there's still a one frame delay
+before it clears. VERY annoying. Seems to be a Svelte issue.
+I tried the techniques in this article and they didn't help:
+https://geoffrich.net/posts/accessible-svelte-transitions/
+Transition delay of zero is supposed to disable to transition
+but it doesn't sem to be working. It still there for 1 frame.
+-->
+{#if outroDuration}
+
+  <div 
+    class="row" 
+    use:setSize={{margin}} 
+    use:setAsCustomPropOnNode={{maxWidth, leftColumn, labelTopOffset, gap}}
+    class:multiLine
+    class:compact
+    out:fade|local={{
+      duration: outroDuration,
+      delay: outroDelay
+    }}
+  >
+    {#if leftColumn}
+      <span class="leftColumn">
+        {label}
+      </span>
+    {/if}
+    <span class="items">
+      <slot></slot>
     </span>
-  {/if}
-  <span class="items">
-    <slot></slot>
-  </span>
-</div>
+  </div>
+
+{:else}
+
+  <div 
+    class="row" 
+    use:setSize={{margin}} 
+    use:setAsCustomPropOnNode={{maxWidth, leftColumn, labelTopOffset, gap}}
+    class:multiLine
+    class:compact
+  >
+    {#if leftColumn}
+      <span class="leftColumn">
+        {label}
+      </span>
+    {/if}
+    <span class="items">
+      <slot></slot>
+    </span>
+  </div>
+
+{/if}

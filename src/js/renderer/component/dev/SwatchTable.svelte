@@ -4,12 +4,11 @@
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
   
 	h3 {
-		@include label-normal-small;
+		@include system-small-font;
 		margin: 1em 0;
-		color: var(--labelColor);
+		color: var(--label-color);
 		display: block;
 		padding: 0;
 		border-top: 1px solid var(--gridColor);
@@ -27,16 +26,16 @@
 		gap: 0.5em;
 		
 		.data {
-		  @include label-normal-small;
+		  @include system-small-font;
 		  flex-grow: 1;
 		  overflow: scroll;
 		  
 		  .name {
-			color: var(--labelColor);
+			color: var(--label-color);
 		  }
 
 		  .value {
-			color: var(--secondaryLabelColor);
+			color: var(--secondary-label-color);
 		  }
 		}
 		.swatch {

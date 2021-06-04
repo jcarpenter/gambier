@@ -12,26 +12,27 @@
   }
 
   h1 {
-    @include label-large-bold;
-    color: var(--labelColor);
+    @include title1-emphasized-text;
+    color: var(--label-color);
   }
 
   h2 {
-    @include label-normal;
-    color: var(--secondaryLabelColor);
+    @include system-regular-font;
+    color: var(--secondary-label-color);
   }
 
   .stateTable {
-    border: 1px solid var(--tertiaryLabelColor);
+    border: 1px solid var(--tertiary-label-color);
     border-radius: 4px;
     padding: 0.4em 0.4em;
     margin-bottom: 1em;
 
     h2 {
-      color: var(--labelColor);
+      color: var(--label-color);
       display: block;
       padding: 0;
-      @include label-normal-small-bold;
+      @include system-small-font;
+      font-weight: bold;
       margin: 0 0 1em;
     }
   }
@@ -52,17 +53,17 @@
     }
 
     .key {
-      @include label-normal-small;
+      @include system-small-font;
       text-align: right;
     //   flex-basis: 6em;
-      color: var(--labelColor);
+      color: var(--label-color);
       padding-right: 1em;
     }
 
     .val {
-      @include label-normal-small;
+      @include system-small-font;
       flex: 1 1 auto;
-      color: var(--secondaryLabelColor);
+      color: var(--secondary-label-color);
     }
   }
 

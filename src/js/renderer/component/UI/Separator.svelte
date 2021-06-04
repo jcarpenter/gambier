@@ -9,7 +9,7 @@
   hr {
     min-height: 1px;
     border: 0;
-    background-color: var(--separatorColor);
+    background-color: var(--separator-color);
   }
 </style>
 

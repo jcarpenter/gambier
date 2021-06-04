@@ -1,8 +1,8 @@
 import { debounce } from 'debounce'
 import { app, BrowserWindow, screen } from 'electron'
 import path from 'path'
+import url from 'url'
 import { wait } from '../shared/utils'
-import { getColors } from './AppearanceManager'
 
 const browserWindowConfig = {
   show: false,
@@ -36,10 +36,12 @@ export async function createWindow(id, project) {
   const win = new BrowserWindow(browserWindowConfig)
   win.projectId = id
 
-  // Set window background color. Remove last two characters because we don't need alpha. Before : '#323232FF' After: '#323232'
-  // TODO: Setting backgroundColor is currently broken. Background always renders as black, regardless of the value. Issue filed at https://github.com/electron/electron/issues/26842
-  const backgroundColor = getColors().colors.windowBackgroundColor.slice(0, -2)
-  win.setBackgroundColor(backgroundColor)
+  // Set window background color.
+  // TODO: Setting backgroundColor is currently broken. 
+  // Background always renders as black, regardless of the value. 
+  // Bug: https://github.com/electron/electron/issues/26842
+  const backgroundColor = global.state().systemColors.windowBackgroundColor
+  if (backgroundColor) win.setBackgroundColor(backgroundColor)
 
   const isNewProject = project.directory == ''
 
@@ -139,13 +141,22 @@ export async function createWindow(id, project) {
 
   // Open DevTools
   if (!app.isPackaged) win.webContents.openDevTools();
+ 
+  // Load index.html (old way)
+  // await win.loadFile(path.join(__dirname, 'index.html'), {
+  
+  // Load local index.html file
+  // "Electron by default allows local resources to be accessed by render processes only when their html files are loaded from local sources with the file:// protocol for security reasons."
 
-  // Load index.html
-  await win.loadFile(path.join(__dirname, 'index.html'), {
+  await win.loadURL(url.format({
+    pathname: 'index.html',
+    protocol: 'file:',
+    slashes: true,
     query: {
       id: win.projectId
-    },
-  })
+    }
+  }))
+
 
   // Save window bounds
   saveWindowBoundsToState(win)

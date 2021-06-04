@@ -5,17 +5,18 @@
 
 <style type="text/scss">
   header {
-    @include label-normal-bold;
+    @include system-regular-font;
+    font-weight: bold;
     display: flex;
     justify-content: center;
     align-items: center;
     margin: 0;
     height: 28px;
     @include dark {
-      color: var(--secondaryLabelColor);
+      color: var(--secondary-label-color);
     }
     @include light {
-      color: var(--labelColor);
+      color: var(--label-color);
     }
   }
 

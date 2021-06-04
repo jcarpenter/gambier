@@ -1,9 +1,8 @@
 <script>
   import { state, project, isMetaKeyDown, markdownOptions } from '../../StateManager'
   import { files } from '../../FilesManager'
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy, tick } from 'svelte'
   import { makeEditor, setMode } from '../../editor/editor2';
-
   import Wizard from './wizard/Wizard.svelte'
   import Autocomplete from './Autocomplete.svelte'
   import Preview from './preview/Preview.svelte'
@@ -15,7 +14,12 @@
   export let isFocusedPanel = false // 1/18: Not using these yet
   export let visible = false
   export let width = 0
+  // export let parentEl
   
+  let cm // CodeMirror (Editor) instance
+  let el // This element
+  let widgets // Widgets element
+
   // We have to call `cm.refresh()` when the panel size
   // changes or selections and cursors don't update.
   $: width, refreshSize()
@@ -24,26 +28,27 @@
     cm.refresh()
   }
 
-  // Bindings
-  let cm // CodeMirror (Editor) instance
-  let el // This element
-
   $: panel, onPanelChange()
 
   /**
    * Handle panel changes. Determine what changed, and make the appropriate updates.
    */
   function onPanelChange() {
+
     if (!cm) return
 
-    // If status has changed...
+    // Determine what's changed
     const statusHasChanged = panel.status !== cm.panel.status
-
     const isNewDoc = panel.docId == 'newDoc'
+    const docHasChanged = panel.docId !== cm.panel.docId
+    const saveStatusHasChanged = panel.unsavedChanges !== cm.panel.unsavedChanges
+
+    // Apply updated `panel` oject to `cm.panel` property
+    cm.panel = { ...panel }
+    // console.log('onPanelChange: cm.panel: ', cm.panel)
 
     // If doc has changed, load new one
     // This will also load initial doc, on Editor creation.
-    const docHasChanged = panel.docId !== cm.panel.docId
     if (docHasChanged) {
       saveCursorPosition(cm)
       if (isNewDoc) {
@@ -55,15 +60,44 @@
 
     // If save status has changed, and it's now "no unsaved changes", mark the doc clean
     // Per: https://codemirror.net/doc/manual.html#markClean
-    const saveStatusHasChanged = cm.panel.unsavedChanges !== panel.unsavedChanges
     if (saveStatusHasChanged) {
       if (!panel.unsavedChanges) {
         cm.doc.markClean()
       }
     }
+  }
 
-    // Set cm.panel to a copy of panel when panel changes.
-    cm.panel = { ...panel }
+  $: fontSize = $state.editorFont.size
+  $: lineHeight = $state.editorLineHeight.size
+  $: maxLineWidth = $state.editorMaxLineWidth.size
+  $: fontSize, lineHeight, maxLineWidth, refreshEditorOnTypographyChange()
+
+  /**
+   * We need to refresh CM instance when typography variables 
+   * change or the layout of character-related items such as
+   * selections and cursors do not update.
+   */
+  function refreshEditorOnTypographyChange() {
+    if (!cm) return
+    cm.refresh()
+  }
+
+  $: frontMatterCollapsed = $state.frontMatterCollapsed
+  $: frontMatterCollapsed, toggleFrontMatterCollapsed()
+  
+  /**
+   * When `frontMatterCollapsed` changes, we need to re-mark
+   * the document. We use marks to hide the front matter, and 
+   * need to either create them, or remove them.
+   */
+  async function toggleFrontMatterCollapsed() {
+    if (!cm) return
+    // Clear current marks, regardless of sourceMode true/false.
+    cm.getAllMarks().forEach((m) => m.clear())
+    markDoc(cm) 
+    // Refresh to ensure positions are correct
+    await tick()
+    cm.refresh()
   }
 
 
@@ -74,13 +108,15 @@
    * When sourceMode changes, clear marks if true.
    * Else, if false, create marks.
    */
-  function toggleSource() {
+  async function toggleSource() {
     if (!cm) return
     // Clear current marks, regardless of sourceMode true/false.
     cm.getAllMarks().forEach((m) => m.clear())
-    if (!sourceMode) { 
-      markDoc(cm) 
-    }
+    markDoc(cm) 
+    // Refresh to ensure positions are correct
+    // console.log('cm.refresh()')
+    await tick()
+    cm.refresh()
   }
 
   $: windowStatus = $project.window.status
@@ -109,12 +145,12 @@
     cm.state.isMetaKeyDown = $isMetaKeyDown
   }
 
-  $: editorTheme = $state.theme.editorTheme
-  $: editorTheme, setEditorTheme()
+  // $: editorTheme = $state.editorTheme.id
+  // $: editorTheme, setEditorTheme()
 
-  function setEditorTheme() {
-    // TODO
-  }
+  // function setEditorTheme() {
+  //   // TODO
+  // }
 
   $: $markdownOptions, setMarkdownOptions()
 
@@ -128,15 +164,15 @@
   onMount(async () => {
 
     // ------ CREATE EDITOR INSTANCE ------ //
+    // console.log('Editor: onMount: panel: ', panel)
 
-    cm = makeEditor(el)
+    cm = makeEditor(el, panel)
     window.cmInstances.push(cm)
 
     // If the panel is focused, focus the CodeMirror instance
     if (isFocusedPanel) cm.focus()
 
-    // Set `cm.panel` to a copy of panel
-    // cm.panel = { ...panel }markdownOptions
+    if (doc) loadDoc(cm, doc)
 
     // ------ CREATE LISTENERS ------ //
 
@@ -220,25 +256,25 @@
 
     // Add wizard, autocomplete and preview components to CodeMirror's scroller element. If we don't, and instead were to define them as components here, in Editor.svelte,they would be siblings of the top-level CodeMirror element (which is added to the `el` div), and therefore NOT scroll with the editor.
 
-    const autocomplete = new Autocomplete({
-      target: cm.getScrollerElement(),
-      props: { cm }
-    })
+    // const autocomplete = new Autocomplete({
+    //   target: cm.getScrollerElement(),
+    //   props: { cm }
+    // })
 
-    const preview = new Preview({
-      target: cm.getScrollerElement(),
-      props: { cm }
-    })
+    // const preview = new Preview({
+    //   target: cm.getScrollerElement(),
+    //   props: { cm }
+    // })
 
-    const wizard = new Wizard({
-      target: cm.getScrollerElement(),
-      props: { cm }
-    })
+    // const wizard = new Wizard({
+    //   target: cm.getScrollerElement(),
+    //   props: { cm }
+    // })
 
     // Expose as props on `cm`
-    cm.autocomplete = autocomplete
-    cm.preview = preview
-    cm.wizard = wizard
+    // cm.autocomplete = autocomplete
+    // cm.preview = preview
+    // cm.wizard = wizard
   })
 
   onDestroy(() => {
@@ -251,30 +287,21 @@
 <style type="text/scss">
 
   .editor {
-    width: 100%;
-    height: 100%;
     position: relative;
+    width: 100%;
+    flex-grow: 1;
     overflow: hidden;
   }
 
-  .isFocusedPanel {
-
-  }
 </style>
-
-<!-- <div class="testing">
-  {panel.id}<br>
-  {panel.docId}<br>
-  {panel.width}<br>
-  {panel.unsavedChanges}<br>
-</div> -->
 
 <div
   bind:this={el}
   class="editor"
+  class:sourceMode={$state.sourceMode}
   class:isFocusedPanel
   class:visible
   class:metaKeyDown={$isMetaKeyDown}
   on:click
->
-</div>
+/>
+

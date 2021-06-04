@@ -1,88 +1,114 @@
 <script>
-  import { sidebar } from '../../StateManager'
+  import { sidebar, state } from '../../StateManager'
   import { setTooltip } from '../../TooltipManager'
 
   export let id
   
   $: tab = $sidebar.tabsById[id]
-  $: isActive = $sidebar.activeTabId == id
+  $: selected = $sidebar.activeTabId == id
+  $: tabindex = $state.system.keyboardNavEnabled ? 0 : -1
 
 </script>
 
 <style type="text/scss">
 
   li {
-    @include centered_mask_image;
-    background-color: var(--controlTextColor);
-    list-style-type: none;
-    margin: 0 12px 0 0;
     padding: 0;
-    width: 14px;
-    height: 14px;
+    margin: 0;
+    width: 20px;
+    height: 20px;
     opacity: 70%;
-    &.isActive {
-      background-color: var(--iconAccentColor);
-      opacity: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+
+    &::before {
+      @include centered-mask-image;
+      content: '';
+      width: 14px;
+      height: 14px;
+      transform: translate(0, 0.5px);
+      background: var(--control-text-color);
     }
   }
-
-  li:last-of-type {
-    margin: 0;
+  
+  li:active {
+    &::before { background-color: foregroundColor(1); }
+    opacity: 100%;
   }
 
-  // Icons
-  .project {
-    -webkit-mask-image: var(--img-folder);
+  li.selected {
+    &::before { background-color: var(--nav-icon-color); }
+    opacity: 100%;
   }
-  .project.isActive {
-    -webkit-mask-image: var(--img-folder-fill);
+
+  li:focus {
+    @include focusRingAnimation;
+    outline: none;
   }
-  .allDocs {
-    -webkit-mask-image: var(--img-doc-on-doc);
+
+  // // Icons
+  .project::before {
+    -webkit-mask-image: var(--nav-project-icon);
   }
-  .allDocs.isActive {
-    -webkit-mask-image: var(--img-doc-on-doc-fill);
+  .project.selected::before {
+    -webkit-mask-image: var(--nav-project-active-icon);
   }
-  .mostRecent {
-    -webkit-mask-image: var(--img-clock);
+  .allDocs::before {
+    -webkit-mask-image: var(--nav-allDocs-icon);
   }
-  .mostRecent.isActive {
-    -webkit-mask-image: var(--img-clock-fill);
+  .allDocs.selected::before {
+    -webkit-mask-image: var(--nav-allDocs-active-icon);
   }
-  .tags {
-    -webkit-mask-image: var(--img-tag);
+  .mostRecent::before {
+    -webkit-mask-image: var(--nav-mostRecent-icon);
   }
-  .tags.isActive {
-    -webkit-mask-image: var(--img-tag-fill);
+  .mostRecent.selected::before {
+    -webkit-mask-image: var(--nav-mostRecent-active-icon);
   }
-  .media {
-    -webkit-mask-image: var(--img-photo);
+  .tags::before {
+    -webkit-mask-image: var(--nav-tags-icon);
   }
-  .media.isActive {
-    -webkit-mask-image: var(--img-photo-fill);
+  .tags.selected::before {
+    -webkit-mask-image: var(--nav-tags-active-icon);
   }
-  .citations {
-    -webkit-mask-image: var(--img-quote-bubble);
+  .media::before {
+    -webkit-mask-image: var(--nav-media-icon);
   }
-  .citations.isActive {
-    -webkit-mask-image: var(--img-quote-bubble-fill);
+  .media.selected::before {
+    -webkit-mask-image: var(--nav-media-active-icon);
   }
-  .search {
-    -webkit-mask-image: var(--img-magnifyingglass);
+  .citations::before {
+    -webkit-mask-image: var(--nav-citations-icon);
   }
-  .search.isActive {
-    -webkit-mask-image: var(--img-magnifyingglass);
+  .citations.selected::before {
+    -webkit-mask-image: var(--nav-citations-active-icon);
   }
+  .search::before {
+    -webkit-mask-image: var(--nav-search-icon);
+  }
+  .search.selected::before {
+    -webkit-mask-image: var(--nav-search-active-icon);
+  }
+
 </style>
 
 <svelte:options immutable={true} />
 
 <li
+  class={`sidebar-tab ${id}`}
   on:click={() => window.api.send('dispatch', {
       type: 'SELECT_SIDEBAR_TAB_BY_ID',
       id: id,
     })}
-  class:isActive
-  class={id} 
+  class:selected
+  tabindex={tabindex}
+  on:mousedown|preventDefault
+  on:keydown={(evt) => {
+    if (evt.code == 'Space') {
+      evt.target.click()
+    }
+  }}
   use:setTooltip={{text: `Show ${tab.title}`, enabled: true}} 
 />

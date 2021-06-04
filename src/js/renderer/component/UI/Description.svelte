@@ -7,13 +7,13 @@
 <style type="text/scss">
 
   p {
-    @include label-normal-small;
-    color: var(--secondaryLabelColor);
+    @include system-small-font;
+    color: var(--secondary-label-color);
     flex-basis: 100%;
   }
 
   // p.compact {
-  //   @include label-normal-small;
+  //   @include system-small-font;
   // }
 
 </style>

@@ -1,6 +1,6 @@
 import TurndownService from "turndown"
 import { isImagePath, isUrl, isValidHttpUrl } from "../../shared/utils"
-import { getFromAndTo } from "./editor-utils"
+import { getFromAndTo, writeMultipleEdits } from "./editor-utils"
 import { getElementAt } from "./map"
 import { markDoc, markElement } from "./mark"
 
@@ -12,7 +12,7 @@ const turndownService = new TurndownService({
 
 export async function onPaste(cm, evt) {
 
-  // console.log('onPaste')
+  console.log('onPaste')
   // console.log(cm.getMode('text/html'))
   // cm.setOption("mode", $(this).val() )
 
@@ -25,14 +25,8 @@ export async function onPaste(cm, evt) {
 
   if (cm.state.pasteAsPlainText) {
     evt.preventDefault()
-    const string = evt.clipboardData.getData('text/plain')
-    cm.operation(() => {
-      const selections = cm.listSelections()
-      selections.forEach((s) => {
-        const { from, to } = getFromAndTo(s)
-        cm.replaceRange(string, from, to)
-      })
-    })
+    const text = evt.clipboardData.getData('text/plain')
+    cm.replaceSelection(text)
     cm.state.pasteAsPlainText = false
     return
   }
@@ -56,6 +50,7 @@ export async function onPaste(cm, evt) {
 
     // Convert HTML to markdown and paste
     evt.preventDefault()
+
     const html = evt.clipboardData.getData('text/html')
     const markdown = turndownService.turndown(html)
     cm.replaceSelection(markdown)
@@ -67,156 +62,49 @@ export async function onPaste(cm, evt) {
     // https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/getAsFile
     // const file = item.getAsFile();
     // const fileType = file.types
+    console.log('isFile')
     window.api.send('saveImageFromClipboard')
 
   }
 
   // Else, proceed to process as plain text...
 
-  const string = evt.clipboardData.getData('text/plain')
-  const isUrl = isValidHttpUrl(string)
+  const clipboardText = evt.clipboardData.getData('text/plain')
+  const isUrl = isValidHttpUrl(clipboardText)
 
   // If pasted text is a URL, and there's text selected
-  // convert the selected text into an inline link.
+  // convert the selected text into an inline link or image.
   // Else paste as bare URL.
 
   if (isUrl) {
 
-    const isImage = isImagePath(string)
-    const selections = cm.listSelections()
+    evt.preventDefault()
 
-    cm.operation(() => {
+    let edits = []
+    const isImage = isImagePath(clipboardText)
+    const ranges = cm.listSelections()
 
-      // For each active selection, paste as bare url
-      // if there's no text selected, or if the selected
-      // text is inside another element.
-      // Else, paste url as link or image.
+    ranges.forEach((range) => {
 
-      selections.forEach((s) => {
+      const { from, to, isMultiLine, isSingleCursor } = getFromAndTo(range)
+      const isSelectedTextInsideAnotherElement =
+        !isSingleCursor &&
+        getElementAt(cm, from.line, from.ch) !== undefined
 
-        const { from, to } = getFromAndTo(s)
-        const isSingleCursor = from.line == to.line && from.ch == to.ch
-        const isSelectedTextInsideAnotherElement =
-          !isSingleCursor &&
-          getElementAt(cm, from.line, from.ch) !== undefined
-
-        if (isSingleCursor || isSelectedTextInsideAnotherElement) {
-          // Paste as bare url
-          cm.replaceRange(string, from, to)
-        } else {
-          // Paste url inside new link or image
-          const text = cm.getRange(from, to)
-          let newLinkOrImage = `[${text}](${string})`
-          if (isImage) newLinkOrImage = `!${newLinkOrImage}`
-          cm.replaceRange(newLinkOrImage, from, to)
-        }
-      })
+      if (isSingleCursor || isSelectedTextInsideAnotherElement) {
+        // Paste as bare url
+        edits.push({ text: clipboardText, from, to, select: { type: 'end' }})
+      } else {
+        // Paste url inside new link or image
+        const selectedText = cm.getRange(from, to)
+        let newLinkOrImage = `[${selectedText}](${clipboardText})`
+        if (isImage) newLinkOrImage = `!${newLinkOrImage}`
+        edits.push({ text: newLinkOrImage, from, to, select: { type: 'end' } })
+      }
     })
 
-    evt.preventDefault()
+    writeMultipleEdits(cm, edits)
     return
-  }
-
-  return
-
-  // Target
-
-  const targetText = cm.getRange(change.from, change.to)
-
-  const targetIsSingleCursor =
-    change.from.line == change.to.line &&
-    change.from.ch == change.to.ch
-
-  const targetIsEmptyLine =
-    targetIsSingleCursor &&
-    cm.getLine(change.from.line).length == 0
-
-  const targetIsSelection =
-    change.from.line !== change.to.line ||
-    change.from.ch !== change.to.ch
-
-  const targetIsSingleLineSelection =
-    change.from.line == change.to.line &&
-    change.from.ch !== change.to.ch
-
-  const targetSelectionIsEntireLine =
-    targetIsSingleLineSelection &&
-    change.from.ch == 0 &&
-    change.to.ch == cm.getLine(change.to.line).length
-
-  const targetIsMultiLineSelection =
-    change.from.line !== change.to.line
-
-  // Change
-
-  const changeIsMultipleLines = change.text.length > 1
-
-  const changeIsUrl =
-    !changeIsMultipleLines &&
-    isUrl(change.text[0])
-
-  const changeIsImageUrl =
-    changeIsUrl &&
-    change.text[0].match(/\.jpg|\.jpeg|\.gif|\.png$/m)
-
-  if (changeIsImageUrl) {
-
-    // If it's image URL...
-
-    const url = change.text[0]
-    if (targetSelectionIsEntireLine) {
-      // Create figure. Make selected text the caption.
-      change.update(null, null, [`![${targetText}](${url})`])
-    } else if (targetIsEmptyLine) {
-      // Create figure. Without caption.
-      change.update(null, null, [`![](${url})`])
-    } else if (targetIsSingleLineSelection) {
-      // Create image. Make `change.text` the alt text.
-      change.update(null, null, [`![${targetText}](${url})`])
-    } else if (targetIsSingleCursor && !targetIsEmptyLine) {
-      // Create image. Without alt text.
-      change.update(null, null, [`![](${url})`])
-    }
-
-  } else if (changeIsUrl) {
-
-    // If it's a non-image URL...
-
-    const url = change.text[0]
-    if (targetIsSingleLineSelection) {
-      // Create link. Make selected text the alt text.
-      change.update(null, null, [`[${targetText}](${url})`])
-    }
-
-  } else {
-
-    // If it's not a URL, determine if it's plain text, or HTML...
-
-    // Cancel the change. We're going to do it manually instead.
-    change.cancel()
-
-    // Determine format. Returns array.
-    const formats = await window.api.invoke('getFormatOfClipboard')
-    const isPlainText = formats.length == 1 && formats[0] === 'text/plain'
-    const isHTML = formats.includes('text/html')
-
-    if (isPlainText) {
-
-      // Paste plain text
-      cm.replaceSelection(change.text.join('\n'))
-
-    } else if (isHTML) {
-
-      // Paste as markdown, converted from HTML
-      const html = await window.api.invoke('getHTMLFromClipboard')
-      const markdown = turndownService.turndown(html)
-      cm.replaceSelection(markdown)
-
-      // If pasted text spans multiple lines, re-mark the doc.
-      if (changeIsMultipleLines) {
-        markDoc(cm)
-      }
-    }
   }
 }
 

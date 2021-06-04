@@ -117,7 +117,6 @@
 
     window.api.send('dispatch', {
       type: 'SIDEBAR_SELECT_TAGS',
-      tabId: tabId,
       tags: newSelected,
     })
   }
@@ -131,8 +130,8 @@
   }
 
   .noTags {
-    @include label-normal;
-    color: var(--secondaryLabelColor);
+    @include system-regular-font;
+    color: var(--secondary-label-color);
   }
 
 </style>

@@ -5,7 +5,7 @@
 
 <style type="text/scss">
   #functionalTests {
-    @include label-normal;
+    @include system-regular-font;
     margin: 5em;
   }
 

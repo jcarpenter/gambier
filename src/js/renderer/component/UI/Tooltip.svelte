@@ -1,6 +1,6 @@
 <script>
   import { tooltip } from '../../TooltipManager'
-  import { css } from './actions'
+  import { setAsCustomPropOnNode } from './actions'
 
   let visible = false
   let text = ''
@@ -73,7 +73,7 @@
 <style type="text/scss">
 
   #tooltip {
-    @include label-normal-small;
+    @include tool-tips-font;
     line-height: 14px;
     display: flex;
     align-items: center;
@@ -90,7 +90,7 @@
     );
     transition: opacity 500ms ease-in-out;
     
-    color: var(--labelColor);
+    color: var(--label-color);
     background: var(--windowBackgroundColor);
 
     @include dark {
@@ -116,6 +116,6 @@
   
 </style>
 
-<div id="tooltip" class:visible use:css={{x, y, text, msDelayUntilShow}}>
+<div id="tooltip" class:visible use:setAsCustomPropOnNode={{x, y, text, msDelayUntilShow}}>
   {text}
 </div>

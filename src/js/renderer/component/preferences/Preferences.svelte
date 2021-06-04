@@ -1,39 +1,46 @@
 <script>
-  import { isWindowFocused, state } from '../../StateManager';
-  import Checkbox from '../ui/Checkbox.svelte';
-  import Description from '../ui/Description.svelte';
-  import FormRow from '../ui/FormRow.svelte';
-  import Separator from '../ui/Separator.svelte';
-  import ToolbarTab from '../ui/ToolbarTab.svelte';
-  import WindowFrame from '../ui/WindowFrame.svelte';
-  import WindowTitleBar from '../ui/WindowTitleBar.svelte'; 
+  import { isWindowFocused, state } from '../../StateManager'
+  import Checkbox from '../ui/Checkbox.svelte'
+  import Description from '../ui/Description.svelte'
+  import FormRow from '../ui/FormRow.svelte'
+  import Menu from '../ui/Menu.svelte';
+  import PopupButton from '../ui/PopupButton.svelte'
+  import Separator from '../ui/Separator.svelte'
+  import ToolbarTab from '../ui/ToolbarTab.svelte'
+  import Tooltip from '../ui/Tooltip.svelte';
+  import WindowFrame from '../ui/WindowFrame.svelte'
+  import WindowTitleBar from '../ui/WindowTitleBar.svelte' 
+  import EditorFontSize from './EditorFontSize.svelte';
+  import EditorLineHeight from './EditorLineHeight.svelte';
+  import EditorMaxLineWidth from './EditorMaxLineWidth.svelte';
+
 
   let activeTab = 'general'
   let tabs = [
     {
       id: 'general',
       title: 'General',
-      icon: 'img-gearshape'
+      icon: 'prefs-tab-general-icon'
     },
     {
       id: 'theme',
       title: 'Theme',
-      icon: 'img-paintpalette-medium-regular'
+      icon: 'prefs-tab-theme-icon'
     },
     {
-      id: 'markup',
-      title: 'Markup',
-      icon: 'img-textformat-medium-regular'
+      id: 'markdown',
+      title: 'Markdown',
+      icon: 'prefs-tab-markdown-icon'
     },
     {
       id: 'media',
       title: 'Media',
-      icon: 'img-photo-medium-regular'
+      icon: 'prefs-tab-media-icon'
     },
     {
       id: 'citations',
       title: 'Citations',
-      icon: 'img-quote-bubble-medium-regular'
+      icon: 'prefs-tab-citations-icon'
     },
   ]
 
@@ -62,8 +69,8 @@
     margin: 0 auto;
     height: 100%;
     padding: 20px;
-    display: flex;
-    flex-direction: column;
+    // display: flex;
+    // flex-direction: column;
     // gap: 10px 0;
     overflow-x: hidden;
     overflow-y: scroll;
@@ -84,23 +91,66 @@
 
 <div id="main" class:isWindowFocused={$isWindowFocused}>
 
-   <!---------- FRAME ---------->
+  <Tooltip />
+  <Menu />
+
+  <!---------- FRAME ---------->
 
   <WindowFrame>
     <WindowTitleBar title={windowTitle} />
     <div class="toolbar">
       {#each tabs as {id, title, icon}}
-        <ToolbarTab label={title} icon={icon} isSelected={id == activeTab} on:mouseup={() => activeTab = id}/>
+        <ToolbarTab 
+          label={title} 
+          icon={icon} 
+          isSelected={id == activeTab} 
+          on:click={() => activeTab = id}
+        />
       {/each}
     </div>
   </WindowFrame>
   
 
-  <!---------- BODY ---------->
-
   <div class="window-body">
 
-    {#if activeTab=='markup'} 
+    <!---------- GENERAL ---------->
+
+    {#if activeTab=='general'} 
+
+      <EditorFontSize leftColumn={'200px'} />
+      <EditorLineHeight leftColumn={'200px'} />
+      <EditorMaxLineWidth leftColumn={'200px'} />
+
+    
+    <!---------- markdown ---------->
+
+    {:else if activeTab=='markdown'} 
+
+      <!-- Strikethrough -->
+
+      <FormRow label={'Strong delimiters:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+
+        <PopupButton 
+          width='110px' 
+          items={[
+            { label: '**Hello**', id: '**', checked: true },
+            { label: '__Hello__', id: '__', checked: false },
+          ]} 
+          on:selectItem={(evt) => {
+            window.api.send('dispatch', {
+              type: 'SET_MARKDOWN_OPTIONS',
+              options: {
+                ...$state.markdown, 
+                strongChar: evt.detail.item.id
+              }
+            })
+            // updateOptions('lookIn', evt.detail.item.id)
+          }}
+        />
+        <Description margin={'4px 0 0 20px'}>
+          An image element with alt text on an empty line will be interpreted as a figure element, and can be displayed with an inline preview. The alt text will be used as caption text.
+        </Description>  
+      </FormRow>
 
       <!-- Strikethrough -->
 
@@ -111,7 +161,7 @@
           on:click={() => {
             window.api.send('dispatch', {
               type: 'SET_MARKDOWN_OPTIONS',
-              markdownOptions: {
+              options: {
                 ...$state.markdown, 
                 strikethrough: !$state.markdown.strikethrough
               }
@@ -132,7 +182,7 @@
           on:click={() => {
             window.api.send('dispatch', {
               type: 'SET_MARKDOWN_OPTIONS',
-              markdownOptions: {
+              options: {
                 ...$state.markdown, 
                 implicitFigures: !$state.markdown.implicitFigures
               }
@@ -152,7 +202,7 @@
           on:click={() => {
             window.api.send('dispatch', {
               type: 'SET_MARKDOWN_OPTIONS',
-              markdownOptions: {
+              options: {
                 ...$state.markdown, 
                 implicitFigures: !$state.markdown.implicitFigures
               }
@@ -169,7 +219,7 @@
           on:click={() => {
             window.api.send('dispatch', {
               type: 'SET_MARKDOWN_OPTIONS',
-              markdownOptions: {
+              options: {
                 ...$state.markdown, 
                 implicitFigures: !$state.markdown.implicitFigures
               }

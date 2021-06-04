@@ -6,7 +6,7 @@ import deepEql from 'deep-eql'
  * Return true if array has ALL of the items
  * @param  {...any} items - One or more strings
  */
-Array.prototype.hasAll = function(...items) {
+Array.prototype.hasAll = function (...items) {
   return items.every((i) => this.includes(i))
 }
 
@@ -14,7 +14,7 @@ Array.prototype.hasAll = function(...items) {
  * Return true if array has ANY of the items
  * @param  {...any} items - One or more strings
  */
-Array.prototype.hasAny = function(...items) {
+Array.prototype.hasAny = function (...items) {
   return items.some((i) => this.includes(i))
 }
 
@@ -23,7 +23,7 @@ Array.prototype.hasAny = function(...items) {
  * E.g. Returns true if item is `-span` and string is `text-span`
  * @param  {...any} items - One or more strings
  */
-String.prototype.includesAny = function(...items) {
+String.prototype.includesAny = function (...items) {
   return items.some((i) => this.includes(i))
 }
 
@@ -33,30 +33,30 @@ String.prototype.includesAny = function(...items) {
  * are "reference" and "full"
  * @param  {...any} items - One or more strings
  */
-String.prototype.includesAll = function(...items) {
+String.prototype.includesAll = function (...items) {
   return items.every((i) => this.includes(i))
 }
 
 /**
  * Return true if string equals any of the items.
- * E.g. Returns true if item is `-span` and string is `text-span`
+ * E.g. Returns true if item is `hello` and string is `hello`
  * @param  {...any} items - One or more strings
  */
-String.prototype.equalsAny = function(...items) {
-  return items.some((i) => this === i)
+String.prototype.equalsAny = function (...items) {
+  return items.some((i) => i === this)
 }
 
 /**
  * Return first character of string
  */
-String.prototype.firstChar = function() {
+String.prototype.firstChar = function () {
   return this.charAt(0)
 }
 
 /**
  * Return last character of string
  */
-String.prototype.lastChar = function() {
+String.prototype.lastChar = function () {
   return this.charAt(this.length - 1)
 }
 
@@ -64,19 +64,95 @@ String.prototype.lastChar = function() {
 // -------- MISC HELPERS -------- //
 
 /**
+ * Return true if element has ancestor with specified id.
+ * (or if the element itself has the id)
+ * From: https://flaviocopes.com/how-to-check-element-descendant/
+ * @param {object} el - DOM element.
+ * @param {string} parentId - E.g. 'wizard'
+ */
+export function isDescendantOfId(el, parentId) {
+  let isDescendant = false
+
+  // First check if `el` is parentId.
+  // If no, iterate up ancestors using while loop,
+  // until there are no more parent nodes. In which case
+  // `el.parentNode` returns null, and loop ends.
+
+  if (el.id === parentId) {
+    isDescendant = true
+  } else {
+    while (el = el.parentNode) {
+      if (el.id == parentId) {
+        isDescendant = true
+      }
+    }
+  }
+
+  return isDescendant
+}
+
+/**
+ * Return true if element has ancestor with specified class.
+ * (or if the element itself has the class)
+ * @param {object} el - DOM element.
+ * @param {string} parentClass - E.g. 'frontmatter'
+ * @returns 
+ */
+export function isDescendantOfClass(el, parentClass) {
+  let isDescendant = false
+
+  // First check if `el` contains parentClass.
+  // If no, iterate up ancestors using while loop,
+  // until there are no more parent nodes. In which case
+  // `el.parentNode` returns null, and loop ends.
+
+  if (el.classList?.contains(parentClass)) {
+    isDescendant = true
+  } else {
+    while (el = el.parentNode) {
+      if (el.classList?.contains(parentClass)) {
+        isDescendant = true
+      }
+    }
+  }
+
+  return isDescendant
+}
+
+/**
+  * From: https://stackoverflow.com/a/53187807
+  * Returns the index of the last element in the array where predicate is true, and -1
+  * otherwise.
+  * @param array - The source array to search in
+  * @param predicate - Calls predicate once for each element of the array, in descending
+  * order, until it finds one where predicate returns true. If such an element is found,
+  * findLastIndex immediately returns that element index. Otherwise, findLastIndex returns -1.
+  * predicate receives 1) array item the index of l, 2) index l, and 3) the whole array.
+  */
+// export function findLastIndex(array, predicate: (value: T, index: number, obj: T[]) => boolean): number {
+export function findLastIndex(array, predicate) {
+  let l = array.length;
+  while (l--) {
+    if (predicate(array[l], l, array))
+      return l;
+  }
+  return -1;
+}
+
+/**
  * Returns true if arrays have same items in same order
  * From: https://gomakethings.com/how-to-check-if-two-arrays-are-equal-with-vanilla-js/
  */
-export function arraysEqual (arr1, arr2) {
+export function arraysEqual(arr1, arr2) {
 
-	// Check if the arrays are the same length
-	if (arr1.length !== arr2.length) return false
+  // Check if the arrays are the same length
+  if (arr1.length !== arr2.length) return false
 
-	// Check if all items exist and are in the same order
-	for (var i = 0; i < arr1.length; i++) {
-		if (arr1[i] !== arr2[i]) return false
+  // Check if all items exist and are in the same order
+  for (var i = 0; i < arr1.length; i++) {
+    if (arr1[i] !== arr2[i]) return false
   }
-  
+
   return true
 }
 
@@ -98,9 +174,9 @@ export function getArrayDiff(arr1, arr2) {
  */
 export function prettySize(bytes, separator = ' ', postFix = '') {
   if (bytes) {
-      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-      const i = Math.min(parseInt(Math.floor(Math.log(bytes) / Math.log(1024)).toString(), 10), sizes.length - 1);
-      return `${(bytes / (1024 ** i)).toFixed(i ? 1 : 0)}${separator}${sizes[i]}${postFix}`;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.min(parseInt(Math.floor(Math.log(bytes) / Math.log(1024)).toString(), 10), sizes.length - 1);
+    return `${(bytes / (1024 ** i)).toFixed(i ? 1 : 0)}${separator}${sizes[i]}${postFix}`;
   }
   return 'n/a';
 }
@@ -124,8 +200,8 @@ export async function wait(ms) {
   });
 }
 
-export function findInTree (tree, value, key = 'id', reverse = false) {
-  const stack = [ tree[0] ]
+export function findInTree(tree, value, key = 'id', reverse = false) {
+  const stack = [tree[0]]
   while (stack.length) {
     const node = stack[reverse ? 'pop' : 'shift']()
     if (node[key] === value) return node
@@ -185,8 +261,8 @@ export function isValidHttpUrl(string) {
  * Return true if string has valid image file format extension
  * E.g. .jpg, .gif, .apng.
  */
-export function isImagePath(url) {
-  return imagePathRE.test(url)
+export function isImagePath(string) {
+  return imagePathRE.test(string)
 }
 
 /**
@@ -247,15 +323,15 @@ export function getFileType(extension) {
  * @param {*} [toValue] - Optional value to check prop against
  */
 export function stateHasChanged(patches, props, toValue = '') {
-	return patches.some((patch) => {
+  return patches.some((patch) => {
 
-  	const pathAsString = patch.path.toString()
-		const checkMultipleProps = Array.isArray(props)
+    const pathAsString = patch.path.toString()
+    const checkMultipleProps = Array.isArray(props)
 
-		const hasChanged = checkMultipleProps ?
-    	props.every((key) => pathAsString.includes(key)) :
+    const hasChanged = checkMultipleProps ?
+      props.every((key) => pathAsString.includes(key)) :
       pathAsString.includes(props)
-    
+
     // If optional 'toValue' argument is specified, check it.
     // Else, only check `hasChanged`
     if (toValue) {
@@ -275,9 +351,9 @@ export function stateHasChanged(patches, props, toValue = '') {
  */
 // Taken from https://coderwall.com/p/_g3x9q/how-to-check-if-javascript-object-is-empty
 export function isEmpty(obj) {
-  for(var key in obj) {
-      if(obj.hasOwnProperty(key))
-          return false
+  for (var key in obj) {
+    if (obj.hasOwnProperty(key))
+      return false
   }
   return true
 }
@@ -330,7 +406,7 @@ export function propHasChanged(keysAsString, objA, objB) {
  * @param {*} objFrom 
  */
 export function propHasChangedTo(keysAsString, value, objTo, objFrom) {
-  if (!keysAsString || !value ) {
+  if (!keysAsString || !value) {
     // If either required arguments are missing or empty, return undefined
     return undefined
   } else {
@@ -378,12 +454,12 @@ function extractKeysFromString(keyAsString) {
  * @param {*} pathArr 
  */
 const getNestedObject = (nestedObj, pathArr) => {
-	return pathArr.reduce((obj, key) =>
-		(obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
+  return pathArr.reduce((obj, key) =>
+    (obj && obj[key] !== 'undefined') ? obj[key] : undefined, nestedObj);
 }
 
 
-// -------- SVELTE (Render-process only) -------- //
+// -------- RENDER-PROCESS ONLY -------- //
 // Main process cannot use these functions
 
 /**
@@ -397,4 +473,42 @@ export function mountComponent(Component, options) {
   const component = new Component({ ...options, target: frag });
   options.target.parentNode.replaceChild(frag, options.target);
   return component;
+}
+
+/**
+ * Select the contents of a target input element or content editable.
+ * @param {*} target 
+ */
+export function selectInputContents(target) {
+  let selection = window.getSelection();
+  let range = document.createRange();
+  range.selectNodeContents(target);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+/**
+ * For the element (e.g. contenteditable or input), set the caret 
+ * to the specified position (e.g. 6 character in).
+ * @param {dom element} element 
+ * @param {integer} index - To place caret at
+ */
+export function setCaretPositionByIndex(element, index) {
+  const range = document.createRange()
+  const sel = window.getSelection()
+  range.setStart(element.childNodes[0], index)
+  range.collapse(true)
+  sel.removeAllRanges()
+  sel.addRange(range)
+}
+
+
+/**
+ * Return array of focusable elements for the given element.
+ */
+export function getFocusableElements(el) {
+
+  const focusables = 'button:not(disabled), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  return el.querySelectorAll(focusables)
+
 }

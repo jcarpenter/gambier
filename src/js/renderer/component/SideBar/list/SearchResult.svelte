@@ -26,7 +26,7 @@
 		padding: 7px 0.75em;
 		width: 100%;
 		// height: 80px;
-		border-bottom: 1px solid var(--separatorColor);
+		border-bottom: 1px solid var(--separator-color);
   }
   
   .header {
@@ -34,8 +34,9 @@
 
     .title {
       flex-grow: 1;
-      @include label-normal-bold;
-      color: var(--labelColor);
+      @include system-regular-font;
+			font-weight: bold;
+      color: var(--label-color);
       text-overflow: ellipsis;
       overflow: hidden;
       white-space: nowrap;
@@ -43,16 +44,16 @@
     }
     
     .numHits {
-      @include label-normal-small;
-      color: var(--secondaryLabelColor);
+      @include system-small-font;
+      color: var(--secondary-label-color);
       flex-shrink: 0;
     }
   }
 
 	.hits {
-		@include label-normal;
+		@include system-regular-font;
     @include list-reset;
-		color: var(--secondaryLabelColor);
+		color: var(--secondary-label-color);
 		pointer-events: none;
 
     li {
@@ -77,10 +78,10 @@
 		// height: 79px; // height minus 1, to create 1px gap below
 		margin-bottom: 1px;
 		.title, .numHits, .hits {
-			color: var(--selectedMenuItemTextColor);
+			color: var(--selected-menuitem-text-color);
 		}
 		&.isSidebarFocused {
-		  background-color: var(--selectedContentBackgroundColor);
+		  background-color: var(--selected-list-item-color);
 		}
 	
 		// Selected, and parent list NOT focused

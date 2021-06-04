@@ -1,119 +1,74 @@
+import { Pos } from "codemirror"
+import { CodeMirror } from "globalthis/implementation"
+import * as WizardManager from "../../WizardManager"
+import { getFromAndTo } from "../editor-utils"
 import { getLineElements } from "../map"
 
 /**
- * Select the next 1) TextMarker, or 2) child span.
- * Do so by finding the next (or surrounding) element. 
- * If it's marked, call its `altTabTo` function.
- * Else, call the next of its child spans.
+ * Select the next TextMarker or token.
  */
 export function tabToNextElement(cm) {
 
   const cursor = cm.getCursor('anchor')
-  let element
+  let spans = []
+  let nextSpan = undefined
+  let textMarkerAtSpan = undefined
 
-  // Else, find the next element in the doc...
+  // Get all spans in doc after cursor
   for (var i = cursor.line; i < cm.lineCount(); i++) {
     const elements = getLineElements(cm, i)
-    element = elements.find((e, index) => {
-
-      // If we're inside an element, it's not a TextMarker
-      // and it has more child spans to select, after the
-      // current cursor position, select it.
-      // E.g. Jump between child spans of a link, image, etc.
-
-      const cursorIsInsideAnElement =
-        e.line == cursor.line &&
-        e.start < cursor.ch &&
-        e.end > cursor.ch
-
-      const elementIsNotMarker =
-        !e.mark.isMarkable ||
-        window.state.sourceMode
-
-      const elementHasContentsToSelect =
-        e.spans.find((c) => c.start > cursor.ch)
-
-      if (cursorIsInsideAnElement && elementIsNotMarker && elementHasContentsToSelect) {
-        return true
-      }
-
-      // Else, find next element on same or subsequent line:
-
-      // Skip element if it's already selected
-      const alreadySelected =
-        e.line == cursor.line &&
-        e.start == cursor.ch &&
-        e.end == cm.getCursor('to').ch
-
-      if (alreadySelected) return false
-
-      // Find next element on same line...
-      // Edge case check: make sure it's not inside a marked
-      // element. E.g. some strong text inside a footnote.
-      // Determine by looking for multiple elements at same spot.
-
-      const isOnSameLineAndGreaterCh =
-        e.line == cursor.line &&
-        e.start >= cursor.ch
-
-      if (isOnSameLineAndGreaterCh) {
-        if (!window.state.sourceMode) {
-          const markAt = cm.findMarksAt({ line: e.line, ch: e.start })[0]
-          // If there's a mark present at the element start
-          // we can tell if _around_ the element by checking the 
-          // from and to values.
-          const isNestedInsideMark =
-            markAt !== undefined &&
-            markAt?.find().from.ch < e.start ||
-            markAt?.find().to.ch > e.end
-          if (!isNestedInsideMark) return true
-        } else {
-          return true
-        }
-      }
-
-      // Else, find first element on subsequent line...
-
-      const isOnSubsequentLine =
-        e.line > cursor.line
-
-      if (isOnSubsequentLine) return true
+    elements.forEach((e) => {
+      spans.push(...e.spans)
     })
-
-    // if (element) console.log(element)
-    if (element) break
   }
 
-  if (!element) return
+  // Find next span
+  nextSpan = spans.find(({ line, start, end }) => {
 
-  // If element has a marker, select it and return...
-  if (!window.state.sourceMode && element.mark.isMarkable) {
-    const textMarker = cm.findMarksAt({ line: element.line, ch: element.start + 1 })[0]
-    if (textMarker) {
-      textMarker.component.altTabTo()
-      return
+    const isOnSameLineAndGreaterCh = line == cursor.line && start > cursor.ch
+    const isOnSubsequentLine = line > cursor.line
+
+    // If the above are not true, keep looking...
+    if (!isOnSameLineAndGreaterCh && !isOnSubsequentLine) return false
+
+    // Else, we've found the next span!
+
+    // Now check if there's a TextMarker at its position.
+    textMarkerAtSpan = cm.findMarksAt(Pos(line, start))[0]
+
+    // If there's a mark at the token, but it's already selected
+    // return false (keep looking for next token/mark)
+    if (textMarkerAtSpan) {
+
+      const markIsAlreadySelected = cm.listSelections().some((range) => {
+        const rangePos = getFromAndTo(range)
+        const markPos = textMarkerAtSpan.find()
+        return markPos.from.line == rangePos.from.line &&
+          markPos.to.line == rangePos.to.line &&
+          markPos.from.ch == rangePos.from.ch &&
+          markPos.to.ch == rangePos.to.ch
+      })
+
+      if (markIsAlreadySelected) {
+        textMarkerAtSpan = undefined
+        return false
+      }
     }
-  }
 
-  // Else, select next child span
-  const nextContents = element.spans.find((c) => {
+    // If we pass all the above, then we've found the next
+    // span or TextMarker to tab to.
+    return true
 
-    // If element is on subsequent line, get first content
-    const isOnSubsequentLine =
-      element.line > cursor.line
-    if (isOnSubsequentLine) return true
-
-    // Else, get next one
-    const isOnSameLineAndGreaterCh =
-      element.line == cursor.line &&
-      c.start > cursor.ch
-    return isOnSameLineAndGreaterCh
   })
 
-  if (nextContents) {
+  // Select the next TextMarker or span
+  // (the former gets priority).
+  if (textMarkerAtSpan) {
+    textMarkerAtSpan.component.altTabTo()
+  } else if (nextSpan) {
     cm.setSelection(
-      { line: element.line, ch: nextContents.start },
-      { line: element.line, ch: nextContents.end }
+      Pos(nextSpan.line, nextSpan.start),
+      Pos(nextSpan.line, nextSpan.end)
     )
   }
 }

@@ -1,4 +1,7 @@
-import { getElementAt, getElementsAt, getSpansAt } from "../map"
+import CodeMirror, { cmpPos } from "codemirror"
+import { component_subscribe } from "svelte/internal"
+import { getModeAndState } from "../editor-utils"
+import { getElementAt, getElementsAt, getLineElements, getSpansAt } from "../map"
 
 /**
  * Open URL when user clicks w/ Cmd button held down,
@@ -8,36 +11,48 @@ import { getElementAt, getElementsAt, getSpansAt } from "../map"
  */
 export function wasUrlClicked(cm, pos) {
 
-  const element = getElementsAt(cm, pos.line, pos.ch)[0]
-  if (!element) return CodeMirror.Pass
+  const { state, mode } = getModeAndState(cm, pos.line)
 
-  switch (element.type) {
+  if (mode.name == 'markdown') {
+
+    const tokenType = cm.getTokenTypeAt(pos)
+
+    const isLinkUrl = tokenType.includesAll('link', 'url')
+    const isBareUrl = tokenType.includes('bare-url')
+    const isEmailInBrackets = tokenType.includes('email-in-brackets')
+    const isUrlInBrackets = tokenType.includes('url-in-brackets')
+    const wasNotFormatting = !tokenType.includes('md')
+
+    const wasUrl = (isLinkUrl || isBareUrl || isEmailInBrackets || isUrlInBrackets) && wasNotFormatting
+
+    if (!wasUrl) return CodeMirror.Pass
+
+    const token = cm.getTokenAt(pos)
     
-    case 'link-inline': {
-      const spans = getSpansAt(cm, pos.line, pos.ch)
-      const clickedOnUrl = spans.some((s) => s.type == 'link inline url')
-      if (clickedOnUrl) {
-        const url = spans.find((s) => s.type == 'link inline url').string
-        window.api.send('openUrlInDefaultBrowser', url)
-        return
+    if (isLinkUrl || isBareUrl || isUrlInBrackets) {
+      window.api.send('openUrlInDefaultBrowser', token.string)
+    } else if (isEmailInBrackets) {
+      window.api.send('openUrlInDefaultBrowser', `mailto:${token.string}`)
+    }
+    
+  } else if (mode.name == 'yaml') {
+
+    const token = cm.getTokenAt(pos)
+    const isTag = token?.type.includes('tag')
+
+    if (isTag) {
+      let { anchor, head } = cm.findWordAt(pos)
+      let text = cm.getRange(anchor, head)
+      // Strip wrapping quotation marks, if present
+      // Demo: https://regex101.com/r/0MpP19/1
+      if (text.match(/["|'].*?["|']/)) {
+        text = text.slice(1, text.length - 1)
       }
-      break
-    }
-
-    case 'bare-url': {
-      window.api.send('openUrlInDefaultBrowser', element.markdown)
-      return
-    }
-
-    case 'email-in-brackets': {
-      const url = element.markdown.substring(1, element.markdown.length - 1)
-      window.api.send('openUrlInDefaultBrowser', `mailto:${url}`)
-      return
-    }
-
-    case 'url-in-brackets': {
-      const url = element.markdown.substring(1, element.markdown.length - 1)
-      window.api.send('openUrlInDefaultBrowser', url)
+      window.api.send('dispatch', {
+        type: 'SIDEBAR_SELECT_TAGS',
+        tabId: 'tags',
+        tags: [text]
+      })
       return
     }
   }

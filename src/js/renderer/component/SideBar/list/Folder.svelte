@@ -3,7 +3,7 @@
 	import { state, sidebar } from '../../../StateManager.js'
   import { files } from '../../../FilesManager'
 	import { flip } from 'svelte/animate';
-	import { css } from '../../ui/actions'
+	import { setAsCustomPropOnNode } from '../../ui/actions'
 	import { standardEase } from '../../ui/easing'
 	import { slideUp } from '../../ui/transition'
   import { getContext } from 'svelte';
@@ -143,7 +143,7 @@
 		on:dragover|preventDefault={() => { if (isRoot) onDragOver() }} 
 		on:dragleave|preventDefault={() => { if (isRoot) onDragLeave() }}
 		on:drop|preventDefault={(evt) => { console.log("drop"); if (isRoot) onDrop(evt) }}
-		use:css={{folderHeight, folderEasing, duration}}
+		use:setAsCustomPropOnNode={{folderHeight, folderEasing, duration}}
 		>
 		<ul class="rows" transition:slideUp|local={{ duration: isRoot ? 0 : duration }}>
 			{#each subtree.children as child (child.id)}

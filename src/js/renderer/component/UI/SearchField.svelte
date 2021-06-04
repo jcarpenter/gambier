@@ -33,9 +33,9 @@
   // ------ Layout: Normal ------ //
 
   .searchfield {
-    @include label-normal;
+    @include system-regular-font;
     position: relative;
-    border-radius: $border-radius-normal;
+    border-radius: var(--button-border-radius);
     // flex: none;
     height: 28px;
     display: inline-flex;
@@ -43,12 +43,12 @@
     align-items: center;
 
     &:focus-within {
-      @include focusFieldAnimation
+      @include focusRingAnimation
     }
   }
 
   .icon {
-    @include centered_mask_image;
+    @include centered-mask-image;
     min-width: 13px;
     height: 13px;
     margin-left: 7px;
@@ -67,7 +67,7 @@
   }
 
   input {
-    @include label-normal;
+    @include system-regular-font;
     margin: 1px 0 0 -2px;
     width: 100%;
     background: transparent;
@@ -79,19 +79,19 @@
   // ------ Layout: Compact ------ //
 
   .searchfield.compact {
-    @include label-normal-small;
+    @include system-small-font;
     height: 20px;
-    border-radius: $border-radius-compact;
+    border-radius: var(--button-border-radius-compact);
     line-height: 20px;
     .icon {
-      @include centered_mask_image;
+      @include centered-mask-image;
       min-width: 11px;
       height: 11px;
       margin-left: 5px;
     }
     input {
       line-height: 20px;
-      @include label-normal-small;
+      @include system-small-font;
     }
   }
 
@@ -103,16 +103,16 @@
   .searchfield.inline {
     
     .icon {
-      background-color: var(--controlTextColor);
+      background-color: var(--control-text-color);
       opacity: 0.8; 
     }
   
     .placeholder {
-      color: var(--placeholderTextColor);
+      color: var(--placeholder-text-color);
     }
   
     input {
-      color: var(--textColor);
+      color: var(--text-color);
     }
   }
 

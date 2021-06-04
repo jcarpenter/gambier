@@ -1,5 +1,5 @@
 <script>
-  import { css, setSize } from '../ui/actions'
+  import { setAsCustomPropOnNode, setSize } from '../ui/actions'
   import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
 
@@ -10,7 +10,7 @@
   export let left = 4
   export let rotation = 0
   export let opacity = 1.0
-  export let iconColor = 'controlTextColor'
+  export let iconColor = 'control-text-color'
 
 </script>
 
@@ -27,18 +27,18 @@
   }
 
   .icon {
-    @include centered_mask_image;
+    @include centered-mask-image;
     width: 100%;
     height: 100%;
     transform: rotateZ(calc(var(--rotation) * 1deg));
-    -webkit-mask-image: var(--img-chevron-down-bold);
+    -webkit-mask-image: var(--disclosure-chevron-icon);
   }
 </style>
 
 <button
   class='disclosure'
   tabindex='-1'
-  use:css={{ left, rotation, opacity }}
+  use:setAsCustomPropOnNode={{ left, rotation, opacity }}
   use:setSize={{width, height, margin, padding}}
   on:mousedown|stopPropagation={() => dispatch('toggle')}
 >

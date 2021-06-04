@@ -2300,6 +2300,7 @@
   function paddingH(display) {
     if (display.cachedPaddingH) { return display.cachedPaddingH }
     var e = removeChildrenAndAdd(display.measure, elt("pre", "x", "CodeMirror-line-like"));
+    // console.log(e)
     var style = window.getComputedStyle ? window.getComputedStyle(e) : e.currentStyle;
     var data = {left: parseInt(style.paddingLeft), right: parseInt(style.paddingRight)};
     if (!isNaN(data.left) && !isNaN(data.right)) { display.cachedPaddingH = data; }
@@ -3210,19 +3211,38 @@
         var ltr = dir == "ltr";
         var fromPos = coords(from, ltr ? "left" : "right");
         var toPos = coords(to - 1, ltr ? "right" : "left");
-
+        
         var openStart = fromArg == null && from == 0, openEnd = toArg == null && to == lineLen;
         var first = i == 0, last = !order || i == order.length - 1;
         if (toPos.top - fromPos.top <= 3) { // Single line
+          // console.log('single')
           var openLeft = (docLTR ? openStart : openEnd) && first;
           var openRight = (docLTR ? openEnd : openStart) && last;
           var left = openLeft ? leftSide : (ltr ? fromPos : toPos).left;
           var right = openRight ? rightSide : (ltr ? toPos : fromPos).right;
+          
+          // NOTE: Josh 5/17/2021: Modified so if line is selected (from beginning to end), 
+          // we set left side of selection to the inner padded edge of the measure element.
+          // Else, if only the start of the line is selected (a litle selected stub), we
+          // we hide the selection by making right value same as the left.
+          const lineSelected = !openLeft && openRight && from == 0
+          if (lineSelected) left = leftSide
+          const littleChunkAtStartSelected = openLeft && !openRight && to == 0
+          if (littleChunkAtStartSelected) right = left
+
           add(left, fromPos.top, right - left, fromPos.bottom);
+
         } else { // Multiple lines
+          // console.log('multi')
           var topLeft, topRight, botLeft, botRight;
           if (ltr) {
-            topLeft = docLTR && openStart && first ? leftSide : fromPos.left;
+            // NOTE: Josh 5/17/2021: Modified to add another condition under which
+            // we set left edge of selection to leftSide (which is inner padded edge of
+            // the measure element): when the from == 0. Meaning the selection extends
+            // to the beginning of the line.
+            topLeft = docLTR && (openStart && first || from == 0) ? leftSide : fromPos.left;
+            // Before:
+            // topLeft = docLTR && openStart && first ? leftSide : fromPos.left;
             topRight = docLTR ? rightSide : wrapX(from, dir, "before");
             botLeft = docLTR ? leftSide : wrapX(to, dir, "after");
             botRight = docLTR && openEnd && last ? rightSide : toPos.right;
@@ -3261,8 +3281,9 @@
           add(leftEnd.right, leftEnd.top, rightStart.left - leftEnd.right, leftEnd.bottom);
         }
       }
-      if (leftEnd.bottom < rightStart.top)
-        { add(leftSide, leftEnd.bottom, null, rightStart.top); }
+      if (leftEnd.bottom < rightStart.top) { 
+        add(leftSide, leftEnd.bottom, null, rightStart.top); 
+      }
     }
 
     output.appendChild(fragment);

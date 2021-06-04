@@ -4,6 +4,8 @@ import svelte from 'rollup-plugin-svelte'
 import sveltePreprocess from 'svelte-preprocess'
 
 const production = !process.env.ROLLUP_WATCH
+const isMac = process.platform === 'darwin'
+const isWin = process.platform === 'win32'
 
 export default [
 
@@ -43,13 +45,19 @@ export default [
     },
     plugins: [
       svelte({
+
+        // See docs for compile options: 
+        // https://svelte.dev/docs#svelte_compile
+
         preprocess: sveltePreprocess({
           defaults: {
             style: 'scss'
           },
           scss: {
             // Prepend our mixins, since we use them everywhere. This saves us having to manually include them in each component's styles. — https://github.com/sveltejs/svelte-preprocess/blob/main/docs/getting-started.md
-            prependData: `@import 'src/styles/_mixins.scss';`
+            // prependData: `@import 'src/styles/helpers/common.scss'; @import 'src/styles/helpers/${ isMac ? 'mac' : 'win'}.scss';`
+            // prependData: `@import 'src/styles/helpers/_${ isMac ? 'mac' : 'win'}.scss';`
+            prependData: `@use 'src/styles/_helpers/_helpers.scss' as *;`
           }
         }),
 
@@ -61,11 +69,6 @@ export default [
         // Enable when not in production
         dev: !production,
         
-        // we'll extract any component CSS out into
-        // a separate file - better for performance
-        // css: css => {
-        //   css.write('public/build/bundle.css');
-        // }
       }),
       resolve(),
       commonjs()
@@ -94,7 +97,9 @@ export default [
           },
           scss: {
             // Prepend our mixins, since we use them everywhere. This saves us having to manually include them in each component's styles. — https://github.com/sveltejs/svelte-preprocess/blob/main/docs/getting-started.md
-            prependData: `@import 'src/styles/_mixins.scss';`
+            // prependData: `@import 'src/styles/helpers/common.scss'; @import 'src/styles/helpers/${ isMac ? 'mac' : 'win'}.scss';`
+            // prependData: `@import 'src/styles/helpers/_${ isMac ? 'mac' : 'win'}.scss';`
+            prependData: `@use 'src/styles/_helpers/_helpers.scss' as *;`
           }
         }),
 

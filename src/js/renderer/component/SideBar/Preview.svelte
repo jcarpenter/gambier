@@ -78,13 +78,14 @@
   .doc-excerpt {
     p {
       .title {
-        @include label-normal-bold;
-        color: var(--labelColor);;
+        @include system-regular-font;
+        font-weight: bold;
+        color: var(--label-color);;
         // font-weight: 500;
       }
-      // border-left: 4px solid var(--tertiaryLabelColor);
-      @include label-normal;
-      color: var(--labelColor);
+      // border-left: 4px solid var(--tertiary-label-color);
+      @include system-regular-font;
+      color: var(--label-color);
       display: -webkit-box;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 10;
@@ -105,8 +106,8 @@
     // flex-shrink: 1;
 
     .path {
-      @include label-normal-small;
-      color: var(--labelColor);
+      @include system-small-font;
+      color: var(--label-color);
       opacity: 0.75;
       white-space: nowrap;                   
       overflow: hidden;
@@ -152,7 +153,7 @@
         </p>
       </div>
       <!-- <div class="metadata">
-        <Label color={'primary'} typography={'label-normal-small-bold'}>
+        <Label color={'primary'} typography={'system-small-font-bold'}>
           {file.title}
         </Label>
         <div class="path" on:click={() => showFileOnDrive(file.path)}>
@@ -168,10 +169,10 @@
         <Thumbnail src={file.path} margin={'0 0 0 0'} />
       </div>
       <div class="metadata">
-        <!-- <Label color={'primary'} typography={'label-normal-small-bold'}>
+        <!-- <Label color={'primary'} typography={'system-small-font-bold'}>
           {file.name}
         </Label> -->
-        <Label align="center" color={'primary'} opacity={0.75} typography={'label-normal-small'}>
+        <Label align="center" color={'primary'} opacity={0.75} typography={'system-small-font'}>
           <!-- {file.format.toUpperCase()} -  -->
           {prettySize(file.sizeInBytes, ' ')} - 
           {file.dimensions.width} x {file.dimensions.height}

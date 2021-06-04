@@ -36,10 +36,11 @@
 
 <style type="text/scss">
   .sortMenu {
-    transform: translate(2px, 0);
+    transform: translate(0, 0);
   }
 </style>
 
 <div class="sortMenu">
-  <IconButton compact={true} menuWidth='120px' items={items} icon={'img-arrow-up-arrow-down'} tooltip={'Change the sorting criteria and direction'} on:selectItem={setSorting} />
+  <IconButton 
+    compact={true} menuWidth='120px' items={items} icon={'sortmenu-icon'} tooltip={'Change the sorting criteria and direction'} on:selectItem={setSorting} />
 </div>

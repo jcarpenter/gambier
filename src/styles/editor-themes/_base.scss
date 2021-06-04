@@ -1,0 +1,177 @@
+@use "../_helpers/colors" as *;
+@use "../_helpers/mediaqueries" as *;
+@use "default-tags";
+@use "markdown-tags";
+@use "sass:color";
+
+body {
+
+    --editor-leftPadding: 4em;
+    --mark-borderRadius: 3px;
+
+    @include dark {
+        $link: #0d67dc;
+        --link-mark:                    #{$link};
+        --link-mark-bg:                 #{color.adjust($link, $alpha: -0.9)};
+        --link-mark-border:             #{color.adjust($link, $lightness: -30%, $alpha: -0.9)};
+        --link-mark-highlight:          white;
+        --link-mark-highlight-bg:       #{$link};
+        --link-source:                  #{$link};
+        --link-source-url:              #{color.adjust($link, $alpha: -0.2)};   
+        --link-source-title:            #{color.adjust($link, $alpha: -0.4)};
+        --link-source-bg:               #{color.adjust($link, $alpha: -0.95)};
+        --link-source-md:               #{color.adjust($link, $alpha: -0.4)};
+        --link-ref-definition-bg:       #{color.adjust($link, $alpha: -0.9)};
+    }
+
+    @include light {
+        --quote: rgb(13, 103, 220);
+        --quote-md: rgba(13, 103, 220, 0.6);
+        --quote-indent: 2em;
+        --quote-border-bg: transparent;
+        // --quote-border-bg: rgba(13, 103, 220, 0.05);
+        --quote-border-width: 0.6em;
+        
+        $citation: #dcc00d;
+        --citation-mark:                #{color.adjust($citation, $lightness: -20%)};
+        --citation-mark-bg:             #{color.adjust($citation, $alpha: -0.8)};
+        --citation-mark-border:         #{color.adjust($citation, $lightness: -30%, $alpha: -0.9)};
+        --citation-mark-highlight:      white;
+        --citation-mark-highlight-bg:   #{$citation};
+        --citation-source:              #{color.adjust($citation, $lightness: -20%)};
+        --citation-source-bg:           #{color.adjust($citation, $alpha: -0.95)};
+        --citation-source-md:           #{color.adjust($citation, $lightness: -20%, $alpha: -0.4)};
+        
+        $code: #4db14c;
+        --code-source:                  #{color.adjust($code, $lightness: -15%)};
+        --code-source-bg:               #{color.adjust($code, $alpha: -0.9)};
+        --code-source-md:               #{color.adjust($code, $lightness: -10%, $alpha: -0.6)};
+        --code-borderRadius:            2px;
+
+        $emphasis: #0d67dc;
+        --emphasis:                     #{$emphasis};
+        --emphasis-md:                  #{color.adjust($emphasis, $alpha: -0.6)};
+        
+        --fencedcodeblock-bg:         hsla(0, 0%, 0%, 0.02);
+        --fencedcodeblock-md:           rgba(var(--foregroundColor), 0.4);
+        --fencedcodeblock-options-label: rgba(var(--foregroundColor), 0.25);
+        --fencedcodeblock-borderRadius: 0.2em;
+        --fencedcodeblock-syntax-icon:  url(img/ui/chevron.down.heavy.svg);
+
+        // --figure-bg:                  rgba(241, 188, 127, 0.2) !important;      
+        --figure-bg:                    transparent;
+        --figure-caption:               #{accent($light: -10%, $sat: -20%)};
+        // --figure-caption:               #{foregroundColor(0.65)};
+        --figure-thumb-bg:              transparent;
+        --figure-thumb-borderRadius:    3.5px;
+        --figure-thumb-borderWidth:     1px;
+        --figure-thumb-borderColor:     var(--accent-color);
+        --figure-options-label:    rgba(var(--foregroundColor), 0.4);
+
+        // --frontmatter-bg:               rgba(var(--foregroundColor), 0.03);
+        --frontmatter-bg:               #{accent($alpha: 0.03)};
+        --frontmatter-border-width:     1px;
+        --frontmatter-border:           #{accent($light: 30%, $sat: -75%, $alpha: 1)};
+        --frontmatter-collapsed-border-hover: #{accent($light: 0%, $sat: 0%, $alpha: 1)};
+        --frontmatter-collapsed-widget-hover: #{accent($light: 0%, $sat: 0%, $alpha: 1)};
+        --frontmatter-borderRadius:     0.3em;
+        --frontmatter-md:               #{accent($light: -20%, $alpha: 0.25)};
+        --frontmatter-options-label:    #{accent($light: -20%, $alpha: 0.25)};
+        --frontmatter-options-icon:     #{accent($light: -20%, $alpha: 0.35)};
+        --frontmatter-dividers:         #{foregroundColor(0.05)};
+        
+        --h1:                           rgba(var(--foregroundColor), 1);
+        --h2:                           rgba(var(--foregroundColor), 0.8);
+        --h3:                           rgba(var(--foregroundColor), 0.8);
+        --h4:                           rgba(var(--foregroundColor), 0.8);
+        --h5:                           rgba(var(--foregroundColor), 0.8);
+        --h6:                           rgba(var(--foregroundColor), 0.8);
+        --hr-bg:                      rgba(198, 198, 198, 0.2);
+        
+        $image: #42ab5e;
+        --image-mark:                   #{color.adjust($image, $lightness: -15%)};
+        --image-mark-bg:                #{color.adjust($image, $alpha: -0.8)};
+        --image-mark-border:            #{color.adjust($image, $lightness: -30%, $alpha: -0.9)};
+        --image-mark-highlight:         white;
+        --image-mark-highlight-bg:      #{$image};
+        --image-source:                 #{color.adjust($image, $lightness: -15%)};
+        --image-source-url:             #{color.adjust($image, $lightness: -15%, $alpha: -0.2)};
+        --image-source-title:           #{color.adjust($image, $lightness: -15%, $alpha: -0.4)};
+        --image-source-bg:              #{color.adjust($image, $alpha: -0.95)};
+        --image-source-md:              #{color.adjust($image, $lightness: -20%, $alpha: -0.4)};
+
+        $footnote: #aa5096;
+        --footnote-mark:                #{$footnote};
+        --footnote-mark-bg:             #{color.adjust($footnote, $alpha: -0.8)};
+        --footnote-mark-border:         #{color.adjust($footnote, $lightness: -30%, $alpha: -0.9)};
+        --footnote-mark-highlight:      white;
+        --footnote-mark-highlight-bg:   #{$footnote};
+        --footnote-source:              #{$footnote};
+        --footnote-source-bg:           #{color.adjust($footnote, $alpha: -0.95)};
+        --footnote-source-md:           #{color.adjust($footnote, $alpha: -0.4)};
+        
+        
+        // --link-colo r:                 hsl(241, 89%, 46%);
+        // --link-color-hsl:               214, 89%, 46%;
+        
+        // --link-mark:                    hsla(var(--link-color-hsl), 1);
+        // --link-mark-bg:                 hsla(var(--link-color-hsl), 0.1);
+        $link: #0d67dc;
+        --link-mark:                    #{$link};
+        --link-mark-bg:                 #{color.adjust($link, $alpha: -0.9)};
+        --link-mark-border:             #{color.adjust($link, $lightness: -20%, $alpha: -0.9)};
+        --link-mark-border-width:       1px;
+        --link-mark-highlight:          white;
+        --link-mark-highlight-bg:       #{$link};
+        --link-mark-borderRadius:       2px;
+        --link-source:                  #{$link};
+        --link-source-url:              #{color.adjust($link, $alpha: -0.2)};
+        --link-source-title:            #{color.adjust($link, $alpha: -0.4)};
+        --link-source-bg:               #{color.adjust($link, $alpha: -0.95)};
+        --link-source-md:               #{color.adjust($link, $alpha: -0.4)};
+        --link-ref-definition-bg:       #{color.adjust($link, $alpha: -0.9)};
+
+        $list: #0d67dc;
+        --list-indentation:             1em;
+        --list-marker:                  #{color.adjust($list, $alpha: -0.2)};
+
+        --texmath-inline:               rgba(214, 214, 214, 0.5);
+        --texmath-display:              rgba(214, 214, 214, 0.5);
+
+        $strikethrough: hsla(0, 0%, 0%, 45%);
+        --strikethrough:                #{$strikethrough};
+        --strikethrough-md:             #{color.adjust($strikethrough, $alpha: -0.2)};
+
+        $strong: #0d67dc;
+        --strong:                       #{$strong};
+        --strong-md:                    #{color.adjust($strong, $alpha: -0.6)};
+
+        $task: #E44720;
+        --task-mark-icon:               url(/img/ui/checkmark.heavy.svg);
+        --task-mark-icon-bg:          white;
+        --task-mark-open-bg:            transparent;
+        --task-mark-open-border:        rgba(var(--foregroundColor), 0.3);
+        --task-mark-closed-bg:          #{$task};
+        --task-mark-closed-border:      #{$task};
+
+        --task-mark-bg:                 #{color.adjust($task, $alpha: -0.8)};
+        --task-mark-border:             #{color.adjust($task, $lightness: -30%, $alpha: -0.9)};
+        --task-mark-highlight:          white;
+        --task-mark-highlight-bg:       #{$task};
+        --task-source:                  #{color.adjust($task, $lightness: -20%)};
+        --task-source-bg:               #{color.adjust($task, $alpha: -0.95)};
+        --task-source-md:               #{color.adjust($task, $lightness: -20%, $alpha: -0.4)};
+
+
+        // Applies to url-in-brackets and email-in-brackets
+        $in-brackets: #0d67dc;
+        --in-brackets:                  #{$in-brackets};
+        --in-brackets-md:               #{color.adjust($in-brackets, $alpha: -0.6)};
+
+        // $strong: #0d67dc;
+        --wizard-error:               rgba(255, 0, 0, 0.5);
+        --wizard-border-color:          var(--separator-color);
+        --wizard-border-thickness:      1px;
+        --wizard-border-radius:         4px;
+    }
+}

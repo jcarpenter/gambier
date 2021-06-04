@@ -10,8 +10,8 @@
 <style type="text/scss">
 
   .token {
-    @include label-normal;
-    color: var(--secondaryLabelColor);
+    @include system-regular-font;
+    color: var(--secondary-label-color);
     padding: 0 4px;
     border-radius: 3px;
     background-color: rgba(var(--foregroundColor), 0.08);

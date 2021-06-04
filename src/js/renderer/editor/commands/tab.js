@@ -1,4 +1,5 @@
 import { getFromAndTo, getModeAndState, orderOrderedList } from "../editor-utils"
+import { getLineClasses } from "../map"
 import { blankLineRE } from "../regexp"
 
 /**
@@ -16,38 +17,57 @@ export function tab(cm, shiftKey) {
     const { from, to, isMultiLine } = getFromAndTo(range, true)
 
     if (!isMultiLine) {
-      const i = from.line
-      const { state, mode } = getModeAndState(cm, i)
-      const lineText = cm.getLine(i)
 
-      if (mode.name !== 'markdown') return
+      const i = from.line
+      const lineHandle = cm.getLineHandle(i)
+      const lineClasses = getLineClasses(lineHandle)
+      const lineText = lineHandle.text
+      const { state, mode } = getModeAndState(cm, i)
+
+      const isUl = lineClasses.includes('ul')
+      const isOl = lineClasses.includes('ol')
+      const isList = isUl || isOl
+
+      if (mode.name !== 'markdown') {
+        cm.execCommand('defaultTab')
+        return
+      }
 
       if (state.header) {
 
         indentHeader(i, shiftKey, state, false)
 
-      } else if (state.list) {
+      } else if (isList) {
+
 
         // List: Indent or un-indent.
         // If list is `ol`, update order.
         if (shiftKey) {
-          if (isSafeToIndentLine(cm, i, 'subtract')) {
+          if (isSafeToIndentLine(cm, i, state, 'subtract')) {
             cm.indentLine(i, 'subtract')
-            if (state.list == 'ol') orderOrderedList(cm, i, '+input', 1, true)
-
+            if (isOl) orderOrderedList(cm, i, '+input', 1, true)
           }
         } else {
-          if (isSafeToIndentLine(cm, i, 'add')) {
+
+          // If it's safe to indent the list, do so.
+          // Else, do nothing. Ignore the tab command.
+          // TODO: Fine tune this in the future so that if cursor is on left
+          // side of bullet, we do nothing (prevent indent), but we enter
+          // tab command as normal if it's on right side of the bullet.
+
+          if (isSafeToIndentLine(cm, i, state, 'add')) {
             cm.indentLine(i, 'add')
-            if (state.list == 'ol') orderOrderedList(cm, i, '+input', 1, true)
+            if (isOl) orderOrderedList(cm, i, '+input', 1, true)
           } else {
-            cm.execCommand('defaultTab')
+            // Do nothing if user presses tab on 
+            // cm.execCommand('defaultTab')
           }
         }
 
       } else {
 
         // Default tab
+        // console.log('default tab')
         cm.execCommand('defaultTab')
 
       }
@@ -58,26 +78,41 @@ export function tab(cm, shiftKey) {
       // For each line in the selection...
       for (var i = from.line; i <= to.line; i++) {
 
+        const lineHandle = cm.getLineHandle(i)
+        const lineClasses = getLineClasses(lineHandle)
+        const lineText = lineHandle.text
         const { state, mode } = getModeAndState(cm, i)
-        const lineText = cm.getLine(i)
+  
+        const isUl = lineClasses.includes('ul')
+        const isOl = lineClasses.includes('ol')
+        const isList = isUl || isOl  
 
         if (mode.name !== 'markdown' || blankLineRE.test(lineText)) continue
 
         if (state.header) {
-          
+
           indentHeader(i, shiftKey, state, true)
 
-        } else if (state.list) {
-          
+        } else if (isList) {
+
+          // If it's safe to indent the list, do so.
+          // Else, do nothing. Ignore the tab command.
+          // TODO: Fine tune this in the future so that if cursor is on left
+          // side of bullet, we do nothing (prevent indent), but we enter
+          // tab command as normal if it's on right side of the bullet.
+
           if (shiftKey) {
             if (isSafeToIndentLine(cm, i, 'subtract')) {
               cm.indentLine(i, 'subtract')
-              if (state.list == 'ol') orderOrderedList(cm, i, '+input', 1, true)
+              if (isOl) orderOrderedList(cm, i, '+input', 1, true)
             }
           } else {
             if (isSafeToIndentLine(cm, i, 'add')) {
               cm.indentLine(i, 'add')
-              if (state.list == 'ol') orderOrderedList(cm, i, '+input', 1, true)
+              if (isOl) orderOrderedList(cm, i, '+input', 1, true)
+            } else {
+              // Do nothing if user presses tab on 
+              // cm.execCommand('defaultTab')
             }
           }
         }
@@ -103,36 +138,87 @@ export function tab(cm, shiftKey) {
 
 
 /**
- * Allow indentation ('add'), when the indentation of the list item above is equal or greater than the selected line. 
- * Allow un-indentation ('subtract'), when 1) the indentation of the list item below is equal or less than the selected line, or 2) the selected line is at the end of the list.
+ * Allow indentation ('add'), when the indentation of the list 
+ * item above is equal or greater than the selected line. 
+ * Allow un-indentation ('subtract'), when 1) the indentation of 
+ * the list item below is equal or less than the selected line, 
+ * or 2) the selected line is at the end of the list.
  */
-function isSafeToIndentLine(cm, line, direction) {
+function isSafeToIndentLine(cm, lineNo, lineState, direction) {
 
-  const thisLineClasses = getLineClasses(cm.getLineHandle(line))
-  const thisLineDepth = thisLineClasses.match(/list-(\d)/)[1]
+  const lineHandle = cm.getLineHandle(lineNo)
+  const lineClasses = getLineClasses(lineHandle)
+  const isUl = lineClasses.includes('ul')
+  const isOl = lineClasses.includes('ol')
+  const listDepth = lineState.listStack.length
 
   if (direction == 'add') {
 
-    const isFirstLineOfDoc = line == 0
+    // Can't indent first line of document.
+    const isFirstLineOfDoc = lineNo == 0
     if (isFirstLineOfDoc) return false
 
-    const prevLineClasses = getLineClasses(cm.getLineHandle(line - 1))
-    const prevLineIsList = prevLineClasses.includes('list')
-    const prevLineDepth = prevLineIsList && prevLineClasses.match(/list-(\d)/)[1]  
+    // We can indent if previous line is 1) of same list type,
+    // and 2) greater or equal indentation, to current line.
 
-    const safeToIndent = prevLineDepth >= thisLineDepth
+    const prevLineHandle = cm.getLineHandle(lineNo - 1)
+    const prevLineClasses = getLineClasses(prevLineHandle)
+    const isPrevLineListOfSameType =
+      isUl && prevLineClasses.includes('ul') ||
+      isOl && prevLineClasses.includes('ol')
+
+    const prevLineState = getModeAndState(cm, lineNo - 1).state
+    const prevLineListDepth = prevLineState.listStack.length
+
+    const safeToIndent = isPrevLineListOfSameType && prevLineListDepth >= listDepth
     return safeToIndent
 
-  } else {
+  } else if (direction == 'subtract') {
 
-    const isLastLineOfDoc = line == cm.lastLine()
+    // Can un-indent if last line of document
+    const isLastLineOfDoc = lineNo == cm.lastLine()
     if (isLastLineOfDoc) return true
 
-    const nextLineClasses = getLineClasses(cm.getLineHandle(line + 1))
-    const nextLineIsList = nextLineClasses.includes('list')
-    const nextLineDepth = nextLineIsList && nextLineClasses.match(/list-(\d)/)[1]  
+    // We can un-indent if next line is not a list,
+    // OR if current line indentation is greater than or equal to 
+    // the next line indentation.
 
-    const safeToUnIndent = !nextLineIsList || thisLineDepth >= nextLineDepth
+    const nextLineHandle = cm.getLineHandle(lineNo + 1)
+    const nextLineClasses = getLineClasses(nextLineHandle)
+    const isNextLineList = nextLineClasses.includes('list')
+
+    const nextLineState = getModeAndState(cm, lineNo + 1).state
+    const nextLineListDepth = nextLineState.listStack.length
+
+    const safeToUnIndent = !isNextLineList || listDepth >= nextLineListDepth
     return safeToUnIndent
   }
+
+  // 5/6/2021: Old state-based version
+  // const listDepth = lineState.listStack.length
+
+  // if (direction == 'add') {
+
+  //   const isFirstLineOfDoc = lineNo == 0
+  //   if (isFirstLineOfDoc) return false
+
+  //   const prevLineState = getModeAndState(cm, lineNo - 1).state
+  //   const isPrevLineListOfSameType = prevLineState.list == lineState.list
+  //   const prevLineListDepth = prevLineState.listStack.length
+
+  //   const safeToIndent = isPrevLineListOfSameType && prevLineListDepth >= listDepth
+  //   return safeToIndent
+
+  // } else {
+
+  //   const isLastLineOfDoc = lineNo == cm.lastLine()
+  //   if (isLastLineOfDoc) return true
+
+  //   const nextLineState = getModeAndState(cm, lineNo + 1).state
+  //   const isNextLineList = nextLineState.list
+  //   const nextLineListDepth = nextLineState.listStack.length
+
+  //   const safeToUnIndent = !isNextLineList || listDepth >= nextLineListDepth
+  //   return safeToUnIndent
+  // }
 }

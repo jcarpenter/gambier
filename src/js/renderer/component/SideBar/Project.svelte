@@ -232,8 +232,8 @@
   <Header title={tab.title} hoverToShowSlot={true}>
     <SortMenu items={sortOptions} />
   </Header>
-  <Separator margin={'0 10px'} />
-  <SearchField icon='img-magnifyingglass' focused bind:query placeholder={'Name'} margin={'10px 10px 0'} />
+  <Separator margin={'0 12px'} />
+  <SearchField icon='img-magnifyingglass' focused bind:query placeholder={'Name'} margin={'8px 12px 0'} />
   {#if query == ''} 
     <TreeList subtree={data.tree[0]} listIds={data.allIds} />
   {:else}

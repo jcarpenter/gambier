@@ -1,17 +1,20 @@
 <script>
-  import { isWindowFocused } from "../../StateManager";
+  import { isWindowFocused, state } from "../../StateManager";
 
   export let label = '' // 'Settings'
   export let icon = '' // 'img-photo'
   export let isSelected = false
+
+  $: tabindex = $state.system.keyboardNavEnabled ? 0 : -1
+
 </script>
 
 <style type="text/scss">
 
   // Layout
   .tab {    
-    width: 55px;
-    height: 45px;
+    width: 58px;
+    height: 44px;
     border-radius: 6px;
     display: flex;
     flex-direction: column;
@@ -20,7 +23,7 @@
     -webkit-app-region: no-drag;
 
     .icon {
-      @include centered_mask_image;
+      @include centered-mask-image;
       width: 23px;
       min-height: 21px;
       margin-top: 5px;
@@ -29,69 +32,74 @@
     }
     
     .label {
-      @include label-normal-small;
+      @include system-small-font;
       text-align: center;
       margin: 0;
       padding: 0;
       pointer-events: none;
     }
+
+    &:focus {
+      @include focusRingAnimation;
+      outline: none;
+    }
   }
 
   // Window focused
-  .tab.isWindowFocused {
+  .tab:not(.windowHidden) {
 
     &:not(.isSelected) {
       background-color: none;
       .icon {
-        @include dark { 
-          background-color: var(--secondaryLabelColor); 
-        }
         @include light { 
-          background-color: var(--labelColor); 
+          background-color: var(--label-color); 
           opacity: 0.75;
+        }
+        @include dark { 
+          background-color: var(--secondary-label-color); 
         }
       }
       .label {
-        @include dark { 
-          color: var(--secondaryLabelColor); 
-        }
         @include light { 
-          color: var(--labelColor); 
+          color: var(--label-color); 
           opacity: 0.75;
+        }
+        @include dark { 
+          color: var(--secondary-label-color); 
         }
       }
     }
 
     &:not(.isSelected):hover {
-      @include dark { background: white(0.08); }
       @include light { background: black(0.05); }
+      @include dark { background: white(0.08); }
     }
 
     &:not(.isSelected):active {
-      @include dark { background: white(0.12); }
       @include light { background: black(0.08); }
+      @include dark { background: white(0.12); }
 
       .icon {
-        @include dark { background: var(--labelColor); }
-        @include light { background: var(--labelColor); }
+        @include light { background: var(--label-color); }
+        @include dark { background: var(--label-color); }
       }
       .label {
-        @include dark { color: var(--labelColor); }
-        @include light { color: var(--labelColor); }
+        @include light { color: var(--label-color); }
+        @include dark { color: var(--label-color); }
       }
     }
     
     &.isSelected {
-      @include dark { background: white(0.08); }
       @include light { background: black(0.05); }
+      @include dark { background: white(0.08); }
 
       .icon {
-        background-color: var(--iconAccentColor);
+        background-color: var(--nav-icon-color);
         @include dark { filter: brightness(1.6); }
         // @include light { }
       }
       .label {
-        color: var(--iconAccentColor);
+        color: var(--nav-icon-color);
         @include dark { filter: brightness(1.6); }
         // @include light { }
       }
@@ -109,32 +117,42 @@
     }
   }
   
-  // Window NOT focused
-  .tab:not(.isWindowFocused) {
+  // Window NOT visible
+  .tab.windowHidden {
 
     &.isSelected {
-      @include dark { background: white(0.08); }
       @include light { background: black(0.05); }
+      @include dark { background: white(0.08); }
     }
 
     &:not(.isSelected) {
-      @include dark { opacity: 0.5; }
       @include light { opacity: 0.6; }
+      @include dark { opacity: 0.5; }
     }
 
     .icon {
-      @include dark { background: var(--secondaryLabelColor); }
-      @include light { background: var(--secondaryLabelColor); }
+      background: var(--secondary-label-color);
     }
 
     .label {
-      @include dark { color: var(--secondaryLabelColor); }
-      @include light { color: var(--secondaryLabelColor); }
+      color: var(--secondary-label-color);
     }
   }
 </style>
 
-<div class="tab" class:isWindowFocused={$isWindowFocused} class:isSelected on:mouseup>
+<div 
+  class="tab" 
+  class:isSelected 
+  tabindex={tabindex}
+  class:windowHidden={!$isWindowFocused} 
+  on:click
+  on:mousedown|preventDefault
+  on:keydown={(evt) => {
+    if (evt.code == 'Space') {
+      evt.target.click()
+    }
+  }}
+>
   <div class="icon" style={`-webkit-mask-image: var(--${icon});`}></div>
   <h1 class="label">{label}</h1>
 </div>

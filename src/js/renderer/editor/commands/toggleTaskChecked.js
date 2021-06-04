@@ -1,31 +1,49 @@
-import { getLineClasses, getLineSpans, getTopAndBottomLines } from "../editor-utils"
+import { Pos } from "codemirror"
+import { getFromAndTo, getModeAndState } from "../editor-utils"
+import { getLineClasses } from "../map"
 
 /**
  * Toggle task list item(s). 
- * TODO: Convert to new system
  */
 export function toggleTaskChecked(cm) {
-  if (cm.getOption('disableInput')) return CodeMirror.Pass
+
   const ranges = cm.listSelections()
-  // For each selection...
-  ranges.forEach((range) => {
-    const { topLine, bottomLine } = getTopAndBottomLines(range)
-    // For each line selected...
-    for (var line = topLine; line <= bottomLine; line++) {
-      // If the line is in a task list...
-      const lineHandle = cm.getLineHandle(line)
+  let edits = []
+
+  for (const r of ranges) {
+
+    const { state, mode } = getModeAndState(cm, r.anchor.line)
+    const { from, to, isMultiLine, isSingleCursor } = getFromAndTo(r, true)
+    if (mode.name !== 'markdown') continue
+
+    for (var i = from.line; i <= to.line; i++) {
+
+      const lineHandle = cm.getLineHandle(i)
       const lineClasses = getLineClasses(lineHandle)
-      const isTaskList = lineClasses.includes('task')
-      if (!isTaskList) continue
-      // Toggle the open/closed value...
-      const spans = getLineSpans(cm, lineHandle)
-      const span = spans.find((s) => s.classes.includes('task'))
-      cm.replaceRange(
-        span.element.isClosed ? ' ' : 'x',
-        { line, ch: span.start + 1 },
-        { line, ch: span.start + 2 }
-      )
+      const isTaskList = lineClasses.includes('taskList')
+
+      if (isTaskList) {
+        const lineText = cm.getLine(i)
+        const ch = lineText.indexOf('[') + 1
+        const type = cm.getTokenTypeAt(Pos(i, ch))
+        const text = type.includes('task-closed') ? ' ' : 'x'
+        cm.replaceRange(text, Pos(i, ch), Pos(i, ch + 1), '+input')
+      }
+      
+      // 5/10/2021: Previous state-based approach. Had to move away from 
+      // this once we stopped marking state.list after first character
+      // (in markdown.js).
+
+      // const { state, mode } = getModeAndState(cm, i)
+      // if (mode.name !== 'markdown') continue
+
+      // if (state.taskList) {
+      //   const lineText = cm.getLine(i)
+      //   const ch = lineText.indexOf('[') + 1
+      //   const type = cm.getTokenTypeAt(Pos(i, ch))
+      //   const text = type.includes('task-closed') ? ' ' : 'x'
+      //   cm.replaceRange(text, Pos(i, ch), Pos(i, ch + 1), '+input')
+      // }
     }
-  })
-  return CodeMirror.Pass
+  }
 }

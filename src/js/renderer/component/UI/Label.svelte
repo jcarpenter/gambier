@@ -1,17 +1,16 @@
 <script>
-  import { css } from '../ui/actions'
+  import { setAsCustomPropOnNode } from '../ui/actions'
   
   export let opacity = '1'
   export let display = 'block'
   export let align = 'left'
   export let color = 'primary'
-  export let typography = 'label-normal'
+  export let typography = 'system-regular-font'
   export let isSelected = false
 
 </script>
 
 <style type="text/scss">
-  @import '../../../../styles/_mixins.scss';
 
   div, span {
     --opacity: 1;
@@ -30,15 +29,15 @@
 
   // Color
   .primary {
-    color: var(--labelColor);
+    color: var(--label-color);
   }
 
   .secondary {
-    color: var(--secondaryLabelColor);
+    color: var(--secondary-label-color);
   }
 
   .tertiary {
-    color: var(--tertiaryLabelColor);
+    color: var(--tertiary-label-color);
   }
 
   .quaternary {
@@ -46,38 +45,37 @@
   }
 
   // Typography
-  .label-normal {
-    @include label-normal;
+  .system-regular-font {
+    @include system-regular-font;
   }
 
   // Typography
-  .label-normal-bold {
-    @include label-normal-bold;
+  .system-regular-font-bold {
+    @include system-regular-font;
+    font-weight: bold;
   }
 
-  .label-normal-small {
-    @include label-normal-small;
+  .system-small-font {
+    @include system-small-font;
   }
 
-  .label-normal-small-bold {
-    @include label-normal-small-bold;
+  .system-small-font-bold {
+    @include system-small-font;
+    font-weight: bold;
   }
 
-  .label-large-bold {
-    @include label-large-bold;
+  .title1-emphasized-text {
+    @include title1-emphasized-text;
   }
 
-  .column {
-    @include column;
-  }
 </style>
 
 {#if display == 'block'}
-  <div class="label {color} {typography}" class:isSelected use:css={{opacity, align}}>
+  <div class="label {color} {typography}" class:isSelected use:setAsCustomPropOnNode={{opacity, align}}>
     <slot></slot>
   </div>
 {:else if display == 'inline'}
-  <span class="label {color} {typography}" class:isSelected use:css={{opacity, align}}>
+  <span class="label {color} {typography}" class:isSelected use:setAsCustomPropOnNode={{opacity, align}}>
     <slot></slot>
   </span>
 {/if}

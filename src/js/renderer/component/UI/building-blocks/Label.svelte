@@ -1,5 +1,5 @@
 <script>
-  import { css } from '../actions';
+  import { setAsCustomPropOnNode } from '../actions';
   export let label
   export let padding = 8
 </script>
@@ -14,6 +14,6 @@
   }
 </style>
 
-<span use:css={{padding}}>
+<span use:setAsCustomPropOnNode={{padding}}>
   {label}:
 </span>

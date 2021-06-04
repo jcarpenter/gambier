@@ -1,0 +1,16 @@
+// -------------- Light & Dark mode -------------- //
+
+// More compact media queries for dark and light mode
+// Usage: `@include dark { ... }`
+
+@mixin dark {
+    @media (prefers-color-scheme: dark) {
+        @content;
+    }
+}
+
+@mixin light {
+    @media (prefers-color-scheme: light) {
+        @content;
+    }
+}

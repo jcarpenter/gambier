@@ -6,9 +6,6 @@ export function onCursorActivity(cm) {
   // console.log('onCursorActivity')
   // console.log(cm.listSelections())
 
-  // const allMarks = cm.getAllMarks()
-  // allMarks.forEach((m) => m.component?.onSelectionChange())
-
   // Check for outstanding marks.
   // We use bookmark marks to flag elements that need to be
   // marked when the cursor moves outside them. This happens

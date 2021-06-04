@@ -1,32 +1,27 @@
-import { getCharAt, getLineClasses, getPrevChars, getNextChars, getTextFromRange, getDocElements, setUnsavedChanges, getLineElements, getModeAndState, orderOrderedList } from "./editor-utils"
+import { getCharAt, getPrevChars, getNextChars, setUnsavedChanges, getModeAndState, orderOrderedList } from "./editor-utils"
 import { clearLineMarks, markDoc, markElement, markLine } from "./mark"
-import { getElementAt } from "./map"
+import { getElementAt, getLineClasses } from "./map"
+import { Pos } from "codemirror"
 
 /**
  * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
  */
 export function onChanges(cm, changes) {
 
-  // console.log('onChanges')
-  // console.log(changes)
+  const isMultipleChanges = changes.length > 1
+  const oneOfChangesSpansMultipleLines = changes.some((change) =>
+    change.from.line !== change.to.line ||
+    change.origin === '+swapLine' ||
+    // `text` is an array of strings representing the text 
+    // that replaced the changed range, split by line. If
+    // length is greater than zero, it means lines were added.
+    change.text.length > 1
+  )
 
-  /*
-  
-  Delete a line by typing backspace:
-  from.line !== to.line && origin == '+delete'
-  
-  Delete a line by typing character while line text is selected:
-  from.line !== to.line && origin == '+input'
+  // Update `unsavedChanges` on parent panel.
+  setUnsavedChanges(cm)
 
-  removed.length > 1. Each removed line = 1 array item
-
-  Line was deleted, and ordered list was effected. We need to re-order it.
-
-  Line was addded, and ordered list was effected.
-
-  */
-  // console.log(changes)
-
+  // Update ordered lists
   changes.forEach((change) => {
 
     const { from, to, origin, removed, text } = change
@@ -59,28 +54,10 @@ export function onChanges(cm, changes) {
 
 
 
-  const isMultipleChanges = changes.length > 1
-  const oneOfChangesSpansMultipleLines = changes.some((change) =>
-    change.from.line !== change.to.line ||
-    change.origin === '+swapLine'
-  )
-
-  // Update `unsavedChanges` on parent panel.
-  setUnsavedChanges(cm)
-
-  // Set cursor, if `cm.setCursorAfterChanges` !== null. We use this when want to place the cursor at a specific position _after_ we've changed the text.
-  // if (cm.setCursorAfterChanges !== null) {
-  //   cm.setCursor(cm.setCursorAfterChanges)
-  //   // Reset
-  //   cm.setCursorAfterChanges = null
-  // }
-
-
   // ------ If there are multiple changes, or a multi-line change... ------ //
 
-  // markDoc...
+  // Mark the entire doc...
   if (isMultipleChanges || oneOfChangesSpansMultipleLines) {
-    // console.log(isMultipleChanges, oneOfChangesSpansMultipleLines)
     markDoc(cm)
     return
   }
@@ -112,9 +89,12 @@ export function onChanges(cm, changes) {
 
   // ------ If change happened inside TextMarker, update it ------ //
 
-  const textMarker = cm.findMarksAt(cursor)[0]
+  // 4/20: Not sure why I was looking for changes inside cursor, 
+  // instead of at the change location... Changed it to the later.
+  // const textMarker = cm.findMarksAt(cursor)[0]
+  const textMarker = cm.findMarksAt(from)[0]
   if (textMarker) {
-    textMarker.component.updateDisplayedText()
+    textMarker.component?.update()
     return
   }
 
@@ -182,6 +162,8 @@ export function onChanges(cm, changes) {
       }
     }
   }
+
+  return
 
 
   // ------ Else, determine if we should show autocomplete ------ //

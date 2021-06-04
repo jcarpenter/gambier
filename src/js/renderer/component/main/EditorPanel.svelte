@@ -1,12 +1,11 @@
 <script>
-  import { project, sidebar } from '../../StateManager';
+  import { project } from '../../StateManager';
   import { files } from '../../FilesManager';
   import { onMount, onDestroy } from 'svelte'
 
   import Editor from './Editor.svelte';
   import IconButton from '../ui/IconButton.svelte';
   import { createEventDispatcher } from 'svelte'
-  import AddressBar from './AddressBar.svelte';
   import { getCmDataByPanelId } from '../../editor/editor-utils';
   const dispatch = createEventDispatcher()
 
@@ -15,6 +14,8 @@
   export let width = 20 // Percentage. Is converted to `20%`.
   export let isFirstPanel = false
   export let isLastPanel = false
+
+  // $: console.log('EditorPanel: panel: ', panel)
 
   export let highlightAll = undefined
   export let highlightLeftEdge = undefined
@@ -247,7 +248,12 @@
 <style type="text/scss">
 
   .panel {
-    overflow: hidden;
+    // position: relative;
+    // overflow: hidden;
+    // height: 100%;
+    // flex:1 1 auto;
+    display: flex;
+    flex-direction: column;
   }
 
   .panel:not(.isFocusedPanel) {
@@ -319,9 +325,8 @@
     width: 100%;
     display: flex;
     flex-direction: row;
-    padding: 0 5px 0 10px;
-    display: flex;
     align-items: center;
+    padding: 0 5px 0 10px;
     height: 30px;
     flex: none;
     user-select: none;
@@ -336,8 +341,8 @@
   }
 
   h1 {
-    @include label-normal;
-    color: var(--secondaryLabelColor);
+    @include system-regular-font;
+    color: var(--secondary-label-color);
     margin: 0;
     padding: 0;
     white-space: nowrap;
@@ -346,8 +351,8 @@
   }
 
   .hasUnsavedChanges {
-    @include label-large-bold;
-    color: var(--secondaryLabelColor);
+    @include title1-emphasized-text;
+    color: var(--secondary-label-color);
     margin-left: 2px;
   } 
 
@@ -361,11 +366,12 @@
   }
 
   // Resizable divider
+  // TODO: Don't see where this is being used...
 
   .divider {
     height: 100%;
     width: 1px;
-    background: var(--separatorColor);
+    background: var(--separator-color);
     position: relative;
 
     .dragTarget {
@@ -389,8 +395,8 @@
 
 <!-- Panel -->
 <div 
-  style={`width: ${width}%`}
   class="panel" 
+  style={`width: ${width}%`}
   class:highlightAll
   class:highlightLeftEdge
   class:highlightRightEdge
@@ -449,7 +455,7 @@
 
     </span>
 
-    <!-- New panel -->
+    <!-- New panel button -->
     <IconButton 
       on:mouseup={openPanelToRight} 
       padding='0 4px' 

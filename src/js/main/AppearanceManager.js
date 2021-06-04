@@ -1,12 +1,17 @@
-import { BrowserWindow, webContents, app, nativeTheme, systemPreferences } from 'electron'
+import { BrowserWindow, app, nativeTheme, systemPreferences } from 'electron'
 import chroma from 'chroma-js'
 import { stateHasChanged } from '../shared/utils'
 
+const isMac = process.platform == 'darwin'
+const isWin = process.platform == 'win32'
 
-
+/**
+ * Setup listeners and get initial values.
+ */
 export function init() {
 
-  // When nativeTheme changes for any reason, get updated colors.
+  // When nativeTheme changes for any reason, save to state the
+  // new nativeTheme values, and system colors.
   // 'updated' fires when something tells Chromium to update visual settings.
   // Can be triggered by app logic, or from the OS:
   // 1) By app: App manually sets `nativeTheme.themeSource` to 'dark'.
@@ -14,18 +19,20 @@ export function init() {
   //    from OS that OS appearance has changed, and `nativeTheme.themeSource` 
   //    is 'system', so Chromium accepts the change.
   nativeTheme.on('updated', () => {
+    console.log('updated')
     saveChromiumValues()
-    // sendUpdatedColorsToRenderProcess()
+    saveSystemColors()
   })
 
-  // When `theme.darkMode` changes, update Chrome nativeTheme.themeSource.
+  // systemPreferences.on('accent-color-changed', () => {
+  //   saveSystemColors()
+  // } 
+
+  // When user makes changes to View > Dark Mode option, set the 
+  // `nativeTheme.themeSource` value on Chromium to match.
   global.store.onDidAnyChange((state, oldState) => {
-
     const darkModeChanged = stateHasChanged(global.patches, "darkMode")
-
-    if (darkModeChanged) {
-      setNativeTheme(false)
-    } 
+    if (darkModeChanged) setNativeTheme(false)
   })
 
   // Set native UI to theme value in store
@@ -63,6 +70,45 @@ function setNativeTheme(isFirstRun) {
 }
 
 /**
+ * Save various system colors to state.
+ * Accent color is the most important.
+ * TODO: Once getColor() alpha and darkMode issues are fixed, retrieve
+ * accent-influenced colors from system (at least on Mac. Windows TBD.)
+ */
+export async function saveSystemColors() {
+
+  let systemColors = {}
+
+  // User-defined accent color as 8-digit hex: #007AFFFF
+  const accentColor = systemPreferences.getAccentColor()
+  systemColors.accentColor = `#${accentColor}`
+  // Hue: 280
+  systemColors.accentH = chroma(accentColor).hsl()[0]
+  // Saturation: 50%
+  systemColors.accentS = `${chroma(accentColor).hsl()[1] * 100}%`
+  // Lightness: 50
+  systemColors.accentL = `${chroma(accentColor).hsl()[2] * 100}%`
+
+  if (isMac) {
+    systemColors.windowBackgroundColor = nativeTheme.shouldUseDarkColors ? '#323232' : '#ECECEC'
+  }
+
+  // console.log('selectedControlColor', systemPreferences.getColor('selected-control'))
+
+  await global.store.dispatch({ 
+    type: 'SAVE_SYSTEM_COLORS', 
+    colors: systemColors
+  })
+
+  // const colors = global.state().chromium.isDarkMode ?
+  //   getDarkColors() :
+  //   getLightColors()
+  // return colors
+}
+
+
+
+/**
  * Save Chromium appearance-related values to store. Note: nativeTheme properties  will usually match the OS, because they're usually set by the OS. But in some cases, they will differ. If the user chooses `View > Appearance > Light` while the OS is in dark mode, for example. 
  */
 function saveChromiumValues() {
@@ -78,26 +124,13 @@ function saveChromiumValues() {
   })
 }
 
-/** 
- * Send update colors to webContents. 
- * Use colorOverrides, except for preferences window 
- * (it should always match the system / default app look).
-// */
-// function sendUpdatedColorsToRenderProcess() {
-//   BrowserWindow.getAllWindows().forEach((win) => {
-//     const useColorOverrides = win.projectId == 'preferences' ? false : true
-//     console.log(win.projectId, useColorOverrides)
-//     const { colors, overriddenVariables } = getColors(useColorOverrides)
-//     win.webContents.send('updatedSystemColors', colors, overriddenVariables)
-//   })
-// }
-
-
 
 
 
 
 // -------- COLORS -------- //
+
+
 
 /**
  * Return an object with list of named colors. 
@@ -106,76 +139,72 @@ function saveChromiumValues() {
  * overrides are applied by the loaded theme.
  * @param {*} observeThemeValues - If true, adhere to theme overrides.
  */
-export function getColors(observeThemeValues = true) {
+// export function getSystemColorsOld(observeThemeValues = true) {
 
-  let colors = {}
-  let overriddenVariables = []
-  const state = global.state()
-  const theme = state.theme
+//   let colors = {}
+//   let overriddenVariables = []
+//   const state = global.state()
 
-  // Get initial colors. By default, we match what Chromium's state.
-  // E.g. If Chromium isDarkMode is true, we return dark colors.
-  // Themes can override this with `theme.baseColorScheme` value.
-  // If `observeThemeValues` is true, we use this value.
-  if (!observeThemeValues) {
-    colors = state.chromium.isDarkMode ? getDarkColors() : getLightColors()
-  } else {
-    switch (theme.baseColorScheme) {
-      case 'match-app':
-        if (state.chromium.isDarkMode) {
-          colors = getDarkColors()
-        } else {
-          colors = getLightColors()
-        }
-        break
-      case 'dark':
-        colors = getDarkColors()
-        break
-      case 'light':
-        colors = getLightColors()
-        break
-    }
-  }
-    
+//   // Get initial colors. By default, we match what Chromium's state.
+//   // E.g. If Chromium isDarkMode is true, we return dark colors.
+//   // Themes can override this with `theme.baseColorScheme` value.
+//   // If `observeThemeValues` is true, we use this value.
+//   if (!observeThemeValues) {
+//     colors = state.chromium.isDarkMode ? getDarkColors() : getLightColors()
+//   } else {
+//     switch (state.theme.baseColorScheme) {
+//       case 'match-app':
+//         if (state.chromium.isDarkMode) {
+//           colors = getDarkColors()
+//         } else {
+//           colors = getLightColors()
+//         }
+//         break
+//       case 'dark':
+//         colors = getDarkColors()
+//         break
+//       case 'light':
+//         colors = getLightColors()
+//         break
+//     }
+//   }
 
-  // Apply color overrides. Themes can specify overrides for
-  // individual color variables. `withMode` specifies when they
-  // apply. Always, or only when app is in light or dark mode.
-  if (observeThemeValues) {
-    theme.colorOverrides.forEach(({ variable, newValue, withMode }) => {
 
-      const appliesToCurrentMode =
-        withMode == 'always' ||
-        withMode == 'dark' && state.chromium.isDarkMode ||
-        withMode == 'light' && !state.chromium.isDarkMode
+//   // Apply color overrides. Themes can specify overrides for
+//   // individual color variables. `withMode` specifies when they
+//   // apply. Always, or only when app is in light or dark mode.
+//   if (observeThemeValues) {
+//     state.theme.colorOverrides.forEach(({ variable, newValue, withMode }) => {
 
-      if (appliesToCurrentMode) {
-        colors[variable] = newValue
-        overriddenVariables.push(variable)
-        // If overrides sets `controlAccentColor` variable (and only it), 
-        // we need to also generate the darker variation.
-        if (variable == 'controlAccentColor') {
-          colors.darkerControlAccentColor = getDarkerAccentColor(colors.controlAccentColor)
-        }
-      }
-    })
-  }
+//       const appliesToCurrentMode =
+//         withMode == 'always' ||
+//         withMode == 'dark' && state.chromium.isDarkMode ||
+//         withMode == 'light' && !state.chromium.isDarkMode
 
-  return {
-    colors,
-    overriddenVariables
-  }
-}
+//       if (appliesToCurrentMode) {
+//         colors[variable] = newValue
+//         overriddenVariables.push(variable)
+//         // If overrides sets `controlAccentColor` variable (and only it), 
+//         // we need to also generate the darker variation.
+//         if (variable == 'controlAccentColor') {
+//           colors.darkerControlAccentColor = getDarkerAccentColor(colors.controlAccentColor)
+//         }
+//       }
+//     })
+//   }
+
+//   return {
+//     colors,
+//     overriddenVariables
+//   }
+// }
+
 
 function getDarkColors() {
   return {
 
     // Gambier-specific colors
-    foregroundColor: '255, 255, 255',
-    backgroundColor: '0, 0, 0',
-    buttonBackgroundColor: '#5B5B5BFF',
-    menuBackgroundColor: 'hsla(0, 0%, 17%, 0.9)',
-    errorColor: '#FA6E50',
+    // errorColor: '#FA6E50',
 
     // macOS "Dynamic colors":
     // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
@@ -228,11 +257,7 @@ function getLightColors() {
   return {
 
     // Gambier-specific colors
-    foregroundColor: '0, 0, 0',
-    backgroundColor: '255, 255, 255',
-    buttonBackgroundColor: '#FFFFFFFF',
-    menuBackgroundColor: 'hsla(0, 0%, 95%, 0.8)',
-    errorColor: '#FA6E50',
+    // errorColor: '#FA6E50',
 
     // macOS "Dynamic colors":
     // https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/color#dynamic-system-colors
@@ -287,6 +312,12 @@ function getLightColors() {
 function getAccentColors(isDarkMode) {
 
   const allegedAccentColor = `#${systemPreferences.getAccentColor().toUpperCase()}`
+
+  // console.log(systemPreferences.getAccentColor())
+  // console.log(systemPreferences.getColor('keyboard-focus-indicator')) // keyboardFocusIndicatorColor
+  // console.log(systemPreferences.getColor('selected-content-background')) // selectedContentBackgroundColor
+  // console.log(systemPreferences.getColor('selected-control')) // selectedControlColor
+  // console.log(systemPreferences.getColor('selected-text-background')) // selectedTextBackgroundColor
 
   switch (allegedAccentColor) {
 

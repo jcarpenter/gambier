@@ -1,5 +1,5 @@
 <script>
-  import { project, sidebar } from '../StateManager'
+  import { project, sidebar, state } from '../StateManager'
   import { files } from '../FilesManager'
   import Background from './backgrounds/Background.svelte'
   import EditorPanels from './main/EditorPanels.svelte'
@@ -15,7 +15,11 @@
   import Files from './dev/Files.svelte'
   import State from './dev/State.svelte'
   import { setLayoutFocus } from './ui/actions';
-import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
+  import Lightbox from './main/Lightbox.svelte';
+  import Wizard from './main/wizard/Wizard.svelte';
+
+  import OverlayGrid from './dev/OverlayGrid.svelte';
 
   $: directoryIsSet = $project.directory
   $: filesPopulated = $files.tree
@@ -47,20 +51,15 @@ import { onDestroy, onMount } from 'svelte';
 </script>
 
 <style type="text/scss">
+
   #main {
-    // background-color: var(--windowBackgroundColor);
     transform: translate(250px, 0);
     position: absolute;
     display: flex;
     flex-direction: column;
     width: calc(100% - 250px);
     height: 100%;
-  }
-
-  #content {
-    width: 100%;
-    height: 100%;
-    overflow: scroll;
+    overflow: hidden;
   }
 </style>
 
@@ -70,8 +69,12 @@ import { onDestroy, onMount } from 'svelte';
   on:drop|preventDefault={onDrop} 
 /> 
 
+
+<OverlayGrid />
 <Tooltip />
 <Menu />
+<Wizard />
+<Lightbox />
 
 <!-- <FunctionalTests /> -->
 
@@ -85,13 +88,13 @@ import { onDestroy, onMount } from 'svelte';
     >
       <Toolbar />
       <Separator />
-      <div id="content">
-        <EditorPanels />
-        <!-- <Colors /> -->
-        <!-- <UIElements /> -->
-        <!-- <State /> -->
-        <!-- <Files /> -->
-      </div>
+      <EditorPanels />
+      <!-- <Colors /> -->
+      <!-- <UIElements /> -->
+      <!-- <State /> -->
+      <!-- <Files /> -->
+      <!-- <div id="content">
+      </div> -->
     </div>
   {/if}
 {/if}
