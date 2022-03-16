@@ -2,6 +2,8 @@
 
 A work-in-progress Markdown editor. 
 
+<img width="1680" alt="overall-ui" src="https://user-images.githubusercontent.com/1425497/158499981-40fc3ec2-c6cc-490a-a8ef-1035af6eed6b.png">
+
 Built with [Svelte](https://svelte.dev/) | [CodeMirror](https://codemirror.net/) | [Electron](https://www.electronjs.org/)
 
 ## Local development
