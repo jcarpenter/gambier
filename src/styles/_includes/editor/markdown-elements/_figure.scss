@@ -1,0 +1,57 @@
+// -------------- Figure -------------- //
+
+.editor:not(.sourceMode) .CodeMirror-line.figure {
+  background-color: var(--figure-bg);
+  // max-height: 6em;
+  height: auto;
+  // We have to set line-height to zero or we get extra
+  // padding at bottom of this line.
+  line-height: 0;
+
+  .CodeMirror-widget {
+    height: 100%;
+    display: grid;
+    grid-gap: 1em;
+    grid-template-columns: 8em 1fr;
+    grid-template-rows: 6em;
+    line-height: var(--editor-lineheight);
+
+    .thumb {
+      grid-column: 1;
+      width: 100%;
+      height: auto;
+      cursor: default;
+      overflow: hidden;
+      background-color: var(--figure-thumb-bg);
+      border-radius: var(--figure-thumb-borderRadius);
+      border-width: var(--figure-thumb-borderWidth);
+      border-style: solid;
+      border-color: var(--figure-thumb-borderColor);
+      // padding: 3px;
+    }
+
+    .caption {
+      font-size: 0.9em;
+      letter-spacing: -0.01em;
+      line-height: calc(var(--editor-lineheight) - 0.1em);
+      // font-style: italic;
+      grid-column: 2;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      color: var(--figure-caption);
+    }
+  }
+
+  .blank::before {
+    content: 'Caption';
+    opacity: 0;
+    transition: opacity 0.2s ease-out 0s;
+  }
+
+  .blank:hover {
+    &::before {
+      opacity: 0.5;
+      transition: opacity 0.2s ease-in 0.1s;
+    }
+  }
+}

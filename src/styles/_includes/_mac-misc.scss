@@ -1,0 +1,21 @@
+@use "../_helpers" as *;
+
+body {
+
+    // Timing and animation
+    // Taken from Material Design
+    // Per: https://material.io/design/motion/speed.html#easing
+    --standard-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    // --decelerate-ease: cubic-bezier(0, 0, 0.2, 1);
+    --sidebar-openClose-duration: 200ms;
+   
+    // Border radius
+    --button-border-radius: 5.5px;
+    --button-border-radius-compact: 4px;
+    --menu-border-radius: 5.5px;
+    --menu-border-radius-compact: 3.5px;
+    
+    // Set to zero if we want to hide sidebar border
+    --topbar-border-width: 1px;
+    --sidebar-border-width: 1px;
+}

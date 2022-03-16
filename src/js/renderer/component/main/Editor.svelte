@@ -1,11 +1,7 @@
 <script>
   import { state, project, isMetaKeyDown, markdownOptions } from '../../StateManager'
-  import { files } from '../../FilesManager'
   import { onMount, onDestroy, tick } from 'svelte'
-  import { makeEditor, setMode } from '../../editor/editor2';
-  import Wizard from './wizard/Wizard.svelte'
-  import Autocomplete from './Autocomplete.svelte'
-  import Preview from './preview/Preview.svelte'
+  import { makeEditor, setMode } from '../../editor/editor';
   import { markDoc } from '../../editor/mark';
   import { loadDoc, saveCursorPosition, loadEmptyDoc, getCmDataByPanelId } from '../../editor/editor-utils';
 
@@ -38,7 +34,7 @@
     if (!cm) return
 
     // Determine what's changed
-    const statusHasChanged = panel.status !== cm.panel.status
+    // const statusHasChanged = panel.status !== cm.panel.status
     const isNewDoc = panel.docId == 'newDoc'
     const docHasChanged = panel.docId !== cm.panel.docId
     const saveStatusHasChanged = panel.unsavedChanges !== cm.panel.unsavedChanges
@@ -114,7 +110,6 @@
     cm.getAllMarks().forEach((m) => m.clear())
     markDoc(cm) 
     // Refresh to ensure positions are correct
-    // console.log('cm.refresh()')
     await tick()
     cm.refresh()
   }
@@ -164,7 +159,6 @@
   onMount(async () => {
 
     // ------ CREATE EDITOR INSTANCE ------ //
-    // console.log('Editor: onMount: panel: ', panel)
 
     cm = makeEditor(el, panel)
     window.cmInstances.push(cm)
@@ -193,6 +187,7 @@
     // Save
     const saveListener = window.api.receive('mainRequestsSaveFocusedPanel', () => {
       if (isFocusedPanel && panel.unsavedChanges) {
+        console.log(panel)
         const isNewDoc = panel.docId == 'newDoc'
         if (isNewDoc) {
           window.api.send('dispatch', {
@@ -252,29 +247,6 @@
 
     removeListenerMethods.push(newDocListener, saveListener, saveAsListener, saveAllListener)
 
-    // ------ CREATE COMPONENTS ------ //
-
-    // Add wizard, autocomplete and preview components to CodeMirror's scroller element. If we don't, and instead were to define them as components here, in Editor.svelte,they would be siblings of the top-level CodeMirror element (which is added to the `el` div), and therefore NOT scroll with the editor.
-
-    // const autocomplete = new Autocomplete({
-    //   target: cm.getScrollerElement(),
-    //   props: { cm }
-    // })
-
-    // const preview = new Preview({
-    //   target: cm.getScrollerElement(),
-    //   props: { cm }
-    // })
-
-    // const wizard = new Wizard({
-    //   target: cm.getScrollerElement(),
-    //   props: { cm }
-    // })
-
-    // Expose as props on `cm`
-    // cm.autocomplete = autocomplete
-    // cm.preview = preview
-    // cm.wizard = wizard
   })
 
   onDestroy(() => {
@@ -289,6 +261,7 @@
   .editor {
     position: relative;
     width: 100%;
+    padding: 0;
     flex-grow: 1;
     overflow: hidden;
   }

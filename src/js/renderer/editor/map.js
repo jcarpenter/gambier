@@ -147,6 +147,7 @@ export function getLineElements(cm, line, type = undefined) {
   // if (tokenPairs.length) console.log(tokenPairs)
 
   tokenPairs.forEach((tokenPair) => {
+
     const { start: startToken, end: endToken, type, tokens } = tokenPair
     const markdown = cm.getRange(Pos(line, startToken.start), Pos(line, endToken.end))
 
@@ -166,13 +167,13 @@ export function getLineElements(cm, line, type = undefined) {
     // If yes, set type to 'figure'
     if (classes.includes('line-figure')) {
       // element.type = `${element.type} figure`
-      element.type = `figure`
+      // element.type = `figure`
     }
 
     // Get child spans if type is link or image.
     // Else, define single span consisting of the text inside the `md` characters.
 
-    if (type.includesAny('link', 'image', 'footnote-reference')) {
+    if (type.includesAny('figure', 'link', 'image', 'footnote-reference')) {
       element.spans = getChildSpans(cm, tokens)
     } else {
 
@@ -209,8 +210,9 @@ export function getLineElements(cm, line, type = undefined) {
     // Define mark details
 
     element.mark = {
-      isMarkable: element.type.equalsAny(...markableElements) || element.type.includes('figure'),
-      // isMarkable: element.type.equalsAny('link-inline', 'link-reference-full', 'link-reference-collapsed', 'image-inline', 'image-reference-full', 'image-reference-collapsed', 'footnote-inline', 'footnote-reference', 'citation') || element.type.includes('figure'),
+      isMarkable: 
+        element.type.equalsAny(...markableElements) && !element.classes.includes('figure') || 
+        element.type.includes('figure'),
       isEditable: element.type.includesAny('link', 'figure'),
       hasWizard: !element.type.includes('task'),
     }
@@ -363,6 +365,6 @@ function getChildSpans(cm, tokens) {
       break
     }
   }
-
+  
   return spans
 }

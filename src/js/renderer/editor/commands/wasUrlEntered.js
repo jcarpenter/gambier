@@ -1,3 +1,5 @@
+import { Pos } from "codemirror"
+import { getFromAndTo } from "../editor-utils"
 import { wasUrlClicked } from "./wasUrlClicked"
 
 /**
@@ -7,14 +9,17 @@ import { wasUrlClicked } from "./wasUrlClicked"
  */
 export function wasUrlEntered(cm) {
 
-  const activeSelections = cm.listSelections()
+  const ranges = cm.listSelections()
 
   // Return if there are multiple selections, or no selection.
-  if (activeSelections.length > 1) return CodeMirror.Pass
+  if (ranges.length > 1 || !cm.somethingSelected()) return CodeMirror.Pass
 
-  const selectionPos = activeSelections[0].anchor
-
-  wasUrlClicked(cm, selectionPos)
+  const { from } = getFromAndTo(ranges[0], true)
+  
+  // Pass to `wasUrlClicked` to handle the rest.
+  // Give it the from.ch, plus one character (so
+  // we're looking inside the selection).
+  wasUrlClicked(cm, Pos(from.line, from.ch + 1))
 
 }
 

@@ -1,5 +1,5 @@
 <script>
-  import { store2 } from "../../../WizardManager"
+  import { store } from "../../../WizardManager"
 
   export let cm = null
   export let element = null
@@ -15,7 +15,7 @@
 <span 
   on:mouseenter={() => {
     // We don't allow user to mouse over url preview
-    store2.close()
+    store.close()
   }}
 >
   {url}

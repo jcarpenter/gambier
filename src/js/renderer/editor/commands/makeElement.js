@@ -86,7 +86,9 @@ export async function makeElement(cm, type) {
     const { from } = getFromAndTo(ranges[0])
     const mark = cm.findMarksAt(from)[0]
     if (mark) {
-      mark.component.openWizard(true)
+      // (This will call the wizard for us, targeted
+      // to this mark).
+      mark.component.altTabTo()
     }
   }
 }

@@ -1,5 +1,5 @@
 <script>
-  import { project } from '../../StateManager';
+  import { project, sidebar } from '../../StateManager';
   import { files } from '../../FilesManager';
   import { onMount, onDestroy } from 'svelte'
 
@@ -7,6 +7,8 @@
   import IconButton from '../ui/IconButton.svelte';
   import { createEventDispatcher } from 'svelte'
   import { getCmDataByPanelId } from '../../editor/editor-utils';
+  import { setAsCustomPropOnNode } from '../ui/actions';
+
   const dispatch = createEventDispatcher()
 
   export let index = 0
@@ -15,15 +17,17 @@
   export let isFirstPanel = false
   export let isLastPanel = false
 
-  // $: console.log('EditorPanel: panel: ', panel)
-
   export let highlightAll = undefined
   export let highlightLeftEdge = undefined
   export let highlightRightEdge = undefined
 
   $: doc = $files.byId[panel.docId]
+  $: isOnlyPanel = isFirstPanel && isLastPanel
   $: isFocusedPanel = index == $project.focusedPanelIndex
 
+  // We set `sidebarWidth` as a custom property on #sidebar
+  $: sidebarWidth = $sidebar.width
+  
   let el // This element
 
   // On drag start, if the dragged file is a doc, set it's id as a dataTransfer item. We use a custom `text/docid`. Per: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/Drag_operations#dragdata
@@ -153,7 +157,7 @@
 
   // ------ RESIZE ------ //
 
-  // TODO 3/17: Remove this? Not sure it's doing anything anymore. Found it active but seemingly not called by anything.
+  // TODO 3/17/21: Remove this? Not sure it's doing anything anymore. Found it active but seemingly not called by anything.
 
   // /**
   //  * If user clicks-and-drags close enough to left/right edges, we start a resize operation (and cancel the event default). Else we just focus the panel.
@@ -248,13 +252,37 @@
 <style type="text/scss">
 
   .panel {
-    // position: relative;
-    // overflow: hidden;
-    // height: 100%;
-    // flex:1 1 auto;
     display: flex;
     flex-direction: column;
+
+    // Multiple panels: Center editor in panel
+    &:not(.isOnlyPanel) {
+      align-items: center;
+    }
+    
+    // Single panel: Center editor with window
+    // by adding right amount of padding-left.
+    &.isOnlyPanel {
+      padding-left: calc(calc(50vw - var(--sidebarWidth) * 1px) - calc(var(--editor-maxlinewidth) / 2) - var(--editor-maxpadding));
+    }
   }
+
+  .panel > :global(div) {
+    background-color: var(--editor-background-color);
+    
+    // min-width = editor-maxlinewidth + minimum padding
+    width: 100%;
+
+    // max-width = editor-maxlinewidth + optimal padding
+    max-width: calc(var(--editor-maxlinewidth) + calc(var(--editor-maxpadding) * 2));
+    // No padding. We set this on the individual codemirror lines.
+  }
+  
+  // .panel.isOnlyPanel > :global(div) {
+  //   position: fixed;
+  //   left: 50%;
+  //   transform: translate(-50%, 0);
+  // }
 
   .panel:not(.isFocusedPanel) {
     h1 {
@@ -330,6 +358,7 @@
     height: 30px;
     flex: none;
     user-select: none;
+    border-radius: var(--editor-border-radius) var(--editor-border-radius) 0 0;
   }
 
   .tab  {
@@ -385,11 +414,6 @@
     }
   }
 
-  .isFocusedPanel {
-    
-  }
-
-
 </style>
 
 
@@ -401,8 +425,10 @@
   class:highlightLeftEdge
   class:highlightRightEdge
   class:isFocusedPanel
+  class:isOnlyPanel
   class:isFirstPanel
   class:isLastPanel
+  use:setAsCustomPropOnNode={{sidebarWidth}}
   bind:this={el}
   on:click={() => {
     if ($project.focusedSectionId !== 'editor') {
@@ -417,26 +443,27 @@
   <div class="header">
     <span class="tab">  
       
-      <!-- Name of doc -->
-      <h1 
-        draggable=true
-        on:dragstart={onDragTabStart}
-        on:dragend={onDragTabEnd}
-      >
-        {#if doc}
-          {doc.title ? doc.title : doc.name}
-        {:else}
-          Untitled-1
-        {/if}
-      </h1>
-
-      <!-- Unsaved changes -->
-      {#if panel.unsavedChanges}
-        <span class="hasUnsavedChanges">•</span>
-      {/if}
-
-      <!-- Close button. Only show this if there are multiple panels. -->
+      <!-- Only show these if there are multiple panels. -->
       {#if $project.panels.length > 1}
+        <!-- Name of doc -->
+        <h1 
+          draggable=true
+          on:dragstart={onDragTabStart}
+          on:dragend={onDragTabEnd}
+        >
+          {#if doc}
+            {doc.title ? doc.title : doc.name}
+          {:else}
+            Untitled-1
+          {/if}
+        </h1>
+
+        <!-- Unsaved changes -->
+        {#if panel.unsavedChanges}
+        <span class="hasUnsavedChanges">•</span>
+        {/if}
+        
+        <!-- Close button -->
         <span class="close">
           <IconButton 
             on:mousedown={(domEvent) => {
@@ -456,14 +483,14 @@
     </span>
 
     <!-- New panel button -->
-    <IconButton 
+    <!-- <IconButton 
       on:mouseup={openPanelToRight} 
       padding='0 4px' 
       tooltip='Add editor to right' 
       compact={true} 
       icon='img-square-split-2x1-medium-regular'
       iconScale={0.8} 
-    />
+    /> -->
   </div>
 
   <Editor {panel} {doc} {isFocusedPanel} {width} />

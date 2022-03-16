@@ -1,18 +1,15 @@
 import { getElementAt } from "./map"
 import { markElement } from "./mark"
 
+/**
+ * Check for outstanding marks.
+ * We use bookmark marks to flag elements that need to be
+ * marked when the cursor moves outside them. This happens
+ * when we create a mark, and the cursor is still inside
+ * it. We delay creating the mark until the user cursors
+ * outside the bounds.
+ */
 export function onCursorActivity(cm) {
-  
-  // console.log('onCursorActivity')
-  // console.log(cm.listSelections())
-
-  // Check for outstanding marks.
-  // We use bookmark marks to flag elements that need to be
-  // marked when the cursor moves outside them. This happens
-  // when we create a mark, and the cursor is still inside
-  // it. We delay creating the mark until the user cursors
-  // outside the bounds.
-
   const marks = cm.getAllMarks()
   const bookmarks = marks.filter((m) => m.type == 'bookmark' && m.isSpotToMark)
   if (bookmarks) {

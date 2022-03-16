@@ -19,7 +19,6 @@ export function init() {
   //    from OS that OS appearance has changed, and `nativeTheme.themeSource` 
   //    is 'system', so Chromium accepts the change.
   nativeTheme.on('updated', () => {
-    console.log('updated')
     saveChromiumValues()
     saveSystemColors()
   })
@@ -81,13 +80,13 @@ export async function saveSystemColors() {
 
   // User-defined accent color as 8-digit hex: #007AFFFF
   const accentColor = systemPreferences.getAccentColor()
-  systemColors.accentColor = `#${accentColor}`
+  systemColors["accent-hex"] = `#${accentColor}`
   // Hue: 280
-  systemColors.accentH = chroma(accentColor).hsl()[0]
+  systemColors["accent-H"] = chroma(accentColor).hsl()[0]
   // Saturation: 50%
-  systemColors.accentS = `${chroma(accentColor).hsl()[1] * 100}%`
+  systemColors["accent-S"] = `${chroma(accentColor).hsl()[1] * 100}%`
   // Lightness: 50
-  systemColors.accentL = `${chroma(accentColor).hsl()[2] * 100}%`
+  systemColors["accent-L"] = `${chroma(accentColor).hsl()[2] * 100}%`
 
   if (isMac) {
     systemColors.windowBackgroundColor = nativeTheme.shouldUseDarkColors ? '#323232' : '#ECECEC'

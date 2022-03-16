@@ -8,12 +8,13 @@
         <title>Gambier</title>
 
         <!-- Security: https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src * ;style-src 'unsafe-inline' 'self'">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src http:; script-src 'self'; img-src * ; style-src 'unsafe-inline' 'self';">
 
         <!-- CodeMirror (UMD module, exports `CodeMirror` to global namespace) -->
         <script src="js/third-party/codemirror/lib/codemirror.js"></script>
         <!-- CodeMirror: Add Ons -->
         <script src="js/third-party/codemirror/addon/edit/closebrackets.js"></script>
+        <script src="js/third-party/codemirror/addon/edit/closetag.js"></script>
         <script src="js/third-party/codemirror/addon/edit/continuelist.js"></script>
         <script src="js/third-party/codemirror/addon/mode/overlay.js"></script>
         <script src="js/third-party/codemirror/addon/hint/show-hint.js"></script>
@@ -48,10 +49,8 @@
         <!-- Turndown (ES6 module) -->
         <script src="js/third-party/turndown/turndown.es.js" type="module"></script>
 
-        <!-- Styles -->
-        <link rel="stylesheet" type="text/css" id="platform-specific" href="" >
-        <link rel="stylesheet" type="text/css" id="app-theme" href="" >
-        <link rel="stylesheet" type="text/css" id="editor-theme" href="" >
+        <!-- Styles -->       
+        <link rel="stylesheet" type="text/css" id="theme" href="" >
 
         <!-- Dark mode -->
         <meta name="color-scheme" content="dark light">

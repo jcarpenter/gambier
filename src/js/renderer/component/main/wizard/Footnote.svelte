@@ -3,7 +3,7 @@
   import { writeToDoc } from '../../../editor/editor-utils';
   import FormRow from '../../ui/FormRow.svelte';
   import InputText from '../../ui/InputText.svelte';
-  import { store2 } from '../../../WizardManager';
+  import { store } from '../../../WizardManager';
 
   export let cm = null
   export let element = null
@@ -19,7 +19,11 @@
       content = element.spans[0]
     } else {
       const index = element.markdown.indexOf('[') + 1 + element.start
-      content = { start: index, end: index, string: ''}
+      content = { 
+        start: index, 
+        end: index, 
+        string: ''
+      }
     }
   }
 
@@ -35,7 +39,7 @@
 
 <FormRow margin={'8px 8px'}>
   <InputText
-    autofocus={$store2.openedBy.hover == false}
+    autofocus={$store.openedBy.hover == false}
     placeholder={'Required'}
     isError={content.string == '' && !suppressWarnings}
     multiLine={true}

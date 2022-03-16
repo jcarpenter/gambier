@@ -1,22 +1,17 @@
-import { getLineClasses, getLineElements, getSpansAt } from "./map"
-import markTaskList from "./markTaskList"
-import Citation from './marks/Citation.svelte'
-import Footnote from './marks/Footnote.svelte'
-import Link from './marks/Link.svelte'
-import Image from './marks/Image.svelte'
-import Task from './marks/Task.svelte'
-import Mark from './marks/Mark.svelte'
-import ImagePreview from "../component/main/wizard/ImagePreview.svelte"
-import SyntaxSelect from "../component/main/SyntaxSelect.svelte"
-import FrontMatterToggleCollapsed from "../component/main/FrontMatterToggleCollapsed.svelte"
+import { getLineClasses, getLineElements } from "./map"
+import HtmlPreview from './HtmlPreview.svelte'
+import Mark from './Mark.svelte'
 import EditorBlockOptionsWidget from "../component/main/EditorBlockOptionsWidget.svelte"
 import { Pos } from "codemirror"
+import { getLastLineOfHtmlBlock } from "./editor-utils"
 
 /**
- * For each line of the doc, find and replace elements that 
- * have `isMarked` true with interactive Svelte components.
+ * For each line of the doc, check for and create
+ * marks. This can include replacing link markup
+ * with shortened interactive components, creating
+ * previews of html content, etc.
  */
-export function markDoc(cm) {
+export async function markDoc(cm) {
 
   // Clear existing marks
   cm.getAllMarks().forEach((mark) => mark.clear())
@@ -28,18 +23,17 @@ export function markDoc(cm) {
       markLine(cm, line, lineHandle)
     })
   })
+
+  // await wait(150)
+  // cm.refresh()
 }
 
 
-
 /**
- * Find the specified line, find and replace elements that 
- * have `isMarked` true with interactive Svelte components.
- * Before: `[Apple](https://apple.com "Computers!")`
- * After:  `Apple`
+ * For the specified line, create marks.
  */
 export function markLine(cm, line, lineHandle) {
-  
+
   const lineClasses = getLineClasses(lineHandle)
 
   // If line is start of front matter, collapse the front matter
@@ -47,10 +41,14 @@ export function markLine(cm, line, lineHandle) {
     collapseFrontMatter(cm)
   }
 
-  // Mark elements
-  const elements = getLineElements(cm, line)
-  elements.forEach((element) => markElement(cm, element))
-  
+  // Replace elements. E.g. links, images, footnotes, etc.
+  // Before: `[Apple](https://apple.com "Computers!")`
+  // After:  `Apple`
+  if (!window.state.sourceMode) {
+    const elements = getLineElements(cm, line)
+    elements.forEach((element) => markElement(cm, element))
+  }
+
   // If line is one of the following, add options widget 
   if (lineClasses.includesAny('frontmatter-start')) {
     addBlockOptionsWidget(cm, 'frontmatter', line)
@@ -58,26 +56,75 @@ export function markLine(cm, line, lineHandle) {
     addBlockOptionsWidget(cm, 'fencedcodeblock', line)
   } else if (lineClasses.includesAny('figure')) {
     addBlockOptionsWidget(cm, 'figure', line)
+  } else if (lineClasses.includes('htmlBlock-firstLine')) {
+    // addBlockOptionsWidget(cm, 'html', line)
+  }
+
+  if (lineClasses.includesAny('htmlBlock-firstLine')) {
+    addHtmlPreview(cm, line)
   }
 }
 
 
 /**
- * We add "block options" to fenced code blocks, figures, and front matter.
- * Depending on the type, the options component can include label, 
- * toggle-collapsed button, etc.
+ * Insert a live preview of the htmlBlock.
+ * @param {*} cm 
+ * @param {*} firstLine 
+ */
+export function addHtmlPreview(cm, firstLine) {
+
+  if (window.state.sourceMode) return
+
+  // If top-level element is NOT iframe or video, return.
+  // We (currently) only support those two elements.
+  const firstLineString = cm.getLine(firstLine)
+  const isIframe = firstLineString.startsWith('<iframe')
+  const isVideo = firstLineString.startsWith('<video')
+  if (!isIframe && !isVideo) return
+
+  let lastLine = getLastLineOfHtmlBlock(cm, firstLine)
+
+  // If line widget already exists, return.
+  // We don't want to create duplicates.
+  const htmlPreviewAlreadyExists = cm.getLineHandle(lastLine).widgets?.length
+  if (htmlPreviewAlreadyExists) return
+
+  const frag = document.createDocumentFragment()
+
+  const component = new HtmlPreview({
+    target: frag,
+    props: {
+      cm,
+      from: Pos(firstLine, 0)
+    }
+  })
+
+  const lineWidget = cm.addLineWidget(lastLine, component.domEl, { above: false })
+
+  lineWidget.component = component
+  component.lineWidget = lineWidget
+}
+
+
+/**
+ * We add "options" to some blocks. E.g. figures, html etc.
+ * Options sit to the right, and can include a label
+ * (e.g. "HTML"), button for toggling collapsed/open,
+ * and button for options.
  * @param {*} cm 
  * @param {String} type - 'fencedcodeblock', 'figure', 'frontmatter'
  * @param {Integer} line - Line number
  * @returns 
  */
 export function addBlockOptionsWidget(cm, type, line) {
-  
+
   const marks = cm.findMarks(Pos(line, 0), Pos(line, 1))
   const optionsWidgetAlreadyExists = marks.length > 0
-  
-  if (optionsWidgetAlreadyExists) return 
-  
+
+  if (optionsWidgetAlreadyExists) return
+
+  // Insert component
+
   const frag = document.createDocumentFragment()
 
   var component = new EditorBlockOptionsWidget({
@@ -92,8 +139,9 @@ export function addBlockOptionsWidget(cm, type, line) {
 
   component.mark = mark
   mark.component = component
-  
+
 }
+
 
 /**
  * Hide the front matter if `state.frontMatterCollapsed` is true
@@ -119,45 +167,12 @@ function collapseFrontMatter(cm) {
   )
 }
 
-/**
- * Create syntax-select menu on opening line of fenced code block line.
- */
-// function markFencedCodeBlock(cm, line, lineTokens) {
-
-//   // If this isn't start of fenced code block, return
-//   const isStartOfFencedCodeBlock = lineTokens[0].type.includes('line-fencedcodeblock-start')
-//   if (!isStartOfFencedCodeBlock) return
-
-//   // If mark already exists, do nothing
-//   const marks = cm.findMarks(Pos(line, 0), Pos(line, lineTokens[0].end))
-
-//   if (!marks.length) {
-
-//     const frag = document.createDocumentFragment()
-
-//     var component = new SyntaxSelect({
-//       target: frag,
-//       props: {
-//         cm
-//       }
-//     })
-
-//     const mark = cm.setBookmark(Pos(line, 0), {
-//       widget: frag,
-//       insertLeft: true
-//     })
-
-//     component.mark = mark
-//   }
-// }
 
 /**
  * Mark the element. 
  * How we mark depends on the type.
  */
 export function markElement(cm, element) {
-
-  // console.log('markElement, cm: ', cm)
 
   // If element is not markable, or we're in sourceMode, return
   if (!element.mark?.isMarkable || window.state.sourceMode) return

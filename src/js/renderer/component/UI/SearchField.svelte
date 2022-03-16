@@ -37,7 +37,7 @@
     position: relative;
     border-radius: var(--button-border-radius);
     // flex: none;
-    height: 28px;
+    min-height: 28px;
     display: inline-flex;
     flex-direction: row;
     align-items: center;

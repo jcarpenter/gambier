@@ -6,16 +6,6 @@
  * @param {*} element 
  */
 export function onRenderLine(cm, lineHandle, element) {
-  // console.log('renderLine', lineHandle.lineNo())
-  // return
-
-  // const charWidth = cm.defaultCharWidth()
-  // const basePadding = charWidth * 2
-  // const indent = CodeMirror.countColumn(lineHandle.text, null, cm.getOption('tabSize')) * charWidth
-  // if (indent) {
-  //   element.style.textIndent = `-${indent}px`
-  //   element.style.paddingLeft = `${basePadding + indent}px`
-  // }
 
   const charWidth = cm.defaultCharWidth()
   // const basePadding = charWidth * 1
@@ -23,10 +13,6 @@ export function onRenderLine(cm, lineHandle, element) {
   const indent = CodeMirror.countColumn(lineHandle.text, null, cm.getOption('tabSize')) * charWidth
   if (indent) {
     element.style.textIndent = `-${indent}px`
-    // element.style.borderLeftWidth = `${basePadding + indent}px`
-    // element.style.borderStyle = `solid`
-    // element.style.borderColor = `rgba(200, 0, 0, 0.2)`
     element.style.paddingLeft = `${basePadding + indent}px`
   }
-
 }

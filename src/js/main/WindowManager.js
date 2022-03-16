@@ -140,7 +140,7 @@ export async function createWindow(id, project) {
   })
 
   // Open DevTools
-  if (!app.isPackaged) win.webContents.openDevTools();
+  // if (!app.isPackaged) win.webContents.openDevTools();
  
   // Load index.html (old way)
   // await win.loadFile(path.join(__dirname, 'index.html'), {
@@ -156,7 +156,6 @@ export async function createWindow(id, project) {
       id: win.projectId
     }
   }))
-
 
   // Save window bounds
   saveWindowBoundsToState(win)

@@ -22,15 +22,19 @@ export function toggleList(cm, type) {
 
     const { from, to, isMultiLine, isSingleCursor } = getFromAndTo(r, true)
 
-    // First try to toggle a surrounding list, if selection 
-    // is singleCursor or a selection inside a line, and the 
+    // First try to toggle a surrounding list, if selection is 
+    // 1) singleCursor or 2) a selection inside a line and the 
     // line is already a list.
 
     if (isSingleCursor || !isMultiLine) {
 
       const cursor = from
       const { state, mode } = getModeAndState(cm, cursor.line)
-      if (mode.name !== 'markdown') continue
+      const isHtmlBlock = cm.lineInfo(cursor.line).lineClasses.includes('html')
+
+      // Don't convert to list if line is not markdown (e.g. front matter), 
+      // or if it's an html block.
+      if (mode.name !== 'markdown' || isHtmlBlock) continue
 
       // If current line is not a list, make it one.
       if (!state.list) {

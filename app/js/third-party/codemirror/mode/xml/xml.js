@@ -318,7 +318,7 @@ CodeMirror.defineMode("xml", function(editorConf, config_) {
     },
 
     token: function(stream, state) {
-      if (!state.tagName && stream.sol())
+      if (!state.tagName && stream.sol()) 
         state.indented = stream.indentation();
 
       if (stream.eatSpace()) return null;

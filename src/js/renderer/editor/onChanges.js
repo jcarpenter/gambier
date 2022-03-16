@@ -1,7 +1,8 @@
-import { getCharAt, getPrevChars, getNextChars, setUnsavedChanges, getModeAndState, orderOrderedList } from "./editor-utils"
+import { getCharAt, getPrevChars, getNextChars, setUnsavedChanges, getModeAndState, orderOrderedList, getLastLineOfHtmlBlock } from "./editor-utils"
 import { clearLineMarks, markDoc, markElement, markLine } from "./mark"
 import { getElementAt, getLineClasses } from "./map"
 import { Pos } from "codemirror"
+import { debounce } from "debounce"
 
 /**
  * "Like the 'change' event, but batched per operation, passing an array containing all the changes that happened in the operation. This event is fired after the operation finished, and display changes it makes will trigger a new operation." — https://codemirror.net/doc/manual.html#event_changes
@@ -26,7 +27,7 @@ export function onChanges(cm, changes) {
 
     const { from, to, origin, removed, text } = change
 
-    const lineWasDeleted = 
+    const lineWasDeleted =
       origin !== 'undo' &&
       from.line !== to.line &&
       removed.length > 1
@@ -34,7 +35,7 @@ export function onChanges(cm, changes) {
     const { state, mode } = getModeAndState(cm, change.from.line)
 
     if (state.list == 'ol' && lineWasDeleted) {
-      
+
       // Find start and end
       let start = change.from.line
 
@@ -48,7 +49,7 @@ export function onChanges(cm, changes) {
         }
       }
 
-      orderOrderedList(cm, start, origin) 
+      orderOrderedList(cm, start, origin)
     }
   })
 
@@ -57,6 +58,9 @@ export function onChanges(cm, changes) {
   // ------ If there are multiple changes, or a multi-line change... ------ //
 
   // Mark the entire doc...
+  // TODO: If one of changes spans multiple lines (this can be user simply
+  // tying "return" to create new line), only update lines of-and-below 
+  // the change.
   if (isMultipleChanges || oneOfChangesSpansMultipleLines) {
     markDoc(cm)
     return
@@ -68,10 +72,6 @@ export function onChanges(cm, changes) {
   const { from, to, text, removed, origin } = changes[0]
   const lineHandle = cm.getLineHandle(from.line)
   const lineClasses = getLineClasses(lineHandle)
-  const textMarkers = cm.findMarks(
-    { line: from.line, ch: 0 },
-    { line: from.line, ch: cm.getLine(from.line).length }
-  )
   const cursor = cm.getCursor()
 
 
@@ -96,6 +96,31 @@ export function onChanges(cm, changes) {
   if (textMarker) {
     textMarker.component?.update()
     return
+  }
+
+
+  // ------ If change happened inside HTML block, update the preview widget ------ //
+
+  const isHtmlBlock = lineClasses.includes('htmlBlock')
+  if (isHtmlBlock) {
+
+    // Confirm that the htmlBlock is complete (has closing tag).
+    const lastLineOfHtmlBlock = getLastLineOfHtmlBlock(cm, from.line)
+    const isCompleteBlock = lastLineOfHtmlBlock
+    
+    // If the block is complete, we next need to either 
+    // 1) update the existing preview widget, OR
+    // 2) create that widget if it doesn't already exist.
+    if (isCompleteBlock) {
+      const widget = cm.getLineHandle(lastLineOfHtmlBlock).widgets?.[0]
+      if (widget) {
+        widget.component.update()
+      } else {
+        markLine(cm, from.line, lineHandle) 
+      }
+    } else {
+      // Do nothing
+    }
   }
 
 

@@ -17,9 +17,9 @@
 <style type='text/scss'>
 
   button {
-    @include absolute-vertical-center;
-    position: absolute;
-    left: calc(var(--left) * 1px);
+    // @include absolute-vertical-center;
+    // position: absolute;
+    // left: calc(var(--left) * 1px);
     border: none;
     outline: none;
     background: none;

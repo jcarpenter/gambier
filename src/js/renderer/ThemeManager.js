@@ -7,17 +7,10 @@ import { stateHasChanged } from "../shared/utils"
  */
 export function init(state) {
 
-  // Listen for system color changes
-
   // Set stylsheets
-  setPlatformStylesheet(state)
-  setAppThemeStylesheet(state)
-  setEditorThemeStylesheet(state)
-
-  // Set css variables
+  setThemeStylesheet(state)
   setSystemColorCSSVars(state)
-  setEditorTypographyCSSVars(state)
-  // setMiscellaneousCSSVars(state)
+  setOtherCSSVars(state)
 }
 
 
@@ -29,18 +22,12 @@ export function init(state) {
  */
 export async function updateTheme(newState, patches) {
 
-  // Set stylesheets
-
-  if (stateHasChanged(patches, "appTheme")) {
-    setAppThemeStylesheet(newState)
-  }
-
-  if (stateHasChanged(patches, "editorTheme")) {
-    setEditorThemeStylesheet(newState)
+  // Set theme
+  if (stateHasChanged(patches, "theme")) {
+    setThemeStylesheet(newState)
   }
 
   // Set color css variables
-
   const darkModeChanged = stateHasChanged(patches, "darkMode")
   const appThemeChanged = stateHasChanged(patches, "appTheme")
   const editorThemeChanged = stateHasChanged(patches, "editorTheme")
@@ -53,26 +40,26 @@ export async function updateTheme(newState, patches) {
     setSystemColorCSSVars(state)
   }
 
-  // Set typography css variables
-
+  // Set other css variables
   const editorTypographyChanged =
     stateHasChanged(patches, "editorFont") ||
     stateHasChanged(patches, "editorLineHeight") ||
     stateHasChanged(patches, "editorMaxLineWidth")
 
   if (editorTypographyChanged) {
-    setEditorTypographyCSSVars(state)
+    setOtherCSSVars(state)
   }
+}
 
-  // Set other miscellaneous css variables
 
-  // const miscVariablesChanged =
-  //   stateHasChanged(patches, "developer")
-
-  // if (miscVariablesChanged) {
-  //   setMiscellaneousCSSVars(state)
-  // }
-
+/*
+ * Set `theme` id stylesheet href in `index.html`
+ * E.g. If state.theme.id is 'gibsons', then stylesheet 
+ * href is './styles/themes/gibsons.css'.
+ */
+export function setThemeStylesheet(state) {
+  const stylesheet = document.getElementById('theme')
+  stylesheet.setAttribute('href', `styles/${state.theme.id}.css`)
 }
 
 
@@ -82,7 +69,6 @@ export async function updateTheme(newState, patches) {
  * This shoudn't be called very often, so probably isn't an issue.
  */
  function setSystemColorCSSVars(state) {
-  // console.log('setSystemColorsAsCSSVariables')
   for (const [varName, rgbaHex] of Object.entries(state.systemColors)) {
     document.body.style.setProperty(`--${varName}`, rgbaHex)
   }
@@ -91,59 +77,16 @@ export async function updateTheme(newState, patches) {
 /**
  * Set editor typography values as CSS variables on `body`.
  */
-function setEditorTypographyCSSVars(state) {
+function setOtherCSSVars(state) {
+ 
   document.body.style.setProperty("--editor-fontsize", `${state.editorFont.size}px`)
+  
   document.body.style.setProperty("--editor-lineheight", `${state.editorLineHeight.size}em`)
-  document.body.style.setProperty("--editor-maxlinewidth", `${state.editorMaxLineWidth.size}em`)
-}
+  
+  document.body.style.setProperty("--editor-maxlinewidth", `${state.editorMaxLineWidth.size * state.editorFont.size}px`)
+  
+  document.body.style.setProperty("--editor-maxpadding", `${state.editorFont.size * 4}px`)
 
-/**
- * Set editor typography values as CSS variables on `body`.
- */
- function setMiscellaneousCSSVars(state) {
   // document.body.style.setProperty("--gridoverlay-display", state.developer.showGrid ? 'none' : 'initial')
-}
-
-
-
-
-/**
- * Set platform stylesheet on index.html, and
- * set platform style on <body>.
- */
-export function setPlatformStylesheet(state) {
-
-  const platform = state.platform
-
-  // Set platform stylesheet on index.html
-  const stylesheet = document.getElementById('platform-specific')
-  stylesheet.setAttribute('href', `styles/platform/${platform}.css`)
-
-  // Set platform style on <body>.
-  document.body.classList.add(platform)
-
-}
-
-
-/*
- * Set `app-theme` stylesheet href in `index.html`
- * E.g. If app theme id is 'gibsons', then stylesheet 
- * href is './styles/themes/gibsons.css'.
- */
-export function setAppThemeStylesheet(state) {
-  const themeId = state.appTheme.id
-  const stylesheet = document.getElementById('app-theme')
-  stylesheet.setAttribute('href', `styles/app-themes/${themeId}.css`)
-}
-
-/**
- * Set `editor-theme` stylesheet href in `index.html`
- * E.g. If editor theme name is 'solarized', then stylesheet 
- * href is './styles/themes/editorThemes/solarized.css'.
- */
-export function setEditorThemeStylesheet(state) {
-  const themeId = state.editorTheme.id
-  const stylesheet = document.getElementById('editor-theme')
-  stylesheet.setAttribute('href', `styles/editor-themes/${themeId}.css`)
 }
 

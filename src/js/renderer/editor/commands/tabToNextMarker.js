@@ -1,6 +1,5 @@
 import { Pos } from "codemirror"
 import { getElementAt } from "../map"
-import markTaskList from "../markTaskList"
 
 export function tabToNextMarker(cm) {
   const cursor = cm.getCursor('from')

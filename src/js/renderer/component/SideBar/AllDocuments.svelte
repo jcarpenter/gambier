@@ -36,8 +36,8 @@
   function getData() {
     data = produce($files.allIds, (draft) => {
       
-      // Get ids with file type 'doc'
-      draft = draft.filter((id) => $files.byId[id].type == 'doc')
+      // Get doc files
+      draft = draft.filter((id) => $files.byId[id].isDoc)
       
       // Filter by query 
       if (query) {
@@ -77,7 +77,7 @@
     <SortMenu items={sortOptions} />
   </Header>
   <Separator margin={'0 10px'} />
-  <SearchField focused bind:query placeholder={'Name'} margin={'10px 10px 0'} />
+  <SearchField focused bind:query placeholder={'Name'} margin={'8px 12px 0'} />
   <DocList listIds={data} component={Doc} />
 </div>
 

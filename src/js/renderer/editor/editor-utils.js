@@ -1,12 +1,119 @@
-import { setMode } from "./editor2"
+import { setMode } from "./editor"
 import { markDoc } from "./mark"
 import * as map from './map'
 import { blankLineRE, listStartRE, headerStartRE, blockQuoteStartRE } from "./regexp"
-import { cmpPos, Pos } from "codemirror"
+import { Pos } from "codemirror"
 
 
 
 // -------- GET DOCUMENT DETAILS -------- //
+
+/**
+ * For the htmlBlock located at line, find the last line.
+ * @param {*} line 
+ */
+export function getLastLineOfHtmlBlock(cm, line) {
+ 
+  // Confirm `line` is an htmlBlock. If not, return.
+  const lineHandle = cm.getLineHandle(line)
+  const lineClasses = map.getLineClasses(lineHandle)
+  const lineIsHtmlBlock = lineClasses?.includes('htmlBlock')
+  if (!lineIsHtmlBlock) return undefined
+
+  // Walk subequent lines in doc until we find the
+  // next one with a token of type `htmlBlock-lastLine`.  
+  let lastLine = undefined
+  for (var i = line; i < cm.lineCount(); i++) {
+    const tokens = cm.getLineTokens(i)
+    const isLastLine = tokens.some(({type}) => type?.includes('htmlBlock-lastLine'))
+    if (isLastLine) {
+      lastLine = i
+      break
+    }
+  }
+
+  return lastLine
+}
+
+/**
+ * Check if we should auto-close an open html tag.
+ * We need to do this manually for the first, opening tag.
+ * The `closetag` addon usually does this for us.
+ * But it doesn't work for that first, opening tag.
+ * Called by `keyup` listener when evt.key == '>'
+ */
+export function checkIfWeShouldCloseHtmlTag(cm, evt) {
+
+  // The `closetag` addon and `autoCloseTags: true` option handle this
+  // inside html blocks. But for inline html (e.g. adding a <b> tag
+  // inside a line of markdown), we need to handle it manually. 
+  if (evt.key == '>') {
+    const ranges = cm.listSelections()
+    ranges.forEach((r) => {
+
+      const mode = cm.getModeAt(r.head)
+      if (mode.name == 'xml') {
+
+        // If this `>` closes a tag,
+        // and the matching closing tag is missing,
+        // create that closing tag. 
+        // By calling the "closeTag" commmand.
+
+        const token = cm.getTokenAt(r.head)
+        const inner = CodeMirror.innerMode(cm.getMode(), token.state)
+
+        // "<span>Here's a clip <video src='trailer.mp4'>|</video> from the trailer</span>"
+        const line = cm.getLine(r.head.line)
+
+        // "<span>Here's a clip <video src='trailer.mp4'>"
+        const lineBeforeCursor = line.slice(0, r.head.ch)
+
+        // "</video> from the trailer</span>"
+        const lineAfterCursor = line.slice(r.head.ch)
+
+        // ["span", "video"]
+        const parentTags = Object.values(inner.mode.xmlCurrentContext(inner.state))
+
+        // "video"
+        const parentTag = parentTags[parentTags.length - 1]
+
+        // True or False
+        // Checks if "video src="trailer.mp4>" starts with "video"
+        const parentTagImmediatelyPrecedes = lineBeforeCursor.slice(lineBeforeCursor.lastIndexOf('<') + 1).startsWith(parentTag)
+
+        // If typed `>` character does not close the parent tag, return.
+        // It means the user is typing a ">" as normal text.
+        if (!parentTagImmediatelyPrecedes) return
+
+        // If closing tag does not immediately follow the typed ">",
+        // close it.
+        const closingTagImmediatelyFollows = lineAfterCursor.startsWith(`</${parentTag}>`)
+        if (!closingTagImmediatelyFollows) {
+          cm.execCommand('closeTag')
+        }
+
+        // Old way:
+        // We only manually close xml tag in very specific case:
+        // The user has just typed the closing `>` of an opening
+        // tag, in an inline stretch of html (not a block). 
+        // E.g. `Some markdown text <b>|`
+        // const isHtmlBlock = cm.getTokenAt(r.head).type.includes('htmlBlock')
+        // const eolModeIsXml = cm.getModeAt(Pos(r.head.line, cm.getLine(r.head.line).length)).name == 'xml'
+        // const isOpenInlineHtmlTag = !isHtmlBlock && eolModeIsXml
+        // if (isOpenInlineHtmlTag) {
+        //   cm.execCommand('closeTag')
+        // }
+      }
+    })
+
+    // Restore selections. Otherwise when closeTag command fires,
+    // it places cursor on far right side of the closed tag.
+    // 1.) <b> - Before `closeTag`
+    // 2.) <b></b>| - After `closeTag`
+    // 3.) <b>|</b> - After we restore selections
+    cm.setSelections(ranges)
+  }
+}
 
 /**
  * Return a {state, mode} object with the inner mode and its 
@@ -370,8 +477,6 @@ export function loadEmptyDoc(cm) {
  * @param {*} doc - Instance of an object from `files.byId`
  */
 export async function loadDoc(cm, doc) {
-
-  // console.log('loadDoc: cm.panel: ', cm.panel)
 
   if (!cm || !doc) return
 

@@ -1,0 +1,1524 @@
+/* ----------------------------- Color functions ---------------------------- */
+/* ----------------------------------- OLD ---------------------------------- */
+@keyframes focusRingAnimationKeyframesMac {
+  from {
+    box-shadow: 0 0 0 25px transparent;
+  }
+  to {
+    box-shadow: 0 0 0 3.5px var(--focus-ring-color);
+  }
+}
+@keyframes dragOverAnimationKeyframesMac {
+  from {
+    box-shadow: inset 0 0 0 0 transparent;
+    background: transparent;
+  }
+  to {
+    box-shadow: inset 0 0 0 4px var(--focus-ring-color);
+    background: hsla(var(--accentH), var(--accentS), var(--accentL), 0.2);
+  }
+}
+/* ---------- HINT ---------- */
+.CodeMirror-hints {
+  position: absolute;
+  z-index: 10;
+  overflow: hidden;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  max-height: 24em;
+  min-width: 10em;
+  max-width: 24em;
+  background: var(--menu-background);
+  border-radius: var(--menu-border-radius-compact);
+  box-shadow: 0 0 20px 2px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+li.CodeMirror-hint {
+  margin: 0;
+  white-space: pre;
+  color: var(--control-text-color);
+  cursor: default;
+  user-select: none;
+  position: relative;
+}
+li.CodeMirror-hint.regular-size {
+  font-family: system-ui;
+  font-weight: normal;
+  font-size: 13px;
+  line-height: 15px;
+  letter-spacing: -0.08px;
+  line-height: 16px;
+  padding: 6px 8px;
+}
+li.CodeMirror-hint.small-size {
+  font-family: system-ui;
+  font-weight: normal;
+  font-size: 11px;
+  line-height: 13px;
+  letter-spacing: 0.07px;
+  padding: 6px 8px;
+}
+li.CodeMirror-hint.show-separator {
+  border-bottom: 1px solid var(--separator-color);
+}
+li.CodeMirror-hint p {
+  padding: 0;
+  margin: 0;
+  white-space: pre;
+}
+li.CodeMirror-hint p.primary {
+  opacity: 1;
+}
+li.CodeMirror-hint p.secondary {
+  opacity: 0.7;
+}
+li.CodeMirror-hint.bold-primary p.primary {
+  font-weight: 500;
+}
+
+li.CodeMirror-hint.CodeMirror-hint-active {
+  background-color: var(--selected-list-item-color);
+  color: var(--selected-menuitem-text-color);
+}
+li.CodeMirror-hint.CodeMirror-hint-active::after {
+  color: var(--selected-menuitem-text-color);
+  opacity: 0.5;
+}
+li.CodeMirror-hint.CodeMirror-hint-active p {
+  color: var(--selected-menuitem-text-color);
+}
+
+li.CodeMirror-hint::after {
+  font-family: "SFMono-Regular";
+  font-size: calc(var(--editor-fontsize) * 0.85);
+  letter-spacing: -0.01em;
+  position: absolute;
+  top: 50%;
+  transform: translate(0, -50%);
+  color: var(--tertiary-label-color);
+  position: absolute;
+  right: 0.5em;
+  letter-spacing: -0.08em;
+}
+
+li.CodeMirror-hint.element-citation::after {
+  content: "[@]";
+}
+
+li.CodeMirror-hint.element-inline-footnote::after {
+  content: "^[]";
+}
+
+li.CodeMirror-hint.element-inline-image::after {
+  content: "![]()";
+}
+
+li.CodeMirror-hint.element-inline-link::after {
+  content: "[]()";
+}
+
+.CodeMirror pre.CodeMirror-line.quote {
+  color: var(--quote);
+  padding-left: calc(var(--editor-leftPadding) + 2em);
+}
+.CodeMirror pre.CodeMirror-line.quote .cm-quote-start {
+  color: var(--quote-md);
+  position: absolute;
+  transform: translate(-100%, 0);
+}
+
+.CodeMirror .mark.citation {
+  color: var(--citation-mark);
+  background-color: var(--citation-mark-bg);
+  border: var(--mark-borderWidth) solid var(--citation-mark-border);
+  border-radius: var(--mark-borderRadius);
+  font-weight: normal;
+  width: 1.1em;
+}
+.CodeMirror .mark.citation:before {
+  content: "@";
+  top: 45%;
+  font-size: 0.95em;
+}
+.CodeMirror .mark.citation.highlighted {
+  color: var(--citation-mark-highlight);
+  background-color: var(--citation-mark-highlight-bg);
+  border-color: var(--citation-mark-highlight-bg);
+}
+
+.cm-citation {
+  color: var(--citation-source) !important;
+  background-color: var(--citation-source-bg) !important;
+}
+.cm-citation.cm-key {
+  text-decoration: underline;
+}
+.cm-citation.cm-md {
+  color: var(--citation-source-md);
+}
+
+.CodeMirror-line:not(.fencedcodeblock) .cm-code {
+  font-family: "SFMono-Regular";
+  font-size: calc(var(--editor-fontsize) * 0.85);
+  letter-spacing: -0.01em;
+  line-height: 0;
+  color: var(--code-source);
+  background-color: var(--code-source-bg);
+  padding: 2px 0;
+}
+.CodeMirror-line:not(.fencedcodeblock) .cm-code.cm-md {
+  color: var(--code-source-md);
+}
+.CodeMirror-line:not(.fencedcodeblock) .cm-code.cm-code-start {
+  border-radius: var(--code-borderRadius) 0 0 var(--code-borderRadius);
+}
+.CodeMirror-line:not(.fencedcodeblock) .cm-code.cm-code-end {
+  border-radius: 0 var(--code-borderRadius) var(--code-borderRadius) 0;
+}
+
+.cm-atom {
+  color: #219;
+}
+
+.cm-attribute {
+  color: #00c;
+}
+
+.cm-bracket {
+  color: #997;
+}
+
+.cm-builtin {
+  color: #30a;
+}
+
+.cm-comment {
+  color: #a50;
+}
+
+.cm-def {
+  color: #00f;
+}
+
+.cm-error {
+  color: #f00;
+}
+
+.cm-keyword {
+  color: #708;
+}
+
+.cm-meta {
+  color: #555;
+}
+
+.cm-negative {
+  color: #d44;
+}
+
+.cm-number {
+  color: #164;
+}
+
+.cm-positive {
+  color: #292;
+}
+
+.cm-qualifier {
+  color: #555;
+}
+
+.cm-string {
+  color: #a11;
+}
+
+.cm-string-2 {
+  color: #f50;
+}
+
+.cm-tag {
+  color: #170;
+}
+
+.cm-type {
+  color: #085;
+}
+
+.cm-variable-2 {
+  color: #05a;
+}
+
+.cm-variable-3 {
+  color: #085;
+}
+
+.cm-emphasis {
+  color: var(--emphasis);
+  font-style: italic;
+}
+.cm-emphasis.cm-md {
+  color: var(--emphasis-md);
+}
+
+.cm-texmath-inline {
+  font-family: "SFMono-Regular";
+  font-size: calc(var(--editor-fontsize) * 0.85);
+  letter-spacing: -0.01em;
+  background-color: var(--texmath-inline);
+}
+
+pre.CodeMirror-line.fencedcodeblock > [role=presentation],
+pre.CodeMirror-line.texmath-display > [role=presentation] {
+  font-family: "SFMono-Regular";
+  font-size: calc(var(--editor-fontsize) * 0.85);
+  letter-spacing: -0.01em;
+  line-height: var(--editor-lineheight);
+  display: block;
+  background: var(--fencedcodeblock-bg);
+  padding: 0 0.25em;
+}
+pre.CodeMirror-line.fencedcodeblock .cm-md,
+pre.CodeMirror-line.texmath-display .cm-md {
+  color: var(--fencedcodeblock-md);
+}
+pre.CodeMirror-line.fencedcodeblock.fencedcodeblock-firstLine > [role=presentation],
+pre.CodeMirror-line.texmath-display.fencedcodeblock-firstLine > [role=presentation] {
+  border-radius: var(--fencedcodeblock-borderRadius) var(--fencedcodeblock-borderRadius) 0 0;
+}
+pre.CodeMirror-line.fencedcodeblock.fencedcodeblock-lastLine > [role=presentation],
+pre.CodeMirror-line.texmath-display.fencedcodeblock-lastLine > [role=presentation] {
+  border-radius: 0 0 var(--fencedcodeblock-borderRadius) var(--fencedcodeblock-borderRadius);
+}
+
+pre.CodeMirror-line.htmlBlock {
+  line-height: calc(var(--editor-lineheight) - 0.2em);
+  background: linear-gradient(to right, transparent var(--editor-leftPadding), var(--fencedcodeblock-bg) var(--editor-leftPadding));
+  padding-right: 0.5em;
+  padding-left: calc(var(--editor-leftPadding) + 0.5em);
+}
+pre.CodeMirror-line.htmlBlock > [role=presentation] {
+  font-family: "SFMono-Regular";
+  font-size: calc(var(--editor-fontsize) * 0.85);
+  letter-spacing: -0.01em;
+}
+
+pre.CodeMirror-line.htmlBlock-firstLine {
+  border-top: 0.2em solid transparent;
+}
+
+pre.CodeMirror-line.htmlBlock-lastLine {
+  border-bottom: 0.2em solid transparent;
+}
+
+.editor:not(.sourceMode) .CodeMirror-line.figure {
+  background-color: var(--figure-bg);
+  height: auto;
+  line-height: 0;
+}
+.editor:not(.sourceMode) .CodeMirror-line.figure .CodeMirror-widget {
+  height: 100%;
+  display: grid;
+  grid-gap: 1em;
+  grid-template-columns: 8em 1fr;
+  grid-template-rows: 6em;
+  line-height: var(--editor-lineheight);
+}
+.editor:not(.sourceMode) .CodeMirror-line.figure .CodeMirror-widget .thumb {
+  grid-column: 1;
+  width: 100%;
+  height: auto;
+  cursor: default;
+  overflow: hidden;
+  background-color: var(--figure-thumb-bg);
+  border-radius: var(--figure-thumb-borderRadius);
+  border-width: var(--figure-thumb-borderWidth);
+  border-style: solid;
+  border-color: var(--figure-thumb-borderColor);
+}
+.editor:not(.sourceMode) .CodeMirror-line.figure .CodeMirror-widget .caption {
+  font-size: 0.9em;
+  letter-spacing: -0.01em;
+  line-height: calc(var(--editor-lineheight) - 0.1em);
+  grid-column: 2;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  color: var(--figure-caption);
+}
+.editor:not(.sourceMode) .CodeMirror-line.figure .blank::before {
+  content: "Caption";
+  opacity: 0;
+  transition: opacity 0.2s ease-out 0s;
+}
+.editor:not(.sourceMode) .CodeMirror-line.figure .blank:hover::before {
+  opacity: 0.5;
+  transition: opacity 0.2s ease-in 0.1s;
+}
+
+.CodeMirror .mark.footnote {
+  color: var(--footnote-mark);
+  background-color: var(--footnote-mark-bg);
+  border: var(--mark-borderWidth) solid var(--footnote-mark-border);
+  border-radius: var(--mark-borderRadius);
+  font-weight: normal;
+}
+.CodeMirror .mark.footnote:before {
+  content: "^";
+}
+.CodeMirror .mark.footnote.highlighted {
+  color: var(--footnote-mark-highlight);
+  background-color: var(--footnote-mark-highlight-bg);
+  border-color: var(--footnote-mark-highlight-bg);
+}
+
+.cm-footnote {
+  color: var(--footnote-source);
+  background-color: var(--footnote-source-bg);
+}
+.cm-footnote.cm-md {
+  color: var(--footnote-source-md);
+}
+
+.CodeMirror-line.footnote-reference-definition,
+.CodeMirror-line.footnote-reference-definition-continued {
+  background-color: rgba(241, 186, 231, 0.2) !important;
+  font-style: italic !important;
+}
+
+:not(.fencedcodeblock) pre.CodeMirror-line.frontmatter {
+  padding-top: 0.3em;
+  padding-bottom: 0.2em;
+  padding-right: var(--frontmatter-padding);
+}
+:not(.fencedcodeblock) pre.CodeMirror-line.frontmatter.list {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+:not(.fencedcodeblock) pre.CodeMirror-line.frontmatter.list-end {
+  padding-top: 0;
+}
+
+.CodeMirror pre.CodeMirror-line.frontmatter {
+  line-height: 1.1em;
+}
+
+.CodeMirror pre.CodeMirror-line.frontmatter > [role=presentation] {
+  font-family: "SFMono-Regular";
+  font-size: calc(var(--editor-fontsize) * 0.85);
+  letter-spacing: -0.01em;
+  font-size: calc(var(--editor-fontsize) * 0.8);
+  width: calc(100% - 1.5em);
+  margin-left: 0.75em;
+  display: block;
+}
+
+.frontmatter::before {
+  content: "";
+  pointer-events: none;
+  display: block;
+  position: absolute;
+  height: 100%;
+  background-color: var(--frontmatter-bg);
+  width: calc(var(--editor-maxlinewidth));
+  top: 0;
+  left: var(--editor-maxpadding);
+  padding: 0;
+  border-left: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-right: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  transition: border-color 0.1s ease-out;
+  box-sizing: border-box;
+}
+
+.frontmatter-start::before {
+  border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
+}
+
+.frontmatter-end::before {
+  border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius);
+}
+
+.frontmatter:not(.frontmatter-start, .list, .list-end)::after {
+  content: "";
+  display: block;
+  background: var(--frontmatter-dividers);
+  width: calc(100% - var(--editor-maxpadding) - calc(var(--frontmatter-padding) * 2));
+  height: 1px;
+  position: absolute;
+  top: 0;
+  left: calc(var(--editor-maxpadding) + var(--frontmatter-padding));
+}
+
+.frontmatter .cm-md {
+  color: var(--frontmatter-md);
+  letter-spacing: 0.2em;
+  font-weight: 600;
+}
+
+.frontmatter .cm-atom {
+  color: rgba(var(--foregroundColor), 0.5);
+  font-weight: 500;
+}
+
+.frontmatter .cm-meta {
+  color: rgba(var(--foregroundColor), 0.6);
+}
+
+.frontmatter .cm-null,
+.frontmatter .cm-string {
+  color: rgba(var(--foregroundColor), 0.8);
+  font-weight: 500;
+}
+
+.frontmatter .cm-def:not(.cm-md) {
+  color: rgba(var(--foregroundColor), 0.8);
+}
+
+.frontmatter .cm-keyword {
+  color: rgba(var(--foregroundColor), 0.8);
+  font-weight: 500;
+}
+
+.frontmatter .cm-number {
+  color: rgba(var(--foregroundColor), 0.8);
+}
+
+pre.CodeMirror-line.frontmatter.comment + pre.CodeMirror-line.frontmatter.comment {
+  padding-top: 0;
+}
+pre.CodeMirror-line.frontmatter.comment + pre.CodeMirror-line.frontmatter.comment::before {
+  border-top: none;
+}
+
+pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
+  color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + -30%), calc(var(--accent-L) + -30%), 0.4);
+  font-style: italic;
+}
+
+.frontmatter .cm-tag {
+  color: rgba(var(--foregroundColor), 1);
+  text-decoration-color: rgba(var(--foregroundColor), 0.6);
+  text-decoration-line: underline;
+  text-decoration-thickness: initial;
+  text-underline-offset: 0.1em;
+}
+
+.metaKeyDown .frontmatter .cm-tag:hover {
+  text-decoration-color: rgba(var(--foregroundColor), 1);
+  cursor: pointer;
+}
+
+pre.CodeMirror-line.frontmatter-start {
+  z-index: 10;
+}
+
+.frontmatter-start.frontmatter-end {
+  cursor: initial;
+}
+.frontmatter-start.frontmatter-end::before {
+  border-radius: var(--frontmatter-borderRadius);
+}
+.CodeMirror-line.header.h1 {
+  color: var(--h1);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.025em;
+  text-decoration-skip-ink: none;
+}
+.CodeMirror-line.header.h1 .cm-header-start {
+  opacity: 0.75;
+}
+.CodeMirror-line.header.h2 {
+  color: var(--h2);
+  font-weight: 700;
+}
+.CodeMirror-line.header.h2 .cm-header-start {
+  opacity: 0.3;
+}
+.CodeMirror-line.header.h3 {
+  color: var(--h3);
+  font-weight: 700;
+}
+.CodeMirror-line.header.h3 .cm-header-start {
+  opacity: 0.3;
+}
+.CodeMirror-line.header.h4 {
+  color: var(--h4);
+  font-style: italic;
+}
+.CodeMirror-line.header.h4 .cm-header-start {
+  opacity: 0.3;
+}
+.CodeMirror-line.header.h5 {
+  color: var(--h5);
+}
+.CodeMirror-line.header.h5 .cm-header-start {
+  opacity: 0.3;
+}
+.CodeMirror-line.header.h6 {
+  color: var(--h6);
+}
+.CodeMirror-line.header.h6 .cm-header-start {
+  opacity: 0.3;
+}
+
+.cm-header-start {
+  position: absolute;
+  transform: translate(-100%, 0);
+  font-weight: normal;
+}
+
+.CodeMirror-line.hr {
+  background-color: var(--hr-bg);
+}
+
+.CodeMirror-line:not(.figure) .mark.image {
+  color: var(--image-mark);
+  background-color: var(--image-mark-bg);
+  border: var(--mark-borderWidth) solid var(--image-mark-border);
+  border-radius: var(--mark-borderRadius);
+}
+.CodeMirror-line:not(.figure) .mark.image::before {
+  content: "i";
+  top: 45%;
+}
+.CodeMirror-line:not(.figure) .mark.image.highlighted {
+  color: var(--image-mark-highlight);
+  background-color: var(--image-mark-highlight-bg);
+  border-color: var(--image-mark-highlight-bg);
+}
+
+.cm-image {
+  color: var(--image-source);
+  background-color: var(--image-source-bg);
+}
+.cm-image.cm-url {
+  color: var(--image-source-url);
+  text-decoration: underline;
+  text-decoration-skip: edges;
+  word-break: break-all;
+}
+.cm-image.cm-title {
+  color: var(--image-source-title);
+}
+.cm-image.cm-md {
+  color: var(--image-source-md);
+}
+
+.cm-incomplete {
+  border-bottom: 2px solid salmon;
+}
+
+.CodeMirror .mark.link {
+  color: var(--link-mark);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.03em;
+  text-decoration-color: inherit;
+  text-decoration-color: var(--link-mark-underline);
+  text-decoration-skip-ink: none;
+  border-radius: var(--mark-borderRadius);
+}
+.CodeMirror .mark.link.highlighted {
+  color: var(--link-mark-highlight);
+  background-color: var(--link-mark-highlight-bg);
+  border-color: var(--link-mark-highlight-bg);
+  text-decoration-color: var(--link-mark-highlight-bg);
+}
+
+.metaKeyDown .mark.link:hover {
+  cursor: pointer;
+}
+
+.cm-link,
+.cm-autolink-url,
+.cm-autolink-email {
+  color: var(--link-source);
+  background-color: var(--link-source-bg);
+  text-decoration: none;
+}
+.cm-link.cm-url,
+.cm-autolink-url.cm-url,
+.cm-autolink-email.cm-url {
+  color: var(--link-source-url);
+  text-decoration: underline;
+  text-decoration-skip: edges;
+  opacity: 0.8;
+  word-break: break-all;
+}
+.cm-link.cm-url:hover,
+.cm-autolink-url.cm-url:hover,
+.cm-autolink-email.cm-url:hover {
+  opacity: 1;
+}
+.cm-link.cm-title,
+.cm-autolink-url.cm-title,
+.cm-autolink-email.cm-title {
+  color: var(--link-source-title);
+}
+.cm-link.cm-md,
+.cm-autolink-url.cm-md,
+.cm-autolink-email.cm-md {
+  color: var(--link-source-md);
+}
+
+.cm-reference.cm-label {
+  font-weight: bold;
+}
+.cm-reference.cm-label.mark {
+  font-weight: normal;
+}
+
+.CodeMirror-line.link-reference-definition {
+  background-color: var(--link-ref-definition-bg);
+  font-style: italic !important;
+}
+
+.cm-list-marker {
+  color: var(--list-marker);
+}
+
+.CodeMirror pre.CodeMirror-line.ul .cm-indent {
+  letter-spacing: 0.2325em;
+}
+.CodeMirror pre.CodeMirror-line.ul .cm-list-marker {
+  letter-spacing: 0.1em;
+}
+.CodeMirror pre.CodeMirror-line.ol .cm-indent {
+  letter-spacing: 0.23em;
+}
+.CodeMirror pre.CodeMirror-line.ol .cm-list-marker {
+  display: inline-block;
+  text-align: right;
+  width: 1em;
+}
+.CodeMirror pre.CodeMirror-line.list-1 {
+  text-indent: -1em;
+  padding-left: calc(var(--editor-leftPadding) + 2em);
+}
+.CodeMirror pre.CodeMirror-line.list-2 {
+  text-indent: -3em;
+  padding-left: calc(var(--editor-leftPadding) + 4em);
+}
+.CodeMirror pre.CodeMirror-line.list-3 {
+  text-indent: -5em;
+  padding-left: calc(var(--editor-leftPadding) + 6em);
+}
+.CodeMirror pre.CodeMirror-line.list-4 {
+  text-indent: -7em;
+  padding-left: calc(var(--editor-leftPadding) + 8em);
+}
+.CodeMirror pre.CodeMirror-line.list-5 {
+  text-indent: -9em;
+  padding-left: calc(var(--editor-leftPadding) + 10em);
+}
+.CodeMirror pre.CodeMirror-line.list-6 {
+  text-indent: -11em;
+  padding-left: calc(var(--editor-leftPadding) + 12em);
+}
+
+.mark:focus {
+  outline: none;
+}
+
+.mark:not(:focus)::selection {
+  background-color: transparent;
+}
+
+.mark:not(.editable) {
+  cursor: initial;
+  display: inline-block;
+  width: 1em;
+  height: 1.3em;
+  vertical-align: middle;
+  position: relative;
+  top: -0.1em;
+  margin-left: 1px;
+}
+.mark:not(.editable)::before {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.cm-strikethrough {
+  color: var(--strikethrough);
+  background: linear-gradient(transparent 55%, rgba(0, 0, 0, 0.5) 55% 60%, transparent 60%);
+}
+.cm-strikethrough.cm-md {
+  text-decoration: none;
+  color: var(--strikethrough-md);
+  background: none;
+}
+
+.cm-strong {
+  color: var(--strong);
+  font-weight: 700;
+}
+.cm-strong.cm-md {
+  color: var(--strong-md);
+}
+
+.mark.task {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  background-color: var(--task-mark-bg);
+  border: 1px solid var(--task-mark-border);
+  border-radius: var(--mark-borderRadius);
+  font-weight: normal;
+  width: 1.2em;
+  height: 1.2em;
+  margin: 0 0.35em 0 0;
+  transform: translate(0, 0.2em);
+}
+.mark.task:before {
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  content: "";
+  width: 100%;
+  height: 100%;
+  -webkit-mask-size: 10px;
+  -webkit-mask-image: var(--task-mark-icon);
+  background: var(--task-mark-icon-bg);
+}
+.mark.task:not(.closed) {
+  background-color: var(--task-mark-open-bg);
+  border-color: var(--task-mark-open-border);
+}
+.mark.task:not(.closed)::before {
+  opacity: 0;
+}
+.mark.task.closed {
+  background-color: var(--task-mark-closed-bg);
+  border-color: var(--task-mark-closed-border);
+}
+.mark.task.closed::before {
+  opacity: 1;
+}
+
+.cm-bare-url,
+.cm-emphasisail-in-brackets,
+.cm-url-in-brackets {
+  color: var(--in-brackets);
+}
+.cm-bare-url.cm-md,
+.cm-emphasisail-in-brackets.cm-md,
+.cm-url-in-brackets.cm-md {
+  color: var(--in-brackets-md);
+}
+
+.metaKeyDown .cm-link.cm-url:hover {
+  cursor: pointer;
+}
+.metaKeyDown .cm-bare-url:hover,
+.metaKeyDown .cm-email-in-brackets:not(.cm-email-in-brackets-start, .cm-email-in-brackets-end):hover,
+.metaKeyDown .cm-url-in-brackets:not(.cm-url-in-brackets-start, .cm-url-in-brackets-end):hover {
+  border-bottom: 1px solid var(--in-brackets);
+  cursor: pointer;
+}
+
+body {
+  --editor-leftPadding: 4em;
+  --mark-borderRadius: 3px;
+}
+
+/* ---------- BASE ---------- */
+.CodeMirror {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-size: var(--editor-fontsize);
+  line-height: var(--editor-lineheight);
+  direction: ltr;
+  padding-left: 10px;
+}
+
+.CodeMirror[data-language=markdown] {
+  font-family: system-ui;
+}
+
+.CodeMirror[data-language=json],
+.CodeMirror[data-language=htmlmixed] {
+  font-family: "Fira Code";
+  font-size: calc(var(--editor-fontsize) - 2px);
+  line-height: 1.4em;
+}
+
+/* ---------- PADDING ---------- */
+.CodeMirror-lines {
+  margin: 1em auto;
+  min-width: 22em;
+  max-width: calc(var(--editor-maxlinewidth) + var(--editor-leftPadding));
+  padding: 0 0 10em;
+  overflow: hidden;
+}
+
+.CodeMirror[data-language=markdown] .CodeMirror-lines {
+  max-width: calc(var(--editor-maxlinewidth) + var(--editor-leftPadding));
+}
+
+.CodeMirror[data-language=json] .CodeMirror-lines,
+.CodeMirror[data-language=htmlmixed] .CodeMirror-lines {
+  max-width: calc(60em + var(--editor-leftPadding));
+}
+
+.CodeMirror pre.CodeMirror-line,
+.CodeMirror pre.CodeMirror-line-like {
+  padding-left: var(--editor-leftPadding);
+  /* Horizontal padding of content */
+}
+
+.CodeMirror-scrollbar-filler,
+.CodeMirror-gutter-filler {
+  background-color: white;
+  /* The little square between H and V scrollbars */
+}
+
+/* ---------- GUTTER ---------- */
+.CodeMirror-gutters {
+  white-space: nowrap;
+}
+
+.CodeMirror-linenumber {
+  padding: 0 3px 0 5px;
+  min-width: 20px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ---------- CURSOR ---------- */
+.CodeMirror-cursor {
+  border-left: 1px solid rgba(var(--foregroundColor), 1);
+  border-right: none;
+  width: 0;
+}
+
+/* Shown when moving in bi-directional text */
+.CodeMirror div.CodeMirror-secondarycursor {
+  border-left: 1px solid silver;
+}
+
+.cm-fat-cursor .CodeMirror-cursor {
+  width: auto;
+  border: 0 !important;
+  background: #7e7;
+}
+
+.cm-fat-cursor div.CodeMirror-cursors {
+  z-index: 1;
+}
+
+.cm-fat-cursor-mark {
+  background-color: rgba(20, 255, 20, 0.5);
+  -webkit-animation: blink 1.06s steps(1) infinite;
+  -moz-animation: blink 1.06s steps(1) infinite;
+  animation: blink 1.06s steps(1) infinite;
+}
+
+.cm-animate-fat-cursor {
+  width: auto;
+  border: 0;
+  -webkit-animation: blink 1.06s steps(1) infinite;
+  -moz-animation: blink 1.06s steps(1) infinite;
+  animation: blink 1.06s steps(1) infinite;
+  background-color: #7e7;
+}
+
+@-moz-keyframes blink {
+  50% {
+    background-color: transparent;
+  }
+}
+@-webkit-keyframes blink {
+  50% {
+    background-color: transparent;
+  }
+}
+@keyframes blink {
+  50% {
+    background-color: transparent;
+  }
+}
+/* ---------- MISCELLANEOUS ---------- */
+.cm-invalidchar {
+  color: #f00;
+}
+
+.CodeMirror-composing {
+  border-bottom: 2px solid;
+}
+
+div.CodeMirror span.CodeMirror-matchingbracket {
+  color: #0b0;
+}
+
+div.CodeMirror span.CodeMirror-nonmatchingbracket {
+  color: #a22;
+}
+
+.CodeMirror-matchingtag {
+  background: rgba(255, 150, 0, 0.3);
+}
+
+/* ---------- STOP ---------- */
+.CodeMirror {
+  position: relative;
+  overflow: hidden;
+}
+
+.CodeMirror-scroll {
+  overflow: scroll !important;
+  /* Things will break if this is overridden */
+  /* 50px is the magic margin used to hide the element's real scrollbars */
+  /* See overflow: hidden in .CodeMirror */
+  margin-right: -50px;
+  margin-left: calc(var(--editor-leftPadding) * -1);
+  /* Josh 10/2: Disabled this because it was screwing up keeping cursor visible. When auto-scrolling to keep cursor visible, if we were scrolling down page, it wouldn't scroll far enough, and cursor was not visible. By about one line height. */
+  /* margin-bottom: -50px;  */
+  /* padding-bottom: 50px; */
+  height: 100%;
+  outline: none;
+  /* Prevent dragging from highlighting the element */
+  position: relative;
+}
+
+.CodeMirror-sizer {
+  position: relative;
+  border-right: 50px solid transparent;
+}
+
+/* The fake, visible scrollbars. Used to force redraw during scrolling
+     before actual scrolling happens, thus preventing shaking and
+     flickering artifacts. */
+.CodeMirror-vscrollbar,
+.CodeMirror-hscrollbar,
+.CodeMirror-scrollbar-filler,
+.CodeMirror-gutter-filler {
+  position: absolute;
+  z-index: 6;
+  display: none;
+}
+
+.CodeMirror-vscrollbar {
+  right: 0;
+  top: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+.CodeMirror-hscrollbar {
+  bottom: 0;
+  left: 0;
+  overflow-y: hidden;
+  overflow-x: scroll;
+}
+
+.CodeMirror-scrollbar-filler {
+  right: 0;
+  bottom: 0;
+}
+
+.CodeMirror-gutter-filler {
+  left: 0;
+  bottom: 0;
+}
+
+.CodeMirror-gutters {
+  position: absolute;
+  left: 0;
+  top: 0;
+  min-height: 100%;
+  z-index: 3;
+}
+
+.CodeMirror-gutter {
+  white-space: normal;
+  height: 100%;
+  display: inline-block;
+  vertical-align: top;
+  margin-bottom: -50px;
+}
+
+.CodeMirror-gutter-wrapper {
+  position: absolute;
+  z-index: 4;
+  background: none !important;
+  border: none !important;
+}
+
+.CodeMirror-gutter-background {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 4;
+}
+
+.CodeMirror-gutter-elt {
+  position: absolute;
+  cursor: default;
+  z-index: 4;
+}
+
+.CodeMirror-gutter-wrapper ::selection {
+  background-color: transparent;
+}
+
+.CodeMirror-gutter-wrapper ::-moz-selection {
+  background-color: transparent;
+}
+
+.CodeMirror-lines {
+  cursor: text;
+  min-height: 1px;
+  /* prevents collapsing before first draw */
+}
+
+.CodeMirror pre.CodeMirror-line,
+.CodeMirror pre.CodeMirror-line-like {
+  /* Reset some styles that the rest of the page might have set */
+  -moz-border-radius: 0;
+  -webkit-border-radius: 0;
+  border-radius: 0;
+  border-width: 0;
+  font-family: inherit;
+  font-size: inherit;
+  margin: 0;
+  white-space: pre;
+  word-wrap: normal;
+  line-height: inherit;
+  z-index: 2;
+  position: relative;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-variant-ligatures: contextual;
+  font-variant-ligatures: contextual;
+}
+
+.CodeMirror-wrap pre.CodeMirror-line,
+.CodeMirror-wrap pre.CodeMirror-line-like {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: normal;
+}
+
+.CodeMirror-linebackground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+}
+
+.CodeMirror-linewidget {
+  position: relative;
+  z-index: 2;
+  padding-left: var(--editor-leftPadding);
+}
+
+.CodeMirror-widget {
+  z-index: 100;
+}
+
+.CodeMirror-rtl pre {
+  direction: rtl;
+}
+
+.CodeMirror-code {
+  outline: none;
+}
+
+/* Force content-box sizing for the elements where we expect it */
+.CodeMirror-scroll,
+.CodeMirror-sizer,
+.CodeMirror-gutter,
+.CodeMirror-gutters,
+.CodeMirror-linenumber {
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+}
+
+.CodeMirror-measure {
+  position: absolute;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.CodeMirror-cursor {
+  position: absolute;
+  pointer-events: none;
+}
+
+.CodeMirror-measure pre {
+  position: static;
+}
+
+div.CodeMirror-cursors {
+  visibility: hidden;
+  position: relative;
+  z-index: 3;
+}
+
+div.CodeMirror-dragcursors {
+  visibility: visible;
+}
+
+.CodeMirror-focused div.CodeMirror-cursors {
+  visibility: visible;
+}
+
+:not(.CodeMirror-focused) .CodeMirror-selected {
+  background: #d9d9d9;
+}
+
+.CodeMirror-focused .CodeMirror-selected {
+  background: var(--selected-text-background);
+}
+
+.CodeMirror-crosshair {
+  cursor: text;
+}
+
+.CodeMirror-line::selection,
+.CodeMirror-line > span::selection,
+.CodeMirror-line > span > span::selection {
+  background: var(--selected-text-background);
+}
+
+.CodeMirror-line::-moz-selection,
+.CodeMirror-line > span::-moz-selection,
+.CodeMirror-line > span > span::-moz-selection {
+  background: #00ffe1;
+}
+
+.cm-searching {
+  background-color: #ffa;
+  background-color: rgba(255, 255, 0, 0.4);
+}
+
+/* Used to force a border model for a node */
+.cm-force-border {
+  padding-right: 0.1px;
+}
+
+@media print {
+  /* Hide the cursor when printing */
+  .CodeMirror div.CodeMirror-cursors {
+    visibility: hidden;
+  }
+}
+/* See issue #2901 */
+.cm-tab-wrap-hack:after {
+  content: "";
+}
+
+/* Help users use markselection to safely style text background */
+span.CodeMirror-selectedtext {
+  background: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100vh;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#layout {
+  height: 100%;
+  background-color: var(--windowBackgroundColor);
+}
+
+body {
+  --foregroundColor: 0, 0, 0;
+  --backgroundColor: 255, 255, 255;
+  /* ------ Accent-influenced ------ */
+  --accent-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
+  --focus-ring-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + -2%), 0.5);
+  --selected-list-item-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 3%), calc(var(--accent-L) + -6%), 1);
+  --selected-text-background: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 3%), calc(var(--accent-L) + 35%), 1);
+  /* ------ Lightbox ------ */
+  --lightbox-icon-color: #fff;
+  /* ------ Buttons ------ */
+  --button-label-color: #000000d8;
+  --button-background: #ffffffff;
+  --button-boxshadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 0.5px 1px 0.5px rgba(0, 0, 0, 0.1);
+  --inset-button-background: #ffffffff;
+  --inset-button-boxshadow: inset 0 1.5px 1px 0 rgba(0, 0, 0, 0.1), inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+  /* ------ Labels ------ */
+  --label-color: #000000d8;
+  --secondary-label-color: #0000007f;
+  --tertiary-label-color: #00000042;
+  /* ------ Text ------ */
+  --text-color: #000000ff;
+  --placeholder-text-color: #0000003f;
+  --selected-menuitem-text-color: #ffffffff;
+  --control-text-color: #000000d8;
+  /* ------ Misc ------ */
+  --menu-background: hsla(0, 0%, 95%, 0.8);
+  --error-color: #fa6e50;
+  --separator-color: #00000019;
+  /* ------ Unused (from mac) ------ */
+  --selected-control-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 3%), calc(var(--accent-L) + 35%), 1);
+  --controlColor: #ffffffff;
+  --controlBackgroundColor: #ffffffff;
+  --alternateSelectedControlTextColor: #ffffffff;
+  --disabledControlTextColor: #0000003f;
+  --findHighlightColor: #ffff00ff;
+  --gridColor: #e6e6e6ff;
+  --headerTextColor: #000000d8;
+  --highlightColor: #ffffffff;
+  --linkColor: #0068daff;
+  --quaternaryLabelColor: #00000019;
+  --selectedControlTextColor: #000000d8;
+  --selectedTextColor: #000000ff;
+  --shadowColor: #000000ff;
+  --textBackgroundColor: #ffffffff;
+  --unemphasizedSelectedContentBackgroundColor: #dcdcdcff;
+  --unemphasizedSelectedTextBackgroundColor: #dcdcdcff;
+  --unemphasizedSelectedTextColor: #000000ff;
+  --windowBackgroundColor: #ecececff;
+  --windowFrameTextColor: #000000d8;
+}
+
+body {
+  --menu-checkmark-img: url(img/ui/checkmark.heavy.svg);
+  --nav-project-icon: url(img/ui/folder.svg);
+  --nav-project-active-icon: url(img/ui/folder.fill.svg);
+  --nav-allDocs-icon: url(img/ui/doc.on.doc.svg);
+  --nav-allDocs-active-icon: url(img/ui/doc.on.doc.fill.svg);
+  --nav-mostRecent-icon: url(img/ui/clock.svg);
+  --nav-mostRecent-active-icon: url(img/ui/clock.fill.svg);
+  --nav-tags-icon: url(img/ui/tag.svg);
+  --nav-tags-active-icon: url(img/ui/tag.fill.svg);
+  --nav-media-icon: url(img/ui/photo.svg);
+  --nav-media-active-icon: url(img/ui/photo.fill.svg);
+  --nav-citations-icon: url(img/ui/quote.bubble.svg);
+  --nav-citations-active-icon: url(img/ui/quote.bubble.fill.svg);
+  --nav-search-icon: url(img/ui/magnifyingglass.svg);
+  --nav-search-active-icon: url(img/ui/magnifyingglass.svg);
+  --new-doc-icon: url(img/ui/plus.medium.regular.svg);
+  --block-options-expand-icon: url(img/ui/chevron.down.medium.semibold.svg);
+  --checkbox-icon: url(img/ui/checkmark.heavy.svg);
+  --disclosure-chevron-icon: url(img/ui/chevron.down.heavy.svg);
+  --iconbutton-chevron-icon: url(img/ui/chevron.down.heavy.svg);
+  --imagepreview-blank-icon: url(img/ui/rectangle.dashed.medium.regular.svg);
+  --imagepreview-error-icon: url(img/ui/custom/image-not-found.svg);
+  --input-error-icon: url(img/ui/exclamationmark.circle.fill.svg);
+  --lightbox-close-icon: url(img/ui/xmark.medium.regular.svg);
+  --lightbox-prev-icon: url(img/ui/chevron.backward.large.light.svg);
+  --popupButton-icon: url(img/ui/chevron.up.down.svg);
+  --prefs-tab-citations-icon: url(img/ui/quote.bubble.medium.regular.svg);
+  --prefs-tab-general-icon: url(img/ui/gearshape.svg);
+  --prefs-tab-markdown-icon: url(img/ui/textformat.medium.regular.svg);
+  --prefs-tab-media-icon: url(img/ui/photo.medium.regular.svg);
+  --prefs-tab-theme-icon: url(img/ui/paintpalette.medium.regular.svg);
+  --pulldownButton-icon: url(img/ui/chevron.down.heavy.svg);
+  --sortmenu-icon: url(img/ui/arrow.up.arrow.down.svg);
+  --stepper-chevron-icon: url(img/ui/chevron.down.heavy.svg);
+  --img-chevron-down-bold: url(img/ui/chevron.down.bold.svg);
+  --img-chevron-down-heavy: url(img/ui/chevron.down.heavy.svg);
+  --img-chevron-up-down: url(img/ui/chevron.up.down.svg);
+  --img-clock-fill: url(img/ui/clock.fill.svg);
+  --img-clock: url(img/ui/clock.svg);
+  --img-doc-on-doc-fill: url(img/ui/doc.on.doc.fill.svg);
+  --img-doc-on-doc: url(img/ui/doc.on.doc.svg);
+  --img-doc-text: url(img/ui/doc.text.svg);
+  --img-exclamationmark-circle-fill: url(img/ui/exclamationmark.circle.fill.svg);
+  --img-folder: url(img/ui/folder.svg);
+  --img-folder-fill: url(img/ui/folder.fill.svg);
+  --img-gearshape: url(img/ui/gearshape.svg);
+  --img-magnifyingglass: url(img/ui/magnifyingglass.svg);
+  --img-photo-fill: url(img/ui/photo.fill.svg);
+  --img-photo: url(img/ui/photo.svg);
+  --img-photo-medium-regular: url(img/ui/photo.medium.regular.svg);
+  --img-play-rectangle-fill: url(img/ui/play.rectangle.fill.svg);
+  --img-play-rectangle: url(img/ui/play.rectangle.svg);
+  --img-quote-bubble-fill: url(img/ui/quote.bubble.fill.svg);
+  --img-quote-bubble: url(img/ui/quote.bubble.svg);
+  --img-quote-bubble-medium-regular: url(img/ui/quote.bubble.medium.regular.svg);
+  --img-rectangle-grid-2x2: url(img/ui/rectangle.grid.2x2.svg);
+  --img-sidebar-left: url(img/ui/sidebar.left.svg);
+  --img-square-split-2x1-medium-regular: url(img/ui/square.split.2x1.medium.regular.svg);
+  --img-tag-fill: url(img/ui/tag.fill.svg);
+  --img-tag: url(img/ui/tag.svg);
+  --img-textformat-medium-regular: url(img/ui/textformat.medium.regular.svg);
+  --img-xmark-medium-regular: url(img/ui/xmark.medium.regular.svg);
+}
+
+body {
+  --standard-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-openClose-duration: 200ms;
+  --button-border-radius: 5.5px;
+  --button-border-radius-compact: 4px;
+  --menu-border-radius: 5.5px;
+  --menu-border-radius-compact: 3.5px;
+  --topbar-border-width: 1px;
+  --sidebar-border-width: 1px;
+}
+
+body {
+  /* --------------------------------- Sidebar -------------------------------- */
+  --sidebar-tab-inactive-color: var(--control-text-color);
+  --sidebar-tab-active-color: rgba(var(--foregroundColor), 1);
+  --sidebar-tab-selected-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
+  --sidebar-tree-icons-color: var(--control-text-color);
+  /* --------------------------------- Editor --------------------------------- */
+  --editor-background-color: #F7F7F7;
+  --editor-border-radius: 0.2rem;
+  --mark-borderRadius: 0.2rem;
+  --mark-borderWidth: 0px;
+  /* ---------------------------- Editor characters --------------------------- */
+  --citation-H: 51.884057971deg;
+  --citation-S: 88.8412017167%;
+  --citation-L: 45.6862745098%;
+  --citation-A: 1;
+  --citation-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
+  --citation-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
+  --citation-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --citation-mark-highlight: white;
+  --citation-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --citation-source: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
+  --citation-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
+  --citation-source-md: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 0.6);
+  --code-H: 0deg;
+  --code-S: 0%;
+  --code-L: 32.5490196078%;
+  --code-A: 1;
+  --code-source: hsla(var(--code-H), var(--code-S), calc(var(--code-L) + -15%), 1);
+  --code-source-bg: hsla(var(--code-H), var(--code-S), var(--code-L), 0.1);
+  --code-source-md: hsla(var(--code-H), var(--code-S), calc(var(--code-L) + -10%), 0.4);
+  --code-borderRadius: 2px;
+  --emphasis-H: 0deg;
+  --emphasis-S: 0%;
+  --emphasis-L: 23.9215686275%;
+  --emphasis-A: 1;
+  --emphasis: hsla(var(--emphasis-H), var(--emphasis-S), var(--emphasis-L), 1);
+  --emphasis-md: hsla(var(--emphasis-H), var(--emphasis-S), var(--emphasis-L), 0.4);
+  --fencedcodeblock-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.07);
+  --fencedcodeblock-md: rgba(var(--foregroundColor), 0.4);
+  --fencedcodeblock-options-label: rgba(var(--foregroundColor), 0.25);
+  --fencedcodeblock-borderRadius: 0.2em;
+  --fencedcodeblock-syntax-icon: url(img/ui/chevron.down.heavy.svg);
+  --footnote-H: 313.3333333333deg;
+  --footnote-S: 36%;
+  --footnote-L: 49.0196078431%;
+  --footnote-A: 1;
+  --footnote-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
+  --footnote-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
+  --footnote-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --footnote-mark-highlight: white;
+  --footnote-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --footnote-source: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --footnote-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
+  --footnote-source-md: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.6);
+  --figure-bg: transparent;
+  --figure-caption: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + -20%), calc(var(--accent-L) + -10%), 1);
+  --figure-options-label: rgba(var(--foregroundColor), 0.4);
+  --figure-thumb-bg: transparent;
+  --figure-thumb-borderColor: var(--accent-color);
+  --figure-thumb-borderRadius: 3.5px;
+  --figure-thumb-borderWidth: 1px;
+  --frontmatter-bg: rgba(var(--foregroundColor), 0.03);
+  --frontmatter-border-width: 0px;
+  --frontmatter-collapsed-border-hover: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
+  --frontmatter-collapsed-widget-hover: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
+  --frontmatter-borderRadius: 0.3em;
+  --frontmatter-md: rgba(var(--foregroundColor), 0.4);
+  --frontmatter-options-label: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + -20%), 0.25);
+  --frontmatter-options-icon: rgba(var(--foregroundColor), 0.4);
+  --frontmatter-dividers: rgba(var(--foregroundColor), 0.03);
+  --frontmatter-padding: 0.6em;
+  --h1: rgba(var(--foregroundColor), 1);
+  --h2: rgba(var(--foregroundColor), 0.8);
+  --h3: rgba(var(--foregroundColor), 0.8);
+  --h4: rgba(var(--foregroundColor), 0.8);
+  --h5: rgba(var(--foregroundColor), 0.8);
+  --h6: rgba(var(--foregroundColor), 0.8);
+  --hr-bg: rgba(198, 198, 198, 0.2);
+  --image-H: 136deg;
+  --image-S: 44.3037974684%;
+  --image-L: 46.4705882353%;
+  --image-A: 1;
+  --image-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
+  --image-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
+  --image-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --image-mark-highlight: white;
+  --image-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --image-source: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 1);
+  --image-source-url: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 0.8);
+  --image-source-title: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 0.6);
+  --image-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
+  --image-source-md: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 0.6);
+  --in-brackets: #0d67dc;
+  --in-brackets-md: rgba(13, 103, 220, 0.4);
+  --link-H: 0deg;
+  --link-S: 0%;
+  --link-L: 11.7647058824%;
+  --link-A: 1;
+  --link-mark: hsla(var(--link-H), var(--link-S), var(--link-L), 1);
+  --link-mark-underline: hsla(var(--link-H), var(--link-S), var(--link-L), 0.4);
+  --link-mark-highlight: white;
+  --link-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --link-mark-borderRadius: 3px;
+  --link-source: #1e1e1e;
+  --link-source-url: rgba(30, 30, 30, 0.8);
+  --link-source-title: rgba(30, 30, 30, 0.6);
+  --link-source-bg: rgba(30, 30, 30, 0.05);
+  --link-source-md: rgba(30, 30, 30, 0.6);
+  --link-ref-definition-bg: rgba(30, 30, 30, 0.1);
+  --list-marker: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --list-indentation: 1em;
+  --texmath-inline: rgba(214, 214, 214, 0.5);
+  --texmath-display: rgba(214, 214, 214, 0.5);
+  --quote: rgba(var(--foregroundColor), 0.6);
+  --quote-md: rgba(var(--foregroundColor), 0.4);
+  --quote-indent: 2em;
+  --quote-border-bg: transparent;
+  --quote-border-width: 0.6em;
+  --strikethrough: rgba(0, 0, 0, 0.45);
+  --strikethrough-md: rgba(0, 0, 0, 0.25);
+  --strong-H: 0deg;
+  --strong-S: 0%;
+  --strong-L: 23.9215686275%;
+  --strong-A: 1;
+  --strong: hsla(var(--strong-H), var(--strong-S), var(--strong-L), 1);
+  --strong-md: hsla(var(--strong-H), var(--strong-S), var(--strong-L), 0.4);
+  --task-mark-icon: url(/img/ui/checkmark.heavy.svg);
+  --task-mark-icon-bg: white;
+  --task-mark-open-bg: transparent;
+  --task-mark-open-border: rgba(var(--foregroundColor), 0.3);
+  --task-mark-closed-bg: #E44720;
+  --task-mark-closed-border: #E44720;
+  --task-mark-bg: rgba(228, 71, 32, 0.2);
+  --task-mark-border: rgba(95, 28, 12, 0.1);
+  --task-mark-highlight: white;
+  --task-mark-highlight-bg: #E44720;
+  --task-source: #8d2a11;
+  --task-source-bg: rgba(228, 71, 32, 0.05);
+  --task-source-md: rgba(141, 42, 17, 0.6);
+  --wizard-error: rgba(255, 0, 0, 0.5);
+  --wizard-border-color: var(--separator-color);
+  --wizard-border-thickness: 1px;
+  --wizard-border-radius: 4px;
+}

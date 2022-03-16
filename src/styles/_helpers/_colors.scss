@@ -1,9 +1,50 @@
-// -------------- Color functions -------------- //
+@use 'sass:color';
+
+/* ----------------------------- Color functions ---------------------------- */
+
+// Set hsla css variable comprised of individual variables
+// for each channel. Use like:
+// `@include setColorVar("citation", #dcc00d);`
+@mixin setColorVar($name, $color) {
+    --#{$name}-H: #{color.hue($color)};
+    --#{$name}-S: #{color.saturation($color)};
+    --#{$name}-L: #{color.lightness($color)};
+    --#{$name}-A: #{color.alpha($color)};
+}
+
+// Retrieve hsla value comprised of individual css variables for
+// each channel. Name the desired top-level variable, e.g. "sky",
+// and get back "hsla(var(sky-H), var(sky-S), var(sky-L), 1)"
+// Can optionally adjust the channels.
+@function colorVar($name, $hue: 0deg, $sat: 0%, $light: 0%, $alpha: 1) {
+    $h: var(--#{$name}-H);
+    $s: var(--#{$name}-S);
+    $l: var(--#{$name}-L);
+
+    @if $hue != 0deg {
+        $h: calc(var(--#{$name}-H) + #{$hue});
+    }
+
+    @if $sat != 0% {
+        $s: calc(var(--#{$name}-S) + #{$sat});
+    }
+
+    @if $light != 0% {
+        $l: calc(var(--#{$name}-L) + #{$light});
+    }
+
+    @return hsla(#{$h}, #{$s}, #{$l}, #{$alpha});
+}
+
 // Short-hand concise functions for colors.
 // Use like: `background-color: white(0.2);`
-
-@function accent($hue:0, $sat:0%, $light:0%, $alpha:1) {
-    @return hsla(calc(var(--accentH) + #{$hue}), calc(var(--accentS) + #{$sat}), calc(var(--accentL) + #{$light}), #{$alpha});
+@function accent($hue: 0, $sat: 0%, $light: 0%, $alpha: 1) {
+    @return hsla(
+        calc(var(--accent-H) + #{$hue}),
+        calc(var(--accent-S) + #{$sat}),
+        calc(var(--accent-L) + #{$light}),
+        #{$alpha}
+    );
 }
 
 @function foregroundColor($alpha) {
@@ -26,7 +67,6 @@
     @return hsla(0, 0%, $lightness, $alpha);
 }
 
-
 // // User's system accent color preference
 // $accentColor: accent();
 
@@ -46,7 +86,8 @@
 // $selectedTextBackground: accent($sat: +3%, $light: +35%);
 
 
-// -------------- OLD -------------- //
+/* ----------------------------------- OLD ---------------------------------- */
+
 // Variables for common styles in UI elements.
 // E.g. gradient backgrounds for buttons.
 // Useful because 1) they're concise, and 2) make re-use easy.

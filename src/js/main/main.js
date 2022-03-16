@@ -140,8 +140,6 @@ app.whenReady()
     // Before: `file:///img/arrow.svg`
     // After: `file:///Users/josh/Desktop/gambier/img/arrow.svg`
     protocol.interceptFileProtocol('file', (request, callback) => {
-
-      // console.log(request)
       
       // If the request url starts with `file:///Users`, it's
       // not a request for an app asset, so we don't need to
@@ -193,14 +191,6 @@ app.whenReady()
 
     // Setup menu bar
     MenuBarManager.init()
-
-    // const appThemeIsNotDefined = !global.state().theme.id
-    // if (appThemeIsNotDefined) {
-    //   await global.store.dispatch({ 
-    //     type: 'SET_APP_THEME', 
-    //     id: AppearanceManager.themes.defaultId
-    //   })
-    // }
 
     // Get initial system appearance values
     AppearanceManager.init()

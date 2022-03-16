@@ -1,0 +1,114 @@
+@use "../../_helpers" as *;
+
+/* ---------- HINT ---------- */
+
+.CodeMirror-hints {
+  // @include system-small-font;
+
+  position: absolute;
+  z-index: 10;
+  overflow: hidden;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  max-height: 24em;
+  min-width: 10em;
+  max-width: 24em;
+  background: var(--menu-background);
+  border-radius: var(--menu-border-radius-compact);
+  box-shadow: 0 0 20px 2px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+
+  // padding: 2px;
+  // -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2);
+  // -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2);
+  // box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2);
+  // border-radius: 3px;
+  // border: 1px solid silver;
+  // background: white;
+  // font-size: 90%;
+  // font-family: monospace;
+}
+
+li.CodeMirror-hint {
+  margin: 0;
+  white-space: pre;
+  color: var(--control-text-color);
+  cursor: default;
+  user-select: none;
+  position: relative;
+
+  &.regular-size {
+      @include system-regular-font;
+      line-height: 16px;
+      padding: 6px 8px;  
+  }
+
+  &.small-size {
+      @include system-small-font;
+      // line-height: 16px;
+      padding: 6px 8px;  
+  }
+
+  &.show-separator {
+      border-bottom: 1px solid var(--separator-color);
+  }
+
+  p {
+      padding: 0;
+      margin: 0;
+      white-space: pre;
+
+      &.primary {
+          opacity: 1;
+      }
+  
+      &.secondary {
+          opacity: 0.7;
+      }
+  }
+
+  &.bold-primary p.primary {
+      font-weight: 500;
+  }
+}
+
+li.CodeMirror-hint.CodeMirror-hint-active {
+  background-color: var(--selected-list-item-color);
+  color: var(--selected-menuitem-text-color);
+  &::after {
+      color: var(--selected-menuitem-text-color);
+      opacity: 0.5;
+  }
+  p {
+      color: var(--selected-menuitem-text-color);
+  }
+}
+
+li.CodeMirror-hint::after {
+  @include code-typography;
+  position: absolute;
+  top: 50%;
+  transform: translate(0, -50%);
+  color: var(--tertiary-label-color);
+  position: absolute;
+  right: 0.5em;
+  letter-spacing: -0.08em;
+}
+
+li.CodeMirror-hint.element-citation::after {
+  content: '[@]';
+}
+
+li.CodeMirror-hint.element-inline-footnote::after {
+  content: '^[]';
+}
+
+li.CodeMirror-hint.element-inline-image::after {
+  content: '![]()';
+}
+
+li.CodeMirror-hint.element-inline-link::after {
+  content: '[]()';
+}

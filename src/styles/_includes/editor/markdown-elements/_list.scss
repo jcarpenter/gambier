@@ -1,0 +1,64 @@
+// -------------- Lists -------------- //
+
+// Indent is same between ul and ol
+// Marker is where they differ.
+// UL marker width is alwys consistent. But OL varies.
+// Needs to be right aligned, and expand in size to left.
+
+.cm-list-marker {
+  color: var(--list-marker);
+}
+
+// UL
+
+.CodeMirror {
+  pre.CodeMirror-line.ul {
+    .cm-indent {
+      letter-spacing: 0.2325em;
+    }
+    .cm-list-marker {
+      letter-spacing: 0.1em;
+    }
+  }
+  
+  pre.CodeMirror-line.ol {
+    .cm-indent {
+      letter-spacing: 0.23em;
+    }
+    .cm-list-marker {
+      display: inline-block;
+      text-align: right;
+      width: 1em;
+    }
+  }
+  
+  pre.CodeMirror-line.list-1 {
+    text-indent: -1em;
+    padding-left: calc(var(--editor-leftPadding) + 2em);
+  }
+  
+  pre.CodeMirror-line.list-2 {
+    text-indent: -3em;
+    padding-left: calc(var(--editor-leftPadding) + 4em);
+  }
+  
+  pre.CodeMirror-line.list-3 {
+    text-indent: -5em;
+    padding-left: calc(var(--editor-leftPadding) + 6em);
+  }
+  
+  pre.CodeMirror-line.list-4 {
+    text-indent: -7em;
+    padding-left: calc(var(--editor-leftPadding) + 8em);
+  }
+  
+  pre.CodeMirror-line.list-5 {
+    text-indent: -9em;
+    padding-left: calc(var(--editor-leftPadding) + 10em);
+  }
+  
+  pre.CodeMirror-line.list-6 {
+    text-indent: -11em;
+    padding-left: calc(var(--editor-leftPadding) + 12em);
+  }
+}

@@ -89,8 +89,8 @@
           draft.allIds = draft.allIds.filter((id) => {
             const file = draft.byId[id]
             const NAME = file.name.toUpperCase()
-            const TITLE = file.type == 'doc' ? file.title.toUpperCase() : ''
-            if (file.type !== 'folder' && (NAME.includes(QUERY) || TITLE.includes(QUERY))) {
+            const TITLE = file.isDoc ? file.title.toUpperCase() : ''
+            if (!file.isFolder && (NAME.includes(QUERY) || TITLE.includes(QUERY))) {
               return true
             } else {
               return false
@@ -156,8 +156,8 @@
     // Sort
     sort(folder.children)
     folder.children.forEach((c) => {
-      const type = $files.byId[c.id].type
-      if (type == 'folder' && c.children.length) {
+      const isFolder = $files.byId[c.id].isFolder
+      if (isFolder && c.children.length) {
         // If folder is not expanded, remove children.
         // Else, recursively sort
         const isExpanded = tab.expanded.includes(c.id)
@@ -185,7 +185,7 @@
     folder.children.forEach((c) => {
       folder.numVisibleDescendants++
       const file = $files.byId[c.id]
-      if (file.type == 'folder') {
+      if (file.isFolder) {
         const { numVisibleDescendants } = mapVisibleDescendants(c)
         folder.numVisibleDescendants += numVisibleDescendants
       }
@@ -208,7 +208,7 @@
       let c = folder.children[i]
       if (c.id.includes('empty')) continue
       const file = $files.byId[c.id]
-      const isExpandedFolder = file.type == 'folder' && tab.expanded.some((id) => id == c.id)
+      const isExpandedFolder = file.isFolder && tab.expanded.some((id) => id == c.id)
 
       if (isExpandedFolder) {
 

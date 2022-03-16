@@ -5,7 +5,6 @@ import { accessSync, renameSync, existsSync, readdirSync } from 'fs-extra'
 import fs from 'fs'
 import path from 'path'
 import { nanoid } from 'nanoid/non-secure'
-import { themes } from './Themes.js'
 
 
 enablePatches()
@@ -51,7 +50,7 @@ export const update = (state, action, window) =>
             // This shouldn't be necessary, when app is working normally, user is saving changes before closing, etc. Should only be needed when app crashes with unsaved changes. They're lost, unfortunately, so this should be false on next cold start.
             project.panels.forEach((p) => p.unsavedChanges = false)
 
-            // Same as above: this shouldn't 
+            // Same as above...
             project.window.status = 'open'
           })
 
@@ -63,9 +62,8 @@ export const update = (state, action, window) =>
         draft.system.keyboardNavEnabled = systemPreferences.getUserDefault('AppleKeyboardUIMode', 'boolean')
 
         // If theme has not yet been defined, use the default (first one).
-        if (!draft.appTheme.id) {
-          draft.appTheme = { ...themes.byId[themes.allIds[0]] }
-          draft.editorTheme.id = draft.appTheme.preferredEditorTheme
+        if (!draft.theme.id) {
+          draft.theme.id = draft.theme.installed[0].id
         }
 
         // If there are no projects, create a new empty one.
@@ -139,25 +137,8 @@ export const update = (state, action, window) =>
         break
       }
 
-      case 'SET_OVERRIDES': {
-        // `action.overrides` is an array of objects.
-        draft.theme.overrides = action.overrides
-        break
-      }
-
-      case 'SET_APP_THEME': {
-        draft.appTheme = { ...action.theme }
-        // applyTheme(draft, action.id)
-        break
-      }
-
-      case 'SET_BACKGROUND': {
-        draft.theme.background = action.name
-        break
-      }
-
-      case 'SET_EDITOR_THEME_BY_ID': {
-        draft.editorTheme.id = action.id
+      case 'SET_THEME': {
+        draft.theme.id = action.id
         break
       }
 
@@ -265,7 +246,6 @@ export const update = (state, action, window) =>
         break
       }
 
-
       // MARKDOWN
 
       case 'SET_MARKDOWN_OPTIONS': {
@@ -329,8 +309,10 @@ export const update = (state, action, window) =>
         }
 
         const nothingIsSelected = activeSidebarTab.selected.length == 0
+        const projectIsEmpty = !action.firstDocId
 
-        // If nothing is selected, select first doc in the project
+        // If nothing is selected, try to select first doc in active sidebar.
+        // Else, if project is empty, create new doc.
         if (nothingIsSelected && action.firstDocId) {
 
           // Load doc in panel
@@ -339,6 +321,10 @@ export const update = (state, action, window) =>
           // Select doc in the active project sidebar tab 
           activeSidebarTab.lastSelected = action.firstDocId
           activeSidebarTab.selected = [action.firstDocId]
+
+        } else if (projectIsEmpty) {
+
+          project.panels[0].docId = 'newDoc'
 
         }
         break
@@ -377,13 +363,10 @@ export const update = (state, action, window) =>
             }
           } else {
 
-            console.log('1')
-
             // Else, check if panel's file was deleted.
             // If yes, show an empty doc.
             const panelFileWasDeleted = !watcher.files.allIds.includes(panel.docId)
             if (panelFileWasDeleted) {
-              console.log('2')
               panel.docId = 'newDoc'
               panel.unsavedChanges = false
             }
@@ -427,19 +410,6 @@ export const update = (state, action, window) =>
         }
 
 
-        break
-      }
-
-      case 'SET_PROJECT_CITATIONS_FILE': {
-        // Do we have read and write permissions for the selected file?
-        // If yes, proceed.
-        // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
-        try {
-          accessSync(action.path, fs.constants.W_OK)
-          project.citations = action.path
-        } catch (err) {
-          console.log(err)
-        }
         break
       }
 
@@ -520,14 +490,55 @@ export const update = (state, action, window) =>
 
       // SIDEBAR
 
-      case 'SELECT_SIDEBAR_TAB_BY_ID': {
-        project.sidebar.activeTabId = action.id
-        project.focusedSectionId = 'sidebar'
+      case 'SIDEBAR_SET_OPEN_CLOSED': {
+        project.sidebar.isOpen = action.value
         break
       }
 
-      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
-        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index]
+      case 'SELECT_SIDEBAR_TAB_BY_ID': {
+        project.sidebar.activeTabId = action.id
+        project.focusedSectionId = 'sidebar'
+        // Make sure sidebar is open
+        project.sidebar.isOpen = true
+        break
+      }
+
+      case 'SIDEBAR_SET_WIDTH': {
+        project.sidebar.width = action.value
+        break
+      }
+
+      case 'SIDEBAR_SHOW_SEARCH_TAB': {
+
+        // Make sure sidebar is open, and focus it.
+        project.sidebar.isOpen = true
+        project.focusedSectionId = 'sidebar'
+        
+        // Select search tab
+        project.sidebar.activeTabId = 'search'
+
+        // Select the correct input (search or replace), 
+        // if user has specified `action.inputToFocus` value.
+        if (action.inputToFocus !== undefined) {
+          const searchTab = project.sidebar.tabsById.search
+          
+          // `inputToFocus` will equal "search", "replace" or undefined.
+          searchTab.inputToFocusOnOpen = action.inputToFocus
+
+          // Set search input value, if user has specified
+          if (action.queryValue) searchTab.queryValue = action.queryValue
+
+          // Make sure Replace expandable is open
+          if (action.inputToFocus == 'replace') {
+            searchTab.replace.isOpen = true
+          }
+        }
+
+        break
+      }
+
+      case 'SAVE_SEARCH_QUERY_VALUE': {
+        project.sidebar.tabsById.search.queryValue = action.value
         break
       }
 
@@ -564,39 +575,9 @@ export const update = (state, action, window) =>
         break
       }
 
-      case 'SET_SEARCH_QUERY': {
-        project.sidebar.tabsById.search.queryValue = action.query
-        break
-      }
-
-      case 'SHOW_SEARCH': {
-
-        // Open sidebar > search
-        project.focusedSectionId = 'sidebar'
-        project.sidebar.activeTabId = 'search'
-
-        // Set which input (search or replace) to focus, on open
-        if (action.inputToFocus !== undefined) {
-          const search = project.sidebar.tabsById.search
-          search.inputToFocusOnOpen = action.inputToFocus
-
-          // Make sure Replace expandable is open
-          if (action.inputToFocus == 'replace') {
-            search.replace.isOpen = true
-          }
-        }
-
-        break
-      }
-
       case 'SIDEBAR_SET_SEARCH_OPTIONS': {
         const tab = project.sidebar.tabsById.search
         tab.options = action.options
-        break
-      }
-
-      case 'SAVE_SEARCH_QUERY_VALUE': {
-        project.sidebar.tabsById.search.queryValue = action.value
         break
       }
 
@@ -909,17 +890,6 @@ function closePanel(project, panelIndex) {
   project.panels.forEach((p, i) => p.index = i)
 }
 
-/**
- * Get current theme and copy values to draft.theme properties.
- */
-function applyTheme(draft, id) {
-  const { backgroundComponent, baseColorScheme, colorOverrides, editorTheme } = themes.byId[id]
-  draft.theme.id = id
-  draft.theme.baseColorScheme = baseColorScheme
-  draft.theme.backgroundComponent = backgroundComponent
-  draft.theme.colorOverrides = colorOverrides
-  draft.theme.editorTheme = editorTheme
-}
 
 /**
 * Each project needs to store the ID of the window it's associated with. The BrowserWindow hasn't been created yet for this project (that's handled by WindowManager), but we know what ID the window will be: BrowserWindow ids start at 1 and go up. And removed BrowserWindows do not release their IDs back into the available set. So the next BrowserWindow id is always +1 of the highest existing.

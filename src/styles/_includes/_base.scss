@@ -1,0 +1,21 @@
+@forward "editor/codemirror";
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    height: 100vh;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+#layout {
+    height: 100%;
+    background-color: var(--windowBackgroundColor);
+}

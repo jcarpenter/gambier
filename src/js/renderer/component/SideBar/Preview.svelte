@@ -142,7 +142,7 @@
   </Header>
 
   <div class="content">
-    {#if file.type == 'doc'}
+    {#if file.isDoc}
 
       <!-- DOC -->
 
@@ -161,7 +161,7 @@
         </div>
       </div> -->
 
-    {:else if file.type == 'img'}
+    {:else if file.contentType.includes('image')}
 
       <!-- IMAGE -->
 
@@ -181,6 +181,10 @@
           {shortenPath(file.path)}
         </div> -->
       </div>
-    {:else if file.type == 'av'}AV{/if}
+    {:else if file.contentType.includes('video')}
+      TODO: Video preview
+    {:else if file.contentType.includes('audio')}
+      TODO: Audio preview
+    {/if}
   </div>
 </div>

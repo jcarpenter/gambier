@@ -1,4 +1,4 @@
-import CodeMirror, { cmpPos } from "codemirror"
+import { cmpPos } from "codemirror"
 import { component_subscribe } from "svelte/internal"
 import { getModeAndState } from "../editor-utils"
 import { getElementAt, getElementsAt, getLineElements, getSpansAt } from "../map"
@@ -16,6 +16,8 @@ export function wasUrlClicked(cm, pos) {
   if (mode.name == 'markdown') {
 
     const tokenType = cm.getTokenTypeAt(pos)
+    console.log(pos, tokenType)
+    if (!tokenType) return CodeMirror.Pass
 
     const isLinkUrl = tokenType.includesAll('link', 'url')
     const isBareUrl = tokenType.includes('bare-url')
@@ -24,7 +26,6 @@ export function wasUrlClicked(cm, pos) {
     const wasNotFormatting = !tokenType.includes('md')
 
     const wasUrl = (isLinkUrl || isBareUrl || isEmailInBrackets || isUrlInBrackets) && wasNotFormatting
-
     if (!wasUrl) return CodeMirror.Pass
 
     const token = cm.getTokenAt(pos)

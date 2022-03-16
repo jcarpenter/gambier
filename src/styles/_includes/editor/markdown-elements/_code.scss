@@ -1,0 +1,28 @@
+@use "../../../_helpers" as *;
+
+// -------------- Code -------------- //
+
+.CodeMirror-line:not(.fencedcodeblock) .cm-code {
+  @include code-typography;
+  line-height: 0;
+  color: var(--code-source);
+  background-color: var(--code-source-bg);
+  // We use border to add some top and bottom padding
+  padding: 2px 0;
+  // border-top: 2px solid transparent;
+  // border-bottom: 2px solid transparent;
+  // line-height: var(--editor-lineheight) !important;
+  // padding: 0.1em 0 0.2em;
+
+  &.cm-md {
+    color: var(--code-source-md);
+  }
+
+  &.cm-code-start {
+    border-radius: var(--code-borderRadius) 0 0 var(--code-borderRadius);
+  }
+
+  &.cm-code-end {
+    border-radius: 0 var(--code-borderRadius) var(--code-borderRadius) 0;
+  }
+}

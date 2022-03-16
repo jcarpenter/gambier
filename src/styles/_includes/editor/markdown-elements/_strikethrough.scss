@@ -1,0 +1,15 @@
+@use "../../../_helpers" as *;
+
+// -------------- Strikethrough -------------- //
+
+.cm-strikethrough {
+  color: var(--strikethrough);
+  // text-decoration: line-through;
+  background: linear-gradient(transparent 55%, hsla(0, 0%, 0%, 0.5) 55% 60%, transparent 60%);
+
+  &.cm-md {
+    text-decoration: none;
+    color: var(--strikethrough-md);
+    background: none;
+  }
+}

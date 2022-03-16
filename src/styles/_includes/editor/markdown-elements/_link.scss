@@ -1,0 +1,87 @@
+// -------------- Link -------------- //
+
+.CodeMirror .mark.link {
+  color: var(--link-mark);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.03em;
+  text-decoration-color: inherit;
+  text-decoration-color: var(--link-mark-underline);
+  text-decoration-skip-ink: none;
+  border-radius: var(--mark-borderRadius);
+
+  &.highlighted {
+    color: var(--link-mark-highlight);
+    background-color: var(--link-mark-highlight-bg);
+    border-color: var(--link-mark-highlight-bg);
+    text-decoration-color: var(--link-mark-highlight-bg);
+  }
+}
+
+.metaKeyDown .mark.link:hover {
+  cursor: pointer;
+}
+
+// Source
+
+.cm-link,
+.cm-autolink-url,
+.cm-autolink-email {
+  color: var(--link-source);
+  background-color: var(--link-source-bg);
+  text-decoration: none;
+
+  &.cm-url {
+    color: var(--link-source-url);
+    text-decoration: underline;
+    text-decoration-skip: edges;
+    opacity: 0.8;
+    word-break: break-all;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &.cm-title {
+    color: var(--link-source-title);
+    // font-style: italic;
+  }
+
+  &.cm-md {
+    color: var(--link-source-md);
+  }
+}
+
+.cm-reference.cm-label {
+  font-weight: bold;
+  &.mark {
+    font-weight: normal;
+  }
+}
+
+// Line
+
+.CodeMirror-line.link-reference-definition {
+  background-color: var(--link-ref-definition-bg);
+  font-style: italic !important;
+}
+
+
+// Pill-style mark
+// .mark.link {
+//   color: var(--link-mark);
+//   background-color: var(--link-mark-bg);
+//   border: var(--link-mark-border-width) solid var(--link-mark-border);
+//   border-radius: var(--link-mark-borderRadius);
+//   font-weight: normal;
+//   padding: 0 0.2em;
+//   position: relative;
+
+//   &.highlighted {
+//     color: var(--link-mark-highlight);
+//     background-color: var(--link-mark-highlight-bg);
+//     border-color: var(--link-mark-highlight-bg);
+//   }
+// }

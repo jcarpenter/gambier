@@ -7,13 +7,16 @@ var produce = require('immer');
 var fsExtra = require('fs-extra');
 var fs = require('fs');
 var nonSecure = require('nanoid/non-secure');
-var chroma = require('chroma-js');
 require('colors');
+var chroma = require('chroma-js');
 require('deep-eql');
 var Database = require('better-sqlite3');
 var matter = require('gray-matter');
+var convert = require('xml-js');
+var CSL = require('citeproc');
 var chokidar = require('chokidar');
 var removeMd = require('remove-markdown');
+var mime = require('mime-types');
 var sizeOf = require('image-size');
 var debounce = require('debounce');
 var url = require('url');
@@ -28,74 +31,13 @@ var fs__default = /*#__PURE__*/_interopDefaultLegacy(fs);
 var chroma__default = /*#__PURE__*/_interopDefaultLegacy(chroma);
 var Database__default = /*#__PURE__*/_interopDefaultLegacy(Database);
 var matter__default = /*#__PURE__*/_interopDefaultLegacy(matter);
+var convert__default = /*#__PURE__*/_interopDefaultLegacy(convert);
+var CSL__default = /*#__PURE__*/_interopDefaultLegacy(CSL);
 var chokidar__default = /*#__PURE__*/_interopDefaultLegacy(chokidar);
 var removeMd__default = /*#__PURE__*/_interopDefaultLegacy(removeMd);
+var mime__default = /*#__PURE__*/_interopDefaultLegacy(mime);
 var sizeOf__default = /*#__PURE__*/_interopDefaultLegacy(sizeOf);
 var url__default = /*#__PURE__*/_interopDefaultLegacy(url);
-
-const themes = {
-  allIds: ['gibsons', 'sechelt'],
-  byId: {
-
-    //------ GIBSONS ------//
-
-    gibsons: {
-      name: 'Gibsons',
-      id: 'gibsons',
-      preferredEditorTheme: 'gambier',
-      backgroundComponent: { name: 'SystemWindow', options: {} },
-      // baseColorScheme: 'match-app',
-      // colorOverrides: [],
-    },
-    
-    //------ SECHELT ------//
-
-    sechelt: {
-      name: 'Sechelt',
-      id: 'sechelt',
-      preferredEditorTheme: 'gambier',
-      backgroundComponent: { name: 'Midnight', options: {} },
-      // baseColorScheme: 'dark',
-      // colorOverrides: [
-      //   { 
-      //     variable: 'buttonBackgroundColor', 
-      //     newValue: '#FFFFFF40',
-      //     withMode: 'always',
-      //   },
-      //   { 
-      //     variable: 'controlAccentColor',
-      //     newValue: '#3E85F5',
-      //     withMode: 'always',
-      //   },
-      //   { 
-      //     variable: 'iconAccentColor',
-      //     newValue: '#FFF',
-      //     withMode: 'always',
-      //   },
-      //   { 
-      //     variable: 'menuBackgroundColor',
-      //     newValue: 'hsla(218, 69%, 20%, 0.95)',
-      //     withMode: 'always',
-      //   },
-      //   { 
-      //     variable: 'placeholderTextColor',
-      //     newValue: 'hsla(0, 0%, 100%, 0.4)',
-      //     withMode: 'always',
-      //   },
-      //   { 
-      //     variable: 'selectedContentBackgroundColor',
-      //     newValue: chroma('#3E85F5').darken().hex(),
-      //     withMode: 'always',
-      //   },
-      //   // { // TODO
-      //   //   variable: 'selectedTextBackgroundColor',
-      //   //   newValue: chroma('#3E85F5').darken().hex(),
-      //   //   withMode: 'always',
-      //   // },
-      // ],
-    }
-  },
-};
 
 produce.enablePatches();
 
@@ -140,7 +82,7 @@ const update$5 = (state, action, window) =>
             // This shouldn't be necessary, when app is working normally, user is saving changes before closing, etc. Should only be needed when app crashes with unsaved changes. They're lost, unfortunately, so this should be false on next cold start.
             project.panels.forEach((p) => p.unsavedChanges = false);
 
-            // Same as above: this shouldn't 
+            // Same as above...
             project.window.status = 'open';
           });
 
@@ -152,9 +94,8 @@ const update$5 = (state, action, window) =>
         draft.system.keyboardNavEnabled = electron.systemPreferences.getUserDefault('AppleKeyboardUIMode', 'boolean');
 
         // If theme has not yet been defined, use the default (first one).
-        if (!draft.appTheme.id) {
-          draft.appTheme = { ...themes.byId[themes.allIds[0]] };
-          draft.editorTheme.id = draft.appTheme.preferredEditorTheme;
+        if (!draft.theme.id) {
+          draft.theme.id = draft.theme.installed[0].id;
         }
 
         // If there are no projects, create a new empty one.
@@ -228,25 +169,8 @@ const update$5 = (state, action, window) =>
         break
       }
 
-      case 'SET_OVERRIDES': {
-        // `action.overrides` is an array of objects.
-        draft.theme.overrides = action.overrides;
-        break
-      }
-
-      case 'SET_APP_THEME': {
-        draft.appTheme = { ...action.theme };
-        // applyTheme(draft, action.id)
-        break
-      }
-
-      case 'SET_BACKGROUND': {
-        draft.theme.background = action.name;
-        break
-      }
-
-      case 'SET_EDITOR_THEME_BY_ID': {
-        draft.editorTheme.id = action.id;
+      case 'SET_THEME': {
+        draft.theme.id = action.id;
         break
       }
 
@@ -354,7 +278,6 @@ const update$5 = (state, action, window) =>
         break
       }
 
-
       // MARKDOWN
 
       case 'SET_MARKDOWN_OPTIONS': {
@@ -416,8 +339,10 @@ const update$5 = (state, action, window) =>
         }
 
         const nothingIsSelected = activeSidebarTab.selected.length == 0;
+        const projectIsEmpty = !action.firstDocId;
 
-        // If nothing is selected, select first doc in the project
+        // If nothing is selected, try to select first doc in active sidebar.
+        // Else, if project is empty, create new doc.
         if (nothingIsSelected && action.firstDocId) {
 
           // Load doc in panel
@@ -426,6 +351,10 @@ const update$5 = (state, action, window) =>
           // Select doc in the active project sidebar tab 
           activeSidebarTab.lastSelected = action.firstDocId;
           activeSidebarTab.selected = [action.firstDocId];
+
+        } else if (projectIsEmpty) {
+
+          project.panels[0].docId = 'newDoc';
 
         }
         break
@@ -464,13 +393,10 @@ const update$5 = (state, action, window) =>
             }
           } else {
 
-            console.log('1');
-
             // Else, check if panel's file was deleted.
             // If yes, show an empty doc.
             const panelFileWasDeleted = !watcher.files.allIds.includes(panel.docId);
             if (panelFileWasDeleted) {
-              console.log('2');
               panel.docId = 'newDoc';
               panel.unsavedChanges = false;
             }
@@ -514,19 +440,6 @@ const update$5 = (state, action, window) =>
         }
 
 
-        break
-      }
-
-      case 'SET_PROJECT_CITATIONS_FILE': {
-        // Do we have read and write permissions for the selected file?
-        // If yes, proceed.
-        // See: https://nodejs.org/api/fs.html#fs_fs_accesssync_path_mode
-        try {
-          fsExtra.accessSync(action.path, fs__default['default'].constants.W_OK);
-          project.citations = action.path;
-        } catch (err) {
-          console.log(err);
-        }
         break
       }
 
@@ -607,14 +520,55 @@ const update$5 = (state, action, window) =>
 
       // SIDEBAR
 
-      case 'SELECT_SIDEBAR_TAB_BY_ID': {
-        project.sidebar.activeTabId = action.id;
-        project.focusedSectionId = 'sidebar';
+      case 'SIDEBAR_SET_OPEN_CLOSED': {
+        project.sidebar.isOpen = action.value;
         break
       }
 
-      case 'SELECT_SIDEBAR_TAB_BY_INDEX': {
-        project.sidebar.activeTabId = project.sidebar.tabsAll[action.index];
+      case 'SELECT_SIDEBAR_TAB_BY_ID': {
+        project.sidebar.activeTabId = action.id;
+        project.focusedSectionId = 'sidebar';
+        // Make sure sidebar is open
+        project.sidebar.isOpen = true;
+        break
+      }
+
+      case 'SIDEBAR_SET_WIDTH': {
+        project.sidebar.width = action.value;
+        break
+      }
+
+      case 'SIDEBAR_SHOW_SEARCH_TAB': {
+
+        // Make sure sidebar is open, and focus it.
+        project.sidebar.isOpen = true;
+        project.focusedSectionId = 'sidebar';
+        
+        // Select search tab
+        project.sidebar.activeTabId = 'search';
+
+        // Select the correct input (search or replace), 
+        // if user has specified `action.inputToFocus` value.
+        if (action.inputToFocus !== undefined) {
+          const searchTab = project.sidebar.tabsById.search;
+          
+          // `inputToFocus` will equal "search", "replace" or undefined.
+          searchTab.inputToFocusOnOpen = action.inputToFocus;
+
+          // Set search input value, if user has specified
+          if (action.queryValue) searchTab.queryValue = action.queryValue;
+
+          // Make sure Replace expandable is open
+          if (action.inputToFocus == 'replace') {
+            searchTab.replace.isOpen = true;
+          }
+        }
+
+        break
+      }
+
+      case 'SAVE_SEARCH_QUERY_VALUE': {
+        project.sidebar.tabsById.search.queryValue = action.value;
         break
       }
 
@@ -651,39 +605,9 @@ const update$5 = (state, action, window) =>
         break
       }
 
-      case 'SET_SEARCH_QUERY': {
-        project.sidebar.tabsById.search.queryValue = action.query;
-        break
-      }
-
-      case 'SHOW_SEARCH': {
-
-        // Open sidebar > search
-        project.focusedSectionId = 'sidebar';
-        project.sidebar.activeTabId = 'search';
-
-        // Set which input (search or replace) to focus, on open
-        if (action.inputToFocus !== undefined) {
-          const search = project.sidebar.tabsById.search;
-          search.inputToFocusOnOpen = action.inputToFocus;
-
-          // Make sure Replace expandable is open
-          if (action.inputToFocus == 'replace') {
-            search.replace.isOpen = true;
-          }
-        }
-
-        break
-      }
-
       case 'SIDEBAR_SET_SEARCH_OPTIONS': {
         const tab = project.sidebar.tabsById.search;
         tab.options = action.options;
-        break
-      }
-
-      case 'SAVE_SEARCH_QUERY_VALUE': {
-        project.sidebar.tabsById.search.queryValue = action.value;
         break
       }
 
@@ -1052,14 +976,10 @@ const storeDefault = {
 
   darkMode: 'match-system',
 
-  appTheme: {
-    id: ''
-  },
-
-  editorTheme: {
+  theme: {
     id: '',
     installed: [
-      { name: "Gambier", id: "gambier" }
+      { name: "Cupertino Light", id: "cupertino-light" }
     ]
   },
 
@@ -1071,40 +991,26 @@ const storeDefault = {
   developer: {
     showGrid: false
   },
-  // See Theme.js for how themes are defined
-  // theme: {
-  // appTheme: 'gibsons',
-  // baseColorScheme: 'match-app', // 'dark', 'light', or 'match-app'
-  // editorTheme: '',
-  // backgroundComponent: {},
-  // colorOverrides: [],
-  // installedAppThemes: [
-
-  // ],
-  // installedEditorThemes: [
-  //   { name: "Gambier", id: "gambier" }
-  // ]
-  // },
 
   editorFont: {
-    default: 14,
-    size: 14,
+    default: 15,
+    size: 15,
     min: 12,
     max: 18,
     increment: 1
   },
 
   editorLineHeight: {
-    default: 1.5,
-    size: 1.5,
+    default: 1.6,
+    size: 1.6,
     min: 1.2,
     max: 2.0,
     increment: 0.1,
   },
 
   editorMaxLineWidth: {
-    default: 40,
-    size: 40,
+    default: 38,
+    size: 38,
     min: 30,
     max: 50,
     increment: 2,
@@ -1245,6 +1151,7 @@ const newProject = {
     isPreviewOpen: true,
     activeTabId: 'project',
     width: 250,
+    defaultWidth: 250,
     tabsById: {
       project: {
         title: 'Project',
@@ -1283,11 +1190,11 @@ const newProject = {
         sortBy: 'By Name',
         sortOrder: 'Ascending'
       },
-      citations: {
-        title: 'Citations',
-        lastSelected: {},
-        selected: [],
-      },
+      // citations: {
+      //   title: 'Citations',
+      //   lastSelected: {},
+      //   selected: [],
+      // },
       search: {
         title: 'Search',
         lastSelected: {},
@@ -1306,11 +1213,18 @@ const newProject = {
         }
       }
     },
-    tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
+    tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search']
+    // tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
   }
 };
 
-// -------- PROTOTYPE EXTENSIONS -------- //
+// import path from 'path'
+// import mime from 'mime-types'
+
+
+/* -------------------------------------------------------------------------- */
+/*                            PROTOTYPE EXTENSIONS                            */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Return true if array has ALL of the items
@@ -1401,12 +1315,60 @@ function findInTree(tree, value, key = 'id', reverse = false) {
 }
 
 
-// -------- CHECK FORMAT -------- //
+/* -------------------------------------------------------------------------- */
+/*                                CHECK FORMAT                                */
+/* -------------------------------------------------------------------------- */
 
 const formats = {
   document: ['.md', '.markdown'],
   image: ['.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'],
-  av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm']
+  av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'],
+  
+  // Video containers (file types)
+  // If a container supports both audio and video (e.g. WebM), we categorize as video,
+  // since <video> also works for audio, but <audio> does not work for video.
+  // See: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#index_of_media_container_formats_file_types
+  // video: [
+    
+  //   // Mp4
+  //   // Supported by Chrome? - Y
+  //   '.mp4', 
+
+  //   // WebM
+  //   // Supported by Chrome? - Y
+  //   '.webm',
+    
+  //   // Ogg
+  //   // Supported by Chrome? - Y
+  //   '.ogg',
+
+  //   // QuickTime
+  //   // Supported by Chrome? - N
+  //   '.mov',
+
+  //   // The OGM file format is a compressed video container file format. The files can contain streams of audio and video data as well as text and metadata. OGM files use the Ogg Vorbis compression technology and contain audio and video stream files that can be played on a user's computer.
+  //   '.ogm', 
+
+  //   // An OGV file is a video file saved in the Xiph.Org open source Ogg container format. It contains video streams that may use one or more different codecs, such as Theora, Dirac, or Daala.
+  //   '.ogv',
+
+  //   // The 3GP or 3GPP media container is used to encapsulate audio and/or video that is specifically intended for transmission over cellular networks for consumption on mobile devices.
+  //   '.3gp'
+  // ],
+
+  // audio: [
+    
+  //   // "The Free Lossless Audio Codec (FLAC) is a lossless audio codec; there is also an associated simple container format, also called FLAC, that can contain this audio."
+  //   // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#flac
+  //   '.flac', 
+
+  //   // M4A is a file extension for an audio file encoded with advanced audio coding (AAC) which is a lossy compression. M4A was generally intended as the successor to MP3, which had not been originally designed for audio only but was layer III in an MPEG 1 or 2 video files. M4A stands for MPEG 4 Audio.
+  //   '.m4a', 
+
+  //   // Mp4s are MPEG files that contain Layer_III/MP3 sound data.
+  //   '.mp3', 
+  //   ''
+  // ]
 };
 
 /**
@@ -1434,9 +1396,17 @@ function isDoc(extension) {
 }
 
 /**
- * Return true if file extension is among valid image or media formats. 
+ * Return true if Content-Type of file is 
  */
 function isMedia(extension) {
+
+  // Return false if json. Helps prevent error from mime package.
+  // if (filepath.includesAny('.DS_Store', '.json')) return false
+
+  // const contentType = mime.lookup(filepath)
+
+  // return contentType.includesAny('video', 'audio', 'image')
+
   const isImage = formats.image.includes(extension);
   const isAV = formats.av.includes(extension);
   return isImage || isAV
@@ -1457,7 +1427,10 @@ function getMediaType(extension) {
   }
 }
 
-// -------- COMPARE PATCHES -------- //
+
+/* -------------------------------------------------------------------------- */
+/*                               COMPARE PATCHES                              */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Check if state property has changed by comparing Immer patches. And (optionally) if property now equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
@@ -1563,7 +1536,6 @@ function init$4() {
   //    from OS that OS appearance has changed, and `nativeTheme.themeSource` 
   //    is 'system', so Chromium accepts the change.
   electron.nativeTheme.on('updated', () => {
-    console.log('updated');
     saveChromiumValues();
     saveSystemColors();
   });
@@ -1625,13 +1597,13 @@ async function saveSystemColors() {
 
   // User-defined accent color as 8-digit hex: #007AFFFF
   const accentColor = electron.systemPreferences.getAccentColor();
-  systemColors.accentColor = `#${accentColor}`;
+  systemColors["accent-hex"] = `#${accentColor}`;
   // Hue: 280
-  systemColors.accentH = chroma__default['default'](accentColor).hsl()[0];
+  systemColors["accent-H"] = chroma__default['default'](accentColor).hsl()[0];
   // Saturation: 50%
-  systemColors.accentS = `${chroma__default['default'](accentColor).hsl()[1] * 100}%`;
+  systemColors["accent-S"] = `${chroma__default['default'](accentColor).hsl()[1] * 100}%`;
   // Lightness: 50
-  systemColors.accentL = `${chroma__default['default'](accentColor).hsl()[2] * 100}%`;
+  systemColors["accent-L"] = `${chroma__default['default'](accentColor).hsl()[2] * 100}%`;
 
   if (isMac$1) {
     systemColors.windowBackgroundColor = electron.nativeTheme.shouldUseDarkColors ? '#323232' : '#ECECEC';
@@ -1807,7 +1779,6 @@ class DbManager {
   }
 }
 
-// 1/25: TODO: Can probably delete. Moved this into MenuBarManager
 async function deleteFile(path) {
   try {
 		await fsExtra.remove(path);
@@ -1816,8 +1787,6 @@ async function deleteFile(path) {
 		return { type: 'DELETE_FILE_FAIL', err: err }
 	}
 }
-
-// 1/25: TODO: Can probably delete. Moved this into MenuBarManager
 
 async function deleteFiles(paths) {
   try {
@@ -1834,6 +1803,8 @@ async function deleteFiles(paths) {
 
 async function selectProjectDirectoryFromDialog () {
 
+  console.log("selectProjectDirectoryFromDialog");
+
   const win = electron.BrowserWindow.getFocusedWindow();
 
   const selection = await electron.dialog.showOpenDialog(win, {
@@ -1849,24 +1820,224 @@ async function selectProjectDirectoryFromDialog () {
   }
 }
 
-async function selectCitationsFileFromDialog () {
+// Find components of cite keys (prefix, id, label, locator)
+// Does not support suffic yet.
+// Demo: https://regex101.com/r/QfLdwI/1
+const citekeyComponentsRE = /(?<prefix>[^\n\[\]\(\)]*?)?@(?<id>[a-zA-Z0-9_][^\s,;\]]+)(?:,\s(?<label>[\D]+)\s?(?<locator>[\w\-,:]+))?(?<suffix>.*)?/;
 
-  const win = electron.BrowserWindow.getFocusedWindow();
+// Variable for our citeproc engine. We'll only populate this once.
+let citeproc;
 
-  const selection = await electron.dialog.showOpenDialog(win, {
-    title: 'Select Citations File',
-    properties: ['openFile'],
-    filters: [
-      { name: 'JSON', extensions: ['json'] },
-    ]
+
+/**
+ * Create instance of the citeproc engine.
+ * Load our custom CSL, and the en-US locale.
+ * @returns 
+ */
+async function makeCiteprocEngine() {
+
+  const stylePath = path__default['default'].join(electron.app.getAppPath(), 'app/references/joshcarpenter-custom-csl.csl');
+  const localePath = path__default['default'].join(electron.app.getAppPath(), 'app/references/locales-en-US.xml');
+  
+  const style = await fsExtra.readFile(stylePath, 'utf8');
+  const locale = await fsExtra.readFile(localePath, 'utf8');
+
+  const engine = new CSL__default['default'].Engine({
+
+    // We'll populate this with citable items
+    items: {},
+
+    // An array of valid locator labels. Each formatted as follows:
+    // {
+    //   term: "p.",
+    //   form: "short",
+    //   plural: "single",
+    //   parentTerm: "page"
+    // }
+    locatorLabels: getCitationLocatorLabels(locale),
+
+    // Given a language tag in RFC-4646 form, this method retrieves the
+    // locale definition file.  This method must return a valid *serialized*
+    // CSL locale. (In other words, an blob of XML as an unparsed string.  The
+    // processor will fail on a native XML object or buffer).
+    retrieveLocale: () => locale,
+
+    // Given an identifier, this retrieves one citation item.  This method
+    // must return a valid CSL-JSON object.
+    retrieveItem: (id) => {
+      return engine.sys.items[id]
+    }
+  }, style);
+
+  return engine
+}
+
+
+/**
+ * Get valid locators from the provided locale file.
+ * Locale files specify the valid terms (locator and otherwise), for the locale.
+ * See: https://docs.citationstyles.org/en/stable/specification.html#locators
+ * for the list of valid locator terms in the CSL spec.
+ * Each locators can also have multiple short, long, singular and pluralized versions.
+ * E.g. "page" can be written as "p." (short, singlular), "pages" (long, multiple), etc.
+ * Locators are specified in the locale files as follows:
+ * ```
+ * <term name="page" form="short">
+ *    <single>p.</single>
+ *    <multiple>pp.</multiple>
+ * </term>
+ * ```
+ * We extract these from the locale file, and return an array of objects, where
+ * each object is a unique locator term (e.g. "p."), in the following format:
+ * ```
+ * {
+ *   term: "p.",
+ *   form: "short",
+ *   plural: "single",
+ *   parentTerm: "page"
+ * }
+ * ```
+ * @param {*} locale: Loaded xml file contents. See CSL repo for full list of locales.
+ */
+function getCitationLocatorLabels(locale) {
+
+  // Convert XML to JS object.
+  // `compact: false` to preserve positions of comments (otherwise they get batched)
+  // `trim: true` to remove white space.
+  const localeJs = convert__default['default'].xml2js(locale, { compact: false, trim: true, spaces: 4 });
+
+  // Get "terms" array. 
+  // Yes, this is ugly; log localeJs to console to see the hierarchy.
+  const allTerms = localeJs.elements[0].elements.find((e) => e.name == "terms").elements;
+
+  // Find all locator terms from "terms" array.
+  // This is a PITA because terms is flat, and the XML comments are the only demarcations,
+  // e.g. <!-- LONG LOCATOR FORMS --> and <!-- SHORT LOCATOR FORMS -->, which prececed
+  // lists of terms, respectively (long, short, and symbol). The following logic looks 
+  // for those, and starts adding the items that follow, up until the next comment block.
+  // If that comment block is also a LOCATOR block, it keeps on adding. Else, it stops.
+  let locatorTerms = [];
+  let isLocator = false;
+  allTerms.map((t) => {
+
+    if (isLocator) {
+      if (t.type !== "comment")
+        locatorTerms.push(t);
+    }
+
+    if (t.type == "comment") {
+      if (t.comment.includes("LOCATOR")) {
+        isLocator = true;
+      } else {
+        isLocator = false;
+      }
+    }
   });
 
-  if (!selection.canceled) {
-    return { 
-      type: 'SET_PROJECT_CITATIONS_FILE', 
-      path: selection.filePaths[0] 
-    }
+  // Build array of objects. This is what we'll return.
+  // One object per locator.
+  let locators = [];
+
+  locatorTerms.map((l) => {
+
+    // Skip "number-of-pages" locators.
+    // `locales-en-US` includes them, but they're not in the official list:
+    // https://docs.citationstyles.org/en/stable/specification.html#locators
+    // ...and they're identical to `pages`, causing needless parsing confusion.
+    if (l.attributes.name == "number-of-pages") return
+
+    // In source locale, term `form` attribute is either missing, or `form="short"`.
+    // E.g. https://github.com/citation-style-language/locales/blob/master/locales-en-US.xml#L166
+    // Hence the ternary operators for `form` key, below:
+
+    // Get singular version
+    let singleVersion = {
+      term: l.elements[0].elements[0].text,
+      form: l.attributes.form ? l.attributes.form : "long",
+      plural: false,
+      parentTerm: l.attributes.name
+    };
+
+    // Get pluralized version
+    let multipleVersion = {
+      term: l.elements[1].elements[0].text,
+      form: l.attributes.form ? l.attributes.form : "long",
+      plural: true,
+      parentTerm: l.attributes.name
+    };
+
+    locators.push(singleVersion, multipleVersion);
+  });
+
+  // Sort locators alphabetically. They're
+  locators.sort((a, b) => (a.term > b.term) ? 1 : -1);
+
+  return locators
+}
+
+
+async function getCitation (bibliographyPath, citekey) {
+
+  // Setup citeproc engine the first time through
+  if (!citeproc) citeproc = await makeCiteprocEngine();
+
+  // Load bibliography (list of CSL "items")
+  // Per https://citeproc-js.readthedocs.io/en/latest/csl-json/markup.html
+  const bibliographyString = await fsExtra.readFile(bibliographyPath, 'utf8');
+  const arrayOfItems = JSON.parse(bibliographyString);
+  arrayOfItems.forEach((item) => citeproc.sys.items[item.id] = item);
+  citeproc.updateItems(Object.keys(citeproc.sys.items));
+
+  // Get citekey components (prefix, id, etc)
+  // Groups return as "According to", "@dole2012", "pp.", "3-4"
+  // First use slice to remove enclosing square brackets
+  // [@tim2020] --> tim2020
+  let {
+    prefix = undefined,
+    id = '',
+    label = '',
+    locator = '',
+    suffix = '',
+  } = citekey.slice(1, citekey.length - 1).match(citekeyComponentsRE)?.groups;
+
+  if (label) {
+
+    // If label is present, we need to get the full parent term name, 
+    // E.g. the parent term name of "pp." is "page"
+    // Citeproc only accepts parent term names (which is annoying)
+
+    // There might be multiple qualifying parent labels. E.g. "page" and "pages" will
+    // both return for "@marlee98 page 22". This will usually be because the singular is 
+    // subset of the plural, so in these cases, match the plural.
+    // Else, if there's only one match, use it.
+    const matchingLabels = citeproc.sys.locatorLabels.filter(({ term }) => label.includes(term));
+    label = matchingLabels.length > 1 ?
+      matchingLabels.find((m) => m.plural).parentTerm :
+      matchingLabels[0].parentTerm;
   }
+
+  // Remove ugly timestamp locator labels
+  // t. 19:31 -> 19.31
+  // Demo: https://regex101.com/r/Uh1KAd/2/
+  // if (label) label = label.replace(/(t\.|tt\.|times|time)\s?/, '')
+
+  let renderedCitation = citeproc.previewCitationCluster({
+    citationItems: [{
+      prefix,
+      id,
+      label,
+      locator,
+      suffix
+    }],
+    properties: {
+      noteIndex: 0
+    }
+  }, [], [], 'text');
+
+  // Strip {{html}} and {{/html}} from rendered output
+  renderedCitation = renderedCitation.replaceAll(/{{html}}|{{\/html}}/g, "");
+
+  return renderedCitation
 }
 
 function init$3() {
@@ -1947,10 +2118,6 @@ function init$3() {
 
     switch (action.type) {
 
-      case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
-        store.dispatch(await selectCitationsFileFromDialog(), win);
-        break
-
       case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
         store.dispatch(await selectProjectDirectoryFromDialog(), win);
         break
@@ -1997,6 +2164,15 @@ function init$3() {
   });
 
   // -------- IPC: Invoke -------- //
+
+  electron.ipcMain.handle('getBibliography', async (evt, bibliographyPath) => {
+    const bibliography = await fsExtra.readFile(bibliographyPath, 'utf8');
+    return bibliography
+  });
+
+  electron.ipcMain.handle('getCitation', async (evt, bibliographyPath, citekey) => {
+    return await getCitation(bibliographyPath, citekey)
+  });
 
   // Return x/y coordinates of cursor inside sender window
   // Return null if cursor is outside the window bounds.
@@ -2150,11 +2326,6 @@ function init$3() {
 // // ipcMain.handle('ifPathExists', async (event, filepath) => {
 // //   const exists = await pathExists(filepath)
 // //   return { path: filepath, exists: exists }
-// // })
-
-
-// // ipcMain.handle('getCitations', (event) => {
-// //   return projectCitations.getCitations()
 // // })
 
 
@@ -2871,7 +3042,6 @@ function create$2() {
         id: 'format-ul',
         accelerator: 'Cmd+Shift+L',
         click(item, focusedWindow) {
-          console.log('Clicked');
           focusedWindow.webContents.send('setFormat', 'ul');
         }
       }),
@@ -2971,6 +3141,23 @@ function create$1() {
       ______________________________,
 
       new electron.MenuItem({
+        label: 'Sidebar',
+        id: 'view-sidebar',
+        type: 'checkbox',
+        accelerator: 'CmdOrCtrl+Alt+B',
+        click(item, focusedWindow) {
+          const state = global.state();
+          const project = state.projects.byId[state.focusedWindowId];
+          global.store.dispatch({
+            type: 'SIDEBAR_SET_OPEN_CLOSED',
+            value: !project.sidebar.isOpen
+          }, focusedWindow);
+        }
+      }),
+
+      ______________________________,
+
+      new electron.MenuItem({
         label: 'Project',
         id: 'view-project',
         type: 'checkbox',
@@ -3035,24 +3222,24 @@ function create$1() {
         }
       }),
 
-      new electron.MenuItem({
-        label: 'Citations',
-        id: 'view-citations',
-        type: 'checkbox',
-        accelerator: 'Cmd+6',
-        click(item, focusedWindow) {
-          global.store.dispatch({
-            type: 'SELECT_SIDEBAR_TAB_BY_ID',
-            id: 'citations'
-          }, focusedWindow);
-        }
-      }),
+      // new MenuItem({
+      //   label: 'Citations',
+      //   id: 'view-citations',
+      //   type: 'checkbox',
+      //   accelerator: 'Cmd+6',
+      //   click(item, focusedWindow) {
+      //     global.store.dispatch({
+      //       type: 'SELECT_SIDEBAR_TAB_BY_ID',
+      //       id: 'citations'
+      //     }, focusedWindow)
+      //   }
+      // }),
 
       new electron.MenuItem({
         label: 'Search',
         id: 'view-search',
         type: 'checkbox',
-        accelerator: 'Cmd+7',
+        accelerator: 'Cmd+6',
         click(item, focusedWindow) {
           global.store.dispatch({
             type: 'SELECT_SIDEBAR_TAB_BY_ID',
@@ -3097,6 +3284,37 @@ function create$1() {
         ]
       }),
 
+      new electron.MenuItem({
+        label: 'Line Height',
+        submenu: [
+          new electron.MenuItem({
+            label: 'Default',
+            id: 'view-lineheight-default',
+            accelerator: 'CmdOrCtrl+Alt+0',
+            click() {
+              global.store.dispatch({ type: 'SET_DEFAULT_EDITOR_LINE_HEIGHT' });
+            }
+          }),
+          ______________________________,
+          new electron.MenuItem({
+            label: 'Increase',
+            id: 'view-lineheight-increase',
+            accelerator: 'CmdOrCtrl+Alt+=',
+            click() {
+              global.store.dispatch({ type: 'INCREASE_EDITOR_LINE_HEIGHT' });
+            }
+          }),
+          new electron.MenuItem({
+            label: 'Decrease',
+            id: 'view-lineheight-decrease',
+            accelerator: 'CmdOrCtrl+Alt+-',
+            click() {
+              global.store.dispatch({ type: 'DECREASE_EDITOR_LINE_HEIGHT' });
+            }
+          })
+        ]
+      }),
+
       // TODO: Am hiding these commands for now, because of Electron bug.
       // Labels are incorrect if accelerator uses Shift and `-` or `=` 
       // keys. For example, `Cmd+Shift+0` accelerator should display 
@@ -3135,53 +3353,6 @@ function create$1() {
 
       ______________________________,
 
-
-      new electron.MenuItem({
-        label: 'App Theme',
-        id: 'view-appTheme',
-        submenu: themes.allIds.map((id) => {
-          const t = themes.byId[id];
-          return new electron.MenuItem({
-            label: t.name,
-            id: `view-appTheme-${id}`,
-            type: 'checkbox',
-            checked: global.state().appTheme.id == id,
-            click() {
-              global.store.dispatch({ type: 'SET_APP_THEME', id });
-            }
-          })
-        })
-      }),
-
-      // new MenuItem({
-      //   label: 'Accent Color',
-      //   submenu: [
-      //     new MenuItem({
-      //       label: 'Match System',
-      //       type: 'checkbox',
-      //       checked: global.state().appTheme.accentColor == 'match-system',
-      //       click() {
-      //         global.store.dispatch({ type: 'SET_ACCENT_COLOR', name: 'match-system', })
-      //       }
-      //     }),
-      //     ______________________________,
-      //   ]
-      // }),
-
-      // new MenuItem({
-      //   label: 'Background',
-      //   submenu: [
-      //     new MenuItem({
-      //       label: 'Placeholder',
-      //       type: 'checkbox',
-      //       checked: global.state().appTheme.background == 'placeholder',
-      //       click() {
-      //         global.store.dispatch({ type: 'SET_BACKGROUND', name: 'placeholder', })
-      //       }
-      //     }),
-      //   ]
-      // }),
-
       new electron.MenuItem({
         label: 'Dark Mode',
         submenu: [
@@ -3214,17 +3385,17 @@ function create$1() {
       }),
 
       new electron.MenuItem({
-        label: 'Editor Theme',
-        id: 'view-editorTheme',
-        submenu: global.state().editorTheme.installed.map((t) => {
+        label: 'Theme',
+        id: 'view-theme',
+        submenu: global.state().theme.installed.map(({ name, id }) => {
           return new electron.MenuItem({
-            label: t.name,
-            id: `view-editorTheme-${t.id}`,
+            label: name,
+            id: `view-theme-${id}`,
             type: 'checkbox',
-            checked: global.state().editorTheme.id == t.id,
+            checked: global.state().theme.id == id,
             click(item) {
               if (!item.checked) {
-                global.store.dispatch({ type: 'SET_EDITOR_THEME_BY_ID', name: t.id });
+                global.store.dispatch({ type: 'SET_THEME', name: id });
               }
             }
           })
@@ -3279,30 +3450,26 @@ function update$1(appMenu) {
 
   m.getMenuItemById('view-sourceMode').checked = state.sourceMode;
 
-  const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search'];
+  const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search'];
   sidebarTabs.forEach((id) => {
     const item = m.getMenuItemById(`view-${id}`);
     item.enabled = project !== undefined;
     item.checked = project?.sidebar.activeTabId == id;
   });
 
-  // View > App Menu submenu: set `checked`
-  m.getMenuItemById('view-appTheme').submenu.items.forEach((item) => {
-    const id = item.id.replace('view-appTheme-', '');
-    item.checked = id == state.appTheme.id;
+  // View > Theme submenu: set `checked`
+  m.getMenuItemById('view-theme').submenu.items.forEach((item) => {
+    const id = item.id.replace('view-theme-', '');
+    item.checked = id == state.theme.id;
   });
 
   m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max;
   m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min;
   
+  m.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen;
+
   // m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
   // m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
-
-  // View > Editor Theme submenu: set `checked`
-  // m.getMenuItemById('view-editorTheme').submenu.items.forEach((item) => {
-  //   const id = item.id.replace('view-editorTheme-', '')
-  //   item.checked = id == state.editorTheme.id
-  // })
 
 }
 
@@ -3317,12 +3484,12 @@ function onStateChanged$1(state, oldState, project, panel, prefsIsFocused, appMe
 
   const changes = [
     state.focusedWindowId !== oldState.focusedWindowId,
-    state.appTheme.id !== oldState.appTheme.id,
-    state.editorTheme.id !== oldState.editorTheme.id,
+    state.theme.id !== oldState.theme.id,
     state.sourceMode !== oldState.sourceMode,
     state.editorFont.size !== oldState.editorFont.size,
     state.editorLineHeight.size !== oldState.editorLineHeight.size,
-    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId
+    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId,
+    project?.sidebar.isOpen !== oldProject?.sidebar.isOpen
   ];
 
   if (changes.includes(true)) {
@@ -3390,12 +3557,14 @@ function init$2() {
 /**
  * For specified path, return document details
  */
-async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
+async function mapDocument(filepath, parentId, nestDepth, stats = undefined) {
 
 	if (stats == undefined) stats = await fsExtra.stat(filepath);
 
-	const doc = {
-		type: 'doc',
+	const file = {
+		isDoc: true,
+		isMedia: false,
+		contentType: mime__default['default'].lookup(filepath), // 'text/markdown', etc
 		name: '',
 		path: filepath,
 		id: `doc-${stats.ino}`,
@@ -3403,56 +3572,58 @@ async function mapDocument (filepath, parentId, nestDepth, stats = undefined) {
 		created: stats.birthtime.toISOString(),
 		modified: stats.mtime.toISOString(),
 		nestDepth: nestDepth,
-		// --- Doc-specific --- //
-		title: '',
-		excerpt: '',
-		tags: [],
-	};	
+		// --- Markdown-specific --- //
+		// title: '',
+		// excerpt: '',
+		// tags: [],
+		// bibliography: {
+		// 	path: "",
+		// 	exists: false,
+		// 	isCslJson: false
+		// }
+	};
 
-	// Get front matter
-	const gm = matter__default['default'].read(filepath);
+	// If file is markdown, get markdown-specific details
+	const isMarkdown = file.contentType == "text/markdown";
+	if (isMarkdown) {
 
-	// Set excerpt
-	// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
-	doc.excerpt = removeMarkdown(gm.content, 350);
-
-	// Set fields from front matter (if it exists)
-	// gray-matter `isEmpty` property returns "true if front-matter is empty".
-	const hasFrontMatter = !gm.isEmpty;
-	if (hasFrontMatter) {
-		
-		// If `tags` exists in front matter, use it. Else, set as empty `[]`.
-		doc.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
-		
-		// If tags is a single string, convert to array
-		// We want to support single tag format, ala `tags: Kitten`
-		// because it's supported by eleventy: 
-		// https://www.11ty.dev/docs/collections/#a-single-tag-cat
-		if (typeof doc.tags === 'string') {
-			doc.tags = [doc.tags];
+		// Get front matter
+		const gm = matter__default['default'].read(filepath);
+	
+		// Set excerpt
+		// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
+		file.excerpt = removeMarkdown(gm.content, 350);
+	
+		// Set fields from front matter (if it exists)
+		// gray-matter `isEmpty` property returns "true if front-matter is empty".
+		const hasFrontMatter = !gm.isEmpty;
+		if (hasFrontMatter) {
+	
+			// If `tags` exists in front matter, use it. Else, set as empty `[]`.
+			file.tags = gm.data.hasOwnProperty('tags') ? gm.data.tags : [];
+	
+			// If tags is a single string, convert to array
+			// We want to support single tag format, ala `tags: Kitten`
+			// because it's supported by eleventy: 
+			// https://www.11ty.dev/docs/collections/#a-single-tag-cat
+			if (typeof file.tags === 'string') {
+				file.tags = [file.tags];
+			}
+	
+			// Get bibliography
+			file.bibliography = await getBibliography(file, gm.data);
+	
 		}
+	
+		// Set title, if present. E.g. "Sea Level Rise"
+		file.title = getTitle(gm, path__default['default'].basename(filepath));
 	}
 
-	// Set title, if present. E.g. "Sea Level Rise"
-	doc.title = getTitle(gm, path__default['default'].basename(filepath));
-
 	// Set name from filename (minus file extension)
-	doc.name = path__default['default'].basename(filepath);
-	doc.name = doc.name.slice(0, doc.name.lastIndexOf('.'));
+	file.name = path__default['default'].basename(filepath);
+	// file.name = file.name.slice(0, file.name.lastIndexOf('.'))
 
-	return doc
-
-	// if (oldVersion !== undefined) {
-	//   const lhs = Object.assign({}, oldVersion)
-	//   const rhs = file
-	//   diff.observableDiff(lhs, rhs, (d) => {
-	//     if (d.kind !== 'D') {
-	//       diff.applyChange(lhs, rhs, d)
-	//     }
-	//   })
-	//   return lhs
-	// } else {
-	// }
+	return file
 }
 
 /**
@@ -3474,45 +3645,6 @@ function getTitle(graymatter, filename) {
 	}
 }
 
-/**
- * Return content stripped of markdown characters.
- * And (optionally) trimmed down to specific character length.
- * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
- * @param {*} content 
- * @param {*} trimToLength 
- */
-function removeMarkdown(content, trimToLength = undefined) {
-
-	// Remove h1, if it exists. Currently atx-style only.
-	let text = content.replace(/^# (.*)\n/gm, '');
-	
-	// If `trimToLength` is defined, do initial trim.
-	// We will then remove markdown characters, and trim to final size.
-	// We do initial trim for performance purposes: to reduce amount of
-	// text that regex replacements below have to process. We add buffer
-	// of 100 characters, or else trimming markdown characters could put
-	// use under the specified `trimToLength` length.
-	if (trimToLength) {
-		text = text.substring(0, trimToLength + 100);
-	}
-
-	// Remove markdown formatting. Start with remove-markdown rules.
-	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
-	// Then add whatever additional changes I want (e.g. new lines).
-	text = removeMd__default['default'](text)
-		.replace(blockQuotes, '') 
-		.replace(newLines, '')         // New lines at start of line (usually doc)
-		.replace(unwantedWhiteSpace, ' ')
-		.replace(bracketedSpans, ' ');
-		// .replace(citations, '')
-
-	// If `trimToLength` is defined, trim to final length.
-	if (trimToLength) {
-		text = text.substring(0, trimToLength);
-	}
-
-	return text
-}
 
 const blockQuotes = /^> /gm;
 const bracketedSpans = /:::.*?:::/gm;
@@ -3527,29 +3659,109 @@ const newLines = /^\n/gm;
 const unwantedWhiteSpace = /\n|\t|\s{2,}/gm;
 
 /**
- * For specified path, return document details
+ * Return content stripped of markdown characters.
+ * And (optionally) trimmed down to specific character length.
+ * Per: https://github.com/jonschlinkert/gray-matter#optionsexcerpt
+ * @param {*} content 
+ * @param {*} trimToLength 
  */
-async function mapMedia (filepath, parentId, nestDepth, stats = undefined) {
+function removeMarkdown(content, trimToLength = undefined) {
+
+	// Remove h1, if it exists. Currently atx-style only.
+	let text = content.replace(/^# (.*)\n/gm, '');
+
+	// If `trimToLength` is defined, do initial trim.
+	// We will then remove markdown characters, and trim to final size.
+	// We do initial trim for performance purposes: to reduce amount of
+	// text that regex replacements below have to process. We add buffer
+	// of 100 characters, or else trimming markdown characters could put
+	// use under the specified `trimToLength` length.
+	if (trimToLength) {
+		text = text.substring(0, trimToLength + 100);
+	}
+
+	// Remove markdown formatting. Start with remove-markdown rules.
+	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
+	// Then add whatever additional changes I want (e.g. new lines).
+	text = removeMd__default['default'](text)
+		.replace(blockQuotes, '')
+		.replace(newLines, '')         // New lines at start of line (usually doc)
+		.replace(unwantedWhiteSpace, ' ')
+		.replace(bracketedSpans, ' ');
+	// .replace(citations, '')
+
+	// If `trimToLength` is defined, trim to final length.
+	if (trimToLength) {
+		text = text.substring(0, trimToLength);
+	}
+
+	return text
+}
+
+/**
+ * Return the full path to the bibliography file specified, 
+ * along with details about it (e.g. does the path work).
+ * @param {object} file
+ * @param {object} frontmatter - Frontmatter loaded from document
+ * @returns Object with absolute path to bibliography, and 
+ * booleans for whether 1) it exists, and 2) if it's CSL-JSON
+ */
+async function getBibliography(file, frontmatter) {
+
+	// If bibliography is not specified, check for bibliography defined in
+	// a top-level `data/` directory. 
+	if (!frontmatter.bibliography) {
+		return { path: "", exists: false, isCslJson: false }
+	}
+
+	const absolutePath = path__default['default'].resolve(path__default['default'].dirname(file.path), frontmatter.bibliography);
+	const exists = await fsExtra.existsSync(absolutePath);
+	const isCslJson = path__default['default'].extname(absolutePath).slice(1).toUpperCase() == "JSON";
+	
+	// If specified bibliography does not exist, warn
+	if (!exists) {
+		console.warn(`Bibliography ${frontmatter.bibliography} not found. File name: ${file.name}.`, "— mapDocument.js");
+	}
+
+	// If format is not JSON, warn
+	// TODO: Validate that the JSON is also CSL-JSON s
+	
+	// Specified bibliography exists. Return.
+	return { path: absolutePath, exists, isCslJson }
+}
+
+/**
+ * For specified path, return media file details
+ */
+async function mapMedia (filepath, parentId, nestDepth, projectId, stats = undefined) {
 
 	if (stats == undefined) stats = await fsExtra.stat(filepath);
 	const extension = path__default['default'].extname(filepath);
 	const type = getMediaType(extension);
-	const { width, height, type: format } = sizeOf__default['default'](filepath);
 
-	return {
-		type: type,
+	const file = {
+		isDoc: false,
+		isMedia: true,
+		contentType: mime__default['default'].lookup(filepath), // 'image/png', 'video/mp4', etc.
 		name: path__default['default'].basename(filepath),
 		path: filepath,
 		id: `${type}-${stats.ino}`,
-		parentId: parentId,
+		parentId,
+		projectId,
 		created: stats.birthtime.toISOString(),
 		modified: stats.mtime.toISOString(),
-		nestDepth: nestDepth,
+		nestDepth,
 		// --- Media-specific --- //
-		format: format,
 		sizeInBytes: stats.size,
-		dimensions: { width: width, height: height },
+	};
+
+	if (file.contentType.includes('image'))	{
+		const { width, height, type: format } = sizeOf__default['default'](filepath);
+		file.dimensions = { width, height };
+		file.format = format;
 	}
+
+	return file
 }
 
 /**
@@ -3571,7 +3783,7 @@ async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, p
 
   // Create and populate new folder
   const folder = {
-    type: 'folder',
+    isFolder: true,
     name: folderPath.substring(folderPath.lastIndexOf('/') + 1),
     path: folderPath,
     id: `folder-${stats.ino}`,
@@ -3602,7 +3814,8 @@ async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, p
   // Get everything in directory with `readdir`.
   // Returns array of `fs.Dirent` objects.
   // https://nodejs.org/api/fs.html#fs_class_fs_dirent
-  const directoryContents = await fsExtra.readdir(folderPath, { withFileTypes: true });
+  let directoryContents = await fsExtra.readdir(folderPath, { withFileTypes: true });
+  directoryContents = directoryContents.filter(({ name }) => !name.includes(".DS_Store"));
 
   await Promise.all(
     directoryContents.map(async (f) => {
@@ -3611,9 +3824,15 @@ async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, p
       const filepath = path__default['default'].join(folderPath, f.name);
 
       // Get extension
-      const ext = path__default['default'].extname(f.name);
+      path__default['default'].extname(f.name);
 
-      if (f.isDirectory()) {
+      // Determine type
+      const contentType = mime__default['default'].lookup(filepath);
+      const isDirectory = f.isDirectory();
+      contentType && contentType.includes('markdown');
+      const isMedia = contentType && contentType.includesAny('video', 'audio', 'image');
+
+      if (isDirectory) {
 
         const { numDescendants } = await mapFolder(files, treeItem.children, filepath, undefined, folder.id, nestDepth + 1);
 
@@ -3621,11 +3840,12 @@ async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, p
         folder.numChildren++;
         folder.numDescendants += numDescendants;
 
-      } else if (isDoc(ext) || isMedia(ext)) {
+      } else {
+      // } else if (isDoc || isMedia) {
 
-        const file = isDoc(ext) ? 
-          await mapDocument(filepath, folder.id, nestDepth + 1) : 
-          await mapMedia(filepath, folder.id, nestDepth + 1);
+        const file = isMedia ? 
+          await mapMedia(filepath, folder.id, nestDepth + 1) :
+          await mapDocument(filepath, folder.id, nestDepth + 1);
 
         files.byId[file.id] = file;
         files.allIds.push(file.id);
@@ -3666,8 +3886,6 @@ async function mapProject (projectPath) {
     
     return files
     
-    // console.log(JSON.stringify(files, null, 2))
-
   } catch (err) {
     console.log(err);
   }
@@ -3740,7 +3958,7 @@ class Watcher {
     // Tell reducers when first project map is complete, 
     // and pass along first file. If a file as not been 
     // selected yet, reducer selects this.
-    const firstDocId = this.files.allIds.find((id) => this.files.byId[id].type == 'doc');
+    const firstDocId = this.files.allIds.find((id) => this.files.byId[id].isDoc);
 
     global.store.dispatch({
       type: 'PROJECT_FILES_MAPPED',
@@ -3820,7 +4038,7 @@ class Watcher {
       // file that the focused panel should display.
       const firstDocId = this.files.allIds.find((id) => {
         const file = this.files.byId[id];
-        return file.type == 'doc'
+        return file.isDoc
       });
 
       global.store.dispatch({
@@ -3862,7 +4080,7 @@ class Watcher {
                 parentTreeItem.children.push({
                   id: file.id,
                   parentId: file.parentId,
-                  type: file.type
+                  // type: file.type
                 });
                 // Increment `numChildren` of parent folder
                 parentFolder.numChildren++;
@@ -3919,6 +4137,8 @@ class Watcher {
         this.window.webContents.send('filesPatchesFromMain', patches);
       });
 
+      // console.log(this.files, "— Watcher.js")
+
       global.store.dispatch({ type: 'PROJECT_FILES_UPDATED' }, this.window);
     }
   }
@@ -3936,7 +4156,7 @@ function insertAllDocsIntoDb(files) {
   const filesForDb = [];
   files.allIds.forEach((id) => {
     const file = files.byId[id];
-    if (file.type == 'doc') {
+    if (file.isDoc) {
       filesForDb.push(getDbReadyFile(file));
     }
   });
@@ -4108,7 +4328,7 @@ async function createWindow(id, project) {
   });
 
   // Open DevTools
-  if (!electron.app.isPackaged) win.webContents.openDevTools();
+  // if (!app.isPackaged) win.webContents.openDevTools();
  
   // Load index.html (old way)
   // await win.loadFile(path.join(__dirname, 'index.html'), {
@@ -4124,7 +4344,6 @@ async function createWindow(id, project) {
       id: win.projectId
     }
   }));
-
 
   // Save window bounds
   saveWindowBoundsToState(win);
@@ -4358,10 +4577,10 @@ async function open() {
     global.store.dispatch({ type: 'CLOSE_PREFERENCES' });
   });
 
-  if (!electron.app.isPackaged) {
-    win.webContents.openDevTools();
-    win.setBounds({ width: 1000 });
-  }
+  // if (!app.isPackaged) {
+  //   win.webContents.openDevTools();
+  //   win.setBounds({ width: 1000 })
+  // }
 
   // Load index.html
   // await win.loadFile(path.join(__dirname, 'preferences.html'), {
@@ -4508,8 +4727,6 @@ electron.app.whenReady()
     // Before: `file:///img/arrow.svg`
     // After: `file:///Users/josh/Desktop/gambier/img/arrow.svg`
     electron.protocol.interceptFileProtocol('file', (request, callback) => {
-
-      // console.log(request)
       
       // If the request url starts with `file:///Users`, it's
       // not a request for an app asset, so we don't need to
@@ -4561,14 +4778,6 @@ electron.app.whenReady()
 
     // Setup menu bar
     init$2();
-
-    // const appThemeIsNotDefined = !global.state().theme.id
-    // if (appThemeIsNotDefined) {
-    //   await global.store.dispatch({ 
-    //     type: 'SET_APP_THEME', 
-    //     id: AppearanceManager.themes.defaultId
-    //   })
-    // }
 
     // Get initial system appearance values
     init$4();

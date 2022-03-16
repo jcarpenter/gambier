@@ -12,7 +12,7 @@ const turndownService = new TurndownService({
 
 export async function onPaste(cm, evt) {
 
-  console.log('onPaste')
+  // console.log('onPaste')
   // console.log(cm.getMode('text/html'))
   // cm.setOption("mode", $(this).val() )
 

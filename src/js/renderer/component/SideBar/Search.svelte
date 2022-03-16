@@ -153,7 +153,7 @@ import { wait } from '../../../shared/utils';
     // Add each folder
     $files.allIds.forEach((id) => {
       const file = $files.byId[id]
-      if (file.type == 'folder') {
+      if (file.isFolder) {
         lookInOptions.push({ label: file.name, id: id, checked: options.lookIn == id })
       }
     })

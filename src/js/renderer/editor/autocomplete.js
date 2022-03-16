@@ -1,8 +1,34 @@
 import { Pos } from "codemirror"
 import { isUrl, isValidHttpUrl } from "../../shared/utils"
+import * as WizardManager from "../WizardManager"
 import { getClipboardContents, getFromAndTo } from "./editor-utils"
+import { getElementAt } from "./map"
 
-export const autocompleteOptions = {
+export function checkIfWeShouldShowAutocomplete(cm, evt) {
+
+  const ranges = cm.listSelections()
+
+  // Show autocomplete only if
+  // - There are not multiple selections
+  // - It's not already visible
+  // - Key pressed was not one those listed (e.g. Escape)
+  const showAutocomplete =
+    ranges.length == 1 &&
+    !cm.state.completionActive &&
+    !evt.key.equalsAny(' ', 'Meta', 'Backspace', 'Enter', 'Shift', 'Alt', 'Escape', 'Control', 'Tab', 'CapsLock', 'Home', 'PageUp', 'PageDown') &&
+    !evt.key.includesAny('Arrow')
+
+  // Show autocomplete
+  if (showAutocomplete) {
+    // We align autocomplete with start of the word
+    // (true) if something is selected, or cursor (false), 
+    // otherwise.
+    const alignWithWord = cm.somethingSelected()
+    cm.showHint({ ...autocompleteOptions, alignWithWord })
+  }
+}
+
+const autocompleteOptions = {
   hint: findHints,
   // Determines whether, when only a single completion is available, it is completed without showing the dialog. Defaults to true.
   completeSingle: false,
@@ -18,7 +44,7 @@ export const autocompleteOptions = {
 }
 
 
-const allowedMarkdownStartCharsRE = /[!\[@\w]/
+const allowedMarkdownStartCharsRE = /[!\^\[@\w]/
 const allowedMarkdownEndCharsRE = /[@\w\]]/
 
 
@@ -28,63 +54,78 @@ const allowedMarkdownEndCharsRE = /[@\w\]]/
 // word that's around the cursor position.
 
 // Element hints
-
 const citation = {
   text: '[@]',
   displayText: 'Citation',
-  className: 'citation',
-  hint: (cm, data, self) => { 
-    cm.replaceRange(`@${data.text}`, data.from, data.to)
+  className: 'small-size element-citation',
+  hint: (cm, data, self) => {
+    cm.replaceRange(`[@${data.text}]`, data.from, data.to)
+    openWizard(cm, data.from)
   }
 }
 
 const inlineFootnote = {
-  text: '[^]',
+  text: '^[]',
   displayText: 'Footnote',
-  className: 'inlineFootnote',
-  hint: (cm, data, self) => { 
-    cm.replaceRange(`^${data.text}`, data.from, data.to)
+  className: 'small-size element-inline-footnote',
+  hint: (cm, data, self) => {
+    cm.replaceRange(`^[${data.text}]`, data.from, data.to)
+    openWizard(cm, data.from)
   }
 }
 
 const inlineImage = {
   text: '![]()',
   displayText: 'Image',
-  className: 'inlineImage',
-  hint: (cm, data, self) => { 
-    // Expand to get brackets as well
-    // Lion --> [Lion]
-    const from = { line: data.from.line, ch: data.from.ch - 1}
-    const to = { line: data.to.line, ch: data.to.ch + 1}
+  className: 'small-size element-inline-image',
+  hint: (cm, data, self) => {
     const textIsUrl = data.text.length && isUrl(data.text)
     if (textIsUrl) {
       // Insert text as url
-      cm.replaceRange(`![](${data.text})`, from, to)
+      cm.replaceRange(`![](${data.text})`, data.from, data.to)
     } else {
       // Insert text as alt text / caption
-      cm.replaceRange(`![${data.text}]()`, from, to)
+      cm.replaceRange(`![${data.text}]()`, data.from, data.to)
     }
+    openWizard(cm, data.from)
   }
 }
 
 const inlineLink = {
   text: '[]()',
   displayText: 'Link',
-  className: 'inlineLink',
-  hint: async (cm, data, self) => {     
-    // Expand to get brackets as well
-    // Lion --> [Lion]
-    const from = { line: data.from.line, ch: data.from.ch - 1}
-    const to = { line: data.to.line, ch: data.to.ch + 1}
+  className: 'small-size element-inline-link',
+  hint: (cm, data, self) => {
     const textIsUrl = data.text.length && isUrl(data.text)
     if (textIsUrl) {
       // Insert text as url
-      cm.replaceRange(`[](${data.text})`, from, to)
+      cm.replaceRange(`[](${data.text})`, data.from, data.to)
     } else {
       // Insert text as alt text / caption
-      cm.replaceRange(`[${data.text}]()`, from, to)
+      cm.replaceRange(`[${data.text}]()`, data.from, data.to)
+      openWizard(cm, data.from)
     }
   }
+}
+
+function openWizard(cm, pos) {
+
+  // Get the DOM element of the element
+  const element = getElementAt(cm, pos.line, pos.ch + 1)
+  const { left, right, top, bottom } = cm.charCoords(Pos(element.line, element.start), "window")
+  const centerOfElementX = right - ((right - left) / 2)
+  const centerOfElementY = bottom - ((bottom - top) / 2)
+  const domElement = document.elementFromPoint(centerOfElementX, centerOfElementY)
+
+  // Open wizard
+  WizardManager.store.setTarget({
+    cm,
+    panelId: cm.panel.id,
+    suppressWarnings: true,
+    domElement,
+    element,
+    openedBy: { tabOrClick: true, hover: false, metaKey: false, altKey: false }
+  })
 }
 
 // Fenced code block hints
@@ -123,7 +164,7 @@ let fencedCodeBlockHints = [
  * @returns 
  */
 function findHints(cm, options) {
-  // console.log(options)
+
   return new Promise((accept) => {
     setTimeout(async () => {
 
@@ -182,17 +223,17 @@ function findHints(cm, options) {
           }
         }
 
-      } else if (token.type.includes('line-fencedcodeblock-start')) {
-        
+      } else if (token?.type?.includes('line-fencedcodeblock-firstLine')) {
+
         // Decrement start until we find whitespace
         while (start && /[^`]/.test(line.charAt(start - 1))) --start
 
         // The string we're going to check for in completions
         const word = line.slice(start, end)?.toLowerCase()
 
-        const languageHints = fencedCodeBlockHints.filter(({text, displayText}) => {
-          return text.toLowerCase().startsWith(word.toLowerCase()) || 
-          displayText.toLowerCase().startsWith(word.toLowerCase())
+        const languageHints = fencedCodeBlockHints.filter(({ text, displayText }) => {
+          return text.toLowerCase().startsWith(word.toLowerCase()) ||
+            displayText.toLowerCase().startsWith(word.toLowerCase())
         })
 
         if (languageHints.length) {
@@ -204,37 +245,20 @@ function findHints(cm, options) {
           })
         }
 
-
       } else if (mode.name == 'markdown') {
 
-        // Decrement start until we find whitespace
+        // Find start and end characters:
+        // - Decrement start until we find whitespace
+        // - Increment end until we find whitespace
         while (start && allowedMarkdownStartCharsRE.test(line.charAt(start - 1))) --start
-
-        // Increment end until we find whitespace
         while (end < line.length && allowedMarkdownEndCharsRE.test(line.charAt(end))) ++end
 
-        // The string we're going to check for in completions
-        const word = line.slice(start, end).toLowerCase()
+        // Get the string we're going to check for in completions
+        const string = line.slice(start, end).toLowerCase()
 
-        // Empty square brackets: []
-        const isEmptySquareBrackets = word == '[]'
-        // Square brackets around selection: [kitty]
-        // Demo: https://regex101.com/r/emhxXZ/1/
-        const isSquareBracketsAroundSelection = word.match(/\[[^\]]+?\]/)
-        // Inline footnote [^|]
-        // Citation [@|]
-        // Image ![|]
-
-        // If the above match, return a list of hints.
-        // "...returns a {list, from, to} object, where list is an array of strings or objects (the completions), and from and to give the start and end of the token that is being completed as {line, ch} objects. An optional selectedHint property (an integer) can be added to the completion object to control the initially selected hint."
-
-        // if (isSquareBracketsAroundSelection) {
-        //   const clipboard = await getClipboardContents()
-        //   const clipboardIsUrl = isValidHttpUrl(clipboard)
-        //   console.log(clipboard)        
-        //   console.log(clipboardIsUrl)        
-        // }
-
+        // Is string empty square brackets? E.g. "[|]"
+        // If yes, return full automcomplete options
+        const isEmptySquareBrackets = string == '[]'
         if (isEmptySquareBrackets) {
           return accept({
             list: [
@@ -245,10 +269,108 @@ function findHints(cm, options) {
             ],
             from: Pos(cursor.line, start),
             to: Pos(cursor.line, end),
-            text: '',
+            text: "",
             selectedHint: 0
           })
-        } else if (isSquareBracketsAroundSelection) {
+        }
+
+        // Is string an image? E.g. "![|]"
+        const isImage = string.substring(0, 2) == "![" && string.slice(-1) == "]"
+        if (isImage) {
+          return accept({
+            list: [inlineImage],
+            from: Pos(cursor.line, start),
+            to: Pos(cursor.line, end),
+            text: string.slice(2, string.length - 1), // Text inside brackets
+            selectedHint: 0
+          })
+        }
+
+        // Is string an inline footnote? E.g. "^[|]"
+        const isFootnote = string.substring(0, 2) == "^[" && string.slice(-1) == "]"
+        if (isFootnote) {
+          return accept({
+            list: [inlineFootnote],
+            from: Pos(cursor.line, start),
+            to: Pos(cursor.line, end),
+            text: string.slice(2, string.length - 1), // Text inside brackets
+            selectedHint: 0
+          })
+        }
+
+        // Is string a citation? E.g. "[@|]"
+        const isCitation = string.substring(0, 2) == "[@" && /\[@[^\]]*?\]/.test(string)
+        if (isCitation) {
+         
+          const text = string.slice(2, string.length - 1) // Text inside brackets
+          const textIsEmpty = text == ""
+
+          // As user starts to type, show hints
+          const doc = window.files.byId[cm.panel.docId]
+          const bibliographyExists = doc.bibliography.exists && doc.bibliography.isCslJson
+          if (!bibliographyExists) {
+            console.warn("Bibliography not found")
+            return accept(null)
+          }
+          const bibliographyString = await window.api.invoke('getBibliography', doc.bibliography.path)
+          let bibliography = JSON.parse(bibliographyString)
+
+          // If user has entered text, filter results by title  
+          if (!textIsEmpty) {
+            bibliography = bibliography.filter((ref) => {
+              const titleMatches = ref.title.toLowerCase().includes(text.toLowerCase())
+              const authorMatches = ref.author?.some((author) => {
+                const familyNameMatches = author.family?.toLowerCase().includes(text.toLowerCase())
+                // const givenNameMatches = author.given?.toLowerCase().includes(text.toLowerCase())
+                return familyNameMatches
+              })
+              return titleMatches || authorMatches
+            })
+          }
+
+          // Make array of objects with text and displayText
+          const matches = bibliography.map((ref) => {
+                          
+            // Define secondary text line
+            const authorFamily = ref.author?.[0].family ?? ""
+            const year = ref.issued?.["date-parts"]?.[0][0] ?? ""
+            const container = ref["container-title"] ?? ""
+            
+            let secondaryDisplayText = ""           
+            if (authorFamily && !year) {
+              secondaryDisplayText = authorFamily
+            } else if (authorFamily && year) {
+              secondaryDisplayText = `${authorFamily} (${year})`
+            } else if (!authorFamily && year) {
+              secondaryDisplayText = `(${year})`
+            }
+            if (container && !authorFamily && !year) {
+              secondaryDisplayText = container
+            } else if (container) {
+              secondaryDisplayText += `, ${container}`
+            }
+           
+            return { 
+              text: ref.id, 
+              displayText: ref.title,
+              secondaryDisplayText,
+              className: `regular-size show-separator bold-primary citation ${ref.type}`
+            }
+          })
+
+          return accept({
+            list: matches,
+            from: Pos(cursor.line, start + 2),
+            to: Pos(cursor.line, end - 1),
+            text,
+            selectedHint: 0
+          })
+        }
+
+        // Is string square brackets around selection? E.g. "[jones]"
+        // If yes, return full automcomplete options
+        const isSquareBracketsAroundSelection = /\[[^\]]+?\]/.test(string)
+        if (isSquareBracketsAroundSelection) {
           return accept({
             list: [
               inlineLink,
@@ -256,20 +378,18 @@ function findHints(cm, options) {
               inlineImage,
               citation
             ],
-            // Pass text and from/to _inside_ the brackets
-            // E.g. [lion] --> lion
-            from: Pos(cursor.line, start + 1),
-            to: Pos(cursor.line, end - 1),
-            text: word.slice(1, word.length - 1),
+            from: Pos(cursor.line, start),
+            to: Pos(cursor.line, end),
+            text: string.slice(1, string.length - 1),
             selectedHint: 0
           })
         }
       }
 
       // Else, if nothing matched...
-
       return accept(null)
-    }, 100)
+
+    }, 10)
   })
 }
 

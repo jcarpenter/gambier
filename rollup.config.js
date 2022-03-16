@@ -2,6 +2,7 @@ import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import svelte from 'rollup-plugin-svelte'
 import sveltePreprocess from 'svelte-preprocess'
+// import json from '@rollup/plugin-json';
 
 const production = !process.env.ROLLUP_WATCH
 const isMac = process.platform === 'darwin'
@@ -17,7 +18,8 @@ export default [
       format: 'cjs',
       file: 'app/main.js',
     },
-    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff', 'xml-js', 'immer', 'image-size', 'debounce', 'better-sqlite3'],
+    external: ['electron', 'electron-store', 'path', 'fs-extra', 'chokidar', 'gray-matter', 'colors', 'deep-object-diff', 'deep-eql', 'remove-markdown', 'deep-diff', 'xml-js', 'immer', 'image-size', 'debounce', 'better-sqlite3', 'mime-types'],
+    // plugins: [json()]
   },
 
   // Preload
@@ -57,7 +59,7 @@ export default [
             // Prepend our mixins, since we use them everywhere. This saves us having to manually include them in each component's styles. — https://github.com/sveltejs/svelte-preprocess/blob/main/docs/getting-started.md
             // prependData: `@import 'src/styles/helpers/common.scss'; @import 'src/styles/helpers/${ isMac ? 'mac' : 'win'}.scss';`
             // prependData: `@import 'src/styles/helpers/_${ isMac ? 'mac' : 'win'}.scss';`
-            prependData: `@use 'src/styles/_helpers/_helpers.scss' as *;`
+            prependData: `@use "src/styles/_helpers" as *;`
           }
         }),
 
@@ -99,7 +101,7 @@ export default [
             // Prepend our mixins, since we use them everywhere. This saves us having to manually include them in each component's styles. — https://github.com/sveltejs/svelte-preprocess/blob/main/docs/getting-started.md
             // prependData: `@import 'src/styles/helpers/common.scss'; @import 'src/styles/helpers/${ isMac ? 'mac' : 'win'}.scss';`
             // prependData: `@import 'src/styles/helpers/_${ isMac ? 'mac' : 'win'}.scss';`
-            prependData: `@use 'src/styles/_helpers/_helpers.scss' as *;`
+            prependData: `@use "src/styles/_helpers" as *;`
           }
         }),
 

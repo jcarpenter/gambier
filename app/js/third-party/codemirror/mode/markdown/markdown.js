@@ -35,19 +35,25 @@
     // Shared regular expressions and strings
 
     const atxHeaderRE = modeCfg.allowAtxHeaderWithoutSpace ? /^(#+)/ : /^(#+)(?: |$)/
-    const citationRE = /^[^\[\]\(\)]*?-?@[a-z0-9_][a-z0-9_:.#$%&\-+?<>~/]*?.*?\](?!\()/
+    const citationRE = /^[^\[\]\(\)]*?-?@[a-z0-9_]*[a-z0-9_:.#$%&\-+?<>~/]*?.*?\](?!\()/
     const emailInBracketsRE = /^[^> \\]+@(?:[^\\>]|\\.)+>/
     const emojiRE = /^(?:[a-z_\d+][a-z_\d+-]*|\-[a-z_\d+][a-z_\d+-]*):/
     const expandedTab = "   " // CommonMark specifies tab as 4 spaces
     const fencedCodeBlockRE = /^(~~~+|```+)[ \t]*([\w+#-]*)[^\n`]*$/
-    // Figure demo: https://regex101.com/r/ZmYyTN/1
-    const figureRE = /^!((\[[^\]]*?\]\(.*?\))|(\[[^\]]+?\]\[[^\]]*?\]))\s?$/
+    // Figure demo: https://regex101.com/r/crpIQU/1
+    const figureRE = /^!((\[.*?\]\(.*?\))|(\[[^\]]+?\]\[[^\]]*?\]))\s?$/
     const footnoteInlineRE = /\[.*?\]/
     const footnoteReferenceRE = /\^\S*\]/
     const footnoteReferenceDefinitionRE = /^\[\^\S*\]: /
     const hrRE = /^([*\-_])(?:\s*\1){2,}\s*$/
-    const imageRE = /(\[[^\]]*?\]\(.*?\))|(\[[^\]]+?\]\[[^\]]*?\])/ // Inline or Reference
-    const linkInlineRE = /[^\]]*?\]\(.*?\)/
+
+    // Changed Mar 7 2022, to allow for anything inside [...], trying to get nested links and citation keys to work inside captions.
+    // const imageRE = /(\[[^\]]*?\]\(.*?\))|(\[[^\]]+?\]\[[^\]]*?\])/ // Inline or Reference
+    const imageRE = /(\[.*?\]\(.*?\))|(\[[^\]]+?\]\[[^\]]*?\])/ // Inline or Reference
+
+    // Changed Mar 7 2022: Same as above
+    // const linkInlineRE = /[^\]]*?\]\(.*?\)/
+    const linkInlineRE = /.*?\]\(.*?\)/
     const linkReferenceDefinitionRE = /^\[[^\]]+?\]:\s*(?:<[^<>\n]*>|(?!<)[^\s]+)/
     const linkReferenceFullRE = /[^\]]+?\]\[[^\]]+\]/
     const linkReferenceCollapsedRE = /[^\]]+?\]\[\]/
@@ -79,11 +85,9 @@
     // Blocks
 
     /**
-     * Called by `token` function at start of new line, when 
-     * regexp determines line contains only whitespace. Unfortunately
-     * it is not called on completely empty lines. I tried to find
-     * why, and I think it has to do with the parent `overlay.js`,
-     * which has opinions about how "blankLines" should be handled.
+     * Called by parent mode when empty line is detected.
+     * And by token function at start of new line, if 
+     * the line contains only whitespace.
      * @param {*} state 
      * @returns 
      */
@@ -102,26 +106,36 @@
       state.strikethrough = false;
       state.quote = 0;
       state.indentedCode = false;
+
+      // If htmlBlock, check if we should exit.
       if (state.f == htmlBlock) {
-        var exit = htmlModeMissing
-        if (!exit) {
-          var inner = CodeMirror.innerMode(htmlMode, state.htmlState)
-          exit = inner.mode.name == "xml" && inner.state.tagStart === null &&
-            (!inner.state.context && inner.state.tokenize.isInText)
-        }
-        if (exit) {
+        var inner = CodeMirror.innerMode(htmlMode, state.htmlState)
+        var exitCondition =
+          inner.mode.name == "xml" &&
+          inner.state.tagStart === null &&
+          (!inner.state.context && inner.state.tokenize.isInText)
+        if (exitCondition) {
           state.f = inlineNormal;
           state.block = blockNormal;
           state.htmlState = null;
         }
       }
+
       // Reset state.trailingSpace
       state.trailingSpace = 0;
       state.trailingSpaceNewLine = false;
+
       // Mark this line as blank
       state.prevLine = state.thisLine
       state.thisLine = { stream: null }
-      return null;
+
+      if (state.fencedcodeblock) {
+        return 'line-fencedcodeblock'
+      } else if (state.f == htmlBlock) {
+        return 'line-htmlBlock'
+      } else {
+        return null;
+      }
     }
 
     function blockNormal(stream, state) {
@@ -199,6 +213,8 @@
       } else if (stream.eatSpace()) {
 
         // ----- Spaces (?) ----- //
+        // I don't think this is ever called... 
+        // Because token function 
         return null;
 
       } else if (firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(atxHeaderRE)) && match[1].length <= 6) {
@@ -240,7 +256,6 @@
         state.f = state.inline;
         return getStyles(state);
 
-
       } else if (!isHr && !state.setext && firstTokenOnLine && state.indentation <= maxNonCodeIndentation && (match = stream.match(listRE))) {
 
         // ----- List ----- //
@@ -271,20 +286,6 @@
         // ----- TeX math: Display ----- //
 
         // Docs: https://pandoc.org/MANUAL.html#math
-
-        // state.texMathDisplay = true
-        // if (modeCfg.highlightFormatting) state.formatting = "texMathDisplay";
-        // state.f = state.inline = texMathDisplay
-        // return getType(state);
-
-        // var end = stream.string.indexOf(">", stream.pos);
-        // if (end != -1) {
-        //   var atts = stream.string.substring(stream.start, end);
-        //   if (/markdown\s*=\s*('|"){0,1}1('|"){0,1}/.test(atts)) state.md_inside = true;
-        // }
-        // stream.backUp(1);
-        // state.htmlState = CodeMirror.startState(htmlMode);
-        // return switchBlock(stream, state, htmlBlock);
 
         // TODO: Add an option here, to enable support only if user has `modeCfg.texMath` true or some such. See `Fenced code block` section below for example of how to format that.
 
@@ -335,7 +336,7 @@
         state.f = state.block = local
 
         state.fencedcodeblock = true
-        state.formatting = 'line-fencedcodeblock-start'
+        state.formatting = 'line-fencedcodeblock-firstLine'
         state.code = -1
 
         return getStyles(state)
@@ -383,23 +384,108 @@
       return switchInline(stream, state, state.inline);
     }
 
+    /**
+     * Called when inlineNormal detects xml tags, and switches
+     * mode to htmlBlock.
+     * @param {*} stream 
+     * @param {*} state 
+     * @returns 
+     */
     function htmlBlock(stream, state) {
+
+      var inner = CodeMirror.innerMode(htmlMode, state.htmlState)
+
       var style = htmlMode.token(stream, state.htmlState);
-      if (!htmlModeMissing) {
-        var inner = CodeMirror.innerMode(htmlMode, state.htmlState)
-        // This code defines conditions for exiting the htmlMode
-        // The original if statement is below. We go very simplified, and
-        // exit on every `>`.
-        if (stream.current().indexOf(">") > -1) {
-          // if ((inner.mode.name == "xml" && inner.state.tagStart === null &&
-          //   (!inner.state.context && inner.state.tokenize.isInText)) ||
-          //   (state.md_inside && stream.current().indexOf(">") > -1)) {
-          state.f = inlineNormal;
-          state.block = blockNormal;
-          state.htmlState = null;
-        }
+
+      // Designate as html block (as opposed to inline html),
+      // if 1) this is the start of the html, and 2) it's the 
+      // first character of the line.
+      if (state.htmlState.isStart && stream.column() == 0) {
+        inner.state.isBlock = true
+        style += ' line-htmlBlock-firstLine'
       }
-      return style;
+
+      // Reset `isStart` state to false
+      if (state.htmlState.isStart) state.htmlState.isStart = false
+
+      // Add `htmlBlock` line style
+      if (inner.state.isBlock) {
+        style += ' line-htmlBlock'
+      }
+
+      // console.log('-------')
+      // console.log(inner.state.tagStart)
+      // console.log(stream.string, stream.current())
+      // console.log(stream)
+      // console.log(inner)
+      // console.log(inner.mode.xmlCurrentContext(inner.state))
+      // console.log(inner.mode.xmlCurrentTag(inner.state))
+
+      // If exit conditions are met, exit.
+
+      // `inner.state.tagStart`: Index on stream.string of the current tag's
+      // opening "<" character. Is null if token is NEITHER the 
+      // opening "<" character or the tag name (e.g. "div", "span").
+
+      // `inner.state.context`: Context is an object with details about token's
+      // parents. `tagName` prop is name of most recent parent. E.g. "div", "b"
+      // If there is no .context, we're outside the closing tag.
+
+      // `inner.state.tokenize.isInText`: Is falsey when token is an opening `<`
+      // or tag's name (e.g. "div"). Is true the rest of the time (e.g. when 
+      // in plain text.)
+
+      // We're at the closing tag's `>` character.
+      const exitConditionA =
+        inner.mode.name == "xml" &&
+        inner.state.tagStart === null &&
+        (!inner.state.context && inner.state.tokenize.isInText)
+
+      // Catch the following scenario:
+      // --------------
+      // <div>
+      //   Open tag <b
+      // </div>
+      // --------------
+      // The bold tag is left open. This causes exitConditionA to
+      // not trigger on </div>, because </div> gets processed as 
+      // plain text, and the html block to therefore never close. 
+      // Everything in the subsequent doc gets styled as html. 
+
+      // We check for this scenario by checking if the current 
+      // token matches an expected closing tag (e.g. "</div>"
+      // within context.tagName of "div"), but it recognized
+      // as plain text (inner.state.tokenize.isInText).
+      const exitConditionB =
+        inner.mode.name == "xml" &&
+        inner.state.tagStart === null &&
+        inner.state.context &&
+        stream.current() == `</${inner.state.context.tagName}>` &&
+        inner.state.tokenize.isInText
+
+      // NOTE: Disabled, because we're not using markdown inside feature.
+      // const exitConditionB =
+      //   state.md_inside &&
+      //   stream.current().indexOf(">") > -1
+
+      if (exitConditionA || exitConditionB) {
+        // Add `htmlBlock-lastLine` line style.
+        if (inner.state.isBlock) style += ' line-htmlBlock-lastLine htmlBlock-closing-bracket'
+        // Reset 
+        state.f = inlineNormal;
+        state.block = blockNormal;
+        state.htmlState = null;
+      }
+
+      // Simplified alternative for determine when to exit HTML:
+      // Exit on every `>`.
+      // if (stream.current().indexOf(">") > -1) {
+      //   state.f = inlineNormal;
+      //   state.block = blockNormal;
+      //   state.htmlState = null;
+      // }
+
+      return style
     }
 
     /**
@@ -408,6 +494,7 @@
      * @param {*} state 
      */
     function local(stream, state) {
+
       var currListInd = state.listStack[state.listStack.length - 1] || 0;
       var hasExitedList = state.indentation < currListInd;
       var maxFencedEndInd = currListInd + 3;
@@ -427,7 +514,7 @@
       } else if (state.fencedEndRE && state.indentation <= maxFencedEndInd && (hasExitedList || stream.match(state.fencedEndRE))) {
 
         // We've reached the end of a fenced code block
-        state.formatting = 'line-fencedcodeblock-end'
+        state.formatting = 'line-fencedcodeblock-lastLine'
         var styles;
         if (!hasExitedList) styles = getStyles(state)
         state.fencedcodeblock = false
@@ -469,7 +556,6 @@
     function getStyles(state) {
       var styles = [];
 
-
       if (state.footnoteReferenceDefinition) styles.push('line-footnote-reference-definition')
       if (state.footnoteReferenceDefinitionContent) styles.push('content')
       if (state.footnoteLabel) styles.push('label')
@@ -482,7 +568,7 @@
         if (state.footnoteContent) { styles.push('content'); }
       }
 
-      if (state.figure) styles.push('line-figure');
+      if (state.figure) styles.push('line-figure', 'figure');
 
       if (state.image) styles.push('image');
 
@@ -493,7 +579,7 @@
         if (state.linkInline) styles.push('inline')
       }
 
-      if (state.link || state.image || state.linkReferenceDefinition) {
+      if (state.figure || state.link || state.image || state.linkReferenceDefinition) {
         if (state.linkText) styles.push('text')
         if (state.linkTitle) styles.push('title')
         if (state.linkUrl) styles.push('url')
@@ -647,10 +733,11 @@
           var styles = getStyles(state)
           state.bareUrl = false
           return styles
-        } else {
-          stream.match(textRE)
-          return getStyles(state);
         }
+
+        // If none of the above, advance past the plain text.
+        stream.match(textRE)
+        return getStyles(state);
       }
 
       // if (stream.match(textRE, true)) {
@@ -667,12 +754,24 @@
      */
     function inlineNormal(stream, state) {
 
-      // Advanced stream past plain text characters.
-      // If state.text returns...
-      // - style, it means it's advanced the stream over plain text characters.
-      // - undefined, it means it's found the next markdown character.
-      var style = state.text(stream, state);
-      if (typeof style !== 'undefined') {
+      // Advanced stream past plain text characters:
+
+      // If state.text returns "undefined", the stream contains a
+      // a markdown character such as "[" or "*" (also spaces), which
+      // we'll process below, in the rest of inlineNormal()..
+
+      // Else, if it returns a style, it contained plain text, 
+      // which it's advanced the stream past, and we want to exit
+      // inlineNormal and return that plain text style.
+
+      // console.log("----")
+      // console.log(stream.column(), stream.current())
+      // console.log(stream.match(textRE, false))
+      const style = state.text(stream, state)
+      const advancedPastPlainText = typeof style !== 'undefined';
+      if (advancedPastPlainText) {
+        // console.log(stream.current())
+        // console.log('/exit', style)
         // Plain text characters found. Exit early.
         return style
       }
@@ -710,7 +809,6 @@
 
       // Advance character
       var ch = stream.next();
-
 
       // Matches link titles present on next line (original comment)
       // NOTE: Never gets called? linkTitle recognition is failing? (Jul 20)
@@ -963,8 +1061,38 @@
         return styles;
       }
 
+      // Figure
+      if (state.figure) {
+
+        // Is it start of figure?
+        const isFigureStart = ch === '!' && stream.column() == 0
+
+        if (isFigureStart) {
+          stream.next() // Advance to `[`
+          state.formatting = 'figure-start'
+          var styles = getStyles(state);
+          state.linkText = true;
+          return styles
+        }
+
+        // Is it start of destination?
+        // Demo: https://regex101.com/r/IwIrYZ/1
+        if (ch === ']' && stream.match(/[^\]]+$/, false)) {
+          // Figure: End of text, start of destination
+          // E.g. `[text](url "title")`
+          //            ^
+          state.linkText = false
+          state.formatting = true
+          var styles = getStyles(state);
+          state.inline = state.f = linkDestination
+        }
+      }
+
+
       const isImageStart = ch === '!' && stream.match(imageRE, false)
       const isLinkStart = ch === '[' && !state.link && !state.image
+
+      // if (isFigure)
 
       // Images and Links: Opening `!` or `[`
       if (isImageStart || isLinkStart) {
@@ -990,7 +1118,6 @@
           // Inline link: Start of text
           // E.g. `[text](url "title") `
           //       ^
-
           state.linkInline = true;
           state.formatting = state.formatting.replace('-start', '-inline-start')
 
@@ -1144,21 +1271,30 @@
       }
 
       // Raw HTML (XML?)
-
-      // Original if statement: 
       // Demo: https://regex101.com/r/3d252R/6
+
+      // Original regex, from Markdown.js: 
       // if (modeCfg.xml && ch === '<' && !state.link && stream.match(/^(!--|\?|!\[CDATA\[|[a-z][a-z0-9-]*(?:\s+[a-z_:.\-]+(?:\s*=\s*[^>]+)?)*\s*(?:>|$))/i, false)) {
 
-      // My version:
+      // My upgraded version with support for additional conditions:
       // Demo: https://regex101.com/r/tzxq58/4
-      if (modeCfg.xml && ch === '<' && !state.link && stream.match(/^((\/[a-z][a-z0-9-]*\s*>)|(!--(?!>)[\s\S]+?[^-]-->)|(\?.*?\?>)|(!\[CDATA\[.*?\]\]>)|(\!?[a-z][a-z0-9-]*(?:\s+[a-z_:.\-]+(?:\s*="\s*[^>]+"|'\s*[^>]+')?)*\s*\/?>))/i, false)) {
-        var end = stream.string.indexOf(">", stream.pos);
-        if (end != -1) {
-          var atts = stream.string.substring(stream.start, end);
-          if (/markdown\s*=\s*('|"){0,1}1('|"){0,1}/.test(atts)) state.md_inside = true;
-        }
+      // if (modeCfg.xml && ch === '<' && !state.link && stream.match(/^((\/[a-z][a-z0-9-]*\s*>)|(!--(?!>)[\s\S]+?[^-]-->)|(\?.*?\?>)|(!\[CDATA\[.*?\]\]>)|(\!?[a-z][a-z0-9-]*(?:\s+[a-z_:.\-]+(?:\s*="\s*[^>]+"|'\s*[^>]+')?)*\s*\/?>))/i, false)) {
+
+      // Original, modified to remove support for open-ended tags, by eliminating `|$` from the look-ahead.
+      if (modeCfg.xml && ch === '<' && !state.link && stream.match(/^(!--|\?|!\[CDATA\[|[a-z][a-z0-9-]*(?:\s+[a-z_:.\-]+(?:\s*=\s*[^>]+)?)*\s*(?:>))/i, false)) {
+
+        // Josh 6/17/2021: This seems to enable support for markdown inside html tags 
+        // ala this thread https://stackoverflow.com/questions/29368902/how-can-i-wrap-my-markdown-in-an-html-div
+        // but I never saw it working in my tests, so am disabling, for sake of performance.
+        // var end = stream.string.indexOf(">", stream.pos);
+        // if (end != -1) {
+        //   var atts = stream.string.substring(stream.start, end);
+        //   if (/markdown\s*=\s*('|"){0,1}1('|"){0,1}/.test(atts)) state.md_inside = true;
+        // }
+
         stream.backUp(1);
         state.htmlState = CodeMirror.startState(htmlMode);
+        state.htmlState.isStart = true
         return switchBlock(stream, state, htmlBlock);
       }
 
@@ -1248,7 +1384,13 @@
         if (stream.peek() == ')') {
           stream.next()
           state.incomplete = true
-          state.formatting = state.image ? 'image-inline-end' : 'link-inline-end'
+          if (state.figure) {
+            state.formatting = 'figure-end'
+          } else if (state.image) {
+            state.formatting = 'image-inline-end'
+          } else if (state.link) {
+            state.formatting = 'link-inline-end'
+          }
           var styles = getStyles(state)
           reset()
           return styles
@@ -1300,7 +1442,14 @@
         if (stream.peek() == ')') stream.next()
         state.linkUrl = false;
         state.linkTitle = false;
-        state.formatting = state.image ? 'image-inline-end' : 'link-inline-end'
+        if (state.figure) {
+          state.formatting = 'figure-end'
+        } else if (state.image) {
+          state.formatting = 'image-inline-end'
+        } else if (state.link) {
+          state.formatting = 'link-inline-end'
+        }
+        // state.formatting = state.image ? 'image-inline-end' : 'link-inline-end'
         var styles = getStyles(state);
         reset()
         return styles;
@@ -1440,7 +1589,7 @@
 
       // Key
       // Demo: https://regex101.com/r/VdP0V5/1
-      if (ch === '@' && stream.match(/^[a-zA-Z0-9_][a-zA-Z0-9_:.#$%&\-+?<>~/]*?(?=[; ,\]{])/, true)) {
+      if (ch === '@' && stream.match(/^[a-zA-Z0-9_]*[a-zA-Z0-9_:.#$%&\-+?<>~/]*?(?=[; ,\]{])/, true)) {
         state.citationKey = true
         return getStyles(state)
       }
@@ -1686,12 +1835,11 @@
       },
 
       /**
-       * Token is called first.
-       * If we detect it's new line, we run some new line logic.
-       * - If line contains only whitespace, skip it.
-       * - Else, assign state.f to the block function, and call it.
-       *   Block function is usually blockNormal, or possibly html.
-       * Once blockNormal runs
+       * The function is called first, for each token in the doc.
+       * It delegates to other functions.
+       * If line is new, block functions (blockNormal or htmlBlock)
+       * are called first. They determine what kind of line it is.
+       * Else, call inlineNormal.
        * @param {*} stream 
        * @param {*} state 
        * @returns 
@@ -1702,7 +1850,6 @@
         state.formatting = false;
 
         // New line found
-        // This is a good place to perform line checks.
         const newLineFound = stream != state.thisLine.stream
         if (newLineFound) {
 
@@ -1712,17 +1859,16 @@
           // Find blank lines
           // If we find a line with only whitespace, and we're NOT currently in a footnote reference definition, make it a blankLine(). We allow empty lines inside footnote reference definitions, so we want to process them the normal way (via blockNormal, inlineNormal, etc).
           // TODO: 3/24/2021: Re-enable multi-line footnote reference definitions in future.
+          // TODO: 6/17/2021: Re-enable and update to new blankLine logic
           // if (!state.footnoteReferenceDefinition && stream.match(/^\s*$/, true)) {
           //   blankLine(state);
           //   return null;
           // }
 
-          // NOTE: This only fires if the line has at least one whitespace character.
-          // It does NOT fire if the line is actually blank. 
-          // See comment on blankLine function for more information.
+          // If line contains only whitespace, treat as a blank line
           if (stream.match(/^\s*$/, true)) {
-            blankLine(state);
-            return null;
+            // blankLine will return `null` or a line style.
+            return blankLine(state);
           }
 
           state.prevLine = state.thisLine
@@ -1731,7 +1877,6 @@
           // Reset state.trailingSpace
           state.trailingSpace = 0;
           state.trailingSpaceNewLine = false;
-
 
           // If `!state.localState`, it means markdown is handling parsing.
           // If it's defined, it means another mode is. E.g. JavaScript mode
@@ -1769,7 +1914,7 @@
         }
 
         // Call state.f. This will point to either 
-        // blockNormal or inlineNormal. If it's
+        // blockNormal or inlineNormal.
         return state.f(stream, state);
       },
 
@@ -1796,7 +1941,5 @@
   }, "xml");
 
   CodeMirror.defineMIME("text/markdown", "markdown");
-
   CodeMirror.defineMIME("text/x-markdown", "markdown");
-
 });

@@ -1,4 +1,10 @@
 <script>
+
+  /*
+  NOTE: 3/15/22: Disabled Citations sidebar tab for now. 
+  Hasn't been hooked up to work, and am not sure it's necessary.
+  */
+
   import { project, sidebar } from '../../StateManager'
   import { files } from '../../FilesManager'
   import Header from './Header.svelte'

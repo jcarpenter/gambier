@@ -16,8 +16,8 @@
 	$: tab = $sidebar.tabsById[tabId]
   $: file = $files.byId[id]
   $: leftOffset = nestDepth * 15
-  $: isExpandable = file?.type == 'folder'
-  $: isFolder = $sidebar.tabsById.project.expanded.some((id) => id == file?.id)
+  $: isExpandable = file?.isFolder
+  $: isExpanded = $sidebar.tabsById.project.expanded.some((id) => id == file?.id)
   $: isSelected = $sidebar.tabsById.project.selected.some((id) => id == file?.id)
   // TODO ^ Update to new system
   $: isWindowDraggedOver = $project.window.isDraggedOver
@@ -35,10 +35,10 @@
   function onDragStart(domEvent) {
     const file = $files.byId[id]
     // console.log(file)
-    if (file.type == 'doc') {
+    if (file.isDoc) {
       domEvent.dataTransfer.setData('text/docid', id);
-    } else if (file.type == 'img') {
-      domEvent.dataTransfer.setData('text/fileid', id);
+    } else if (file.isMedia) {
+      domEvent.dataTransfer.setData('text/mediaid', id);
     }
   }
 
@@ -52,11 +52,13 @@
     margin-bottom: 1px;
     width: 100%;
     height: 28px;
+    display: flex;
+    align-items: center;
 
     .icon {
       @include centered-mask-image;
       @include absolute-vertical-center;
-      background-color: var(--nav-icon-color);
+      background-color: var(--sidebar-tree-icons-color);
       left: calc(calc(var(--leftOffset) * 1px) + 20px);
       width: 14px;
       height: 14px;
@@ -91,11 +93,15 @@
     -webkit-mask-image: var(--img-doc-text);
   }
 
-  .img .icon {
+  .image .icon {
     -webkit-mask-image: var(--img-photo);
   }
 
-  .av .icon {
+  .audio .icon {
+    -webkit-mask-image: var(--img-play-rectangle);
+  }
+
+  .video .icon {
     -webkit-mask-image: var(--img-play-rectangle);
   }
 
@@ -155,10 +161,14 @@
 {#if file}
   <div
     use:setAsCustomPropOnNode={{ leftOffset }}
-    class="file {file.type}"
+    class="file"
+    class:folder={file?.isFolder}
+    class:doc={file?.isDoc}
+    class:video={file?.contentType?.includes('video')}
+    class:audio={file?.contentType?.includes('audio')}
+    class:image={file?.contentType?.includes('image')}
     class:isHighlighted
     class:isHighlightedInBg
-    class:isFolder
     draggable=true
     on:dragstart={onDragStart}
     on:dragover|preventDefault|stopPropagation
@@ -174,10 +184,10 @@
         height={'14px'}
         padding={'3px'}
         left={leftOffset + 3}
-        rotation={isFolder ? 0 : -90}
+        rotation={isExpanded ? 0 : -90}
         opacity={0.85}
         iconColor={isHighlighted ? 'selected-menuitem-text-color' : 'control-text-color'}
-        on:toggle={() => toggleExpanded(id, isFolder, tab, tabId)} 
+        on:toggle={() => toggleExpanded(id, isExpanded, tab, tabId)} 
       />
 
     {/if}

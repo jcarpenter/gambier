@@ -29,17 +29,17 @@
       width: 14px;
       height: 14px;
       transform: translate(0, 0.5px);
-      background: var(--control-text-color);
+      background-color: var(--sidebar-tab-inactive-color);
     }
   }
   
   li:active {
-    &::before { background-color: foregroundColor(1); }
+    &::before { background-color: var(--sidebar-tab-active-color); }
     opacity: 100%;
   }
 
   li.selected {
-    &::before { background-color: var(--nav-icon-color); }
+    &::before { background-color: var(--sidebar-tab-selected-color); }
     opacity: 100%;
   }
 

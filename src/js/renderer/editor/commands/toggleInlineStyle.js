@@ -65,7 +65,6 @@ export async function toggleInlineStyle(cm, type, chars) {
     } else {
 
       const el = getStyledElementAtRange(cm, from, to)
-      console.log(el)
 
       if (el?.type == type) {
 

@@ -1,0 +1,63 @@
+// -------------- Headers -------------- //
+
+.CodeMirror-line.header {
+  &.h1 {
+    color: var(--h1);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 0.15em;
+    text-underline-offset: 0.025em;
+    text-decoration-skip-ink: none;
+
+    // [role='presentation'] {
+    //   border-bottom: 2px solid black;
+    // }
+    .cm-header-start {
+      opacity: 0.75;
+    }
+  }
+
+  &.h2 {
+    color: var(--h2);
+    font-weight: 700;
+    .cm-header-start {
+      opacity: 0.3;
+    }
+  }
+
+  &.h3 {
+    color: var(--h3);
+    font-weight: 700;
+    .cm-header-start {
+      opacity: 0.3;
+    }
+  }
+
+  &.h4 {
+    color: var(--h4);
+    font-style: italic;
+    .cm-header-start {
+      opacity: 0.3;
+    }
+  }
+
+  &.h5 {
+    color: var(--h5);
+    .cm-header-start {
+      opacity: 0.3;
+    }
+  }
+
+  &.h6 {
+    color: var(--h6);
+    .cm-header-start {
+      opacity: 0.3;
+    }
+  }
+}
+
+.cm-header-start {
+  position: absolute;
+  transform: translate(-100%, 0);
+  font-weight: normal;
+}

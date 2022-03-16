@@ -33,7 +33,7 @@
 	- Local and relative to project: 		 `/Images/graph.png`
 	- Remote: 													 `https://cbc.ca/logo.png`
 	
-	To load a local URL, we need to format as:
+	To load a local URL, we need to format with:
 	1) files scheme, and 2) local system path:
 	`files:///Users/josh/Desktop/Note/Images/graph.png`
 	
@@ -136,11 +136,11 @@
 	*/
 	async function onDrop(evt) {
   	const project = window.state.projects.byId[window.id]
-		const isFileId = evt.dataTransfer.types.includes('text/fileid')
+		const isFileId = evt.dataTransfer.types.includes('text/mediaid')
 		if (isFileId) {
-			const id = evt.dataTransfer.getData('text/fileid')
+			const id = evt.dataTransfer.getData('text/mediaid')
 			const file = $files.byId[id]
-			if (file.type == 'img') {
+			if (file.contentType.includes('image')) {
 				
 				evt.stopPropagation()
 				

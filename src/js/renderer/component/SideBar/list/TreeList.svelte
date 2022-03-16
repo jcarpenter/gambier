@@ -16,7 +16,8 @@
 
 <style type="text/scss">
 	.list {
-    padding: 10px 10px 0 10px;
+    // padding: 10px 10px 0 10px;
+    padding: 10px;
     flex-grow: 1;
     overflow-y: scroll;
     position: relative;

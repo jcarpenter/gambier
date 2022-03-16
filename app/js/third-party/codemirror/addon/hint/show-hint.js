@@ -242,8 +242,25 @@
       var className = HINT_ELEMENT_CLASS + (i != this.selectedHint ? "" : " " + ACTIVE_HINT_ELEMENT_CLASS);
       if (cur.className != null) className = cur.className + " " + className;
       elt.className = className;
-      if (cur.render) cur.render(elt, data, cur);
-      else elt.appendChild(ownerDocument.createTextNode(cur.displayText || getText(cur)));
+      
+      // Add primary text
+      if (cur.render) {
+        cur.render(elt, data, cur);
+      } else {
+        const p = ownerDocument.createElement('p');
+        p.classList.add('primary')
+        p.innerText = cur.displayText || getText(cur)
+        elt.appendChild(p);
+      }
+      
+      // Add secondary text
+      // NOTE: This is a modification I made to show-hint
+      if (cur.secondaryDisplayText) {
+        const p = ownerDocument.createElement('p');
+        p.classList.add('secondary')
+        p.innerText = cur.secondaryDisplayText
+        elt.appendChild(p)
+      }
       elt.hintId = i;
     }
 

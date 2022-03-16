@@ -5,7 +5,7 @@
   import { writeToDoc } from '../../../editor/editor-utils';
   import { state } from '../../../StateManager';
   import FormRow from '../../ui/FormRow.svelte';
-  import { store2 } from '../../../WizardManager';
+  import { store } from '../../../WizardManager';
 
   export let cm = null
   export let element = null
@@ -74,7 +74,7 @@
   <InputText 
     placeholder={'Required'}
     isError={text.string == '' && !suppressWarnings}
-    autofocus={$store2.openedBy.hover == false}
+    autofocus={$store.openedBy.hover == false}
     multiLine={true}
     multiLineMaxHeight='100'
     width={'100%'}

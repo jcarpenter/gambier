@@ -2,6 +2,8 @@ import { BrowserWindow, dialog } from 'electron'
 
 export default async function () {
 
+  console.log("selectProjectDirectoryFromDialog")
+
   const win = BrowserWindow.getFocusedWindow()
 
   const selection = await dialog.showOpenDialog(win, {

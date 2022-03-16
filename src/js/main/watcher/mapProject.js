@@ -19,8 +19,6 @@ export async function mapProject (projectPath) {
     
     return files
     
-    // console.log(JSON.stringify(files, null, 2))
-
   } catch (err) {
     console.log(err)
   }

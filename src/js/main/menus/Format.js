@@ -100,7 +100,6 @@ export function create() {
         id: 'format-ul',
         accelerator: 'Cmd+Shift+L',
         click(item, focusedWindow) {
-          console.log('Clicked')
           focusedWindow.webContents.send('setFormat', 'ul')
         }
       }),

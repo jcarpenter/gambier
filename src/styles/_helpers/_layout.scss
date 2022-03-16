@@ -1,14 +1,5 @@
 // -------------- Layout -------------- //
 
-@mixin background-layout {
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    position: absolute;
-    z-index: -1;
-}
-
 @mixin centered-mask-image {
     -webkit-mask-size: contain;
     -webkit-mask-position: center;

@@ -2,7 +2,7 @@
 import * as StateManager from './StateManager'
 import * as FilesManager from './FilesManager'
 import * as ThemeManager from './ThemeManager'
-import { defineGambierMode } from './editor/gambierCodeMirrorMode'
+import { defineCodeMirrorMode } from './editor/codeMirrorMode'
 import Layout from './component/Layout.svelte'
 
 
@@ -24,7 +24,7 @@ async function init() {
 
   // Define CodeMirror "Gambier" mode. We only need to do this once.
   // Individual CodeMirror instances load via `mode: 'gambier'` in their setup configs.
-  defineGambierMode()
+  defineCodeMirrorMode()
 
   // Define an array of CodeMirror instances on window.
   // We push to these in onMount of Editor components.

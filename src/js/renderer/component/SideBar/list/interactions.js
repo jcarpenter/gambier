@@ -83,7 +83,7 @@ export function onMouseup(domEvent, id, tab, tabId, panel, files) {
     domEvent.shiftKey || domEvent.metaKey
   if (shiftOrMetaWerePressed) return
 
-  const isDoc = files.byId[id].type == 'doc'
+  const isDoc = files.byId[id].isDoc
   const isNotAlreadyOpen = id !== panel.docId
   // const oneFileSelected = tab.selected.length == 1
 
@@ -234,7 +234,7 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
 
   } else {
 
-    const isDoc = files.byId[id]?.type == 'doc'
+    const isDoc = files.byId[id]?.isDoc
     
     // Open doc
     if (isDoc) {
@@ -266,7 +266,7 @@ export function arrowLeftRight(key, tab, tabId, listIds, files) {
 
     const selectedFolders = files.allIds.filter((id) =>
       tab.selected.includes(id) &&
-      files.byId[id].type == 'folder')
+      files.byId[id].isFolder)
 
     let expanded = [...tab.expanded]
 
@@ -293,17 +293,16 @@ export function arrowLeftRight(key, tab, tabId, listIds, files) {
   } else {
 
     const file = files.byId[tab.lastSelected]
-    const isFolder = file.type == 'folder'
-    const isExpanded = isFolder && tab.expanded.some((id) => id == file.id)
+    const isExpanded = file.isFolder && tab.expanded.some((id) => id == file.id)
 
     if (key == 'ArrowLeft') {
-      if (isFolder && isExpanded) {
+      if (file.isFolder && isExpanded) {
         toggleExpanded(file.id, isExpanded, tab, tabId)
       } else {
         selectParentFolder(file.id, tabId, listIds, files)
       }
     } else if (key == 'ArrowRight') {
-      if (isFolder && !isExpanded) {
+      if (file.isFolder && !isExpanded) {
         toggleExpanded(file.id, isExpanded, tab, tabId)
       }
     }

@@ -37,7 +37,7 @@
 	$: isExpanded = isRoot || folder.numChildren > 0 && $sidebar.tabsById.project.expanded.includes(folder.id)
 
 	function isFolder(id) {
-		return $files.byId[id].type == 'folder'
+		return $files.byId[id].isFolder
 	}
 
 	/**

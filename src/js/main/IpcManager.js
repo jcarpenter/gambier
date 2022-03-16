@@ -1,9 +1,10 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, screen, shell, systemPreferences, nativeTheme, webFrame } from 'electron'
 import { readFile, writeFile, renameSync, copyFileSync, existsSync, readdirSync } from 'fs-extra'
 import path from 'path'
-import { deleteFile, deleteFiles, selectProjectDirectoryFromDialog, selectCitationsFileFromDialog } from './actions/index.js'
+import { deleteFile, deleteFiles, selectProjectDirectoryFromDialog } from './actions/index.js'
 import matter from 'gray-matter'
 import { isValidHttpUrl } from '../shared/utils.js'
+import getCitation from './getCitation.js'
 
 export function init() {
 
@@ -83,10 +84,6 @@ export function init() {
 
     switch (action.type) {
 
-      case ('SELECT_CITATIONS_FILE_FROM_DIALOG'):
-        store.dispatch(await selectCitationsFileFromDialog(), win)
-        break
-
       case ('SELECT_PROJECT_DIRECTORY_FROM_DIALOG'):
         store.dispatch(await selectProjectDirectoryFromDialog(), win)
         break
@@ -133,6 +130,15 @@ export function init() {
   })
 
   // -------- IPC: Invoke -------- //
+
+  ipcMain.handle('getBibliography', async (evt, bibliographyPath) => {
+    const bibliography = await readFile(bibliographyPath, 'utf8')
+    return bibliography
+  })
+
+  ipcMain.handle('getCitation', async (evt, bibliographyPath, citekey) => {
+    return await getCitation(bibliographyPath, citekey)
+  })
 
   // Return x/y coordinates of cursor inside sender window
   // Return null if cursor is outside the window bounds.
@@ -286,11 +292,6 @@ export function init() {
 // // ipcMain.handle('ifPathExists', async (event, filepath) => {
 // //   const exists = await pathExists(filepath)
 // //   return { path: filepath, exists: exists }
-// // })
-
-
-// // ipcMain.handle('getCitations', (event) => {
-// //   return projectCitations.getCitations()
 // // })
 
 

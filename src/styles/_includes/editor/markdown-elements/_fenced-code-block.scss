@@ -1,0 +1,67 @@
+@use "../../../_helpers" as *;
+
+// -------------- Fenced code block and TeXMath -------------- //
+
+// pre.CodeMirror-line.texmath-display {
+//   @include code-typography;
+//   background-color: var(--texmath-display);
+// }
+
+.cm-texmath-inline {
+  @include code-typography;
+  background-color: var(--texmath-inline);
+}
+
+pre.CodeMirror-line.fencedcodeblock,
+pre.CodeMirror-line.texmath-display {
+  & > [role='presentation'] {
+    @include code-typography;
+    line-height: var(--editor-lineheight);
+    display: block;
+    background: var(--fencedcodeblock-bg);
+    padding: 0 0.25em;
+  }
+
+  .cm-md {
+    color: var(--fencedcodeblock-md);
+  }
+
+  &.fencedcodeblock-firstLine > [role='presentation'] {
+    border-radius: var(--fencedcodeblock-borderRadius) var(--fencedcodeblock-borderRadius) 0 0;
+    // padding: 0 0.2em;
+  }
+
+  &.fencedcodeblock-lastLine > [role='presentation'] {
+    border-radius: 0 0 var(--fencedcodeblock-borderRadius) var(--fencedcodeblock-borderRadius);
+    // padding: 0 0.2em;
+  }
+}
+
+pre.CodeMirror-line.htmlBlock {
+  & > [role='presentation'] {
+    // padding: 0 0.25em;
+    @include code-typography;
+  }
+  line-height: calc(var(--editor-lineheight) - 0.2em);
+  background: linear-gradient(to right, transparent var(--editor-leftPadding), var(--fencedcodeblock-bg) var(--editor-leftPadding));
+  // padding-top: 0.5em;
+  // padding-bottom: 0.5em;
+  padding-right: 0.5em;
+  padding-left: calc(var(--editor-leftPadding) + 0.5em);
+
+  // &::before {
+  //   content: ' ';
+  //   width: 100%;
+  //   margin-top: 0.5em;
+  //   background: red;
+  //   display: block;
+  // }
+}
+
+pre.CodeMirror-line.htmlBlock-firstLine {
+  border-top: 0.2em solid transparent;
+}
+
+pre.CodeMirror-line.htmlBlock-lastLine {
+  border-bottom: 0.2em solid transparent;
+}

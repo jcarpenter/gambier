@@ -1,0 +1,87 @@
+@use '../_helpers' as *;
+
+body {
+
+  --foregroundColor: 255, 255, 255;
+  --backgroundColor: 0, 0, 0;
+
+  /* ------ Accent-influenced ------ */
+
+  // User's system accent color preference
+  --accent-color: #{accent()};
+
+  // Color of navigation UI icons
+  --nav-icon-color: #{accent()};
+
+  // Highlight around focused controls
+  --focus-ring-color: #{accent($light: -2%, $alpha: 0.5)};
+
+  // Selected list/menu items
+  --selected-list-item-color: #{accent($sat: +3%, $light: -6%)};
+
+  // Background of selected text
+  --selected-text-background: #{accent($sat: +3%, $light: +35%)};
+
+  /* ------ Controls ------ */
+
+  --button-label-color: #ffffffd8;
+  --button-background: #555656ff;
+  // Top bevel, Outline, Drop shadow
+  --button-boxshadow: inset 0 0.5px 0 0 #{white(0.25)}, 0 0 0 0.5px #{black(0.15)}, 0 1px 1px 0 #{black(0.15)};
+
+  --inset-button-background: linear-gradient(hsla(0, 0%, 0%, 0.2), hsla(0, 0%, 0%, 0)), var(--button-background);
+  // Top bevel, Outline
+  --inset-button-boxshadow: inset 0 1px 0 0 #{white(0.15)}, 0 0 0 0.5px #{black(0.15)};
+
+  /* ------ Labels ------ */
+
+  --label-color: #ffffffd8;
+  --secondary-label-color: #ffffff8c;
+  --tertiary-label-color: #ffffff3f;
+
+  /* ------ Text ------ */
+
+  --text-color: #ffffffff;
+  --placeholder-text-color: #ffffff3f;
+  --selected-menuitem-text-color: #ffffffff;
+  --control-text-color: #ffffffd8;
+
+  /* ------ Misc ------ */
+
+  --menu-background: hsla(0, 0%, 17%, 0.9);
+  --error-color: #fa6e50;
+
+  /* ------ OLD (to be converted) ------ */
+
+  // Controls that are being clicked or dragged
+  // Mac equivalent: selectedControlColor
+  // NOT USED
+  --selected-control-color: #{accent($sat: +3%, $light: +35%)};
+
+  --alternateSelectedControlTextColor: rgb(92, 84, 84);
+  --controlBackgroundColor: #1e1e1eff;
+  --controlColor: #ffffff3f;
+  --disabledControlTextColor: #ffffff3f;
+  --findHighlightColor: #ffff00ff;
+  --gridColor: #ffffff19;
+  --headerTextColor: #ffffffff;
+  --highlightColor: #b4b4b4ff;
+  --label-color: #ffffffd8;
+  --linkColor: #419cffff;
+  --placeholder-text-color: #ffffff3f;
+  --quaternaryLabelColor: #ffffff19;
+  --secondary-label-color: #ffffff8c;
+  --selectedControlTextColor: #ffffffd8;
+  --selected-menuitem-text-color: #ffffffff;
+  --selectedTextColor: #ffffffff;
+  --separator-color: #ffffff19;
+  --shadowColor: #000000ff;
+  --tertiary-label-color: #ffffff3f;
+  --textBackgroundColor: #1e1e1eff;
+  --text-color: #ffffffff;
+  --unemphasizedSelectedContentBackgroundColor: #464646ff;
+  --unemphasizedSelectedTextBackgroundColor: #464646ff;
+  --unemphasizedSelectedTextColor: #ffffffff;
+  --windowBackgroundColor: #323232ff;
+  --windowFrameTextColor: #ffffffd8;
+}

@@ -1,0 +1,66 @@
+@use "../../../_helpers" as *;
+
+// -------------- Footnote -------------- //
+
+// Mark
+
+.CodeMirror .mark.footnote {
+  color: var(--footnote-mark);
+  background-color: var(--footnote-mark-bg);
+  border: var(--mark-borderWidth) solid var(--footnote-mark-border);
+  border-radius: var(--mark-borderRadius);
+  font-weight: normal;
+
+  &:before {
+    content: '^';
+  }
+
+  &.highlighted {
+    color: var(--footnote-mark-highlight);
+    background-color: var(--footnote-mark-highlight-bg);
+    border-color: var(--footnote-mark-highlight-bg);
+  }
+}
+
+// Source
+
+.cm-footnote {
+  color: var(--footnote-source);
+  background-color: var(--footnote-source-bg);
+  &.cm-md {
+    color: var(--footnote-source-md);
+  }
+}
+
+// Reference definition
+
+.CodeMirror-line.footnote-reference-definition,
+.CodeMirror-line.footnote-reference-definition-continued {
+  background-color: rgba(241, 186, 231, 0.2) !important; // TODO
+  font-style: italic !important;
+}
+
+// Old icon-based Mark style
+// .mark.footnote {
+//   background-color: hsla(0, 0%, 77%, 1);
+//   border-radius: 2px;
+
+//   &:before {
+//     @include centered-mask-image;
+//     content: '';
+//     width: 1em;
+//     height: 1em;
+//     // width: 100%;
+//     // height: 100%;
+//     // transform: translate(0, 0.5px);
+//     -webkit-mask-size: 10px;
+//     -webkit-mask-image: url(/img/footnote-icon-1.svg);
+//     background: rgba(0, 0, 0, 0.7);
+//   }
+
+//   &.highlighted {
+//     color: var(--footnote-mark-highlight);
+//     background-color: var(--footnote-mark-highlight-bg);
+//     border-color: var(--footnote-mark-highlight-bg);
+//   }
+// }

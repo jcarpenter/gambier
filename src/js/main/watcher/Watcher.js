@@ -77,7 +77,7 @@ export class Watcher {
     // Tell reducers when first project map is complete, 
     // and pass along first file. If a file as not been 
     // selected yet, reducer selects this.
-    const firstDocId = this.files.allIds.find((id) => this.files.byId[id].type == 'doc')
+    const firstDocId = this.files.allIds.find((id) => this.files.byId[id].isDoc)
 
     global.store.dispatch({
       type: 'PROJECT_FILES_MAPPED',
@@ -157,7 +157,7 @@ export class Watcher {
       // file that the focused panel should display.
       const firstDocId = this.files.allIds.find((id) => {
         const file = this.files.byId[id]
-        return file.type == 'doc'
+        return file.isDoc
       })
 
       global.store.dispatch({
@@ -199,7 +199,7 @@ export class Watcher {
                 parentTreeItem.children.push({
                   id: file.id,
                   parentId: file.parentId,
-                  type: file.type
+                  // type: file.type
                 })
                 // Increment `numChildren` of parent folder
                 parentFolder.numChildren++
@@ -256,6 +256,8 @@ export class Watcher {
         this.window.webContents.send('filesPatchesFromMain', patches)
       })
 
+      // console.log(this.files, "— Watcher.js")
+
       global.store.dispatch({ type: 'PROJECT_FILES_UPDATED' }, this.window)
     }
   }
@@ -273,7 +275,7 @@ function insertAllDocsIntoDb(files) {
   const filesForDb = []
   files.allIds.forEach((id) => {
     const file = files.byId[id]
-    if (file.type == 'doc') {
+    if (file.isDoc) {
       filesForDb.push(getDbReadyFile(file))
     }
   })

@@ -1,0 +1,213 @@
+@use "../../../_helpers" as *;
+
+// -------------- Frontmatter -------------- //
+
+// Padding of rows
+
+:not(.fencedcodeblock) {
+
+  pre.CodeMirror-line.frontmatter {
+    padding-top: 0.3em;
+    padding-bottom: 0.2em;
+    padding-right: var(--frontmatter-padding);
+    // padding-left: calc(var(--editor-leftPadding) + var(--frontmatter-padding));
+  }
+ 
+  pre.CodeMirror-line.frontmatter.list-start {
+    // padding-bottom: 0;
+  }
+
+  pre.CodeMirror-line.frontmatter.list {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  
+  pre.CodeMirror-line.frontmatter.list-end {
+    padding-top: 0;
+  }
+
+  // Remove top padding from first line after -start
+  // pre.CodeMirror-line.frontmatter-start + 
+  // pre.CodeMirror-line.frontmatter {
+  //   padding-top: 0.1em;
+  // }
+
+  // Remove bottom padding from last line before -end
+  // TODO
+}
+
+// Font size and line heights
+
+.CodeMirror pre.CodeMirror-line.frontmatter {
+  line-height: 1.1em;
+}
+
+.CodeMirror pre.CodeMirror-line.frontmatter > [role='presentation'] {
+  @include code-typography;
+  font-size: calc(var(--editor-fontsize) * 0.8);
+  width: calc(100% - 1.5em);
+  margin-left: 0.75em;
+  display: block;
+  // line-height: 1.2em !important;
+}
+
+// Visible borders and backgrounds:
+// Are created with ::before psuedo elements 
+
+.frontmatter::before {
+  content: '';
+  pointer-events: none;
+  display: block;
+  position: absolute;
+  height: 100%;
+  background-color: var(--frontmatter-bg);
+  width: calc(var(--editor-maxlinewidth));
+  top: 0;
+  left: var(--editor-maxpadding);
+  padding: 0;
+  border-left: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-right: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  transition: border-color 0.1s ease-out;
+  box-sizing: border-box;
+}
+
+.frontmatter-start::before {
+  border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
+}
+
+.frontmatter-end::before {
+  border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius); 
+}
+
+// Horizontal divider between rows
+.frontmatter:not(.frontmatter-start, .list, .list-end)::after {
+  content: '';
+  display: block;
+  background: var(--frontmatter-dividers);
+  width: calc(100% - var(--editor-maxpadding) - calc(var(--frontmatter-padding) * 2));
+  height: 1px;
+  position: absolute;
+  top: 0;
+  left: calc(var(--editor-maxpadding) + var(--frontmatter-padding));
+}
+
+// Text styling:
+
+.frontmatter .cm-md {
+  color: var(--frontmatter-md);
+  letter-spacing: 0.2em;
+  font-weight: 600;
+}
+
+.frontmatter .cm-atom {
+  color: foregroundColor(0.5);
+  font-weight: 500;
+  
+  // Pill-style:
+  // border-radius: 0.2em;
+  // text-shadow: 0 1px backgroundColor(0.1);
+  // font-size: 0.8em;
+  // letter-spacing: 0.01em;
+  // padding: 0.1em 0.4em;
+  // text-transform: uppercase;
+  // color: foregroundColor(0.8);
+  // background-color: foregroundColor(0.1);
+  // background-color: accent($light: -20%, $alpha: 0.1);
+}
+
+.frontmatter .cm-meta {
+  color: foregroundColor(0.6);
+}
+
+.frontmatter .cm-null,
+.frontmatter .cm-string {
+  color: foregroundColor(0.8);
+  font-weight: 500;
+}
+
+.frontmatter .cm-def:not(.cm-md) {
+  color: foregroundColor(0.8);
+}
+
+// E.g. true/false boolean
+.frontmatter .cm-keyword {
+  color: foregroundColor(0.8);
+  font-weight: 500;
+}
+
+.frontmatter .cm-number {
+  color: foregroundColor(0.8);
+}
+
+// Remove gap and divider from consecutive comments
+pre.CodeMirror-line.frontmatter.comment +
+pre.CodeMirror-line.frontmatter.comment {
+  padding-top: 0;
+  // background: red;
+  &::before {
+    border-top: none;
+  }
+}
+
+pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
+  color: accent($light: -30%, $sat: -30%, $alpha: 0.4);
+  font-style: italic;
+}
+
+// Tags: Dark buttons
+// .frontmatter .cm-tag {
+//   text-transform: uppercase;
+//   color: backgroundColor(1);
+//   font-weight: 500;
+//   opacity: 0.7;
+//   letter-spacing: 0.01em;
+//   background-color: foregroundColor(0.8);
+//   padding: 0.1em 0.2em;
+//   text-shadow: 0 1px backgroundColor(0.1);
+//   border-radius: 2px;
+//   font-size: 0.9em;
+// }
+
+// Tags: underline
+.frontmatter .cm-tag {
+  color: foregroundColor(1);
+  text-decoration-color: foregroundColor(0.6);
+  text-decoration-line: underline;
+  text-decoration-thickness: initial;
+  text-underline-offset: 0.1em;
+}
+
+.metaKeyDown .frontmatter .cm-tag:hover {
+  text-decoration-color: foregroundColor(1);
+  cursor: pointer;
+} 
+
+// Collapsed
+// When collapsed, all rows of the frontmatter are replaced by a 
+// TextMarker, and both -start and -end classes are applied to the
+// remaining parent row.
+
+pre.CodeMirror-line.frontmatter-start {
+  z-index: 10;
+}
+
+.frontmatter-start.frontmatter-end {
+  cursor: initial;
+  &::before {
+    border-radius: var(--frontmatter-borderRadius);
+  }
+  &:hover {
+    // .collapseButton {
+    //   opacity: 1;
+    // }
+    // &::before {
+    //   border-color: var(--frontmatter-collapsed-border-hover);
+    //   transition: border-color 0.1s ease-in;
+    // }
+    // .cm-md {
+    //   color: var(--frontmatter-collapsed-border-hover);
+    // }
+  }
+}

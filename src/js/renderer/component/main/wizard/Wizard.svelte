@@ -10,9 +10,8 @@
   import { getElementAt } from '../../../editor/map';
   import FrontmatterTagPreview from './FrontmatterTagPreview.svelte';
   import UrlPreview from './UrlPreview.svelte';
-  import { store2 } from '../../../WizardManager'
+  import { store } from '../../../WizardManager'
   import { setAsCustomPropOnNode } from '../../ui/actions';
-import { min } from 'moment';
 
   let domEl // DOM element of this Wizard
   let component // The child component to render
@@ -37,30 +36,30 @@ import { min } from 'moment';
 
   // ------- LISTEN FOR STORE CHANGES ------ //
 
-  // React the changes on store2
-  // $: ({suppressWarnings} = $store2)
+  // React the changes on store
+  // $: ({suppressWarnings} = $store)
 
   // When CM changes, we update cm listeners (e.g. changes, scroll)/
-  // let panelId = $store2.panelId
+  // let panelId = $store.panelId
   // $: console.log(panelId)
-  $: $store2.panelId, onCmChanged()
+  $: $store.panelId, onCmChanged()
 
   // Close wizard if isVisible changes
-  $: if (!$store2.isVisible) onWizardClosed()
+  $: if (!$store.isVisible) onWizardClosed()
 
   // Focus wizard when it becomes visible, 
   // IF it was opened by tab or click.
-  $: if ($store2.isVisible) {
-    if ($store2.openedBy.tabOrClick) {
+  $: if ($store.isVisible) {
+    if ($store.openedBy.tabOrClick) {
       domEl.focus({preventScroll: true}) 
     }
   }
 
   // When target DOM element changes, we update the position
-  $: $store2.domElement, updatePosition()
+  $: $store.domElement, updatePosition()
 
   // When target element changes, we update the component (and other things).
-  $: $store2.element, onElementChanged()
+  $: $store.element, onElementChanged()
 
 
   // ------- HANDLERS ------ //
@@ -71,14 +70,14 @@ import { min } from 'moment';
    */
   function onCmChanged() {
 
-    if (!$store2.panelId) return
+    if (!$store.panelId) return
     
     // Remove listeners from outgoing cm instance
     cm?.off('changes', onChanges)
     cm?.off('scroll', onScroll)
 
     // Update cm variable
-    cm = $store2.cm
+    cm = $store.cm
 
     // Add listeners to new cm instance 
     cm.on('changes', onChanges)
@@ -91,12 +90,12 @@ import { min } from 'moment';
    */
   async function onElementChanged() {
 
-    // console.trace('onElementChanged: $store2.element', $store2.element)
+    // console.trace('onElementChanged: $store.element', $store.element)
 
-    if (!$store2.element) return
+    if (!$store.element) return
 
     // Update local element value
-    element = $store2.element
+    element = $store.element
 
     // Determine which component to render...
     // Depends on 1) element type, and 2) how the wizard was opened.
@@ -109,7 +108,7 @@ import { min } from 'moment';
     const type = element.type
     
     // How was the wizard opened?
-    const { tabOrClick, hover, metaKey, altKey } = $store2.openedBy
+    const { tabOrClick, hover, metaKey, altKey } = $store.openedBy
 
     if (type == 'citation') {
 
@@ -201,7 +200,7 @@ import { min } from 'moment';
    */
   function onChanges(cm, changes) {
 
-    if (!$store2.isVisible || !element) return
+    if (!$store.isVisible || !element) return
     
     // Check if element was affected
     const elementWasAffected = changes.find(
@@ -220,7 +219,7 @@ import { min } from 'moment';
       element = getElementAt(cm, element.line, element.start + 1)
 
       // Hide the wizard if the element was deleted
-      if (!element) store2.close()
+      if (!element) store.close()
     }
   }
 
@@ -229,7 +228,7 @@ import { min } from 'moment';
    * position (if the wizard is open).
    */
   function onScroll() {
-    if (!$store2.isVisible || !element) return
+    if (!$store.isVisible || !element) return
     updatePosition()
   }
 
@@ -343,8 +342,8 @@ import { min } from 'moment';
 
     // TODO: Need to get the element
     // const rect = textMarker.replacedWith.getBoundingClientRect() 
-    if (!$store2.domElement) return
-    const rect = $store2.domElement.getBoundingClientRect() 
+    if (!$store.domElement) return
+    const rect = $store.domElement.getBoundingClientRect() 
     domEl.style.left = `${rect.left}px` 
     domEl.style.top = `${rect.top - wizardOffset}px`
 
@@ -355,15 +354,14 @@ import { min } from 'moment';
 </script>
 
 <style type="text/scss">
-  
-  
-  #wizard.isVisible:focus-within {
-    outline: 2px solid green !important;
-  }
+    
+  // #wizard.isVisible:focus-within {
+  //   outline: 2px solid green !important;
+  // }
 
-  #wizard.isVisible:not(:focus-within) {
-    outline: 2px solid black;
-  }
+  // #wizard.isVisible:not(:focus-within) {
+  //   outline: 2px solid black;
+  // }
 
 
   #wizard {
@@ -388,7 +386,8 @@ import { min } from 'moment';
     transition-timing-function: ease-out;
     transition: opacity 0.05s;
     white-space: normal;
-    min-width: var(--minWidth);
+    min-width: 20em;
+    max-width: 22em;
     // width: 20em;
     z-index: 10;
     height: auto;
@@ -519,49 +518,49 @@ import { min } from 'moment';
   id="wizard"
   bind:this={domEl}
   use:setAsCustomPropOnNode={{wizardOffset, minWidth}}
-  class:isVisible={$store2.isVisible}
+  class:isVisible={$store.isVisible}
   class:isIncomplete={element?.isIncomplete}
   tabindex="-1"
   on:mousedown|stopPropagation
   on:keydown={onKeydown}
   on:focusout={(evt) => {
     if (!domEl.contains(evt.relatedTarget)) {
-      store2.close()
+      store.close()
     }
   }}
   on:mouseenter={() => {
     // Close wizard if user opens it with metaKey then mouses over.
     // Meta-key incarnations of wizard are not meant to be interacted
     // with directly (goes the current thinking)
-    if ($store2.openedBy.metaKey) {
-      store2.close()
+    if ($store.openedBy.metaKey) {
+      store.close()
     }
   }}
   on:mouseleave={(evt) => {
 
     const isFocused = domEl.contains(document.activeElement)
 
-    // if (!isFocused && $store2.openedBy.altKey && evt.altKey) {
-    if (!isFocused && $store2.openedBy.altKey) {
+    // if (!isFocused && $store.openedBy.altKey && evt.altKey) {
+    if (!isFocused && $store.openedBy.altKey) {
     
       // If user opened wizard by hovering mark with alt-key,
       // pressed, and user has not interacted with the wizard,
       // close the wizard.
-      store2.close()
+      store.close()
 
-    } else if ($store2.openedBy.metaKey) {
+    } else if ($store.openedBy.metaKey) {
 
       // If user opened wizard by hovering mark with meta-key,
       // close the wizard on mouse leave. This is a bit more aggressive
       // than the alt key.
-      store2.close()
+      store.close()
 
-    } else if (!isFocused && !$store2.openedBy.metaKey && !$store2.openedBy.altKey) {
+    } else if (!isFocused && !$store.openedBy.metaKey && !$store.openedBy.altKey) {
 
       // Else, if user opened wizard by hovering mark _without_
       // modifier keys, and user has not interacted with the 
       // wizard, close the wizard.
-      store2.close()
+      store.close()
     }
   }}
 >
@@ -571,7 +570,7 @@ import { min } from 'moment';
       bind:this={componentInstance} 
       {cm} 
       {element} 
-      suppressWarnings={$store2.suppressWarnings}
+      suppressWarnings={$store.suppressWarnings}
     />
   {/if}
 

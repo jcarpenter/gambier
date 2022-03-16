@@ -62,7 +62,7 @@
       // Get ids with file type 'doc'
       draft = draft.filter((id) => {
         const file = $files.byId[id]
-        const isDoc = file.type == 'doc'
+        const isDoc = file.isDoc
         const hasTag = file.tags?.some((fileTag) => selectedTags.includes(fileTag))
         return isDoc && hasTag
       })

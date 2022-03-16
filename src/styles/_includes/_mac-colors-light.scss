@@ -1,0 +1,88 @@
+@use '../_helpers' as *;
+
+body {
+  
+  --foregroundColor: 0, 0, 0;
+  --backgroundColor: 255, 255, 255;
+
+  /* ------ Accent-influenced ------ */
+  // Direct equivalents of Mac system colors:
+
+  // User's system accent color preference
+  // Mac equivalent: controlAccentColor
+  --accent-color: #{accent()};
+
+  // Highlight around focused controls
+  // Mac equivalent: keyboardFocusIndicatorColor
+  --focus-ring-color: #{accent($light: -2%, $alpha: 0.5)};
+
+  // Selected list/menu items
+  // Mac equivalent: selectedContentBackgroundColor
+  --selected-list-item-color: #{accent($sat: +3%, $light: -6%)};
+
+  // Background of selected text
+  // Mac equivalent: selectedTextBackgroundColor
+  --selected-text-background: #{accent($sat: +3%, $light: +35%)};
+
+  /* ------ Lightbox ------ */
+
+  --lightbox-icon-color: #fff;
+
+  /* ------ Buttons ------ */
+
+  --button-label-color: #000000d8;
+  --button-background: #ffffffff;
+  // Outline, Drop shadow
+  --button-boxshadow: 0 0 0 0.5px #{black(0.08)}, 0 0.5px 1px 0.5px #{black(0.1)};
+
+  --inset-button-background: #ffffffff;
+  // Outline, Drop shadow
+  --inset-button-boxshadow: inset 0 1.5px 1px 0 #{black(0.1)}, inset 0 0 0 0.5px #{black(0.2)};
+
+  /* ------ Labels ------ */
+
+  --label-color: #000000d8;
+  --secondary-label-color: #0000007f;
+  --tertiary-label-color: #00000042;
+
+  /* ------ Text ------ */
+
+  --text-color: #000000ff;
+  --placeholder-text-color: #0000003f;
+  --selected-menuitem-text-color: #ffffffff;
+  --control-text-color: #000000d8;
+
+  /* ------ Misc ------ */
+
+  --menu-background: hsla(0, 0%, 95%, 0.8);
+  --error-color: #fa6e50;
+  --separator-color: #00000019;
+
+  /* ------ Unused (from mac) ------ */
+
+  // Controls that are being clicked or dragged
+  // Mac equivalent: selectedControlColor
+  // NOT USED
+  --selected-control-color: #{accent($sat: +3%, $light: +35%)};
+
+  --controlColor: #ffffffff;
+  --controlBackgroundColor: #ffffffff;
+  --alternateSelectedControlTextColor: #ffffffff;
+
+  --disabledControlTextColor: #0000003f;
+  --findHighlightColor: #ffff00ff;
+  --gridColor: #e6e6e6ff;
+  --headerTextColor: #000000d8;
+  --highlightColor: #ffffffff;
+  --linkColor: #0068daff;
+  --quaternaryLabelColor: #00000019;
+  --selectedControlTextColor: #000000d8;
+  --selectedTextColor: #000000ff;
+  --shadowColor: #000000ff;
+  --textBackgroundColor: #ffffffff;
+  --unemphasizedSelectedContentBackgroundColor: #dcdcdcff;
+  --unemphasizedSelectedTextBackgroundColor: #dcdcdcff;
+  --unemphasizedSelectedTextColor: #000000ff;
+  --windowBackgroundColor: #ecececff;
+  --windowFrameTextColor: #000000d8;
+}

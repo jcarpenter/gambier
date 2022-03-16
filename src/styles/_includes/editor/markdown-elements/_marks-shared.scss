@@ -1,0 +1,36 @@
+// -------------- Marks (shared) -------------- //
+
+.mark:focus {
+  outline: none;
+}
+
+// Hide text selection when mark is not focused
+.mark:not(:focus)::selection {
+  background-color: transparent;
+}
+
+.mark:not(.editable) {
+  cursor: initial;
+  display: inline-block;
+  width: 1em;
+  height: 1.3em;
+  vertical-align: middle;
+  position: relative;
+  // Nudge up to better align with text
+  top: -0.1em;
+  
+  // Ensure there's some space between mark and preceding character.
+  margin-left: 1px;
+
+  // Icon/text inside mark
+  &::before {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    // justify-content: center;
+    // display: inline-flex;
+    // width: 1em;
+    // overflow: hidden;
+  }
+}

@@ -54,14 +54,10 @@ const storeDefault = {
 
   darkMode: 'match-system',
 
-  appTheme: {
-    id: ''
-  },
-
-  editorTheme: {
+  theme: {
     id: '',
     installed: [
-      { name: "Gambier", id: "gambier" }
+      { name: "Cupertino Light", id: "cupertino-light" }
     ]
   },
 
@@ -73,40 +69,26 @@ const storeDefault = {
   developer: {
     showGrid: false
   },
-  // See Theme.js for how themes are defined
-  // theme: {
-  // appTheme: 'gibsons',
-  // baseColorScheme: 'match-app', // 'dark', 'light', or 'match-app'
-  // editorTheme: '',
-  // backgroundComponent: {},
-  // colorOverrides: [],
-  // installedAppThemes: [
-
-  // ],
-  // installedEditorThemes: [
-  //   { name: "Gambier", id: "gambier" }
-  // ]
-  // },
 
   editorFont: {
-    default: 14,
-    size: 14,
+    default: 15,
+    size: 15,
     min: 12,
     max: 18,
     increment: 1
   },
 
   editorLineHeight: {
-    default: 1.5,
-    size: 1.5,
+    default: 1.6,
+    size: 1.6,
     min: 1.2,
     max: 2.0,
     increment: 0.1,
   },
 
   editorMaxLineWidth: {
-    default: 40,
-    size: 40,
+    default: 38,
+    size: 38,
     min: 30,
     max: 50,
     increment: 2,
@@ -247,6 +229,7 @@ export const newProject = {
     isPreviewOpen: true,
     activeTabId: 'project',
     width: 250,
+    defaultWidth: 250,
     tabsById: {
       project: {
         title: 'Project',
@@ -285,11 +268,11 @@ export const newProject = {
         sortBy: 'By Name',
         sortOrder: 'Ascending'
       },
-      citations: {
-        title: 'Citations',
-        lastSelected: {},
-        selected: [],
-      },
+      // citations: {
+      //   title: 'Citations',
+      //   lastSelected: {},
+      //   selected: [],
+      // },
       search: {
         title: 'Search',
         lastSelected: {},
@@ -308,6 +291,7 @@ export const newProject = {
         }
       }
     },
-    tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
+    tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search']
+    // tabsAll: ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
   }
 }

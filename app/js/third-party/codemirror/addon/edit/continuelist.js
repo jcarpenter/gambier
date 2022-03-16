@@ -31,7 +31,6 @@
         // if (inner.mode.name == 'yaml') {
         //   console.log(inner.state)
         // }
-        console.log(inner)
         if (inner.mode.name == 'yaml' && inner.state.list || inner.state.listEnd) {
           cm.replaceRange('\n- ', pos, pos)
         } else {

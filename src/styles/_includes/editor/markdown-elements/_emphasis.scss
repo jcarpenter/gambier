@@ -1,0 +1,9 @@
+// -------------- Emphasis -------------- //
+
+.cm-emphasis {
+  color: var(--emphasis);
+  font-style: italic;
+  &.cm-md {
+    color: var(--emphasis-md);
+  }
+}

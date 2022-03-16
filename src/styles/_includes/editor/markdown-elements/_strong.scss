@@ -1,0 +1,11 @@
+@use "../../../_helpers" as *;
+
+// -------------- Strong -------------- //
+
+.cm-strong {
+  color: var(--strong);
+  font-weight: 700;
+  &.cm-md {
+    color: var(--strong-md);
+  }
+}

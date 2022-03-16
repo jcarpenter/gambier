@@ -43,6 +43,7 @@
     width: 10px;
     height: 100%;
     z-index: 10;
+    // background: red;
   }
 
   .divider:not(.enabled) {

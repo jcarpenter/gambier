@@ -1,6 +1,5 @@
 
 import { app, MenuItem } from "electron";
-import { themes } from "../Themes.js";
 import { ______________________________ } from './Separator.js'
 
 const isMac = process.platform === 'darwin'
@@ -23,6 +22,23 @@ export function create() {
               enabled: !global.state().sourceMode,
             }, focusedWindow)
           }
+        }
+      }),
+
+      ______________________________,
+
+      new MenuItem({
+        label: 'Sidebar',
+        id: 'view-sidebar',
+        type: 'checkbox',
+        accelerator: 'CmdOrCtrl+Alt+B',
+        click(item, focusedWindow) {
+          const state = global.state()
+          const project = state.projects.byId[state.focusedWindowId]
+          global.store.dispatch({
+            type: 'SIDEBAR_SET_OPEN_CLOSED',
+            value: !project.sidebar.isOpen
+          }, focusedWindow)
         }
       }),
 
@@ -93,24 +109,24 @@ export function create() {
         }
       }),
 
-      new MenuItem({
-        label: 'Citations',
-        id: 'view-citations',
-        type: 'checkbox',
-        accelerator: 'Cmd+6',
-        click(item, focusedWindow) {
-          global.store.dispatch({
-            type: 'SELECT_SIDEBAR_TAB_BY_ID',
-            id: 'citations'
-          }, focusedWindow)
-        }
-      }),
+      // new MenuItem({
+      //   label: 'Citations',
+      //   id: 'view-citations',
+      //   type: 'checkbox',
+      //   accelerator: 'Cmd+6',
+      //   click(item, focusedWindow) {
+      //     global.store.dispatch({
+      //       type: 'SELECT_SIDEBAR_TAB_BY_ID',
+      //       id: 'citations'
+      //     }, focusedWindow)
+      //   }
+      // }),
 
       new MenuItem({
         label: 'Search',
         id: 'view-search',
         type: 'checkbox',
-        accelerator: 'Cmd+7',
+        accelerator: 'Cmd+6',
         click(item, focusedWindow) {
           global.store.dispatch({
             type: 'SELECT_SIDEBAR_TAB_BY_ID',
@@ -155,6 +171,37 @@ export function create() {
         ]
       }),
 
+      new MenuItem({
+        label: 'Line Height',
+        submenu: [
+          new MenuItem({
+            label: 'Default',
+            id: 'view-lineheight-default',
+            accelerator: 'CmdOrCtrl+Alt+0',
+            click() {
+              global.store.dispatch({ type: 'SET_DEFAULT_EDITOR_LINE_HEIGHT' })
+            }
+          }),
+          ______________________________,
+          new MenuItem({
+            label: 'Increase',
+            id: 'view-lineheight-increase',
+            accelerator: 'CmdOrCtrl+Alt+=',
+            click() {
+              global.store.dispatch({ type: 'INCREASE_EDITOR_LINE_HEIGHT' })
+            }
+          }),
+          new MenuItem({
+            label: 'Decrease',
+            id: 'view-lineheight-decrease',
+            accelerator: 'CmdOrCtrl+Alt+-',
+            click() {
+              global.store.dispatch({ type: 'DECREASE_EDITOR_LINE_HEIGHT' })
+            }
+          })
+        ]
+      }),
+
       // TODO: Am hiding these commands for now, because of Electron bug.
       // Labels are incorrect if accelerator uses Shift and `-` or `=` 
       // keys. For example, `Cmd+Shift+0` accelerator should display 
@@ -193,53 +240,6 @@ export function create() {
 
       ______________________________,
 
-
-      new MenuItem({
-        label: 'App Theme',
-        id: 'view-appTheme',
-        submenu: themes.allIds.map((id) => {
-          const t = themes.byId[id]
-          return new MenuItem({
-            label: t.name,
-            id: `view-appTheme-${id}`,
-            type: 'checkbox',
-            checked: global.state().appTheme.id == id,
-            click() {
-              global.store.dispatch({ type: 'SET_APP_THEME', id })
-            }
-          })
-        })
-      }),
-
-      // new MenuItem({
-      //   label: 'Accent Color',
-      //   submenu: [
-      //     new MenuItem({
-      //       label: 'Match System',
-      //       type: 'checkbox',
-      //       checked: global.state().appTheme.accentColor == 'match-system',
-      //       click() {
-      //         global.store.dispatch({ type: 'SET_ACCENT_COLOR', name: 'match-system', })
-      //       }
-      //     }),
-      //     ______________________________,
-      //   ]
-      // }),
-
-      // new MenuItem({
-      //   label: 'Background',
-      //   submenu: [
-      //     new MenuItem({
-      //       label: 'Placeholder',
-      //       type: 'checkbox',
-      //       checked: global.state().appTheme.background == 'placeholder',
-      //       click() {
-      //         global.store.dispatch({ type: 'SET_BACKGROUND', name: 'placeholder', })
-      //       }
-      //     }),
-      //   ]
-      // }),
-
       new MenuItem({
         label: 'Dark Mode',
         submenu: [
@@ -272,17 +272,17 @@ export function create() {
       }),
 
       new MenuItem({
-        label: 'Editor Theme',
-        id: 'view-editorTheme',
-        submenu: global.state().editorTheme.installed.map((t) => {
+        label: 'Theme',
+        id: 'view-theme',
+        submenu: global.state().theme.installed.map(({ name, id }) => {
           return new MenuItem({
-            label: t.name,
-            id: `view-editorTheme-${t.id}`,
+            label: name,
+            id: `view-theme-${id}`,
             type: 'checkbox',
-            checked: global.state().editorTheme.id == t.id,
+            checked: global.state().theme.id == id,
             click(item) {
               if (!item.checked) {
-                global.store.dispatch({ type: 'SET_EDITOR_THEME_BY_ID', name: t.id })
+                global.store.dispatch({ type: 'SET_THEME', name: id })
               }
             }
           })
@@ -337,30 +337,26 @@ export function update(appMenu) {
 
   m.getMenuItemById('view-sourceMode').checked = state.sourceMode
 
-  const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'citations', 'search']
+  const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search']
   sidebarTabs.forEach((id) => {
     const item = m.getMenuItemById(`view-${id}`)
     item.enabled = project !== undefined
     item.checked = project?.sidebar.activeTabId == id
   })
 
-  // View > App Menu submenu: set `checked`
-  m.getMenuItemById('view-appTheme').submenu.items.forEach((item) => {
-    const id = item.id.replace('view-appTheme-', '')
-    item.checked = id == state.appTheme.id
+  // View > Theme submenu: set `checked`
+  m.getMenuItemById('view-theme').submenu.items.forEach((item) => {
+    const id = item.id.replace('view-theme-', '')
+    item.checked = id == state.theme.id
   })
 
   m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max
   m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min
   
+  m.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen
+
   // m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
   // m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
-
-  // View > Editor Theme submenu: set `checked`
-  // m.getMenuItemById('view-editorTheme').submenu.items.forEach((item) => {
-  //   const id = item.id.replace('view-editorTheme-', '')
-  //   item.checked = id == state.editorTheme.id
-  // })
 
 }
 
@@ -375,12 +371,12 @@ export function onStateChanged(state, oldState, project, panel, prefsIsFocused, 
 
   const changes = [
     state.focusedWindowId !== oldState.focusedWindowId,
-    state.appTheme.id !== oldState.appTheme.id,
-    state.editorTheme.id !== oldState.editorTheme.id,
+    state.theme.id !== oldState.theme.id,
     state.sourceMode !== oldState.sourceMode,
     state.editorFont.size !== oldState.editorFont.size,
     state.editorLineHeight.size !== oldState.editorLineHeight.size,
-    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId
+    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId,
+    project?.sidebar.isOpen !== oldProject?.sidebar.isOpen
   ]
 
   if (changes.includes(true)) {

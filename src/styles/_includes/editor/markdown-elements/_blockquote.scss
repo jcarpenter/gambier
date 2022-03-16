@@ -1,0 +1,33 @@
+@use "../../../_helpers" as *;
+
+// -------------- Blockquote -------------- //
+
+.CodeMirror pre.CodeMirror-line.quote {
+  // color: colorVar("quote");
+  color: var(--quote);
+  // font-style: italic;
+  // Creating hanging indentation for >
+  // text-indent: -1em;
+  // Make hanging > align with side of page
+  padding-left: calc(var(--editor-leftPadding) + 2em);
+
+  // Notch ">" at start
+  .cm-quote-start {
+    // color: colorVar("quote", $alpha: 0.6);
+    color: var(--quote-md);
+    position: absolute;
+    transform: translate(-100%, 0);
+  }
+
+  // Vertical left border
+  // &::before {
+  //   content: '';
+  //   position: absolute;
+  //   width: 0.2em;
+  //   top: 0.3em;
+  //   height: calc(100% - 0.5em);
+  //   left: var(--editor-leftPadding);
+  //   background: getTheme("quote", $alpha: 0.6);
+  //   border-radius: 1em;
+  // }
+}

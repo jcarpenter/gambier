@@ -1,6 +1,11 @@
 import deepEql from 'deep-eql'
+// import path from 'path'
+// import mime from 'mime-types'
 
-// -------- PROTOTYPE EXTENSIONS -------- //
+
+/* -------------------------------------------------------------------------- */
+/*                            PROTOTYPE EXTENSIONS                            */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Return true if array has ALL of the items
@@ -61,7 +66,28 @@ String.prototype.lastChar = function () {
 }
 
 
-// -------- MISC HELPERS -------- //
+/* -------------------------------------------------------------------------- */
+/*                                MISC HELPERS                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Call the specified function after the specified delay.
+ * Used to throttle functions that we don't want to fire
+ * too rapidly. E.g. we're calling a complicated resize 
+ * function from `mousemove` listener.
+ * From: https://codeburst.io/throttling-and-debouncing-in-javascript-646d076d0a44
+ */
+export function throttle(delay, fn) {
+  let lastCall = 0;
+  return function (...args) {
+    const now = (new Date).getTime();
+    if (now - lastCall < delay) {
+      return;
+    }
+    lastCall = now;
+    return fn(...args);
+  }
+}
 
 /**
  * Return true if element has ancestor with specified id.
@@ -217,12 +243,60 @@ export function clamp(num, min, max) {
 }
 
 
-// -------- CHECK FORMAT -------- //
+/* -------------------------------------------------------------------------- */
+/*                                CHECK FORMAT                                */
+/* -------------------------------------------------------------------------- */
 
 const formats = {
   document: ['.md', '.markdown'],
   image: ['.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'],
-  av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm']
+  av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'],
+  
+  // Video containers (file types)
+  // If a container supports both audio and video (e.g. WebM), we categorize as video,
+  // since <video> also works for audio, but <audio> does not work for video.
+  // See: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#index_of_media_container_formats_file_types
+  // video: [
+    
+  //   // Mp4
+  //   // Supported by Chrome? - Y
+  //   '.mp4', 
+
+  //   // WebM
+  //   // Supported by Chrome? - Y
+  //   '.webm',
+    
+  //   // Ogg
+  //   // Supported by Chrome? - Y
+  //   '.ogg',
+
+  //   // QuickTime
+  //   // Supported by Chrome? - N
+  //   '.mov',
+
+  //   // The OGM file format is a compressed video container file format. The files can contain streams of audio and video data as well as text and metadata. OGM files use the Ogg Vorbis compression technology and contain audio and video stream files that can be played on a user's computer.
+  //   '.ogm', 
+
+  //   // An OGV file is a video file saved in the Xiph.Org open source Ogg container format. It contains video streams that may use one or more different codecs, such as Theora, Dirac, or Daala.
+  //   '.ogv',
+
+  //   // The 3GP or 3GPP media container is used to encapsulate audio and/or video that is specifically intended for transmission over cellular networks for consumption on mobile devices.
+  //   '.3gp'
+  // ],
+
+  // audio: [
+    
+  //   // "The Free Lossless Audio Codec (FLAC) is a lossless audio codec; there is also an associated simple container format, also called FLAC, that can contain this audio."
+  //   // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#flac
+  //   '.flac', 
+
+  //   // M4A is a file extension for an audio file encoded with advanced audio coding (AAC) which is a lossy compression. M4A was generally intended as the successor to MP3, which had not been originally designed for audio only but was layer III in an MPEG 1 or 2 video files. M4A stands for MPEG 4 Audio.
+  //   '.m4a', 
+
+  //   // Mp4s are MPEG files that contain Layer_III/MP3 sound data.
+  //   '.mp3', 
+  //   ''
+  // ]
 }
 
 export const urlRE = new RegExp(/^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i)
@@ -273,9 +347,17 @@ export function isDoc(extension) {
 }
 
 /**
- * Return true if file extension is among valid image or media formats. 
+ * Return true if Content-Type of file is 
  */
 export function isMedia(extension) {
+
+  // Return false if json. Helps prevent error from mime package.
+  // if (filepath.includesAny('.DS_Store', '.json')) return false
+
+  // const contentType = mime.lookup(filepath)
+
+  // return contentType.includesAny('video', 'audio', 'image')
+
   const isImage = formats.image.includes(extension)
   const isAV = formats.av.includes(extension)
   return isImage || isAV
@@ -315,7 +397,10 @@ export function getFileType(extension) {
   }
 }
 
-// -------- COMPARE PATCHES -------- //
+
+/* -------------------------------------------------------------------------- */
+/*                               COMPARE PATCHES                              */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Check if state property has changed by comparing Immer patches. And (optionally) if property now equals a specified value. For each patch, check if `path` array contains specified `props`, and if `value` value equals specified `toValue`.
@@ -344,7 +429,9 @@ export function stateHasChanged(patches, props, toValue = '') {
 }
 
 
-// -------- WORK WITH OBJECTS -------- //
+/* -------------------------------------------------------------------------- */
+/*                              WORK WITH OBJECTS                             */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Check if object is empty" {}
@@ -459,8 +546,42 @@ const getNestedObject = (nestedObj, pathArr) => {
 }
 
 
-// -------- RENDER-PROCESS ONLY -------- //
+/* -------------------------------------------------------------------------- */
+/*                             RENDER-PROCESS ONLY                            */
+/* -------------------------------------------------------------------------- */
 // Main process cannot use these functions
+
+/**
+ * Take a CSS time value, like "500ms", and return as milliseconds.
+ * "500ms" --> 500
+ * "2.5s" --> 2500
+ */
+export function convertCSSTimeToMilliseconds(time) {
+
+  // If it's not a string, it's not a CSS value. 
+  // Return the value unchanged.
+  if (typeof time !== 'string') return time
+
+  const isInSeconds = time.match(/\d+s/)
+
+  // Use parseFloat to strip CSS <time> prefix "ms" or "s" values.
+  time = parseFloat(time)
+
+  // If format was seconds, convert to milliseconds
+  if (isInSeconds) time = time * 1000
+
+  return time
+}
+
+/**
+ * Return the value of the CSS custom property of the
+ * specified name, on the body element.
+ * All this does is make declaration more compact.
+ * @param {string} propName - Property name, without double dashes. E.g. "sidebar-color". 
+ */
+export function getCssProp(propName) {
+  return window.getComputedStyle(document.body).getPropertyValue(propName)
+}
 
 /**
  * Mount Svelte component without the unnecessary empty parent frag.

@@ -1,5 +1,6 @@
 <script>
   import { state } from "../../StateManager";
+import DisclosureButton from "../ui/DisclosureButton.svelte";
   import IconButton from "../ui/IconButton.svelte";
 
   export let cm
@@ -13,8 +14,11 @@
     position: absolute;
     // right: 0.35em;
     right: 0;
-    top: 50%;
-    transform: translate(0, -50%);
+    top: 0;
+    // background: yellow;
+    transform: translate(0, 0);
+    // top: 50%;
+    // transform: translate(0, -50%);
     display: flex;
     align-items: center;
   }
@@ -23,7 +27,8 @@
     @include code-typography;
     letter-spacing: 0;
     font-size: 0.8em;
-    line-height: 1em;
+    // line-height: 1em;
+    // background: red;
     user-select: none;
     cursor: initial;
     text-transform: uppercase;
@@ -70,9 +75,24 @@
 
   {:else if type == 'frontmatter'}
 
-    <span class="label">Frontmatter</span>
+    <!-- <span class="label">Frontmatter</span> -->
+
+    <DisclosureButton 
+      width={'14px'}
+      height={'14px'}
+      padding={'3px'}
+      margin={'4px'}
+      rotation={$state.frontMatterCollapsed ? 90 : 0}
+      opacity={0.5}
+      on:toggle={() => {
+        window.api.send('dispatch', {
+          type: 'SET_FRONT_MATTER_COLLAPSED',
+          value: !$state.frontMatterCollapsed
+        })
+      }}
+    />
  
-    <IconButton 
+    <!-- <IconButton 
       icon='block-options-expand-icon' 
       showCaret={false} 
       compact={true}
@@ -87,7 +107,11 @@
           value: !$state.frontMatterCollapsed
         })
       }}
-    />
+    /> -->
+
+  {:else if type == 'html'}
+
+    <span class="label">HTML</span>
     
   {/if}
 

@@ -1,0 +1,41 @@
+// -------------- Citation -------------- //
+
+// Mark
+
+.CodeMirror .mark.citation {
+  color: var(--citation-mark);
+  background-color: var(--citation-mark-bg);
+  border: var(--mark-borderWidth) solid var(--citation-mark-border);
+  border-radius: var(--mark-borderRadius);
+  font-weight: normal;
+  width: 1.1em;
+  // padding: 0 0.5em 0.1em;
+
+  &:before {
+    content: '@';
+    top: 45%;
+    font-size: 0.95em;
+  }
+
+  &.highlighted {
+    color: var(--citation-mark-highlight);
+    background-color: var(--citation-mark-highlight-bg);
+    border-color: var(--citation-mark-highlight-bg);
+  }
+}
+
+// Source
+
+.cm-citation {
+  color: var(--citation-source) !important;
+  background-color: var(--citation-source-bg) !important;
+
+  &.cm-key {
+    text-decoration: underline;
+    // color: black;
+  }
+
+  &.cm-md {
+    color: var(--citation-source-md);
+  }
+}
