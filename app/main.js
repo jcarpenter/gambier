@@ -41,7 +41,7 @@ var url__default = /*#__PURE__*/_interopDefaultLegacy(url);
 
 produce.enablePatches();
 
-const update$5 = (state, action, window) =>
+const update$6 = (state, action, window) =>
   produce__default['default'](state, (draft) => {
 
     // Set a few useful, commonly-used variables
@@ -945,7 +945,7 @@ class Store extends ElectronStore__default['default'] {
 
     // Get next state. 
     // `update` function also updates `global.patches`.
-    const nextState = update$5(store.store, action, window);
+    const nextState = update$6(store.store, action, window);
 
     // Apply next state to Store
     this.set(nextState);
@@ -2585,7 +2585,7 @@ function getIncrementedFileName(origPath) {
 
 const ______________________________ = new electron.MenuItem({ type: 'separator' });
 
-function create$5() {
+function create$6() {
  
   return new electron.MenuItem({
     label: electron.app.name,
@@ -2630,7 +2630,7 @@ function isMoveToTrashEnabled() {
   return sideBarIsOpen && fileIsSelectedInSidebar
 }
 
-function create$4() {
+function create$5() {
 
   return new electron.MenuItem({
     label: 'File',
@@ -2784,9 +2784,9 @@ function create$4() {
 
 
 
-function update$4(applicationMenu) {
+function update$5(appMenu) {
 
-  const m = applicationMenu;
+  const m = appMenu;
   const state = global.state();
   const project = state.projects.byId[state.focusedWindowId];
   const panel = project?.panels[project?.focusedPanelIndex];
@@ -2810,17 +2810,11 @@ function update$4(applicationMenu) {
 
 }
 
-function onStateChanged$4(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-
-  // We care about:
-  // Prefs is focused?
-  // Panel changed?
-  // Sidebar is open?
-  // fileIsSelectedInSidebar?
-  update$4(applicationMenu);
+function onStateChanged$5(state, oldState, project, panel, prefsIsFocused, appMenu) {
+  update$5(appMenu);
 }
 
-function create$3() {
+function create$4() {
 
   return new electron.MenuItem({
     label: 'Edit',
@@ -2914,7 +2908,7 @@ function create$3() {
 }
 
 
-function update$3(applicationMenu) {
+function update$4(applicationMenu) {
   const m = applicationMenu;
   const state = global.state();
   const project = state.projects.byId[state.focusedWindowId];
@@ -2939,8 +2933,149 @@ function update$3(applicationMenu) {
 
 }
 
-function onStateChanged$3(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update$3(applicationMenu);
+function onStateChanged$4(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
+  update$4(applicationMenu);
+}
+
+// function isMoveToTrashEnabled() {
+//   const state = global.state()
+//   const project = state.projects.byId[state.focusedWindowId]
+//   const sideBarIsOpen = project?.sidebar.isOpen
+//   const selectedTab = project?.sidebar.tabsById[project?.sidebar.activeTabId]
+//   const fileIsSelectedInSidebar = selectedTab?.selected.length
+//   return sideBarIsOpen && fileIsSelectedInSidebar
+// }
+
+function create$3() {
+  return new electron.MenuItem({
+    label: 'Select',
+    submenu: [      
+      new electron.MenuItem({
+        label: 'Select Next Entity',
+        id: 'select-selectNextEntity',
+        accelerator: 'Alt+Tab',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'selectNextEntity');
+        }
+      }),
+      new electron.MenuItem({
+        label: 'Select Previous Entity',
+        id: 'select-selectPrevEntity',
+        accelerator: 'Shift+Alt+Tab',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'selectPrevEntity');
+        }
+      }),
+      ______________________________,
+      new electron.MenuItem({
+        label: 'Add Next Occurence',
+        id: 'select-selectNextOccurence',
+        accelerator: 'Cmd+D',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'selectNextOccurence');
+        }
+      }),
+      ______________________________,
+      new electron.MenuItem({
+        label: 'Select Line',
+        id: 'select-selectLine',
+        accelerator: 'Cmd+L',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'selectLine');
+        }
+      }),
+
+      new electron.MenuItem({
+        label: 'Cut Line',
+        id: 'select-cutLine',
+        accelerator: 'Cmd+X',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'cutLine');
+        }
+      }),
+      new electron.MenuItem({
+        label: 'Delete Line',
+        id: 'select-deleteLine',
+        accelerator: 'Cmd+Shift+K',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'deleteLine');
+        }
+      }),
+      new electron.MenuItem({
+        label: 'Duplicate Line',
+        id: 'select-duplicateLine',
+        accelerator: 'Shift+Alt+Down',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'duplicateLine');
+        }
+      }),
+      new electron.MenuItem({
+        label: 'Move Line Up',
+        id: 'select-moveLineUp',
+        accelerator: 'Alt+Up',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'moveLineUp');
+        }
+      }),
+      new electron.MenuItem({
+        label: 'Move Line Down',
+        id: 'select-moveLineDown',
+        accelerator: 'Alt+Down',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'moveLineDown');
+        }
+      }),
+      ______________________________,
+      new electron.MenuItem({
+        label: 'Add Cursor to Previous Line',
+        id: 'select-addCursorToPrevLine',
+        accelerator: 'Cmd+Alt+Up',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'addCursorToPrevLine');
+        }
+      }),
+      new electron.MenuItem({
+        label: 'Add Cursor to Next Line',
+        id: 'select-addCursorToNextLine',
+        accelerator: 'Cmd+Alt+Down',
+        async click(item, focusedWindow) {
+          focusedWindow.webContents.send('editorCommand', 'addCursorToNextLine');
+        }
+      }),
+    ]
+  })
+}
+
+function update$3(appMenu) {
+  const m = appMenu;
+  const state = global.state();
+  const project = state.projects.byId[state.focusedWindowId];
+  project?.panels[project?.focusedPanelIndex];
+  const focusedSectionId = project?.focusedSectionId;
+  const editorIsFocused = focusedSectionId == "editor";
+    
+  // Disable when editor is not focused
+
+  m.getMenuItemById('select-selectNextEntity').enabled = editorIsFocused;
+  m.getMenuItemById('select-selectPrevEntity').enabled = editorIsFocused;
+  m.getMenuItemById('select-selectNextOccurence').enabled = editorIsFocused;
+  m.getMenuItemById('select-selectLine').enabled = editorIsFocused;
+  m.getMenuItemById('select-cutLine').enabled = editorIsFocused;
+  m.getMenuItemById('select-deleteLine').enabled = editorIsFocused;
+  m.getMenuItemById('select-duplicateLine').enabled = editorIsFocused;
+  m.getMenuItemById('select-moveLineUp').enabled = editorIsFocused;
+  m.getMenuItemById('select-moveLineDown').enabled = editorIsFocused;
+  m.getMenuItemById('select-addCursorToPrevLine').enabled = editorIsFocused;
+  m.getMenuItemById('select-addCursorToNextLine').enabled = editorIsFocused;
+
+}
+
+/**
+ * Determine whether we need to update the menu,
+ * based on what has changed.
+ */
+function onStateChanged$3(state, oldState, project, panel, prefsIsFocused, appMenu) {
+  update$3(appMenu);
 }
 
 function create$2() {
@@ -2948,7 +3083,18 @@ function create$2() {
   return new electron.MenuItem({
     label: 'Format',
     submenu: [
+
+      new electron.MenuItem({
+        label: 'Plain Text',
+        id: 'format-plaintext',
+        accelerator: 'Cmd+Shift+P',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'plainText');
+        }
+      }),
   
+      ______________________________,
+
       new electron.MenuItem({
         label: 'Heading',
         id: 'format-heading',
@@ -3082,37 +3228,42 @@ function create$2() {
 }
 
 
-function update$2(applicationMenu) {
+function update$2(appMenu) {
 
-  const m = applicationMenu;
+  const m = appMenu;
   const state = global.state();
   const project = state.projects.byId[state.focusedWindowId];
   const panel = project?.panels[project?.focusedPanelIndex];
-  const isAPanelFocused = panel && project?.focusedSectionId == 'editor';
-
-  m.getMenuItemById('format-heading').enabled = isAPanelFocused;
+  const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
+  const activeDoc = watcher?.files.byId[panel.docId];
   
-  m.getMenuItemById('format-strong').enabled = isAPanelFocused;
-  m.getMenuItemById('format-emphasis').enabled = isAPanelFocused;
-  m.getMenuItemById('format-code').enabled = isAPanelFocused;
-  m.getMenuItemById('format-strikethrough').enabled = isAPanelFocused;
+  const isActiveDocMarkdownAndEditorFocused = 
+    activeDoc?.contentType == 'text/markdown' &&
+    project?.focusedSectionId == 'editor';
+
+  // Disable when editor is not focused,
+  // or if editor document is not markdown
+
+  m.getMenuItemById('format-citation').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-code').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-emphasis').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-footnote').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-heading').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-image').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-link').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-ol').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-plaintext').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-strikethrough').enabled = isActiveDocMarkdownAndEditorFocused;
   m.getMenuItemById('format-strikethrough').visible = state.markdown.strikethrough;
-  
-  m.getMenuItemById('format-link').enabled = isAPanelFocused;
-  m.getMenuItemById('format-image').enabled = isAPanelFocused;
-  m.getMenuItemById('format-footnote').enabled = isAPanelFocused;
-  m.getMenuItemById('format-citation').enabled = isAPanelFocused;
-
-  m.getMenuItemById('format-ul').enabled = isAPanelFocused;
-  m.getMenuItemById('format-ol').enabled = isAPanelFocused;
-
-  m.getMenuItemById('format-taskList').enabled = isAPanelFocused;
-  m.getMenuItemById('format-taskChecked').enabled = isAPanelFocused;
+  m.getMenuItemById('format-strong').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-taskChecked').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-taskList').enabled = isActiveDocMarkdownAndEditorFocused;
+  m.getMenuItemById('format-ul').enabled = isActiveDocMarkdownAndEditorFocused;
 
 }
 
-function onStateChanged$2(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update$2(applicationMenu);
+function onStateChanged$2(state, oldState, project, panel, prefsIsFocused, appMenu) {
+  update$2(appMenu);
 }
 
 const isMac = process.platform === 'darwin';
@@ -3137,6 +3288,29 @@ function create$1() {
           }
         }
       }),
+
+      // new MenuItem({
+      //   label: 'Toggle Frontmatter',
+      //   id: 'view-frontmatter',
+      //   type: 'checkbox',
+      //   accelerator: 'CmdOrCtrl+Shift+M',
+      //   click(item, focusedWindow) {
+
+      //     const state = global.state()
+      //     const project = state.projects.byId[state.focusedWindowId]
+      //     const panel = project?.panels[project?.focusedPanelIndex]
+      //     const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId)
+      //     const activeDoc = watcher.files.byId[panel.docId]
+          
+      //     if (focusedWindow) {
+      //       console.log(global.state().frontMatterCollapsed)
+      //       global.store.dispatch({
+      //         type: 'SET_FRONT_MATTER_COLLAPSED',
+      //         value: !global.state().frontMatterCollapsed,
+      //       }, focusedWindow)
+      //     }
+      //   }
+      // }),
 
       ______________________________,
 
@@ -3258,8 +3432,8 @@ function create$1() {
             id: 'view-fontsize-default',
             accelerator: 'CmdOrCtrl+0',
             click() {
-              global.store.dispatch({ 
-                type: 'SET_EDITOR_FONT_SIZE', 
+              global.store.dispatch({
+                type: 'SET_EDITOR_FONT_SIZE',
                 value: global.state().editorFont.default
               });
             }
@@ -3314,6 +3488,8 @@ function create$1() {
           })
         ]
       }),
+
+      ______________________________,
 
       // TODO: Am hiding these commands for now, because of Electron bug.
       // Labels are incorrect if accelerator uses Shift and `-` or `=` 
@@ -3421,10 +3597,10 @@ function create$1() {
               label: 'Toggle Grid',
               accelerator: 'CmdOrCtrl+Alt+G',
               click() {
-                global.store.dispatch({ 
-                  type: 'SET_DEVELOPER_OPTIONS', 
+                global.store.dispatch({
+                  type: 'SET_DEVELOPER_OPTIONS',
                   options: {
-                    ...global.state().developer, 
+                    ...global.state().developer,
                     showGrid: !global.state().developer.showGrid
                   }
                 });
@@ -3446,9 +3622,17 @@ function update$1(appMenu) {
   const state = global.state();
   const project = state.projects.byId[state.focusedWindowId];
   project?.panels[project?.focusedPanelIndex];
-  state.focusedWindowId == 'preferences';
+  global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
+  // const activeDoc = watcher?.files.byId[panel.docId]
+  // const prefsIsFocused = state.focusedWindowId == 'preferences'
 
   m.getMenuItemById('view-sourceMode').checked = state.sourceMode;
+  m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max;
+  m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min;
+  m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max;
+  m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min;
+
+  m.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen;
 
   const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search'];
   sidebarTabs.forEach((id) => {
@@ -3462,17 +3646,12 @@ function update$1(appMenu) {
     const id = item.id.replace('view-theme-', '');
     item.checked = id == state.theme.id;
   });
-
-  m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max;
-  m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min;
-  
-  m.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen;
-
-  // m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
-  // m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
-
 }
 
+/**
+ * Determine whether we need to update the menu,
+ * based on what has changed.
+ */
 function onStateChanged$1(state, oldState, project, panel, prefsIsFocused, appMenu) {
 
   if (state.appStatus == 'coldStarting') {
@@ -3482,19 +3661,16 @@ function onStateChanged$1(state, oldState, project, panel, prefsIsFocused, appMe
 
   const oldProject = oldState.projects.byId[oldState.focusedWindowId];
 
-  const changes = [
-    state.focusedWindowId !== oldState.focusedWindowId,
-    state.theme.id !== oldState.theme.id,
-    state.sourceMode !== oldState.sourceMode,
-    state.editorFont.size !== oldState.editorFont.size,
-    state.editorLineHeight.size !== oldState.editorLineHeight.size,
-    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId,
-    project?.sidebar.isOpen !== oldProject?.sidebar.isOpen
-  ];
+  const somethingChanged =
+    state.focusedWindowId !== oldState.focusedWindowId ||
+    state.sourceMode !== oldState.sourceMode ||
+    state.editorFont.size !== oldState.editorFont.size ||
+    state.editorLineHeight.size !== oldState.editorLineHeight.size ||
+    project?.sidebar.isOpen !== oldProject?.sidebar.isOpen ||
+    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId ||
+    state.theme.id !== oldState.theme.id;
 
-  if (changes.includes(true)) {
-    update$1(appMenu);
-  }
+  if (somethingChanged) update$1(appMenu);
 }
 
 function create() {
@@ -3525,8 +3701,27 @@ function onStateChanged(state, oldState, project, panel, prefsIsFocused, applica
  */
 function init$2() {
 
+  // const darkModeChanged = stateHasChanged(global.patches, "darkMode")
+  // if (darkModeChanged) setNativeTheme(false)
+
+  /*
+  If project directory is not yet specified, do not show menu?
+  */
+
+  // global.store.onDidAnyChange((state, oldState) => {
+
+  //   // Get window
+  //   // Get project
+  //   // Get project.directory
+
+  //   const project = state.projects.byId[state.focusedWindowId]
+  //   if (!)
+
+  // })
+
   // Create menu
   const menu = new electron.Menu();
+  menu.append(create$6());
   menu.append(create$5());
   menu.append(create$4());
   menu.append(create$3());
@@ -3534,22 +3729,24 @@ function init$2() {
   menu.append(create$1());
   menu.append(create());
   electron.Menu.setApplicationMenu(menu);
+  update$5(menu);
   update$4(menu);
   update$3(menu);
-  // viewMenu.update(menu)
   update$2(menu);
+  update$1(menu);
   update();
 
-  // On state change, prompt 
+  // On state change, trigger update() 
   global.store.onDidAnyChange((state, oldState) => {
 
     const project = state.projects.byId[state.focusedWindowId];
     const panel = project?.panels[project?.focusedPanelIndex];
     const prefsIsFocused = state.focusedWindowId == 'preferences';  
+    onStateChanged$5(state, oldState, project, panel, prefsIsFocused, menu);
     onStateChanged$4(state, oldState, project, panel, prefsIsFocused, menu);
     onStateChanged$3(state, oldState, project, panel, prefsIsFocused, menu);
-    onStateChanged$1(state, oldState, project, panel, prefsIsFocused, menu);
     onStateChanged$2(state, oldState, project, panel, prefsIsFocused, menu);
+    onStateChanged$1(state, oldState, project, panel, prefsIsFocused, menu);
     onStateChanged();
   });  
 }
@@ -4328,7 +4525,7 @@ async function createWindow(id, project) {
   });
 
   // Open DevTools
-  // if (!app.isPackaged) win.webContents.openDevTools();
+  if (!electron.app.isPackaged) win.webContents.openDevTools();
  
   // Load index.html (old way)
   // await win.loadFile(path.join(__dirname, 'index.html'), {

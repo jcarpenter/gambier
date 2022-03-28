@@ -6,7 +6,18 @@ export function create() {
   return new MenuItem({
     label: 'Format',
     submenu: [
+
+      new MenuItem({
+        label: 'Plain Text',
+        id: 'format-plaintext',
+        accelerator: 'Cmd+Shift+P',
+        click(item, focusedWindow) {
+          focusedWindow.webContents.send('setFormat', 'plainText')
+        }
+      }),
   
+      ______________________________,
+
       new MenuItem({
         label: 'Heading',
         id: 'format-heading',
@@ -140,35 +151,40 @@ export function create() {
 }
 
 
-export function update(applicationMenu) {
+export function update(appMenu) {
 
-  const m = applicationMenu
+  const m = appMenu
   const state = global.state()
-  const project = state.projects.byId[state.focusedWindowId]
-  const panel = project?.panels[project?.focusedPanelIndex]
-  const isAPanelFocused = panel && project?.focusedSectionId == 'editor'
-
-  m.getMenuItemById('format-heading').enabled = isAPanelFocused
+  const project = state.projects.byId[state.focusedWindowId];
+  const panel = project?.panels[project?.focusedPanelIndex];
+  const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
+  const activeDoc = watcher?.files.byId[panel.docId];
   
-  m.getMenuItemById('format-strong').enabled = isAPanelFocused
-  m.getMenuItemById('format-emphasis').enabled = isAPanelFocused
-  m.getMenuItemById('format-code').enabled = isAPanelFocused
-  m.getMenuItemById('format-strikethrough').enabled = isAPanelFocused
+  const isActiveDocMarkdownAndEditorFocused = 
+    activeDoc?.contentType == 'text/markdown' &&
+    project?.focusedSectionId == 'editor'
+
+  // Disable when editor is not focused,
+  // or if editor document is not markdown
+
+  m.getMenuItemById('format-citation').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-code').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-emphasis').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-footnote').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-heading').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-image').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-link').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-ol').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-plaintext').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-strikethrough').enabled = isActiveDocMarkdownAndEditorFocused
   m.getMenuItemById('format-strikethrough').visible = state.markdown.strikethrough
-  
-  m.getMenuItemById('format-link').enabled = isAPanelFocused
-  m.getMenuItemById('format-image').enabled = isAPanelFocused
-  m.getMenuItemById('format-footnote').enabled = isAPanelFocused
-  m.getMenuItemById('format-citation').enabled = isAPanelFocused
-
-  m.getMenuItemById('format-ul').enabled = isAPanelFocused
-  m.getMenuItemById('format-ol').enabled = isAPanelFocused
-
-  m.getMenuItemById('format-taskList').enabled = isAPanelFocused
-  m.getMenuItemById('format-taskChecked').enabled = isAPanelFocused
+  m.getMenuItemById('format-strong').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-taskChecked').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-taskList').enabled = isActiveDocMarkdownAndEditorFocused
+  m.getMenuItemById('format-ul').enabled = isActiveDocMarkdownAndEditorFocused
 
 }
 
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update(applicationMenu)
+export function onStateChanged(state, oldState, project, panel, prefsIsFocused, appMenu) {
+  update(appMenu)
 }

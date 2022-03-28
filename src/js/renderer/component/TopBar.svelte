@@ -5,7 +5,7 @@
   import SearchField from "./ui/SearchField.svelte";
 
   $: focusedPanel = $project.panels[$project.focusedPanelIndex]
-  $: file = $files.byId[focusedPanel.docId]
+  $: file = $files?.byId[focusedPanel?.docId]
 
   // We apply this to flex-basis property in style tag on
   // the sidebar element. If the sidebar is closed, we still

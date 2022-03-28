@@ -1,4 +1,4 @@
-import { getMode, Pos } from "codemirror"
+import { Pos } from "codemirror"
 import { getFromAndTo, getModeAndState, writeMultipleEdits } from "../editor-utils"
 
 /**

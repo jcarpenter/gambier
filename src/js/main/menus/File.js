@@ -166,9 +166,9 @@ export function create() {
 
 
 
-export function update(applicationMenu) {
+export function update(appMenu) {
 
-  const m = applicationMenu
+  const m = appMenu
   const state = global.state()
   const project = state.projects.byId[state.focusedWindowId]
   const panel = project?.panels[project?.focusedPanelIndex]
@@ -192,12 +192,6 @@ export function update(applicationMenu) {
 
 }
 
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-
-  // We care about:
-  // Prefs is focused?
-  // Panel changed?
-  // Sidebar is open?
-  // fileIsSelectedInSidebar?
-  update(applicationMenu)
+export function onStateChanged(state, oldState, project, panel, prefsIsFocused, appMenu) {
+  update(appMenu)
 }

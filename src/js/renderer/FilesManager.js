@@ -39,6 +39,8 @@ export function init(initialFiles) {
   window.api.receive('initialFilesFromMain', (files) => {
     filesAsObject = files
     tagsAsArray = getTagsFromFiles()
+    window.files = filesAsObject
+    window.tags = tagsAsArray
     setStore()
   })
 

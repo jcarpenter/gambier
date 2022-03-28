@@ -25,6 +25,14 @@ import * as WizardManager from '../WizardManager'
 import { tabToNextSpanOrMarker, tabToPrevSpanOrMarker } from './commands/tabTo'
 import { checkIfWeShouldCloseHtmlTag } from './editor-utils'
 import { duplicateLine } from './commands/duplicateLine'
+import { togglePlainText } from './commands/togglePlainText'
+
+// console.log(CodeMirror.commands)
+function jimmy(cm) {
+  console.log("Whisper")
+  return CodeMirror.Pass
+}
+CodeMirror.commands.jimmy = jimmy
 
 export function makeEditor(parentElement, parentPanel) {
 
@@ -37,7 +45,7 @@ export function makeEditor(parentElement, parentPanel) {
     autoCloseTags: {
       dontCloseTags: false,
       indentTags: false
-    }, 
+    },
 
     // "Whether CodeMirror should scroll or wrap for long lines. Defaults to false (scroll)."
     lineWrapping: true,
@@ -82,11 +90,17 @@ export function makeEditor(parentElement, parentPanel) {
     },
 
     // cursorScrollMargin: 20,
-    // Turning on `keyMap: 'sublime'` activates -all- sublime keymaps. We instead want to pick and choose, using `extraKeys`
-    // keyMap: 'sublime',
-    // https://codemirror.net/keymap/sublime.js
+
+    // We use a mixture of...
+    // 1) Default CodeMirror commmands. E.g. "deleteLine"
+    //    See: codemirror.js. Search for `var commands =`
+    // 2) Commands defined in the sublime.js add-on. E.g. "selectNextOccurrence"
+    //    See: https://codemirror.net/keymap/sublime.js
+    // 3) Custom commands
+
     extraKeys: {
       // 'Alt-T': () => console.log(getElementAt(cm, cm.getCursor().line, cm.getCursor().ch)),
+      // 'Alt-T': 'katie',
       'Shift-Cmd-K': 'deleteLine',
       'Cmd-L': 'selectLine',
       'Shift-Alt-Up': () => duplicateLine(cm, 'up'),
@@ -99,6 +113,13 @@ export function makeEditor(parentElement, parentPanel) {
       'Shift-Ctrl-Down': 'addCursorToNextLine',
       // https://codemirror.net/addon/edit/continuelist.js
       Enter: 'newlineAndIndentContinueMarkdownList',
+      'Shift-Cmd-M': (cm, pos) => {
+        window.api.send("dispatch", {
+          type: "SET_FRONT_MATTER_COLLAPSED",
+          value: !window.state.frontMatterCollapsed
+        }
+        )
+      },
       'Cmd-LeftClick': (cm, pos) => wasUrlClicked(cm, pos),
       'Shift-8': () => asterix(cm), // Strong
       'Shift--': () => underscore(cm), // Emphasis
@@ -117,7 +138,6 @@ export function makeEditor(parentElement, parentPanel) {
         cm.state.pasteAsPlainText = true;
         return CodeMirror.Pass
       },
-      // 'Shift-.': (cm) => test(),
     },
   })
 
@@ -127,7 +147,8 @@ export function makeEditor(parentElement, parentPanel) {
   setMode(cm)
 
   // Set initial editor theme
-  cm.setOption('theme', window.state.theme.id)
+  // NOTE 3/25/2022: I don't think we're using this anymore
+  // cm.setOption('theme', window.state.theme.id)
 
   // Placeholder. Contains copy of associated panel from 
   // `state`. Is updated by `Editor.svelte` whenever that
@@ -179,8 +200,6 @@ export function makeEditor(parentElement, parentPanel) {
     checkIfWeShouldCloseHtmlTag(cm, evt)
   })
 
-
-
   // Send selection updates to marks
   cm.on('beforeSelectionChange', (cm, change) => {
     const { origin, ranges } = change
@@ -202,20 +221,6 @@ export function makeEditor(parentElement, parentPanel) {
 
   // ------ CREATE IPC LISTENERS ------ //
 
-  // window.api.receive('editor-command', (command) => {
-  //   switch (command) {
-  //     case 'cut': 
-  //       cm.triggerOnKeyDown({
-  //         type: 'keydown',
-  //         keyCode: 88,
-  //         altKey: false,
-  //         shiftKey: false,
-  //         metaKey: true,
-  //       })
-  //       break
-  //   }
-  // })
-  
   // TODO 4/8: Hate to use deprecated `document.execCommand`, 
   // but I don't know of another way to programmatically trigger
   // paste. 
@@ -249,23 +254,42 @@ export function makeEditor(parentElement, parentPanel) {
     }
   })
 
+  // Handle commands from `Select` menu
+  window.api.receive('editorCommand', (command) => {
+    if (!isFocusedPanel(cm)) return
+    switch (command) {
+      case 'selectLine': cm.execCommand('selectLine'); break
+      case 'cutLine': duplicateLine(cm, 'down'); break
+      case 'deleteLine': cm.execCommand('deleteLine'); break
+      case 'duplicateLine': duplicateLine(cm, 'down'); break
+      case 'moveLineUp': cm.execCommand('swapLineUp'); break
+      case 'moveLineDown': cm.execCommand('swapLineDown'); break
+      case 'selectNextOccurence': cm.execCommand('selectNextOccurrence'); break
+      case 'addCursorToPrevLine': cm.execCommand('addCursorToPrevLine'); break
+      case 'addCursorToNextLine': cm.execCommand('addCursorToNextLine'); break
+      case 'selectNextEntity': tabToNextSpanOrMarker(cm); break
+      case 'selectPrevEntity': tabToPrevSpanOrMarker(cm); break
+    }
+  })
+
+  // Handle commands from `Format` menu
   window.api.receive('setFormat', (cmd) => {
-    if (isFocusedPanel(cm)) {
-      switch (cmd) {
-        case 'citation': makeElement(cm, 'citation'); break
-        case 'code': toggleInlineStyle(cm, 'code', '`'); break
-        case 'emphasis': toggleInlineStyle(cm, 'emphasis', window.state.markdown.emphasisChar); break
-        case 'footnote': makeElement(cm, 'footnote inline'); break
-        case 'heading': toggleHeader(cm); break
-        case 'image': makeElement(cm, 'image inline'); break
-        case 'link': makeElement(cm, 'link inline'); break
-        case 'ol': toggleList(cm, 'ol'); break
-        case 'strikethrough': toggleInlineStyle(cm, 'strikethrough', '~~'); break
-        case 'strong': toggleInlineStyle(cm, 'strong', window.state.markdown.strongChar); break
-        case 'ul': toggleList(cm, 'ul'); break
-        case 'taskList': toggleList(cm, 'task'); break
-        case 'taskChecked': toggleTaskChecked(cm); break
-      }
+    if (!isFocusedPanel(cm)) return
+    switch (cmd) {
+      case 'citation': makeElement(cm, 'citation'); break
+      case 'code': toggleInlineStyle(cm, 'code', '`'); break
+      case 'emphasis': toggleInlineStyle(cm, 'emphasis', window.state.markdown.emphasisChar); break
+      case 'footnote': makeElement(cm, 'footnote inline'); break
+      case 'heading': toggleHeader(cm); break
+      case 'image': makeElement(cm, 'image inline'); break
+      case 'link': makeElement(cm, 'link inline'); break
+      case 'ol': toggleList(cm, 'ol'); break
+      case 'plainText': togglePlainText(cm); break
+      case 'strikethrough': toggleInlineStyle(cm, 'strikethrough', '~~'); break
+      case 'strong': toggleInlineStyle(cm, 'strong', window.state.markdown.strongChar); break
+      case 'ul': toggleList(cm, 'ul'); break
+      case 'taskList': toggleList(cm, 'task'); break
+      case 'taskChecked': toggleTaskChecked(cm); break
     }
   })
 

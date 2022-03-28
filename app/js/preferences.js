@@ -16075,6 +16075,13 @@ new TurndownService({
   hr: '---'
 });
 
+// console.log(CodeMirror.commands)
+function jimmy(cm) {
+  console.log("Whisper");
+  return CodeMirror.Pass
+}
+CodeMirror.commands.jimmy = jimmy;
+
 /**
  * Sometimes we need to access CodeMirror instances from outside their parent Editor components. This is a convenience function for finding the CM instance from `windows.cmInstances` by the ID of it's associated panel, and getting it's ddata.
  * @param {*} panelId 

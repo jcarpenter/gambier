@@ -25,6 +25,29 @@ export function create() {
         }
       }),
 
+      // new MenuItem({
+      //   label: 'Toggle Frontmatter',
+      //   id: 'view-frontmatter',
+      //   type: 'checkbox',
+      //   accelerator: 'CmdOrCtrl+Shift+M',
+      //   click(item, focusedWindow) {
+
+      //     const state = global.state()
+      //     const project = state.projects.byId[state.focusedWindowId]
+      //     const panel = project?.panels[project?.focusedPanelIndex]
+      //     const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId)
+      //     const activeDoc = watcher.files.byId[panel.docId]
+          
+      //     if (focusedWindow) {
+      //       console.log(global.state().frontMatterCollapsed)
+      //       global.store.dispatch({
+      //         type: 'SET_FRONT_MATTER_COLLAPSED',
+      //         value: !global.state().frontMatterCollapsed,
+      //       }, focusedWindow)
+      //     }
+      //   }
+      // }),
+
       ______________________________,
 
       new MenuItem({
@@ -145,8 +168,8 @@ export function create() {
             id: 'view-fontsize-default',
             accelerator: 'CmdOrCtrl+0',
             click() {
-              global.store.dispatch({ 
-                type: 'SET_EDITOR_FONT_SIZE', 
+              global.store.dispatch({
+                type: 'SET_EDITOR_FONT_SIZE',
                 value: global.state().editorFont.default
               })
             }
@@ -201,6 +224,8 @@ export function create() {
           })
         ]
       }),
+
+      ______________________________,
 
       // TODO: Am hiding these commands for now, because of Electron bug.
       // Labels are incorrect if accelerator uses Shift and `-` or `=` 
@@ -308,10 +333,10 @@ export function create() {
               label: 'Toggle Grid',
               accelerator: 'CmdOrCtrl+Alt+G',
               click() {
-                global.store.dispatch({ 
-                  type: 'SET_DEVELOPER_OPTIONS', 
+                global.store.dispatch({
+                  type: 'SET_DEVELOPER_OPTIONS',
                   options: {
-                    ...global.state().developer, 
+                    ...global.state().developer,
                     showGrid: !global.state().developer.showGrid
                   }
                 })
@@ -333,9 +358,17 @@ export function update(appMenu) {
   const state = global.state()
   const project = state.projects.byId[state.focusedWindowId]
   const panel = project?.panels[project?.focusedPanelIndex]
-  const prefsIsFocused = state.focusedWindowId == 'preferences'
+  const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId)
+  // const activeDoc = watcher?.files.byId[panel.docId]
+  // const prefsIsFocused = state.focusedWindowId == 'preferences'
 
   m.getMenuItemById('view-sourceMode').checked = state.sourceMode
+  m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max
+  m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min
+  m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
+  m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
+
+  m.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen
 
   const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search']
   sidebarTabs.forEach((id) => {
@@ -349,17 +382,12 @@ export function update(appMenu) {
     const id = item.id.replace('view-theme-', '')
     item.checked = id == state.theme.id
   })
-
-  m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max
-  m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min
-  
-  m.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen
-
-  // m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
-  // m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
-
 }
 
+/**
+ * Determine whether we need to update the menu,
+ * based on what has changed.
+ */
 export function onStateChanged(state, oldState, project, panel, prefsIsFocused, appMenu) {
 
   if (state.appStatus == 'coldStarting') {
@@ -369,17 +397,14 @@ export function onStateChanged(state, oldState, project, panel, prefsIsFocused, 
 
   const oldProject = oldState.projects.byId[oldState.focusedWindowId]
 
-  const changes = [
-    state.focusedWindowId !== oldState.focusedWindowId,
-    state.theme.id !== oldState.theme.id,
-    state.sourceMode !== oldState.sourceMode,
-    state.editorFont.size !== oldState.editorFont.size,
-    state.editorLineHeight.size !== oldState.editorLineHeight.size,
-    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId,
-    project?.sidebar.isOpen !== oldProject?.sidebar.isOpen
-  ]
+  const somethingChanged =
+    state.focusedWindowId !== oldState.focusedWindowId ||
+    state.sourceMode !== oldState.sourceMode ||
+    state.editorFont.size !== oldState.editorFont.size ||
+    state.editorLineHeight.size !== oldState.editorLineHeight.size ||
+    project?.sidebar.isOpen !== oldProject?.sidebar.isOpen ||
+    project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId ||
+    state.theme.id !== oldState.theme.id
 
-  if (changes.includes(true)) {
-    update(appMenu)
-  }
+  if (somethingChanged) update(appMenu)
 }
