@@ -122,7 +122,7 @@ li.CodeMirror-hint.element-inline-link::after {
 
 .CodeMirror pre.CodeMirror-line.quote {
   color: var(--quote);
-  padding-left: calc(var(--editor-leftPadding) + 2em);
+  padding-left: calc(var(--editor-side-padding) + 2em);
 }
 .CodeMirror pre.CodeMirror-line.quote .cm-quote-start {
   color: var(--quote-md);
@@ -295,9 +295,9 @@ pre.CodeMirror-line.texmath-display.fencedcodeblock-lastLine > [role=presentatio
 
 pre.CodeMirror-line.htmlBlock {
   line-height: calc(var(--editor-lineheight) - 0.2em);
-  background: linear-gradient(to right, transparent var(--editor-leftPadding), var(--fencedcodeblock-bg) var(--editor-leftPadding));
+  background: linear-gradient(to right, transparent var(--editor-side-padding), var(--fencedcodeblock-bg) var(--editor-side-padding));
   padding-right: 0.5em;
-  padding-left: calc(var(--editor-leftPadding) + 0.5em);
+  padding-left: calc(var(--editor-side-padding) + 0.5em);
 }
 pre.CodeMirror-line.htmlBlock > [role=presentation] {
   font-family: "SFMono-Regular";
@@ -314,11 +314,13 @@ pre.CodeMirror-line.htmlBlock-lastLine {
 }
 
 .editor:not(.sourceMode) .CodeMirror-line.figure {
-  background-color: var(--figure-bg);
   height: auto;
   line-height: 0;
 }
 .editor:not(.sourceMode) .CodeMirror-line.figure .CodeMirror-widget {
+  border-radius: var(--mark-borderRadius);
+  background-color: var(--figure-bg);
+  padding: 0.5em;
   height: 100%;
   display: grid;
   grid-gap: 1em;
@@ -332,7 +334,6 @@ pre.CodeMirror-line.htmlBlock-lastLine {
   height: auto;
   cursor: default;
   overflow: hidden;
-  background-color: var(--figure-thumb-bg);
   border-radius: var(--figure-thumb-borderRadius);
   border-width: var(--figure-thumb-borderWidth);
   border-style: solid;
@@ -388,9 +389,9 @@ pre.CodeMirror-line.htmlBlock-lastLine {
 }
 
 :not(.fencedcodeblock) pre.CodeMirror-line.frontmatter {
+  padding-left: calc(var(--editor-side-padding) + 0.5em);
   padding-top: 0.3em;
   padding-bottom: 0.2em;
-  padding-right: var(--frontmatter-padding);
 }
 :not(.fencedcodeblock) pre.CodeMirror-line.frontmatter.list {
   padding-top: 0;
@@ -410,20 +411,19 @@ pre.CodeMirror-line.htmlBlock-lastLine {
   letter-spacing: -0.01em;
   font-size: calc(var(--editor-fontsize) * 0.8);
   width: calc(100% - 1.5em);
-  margin-left: 0.75em;
-  display: block;
 }
 
 .frontmatter::before {
   content: "";
   pointer-events: none;
+  user-select: none;
   display: block;
   position: absolute;
   height: 100%;
   background-color: var(--frontmatter-bg);
-  width: calc(var(--editor-maxlinewidth));
+  width: calc(100% - var(--editor-side-padding));
   top: 0;
-  left: var(--editor-maxpadding);
+  left: var(--editor-side-padding);
   padding: 0;
   border-left: var(--frontmatter-border-width) solid var(--frontmatter-border);
   border-right: var(--frontmatter-border-width) solid var(--frontmatter-border);
@@ -431,25 +431,14 @@ pre.CodeMirror-line.htmlBlock-lastLine {
   box-sizing: border-box;
 }
 
-.frontmatter-start::before {
-  border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
-  border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
-}
-
-.frontmatter-end::before {
-  border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
-  border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius);
-}
-
 .frontmatter:not(.frontmatter-start, .list, .list-end)::after {
   content: "";
   display: block;
   background: var(--frontmatter-dividers);
-  width: calc(100% - var(--editor-maxpadding) - calc(var(--frontmatter-padding) * 2));
+  width: calc(100% - var(--editor-side-padding) - 1em);
   height: 1px;
   position: absolute;
   top: 0;
-  left: calc(var(--editor-maxpadding) + var(--frontmatter-padding));
 }
 
 .frontmatter .cm-md {
@@ -699,27 +688,27 @@ pre.CodeMirror-line.frontmatter-start {
 }
 .CodeMirror pre.CodeMirror-line.list-1 {
   text-indent: -1em;
-  padding-left: calc(var(--editor-leftPadding) + 2em);
+  padding-left: calc(var(--editor-side-padding) + 2em);
 }
 .CodeMirror pre.CodeMirror-line.list-2 {
   text-indent: -3em;
-  padding-left: calc(var(--editor-leftPadding) + 4em);
+  padding-left: calc(var(--editor-side-padding) + 4em);
 }
 .CodeMirror pre.CodeMirror-line.list-3 {
   text-indent: -5em;
-  padding-left: calc(var(--editor-leftPadding) + 6em);
+  padding-left: calc(var(--editor-side-padding) + 6em);
 }
 .CodeMirror pre.CodeMirror-line.list-4 {
   text-indent: -7em;
-  padding-left: calc(var(--editor-leftPadding) + 8em);
+  padding-left: calc(var(--editor-side-padding) + 8em);
 }
 .CodeMirror pre.CodeMirror-line.list-5 {
   text-indent: -9em;
-  padding-left: calc(var(--editor-leftPadding) + 10em);
+  padding-left: calc(var(--editor-side-padding) + 10em);
 }
 .CodeMirror pre.CodeMirror-line.list-6 {
   text-indent: -11em;
-  padding-left: calc(var(--editor-leftPadding) + 12em);
+  padding-left: calc(var(--editor-side-padding) + 12em);
 }
 
 .mark:focus {
@@ -827,11 +816,6 @@ pre.CodeMirror-line.frontmatter-start {
   cursor: pointer;
 }
 
-body {
-  --editor-leftPadding: 4em;
-  --mark-borderRadius: 3px;
-}
-
 /* ---------- BASE ---------- */
 .CodeMirror {
   width: 100%;
@@ -840,7 +824,6 @@ body {
   font-size: var(--editor-fontsize);
   line-height: var(--editor-lineheight);
   direction: ltr;
-  padding-left: 10px;
 }
 
 .CodeMirror[data-language=markdown] {
@@ -856,25 +839,25 @@ body {
 
 /* ---------- PADDING ---------- */
 .CodeMirror-lines {
-  margin: 1em auto;
+  margin: 0 var(--editor-side-padding) 0 0;
   min-width: 22em;
-  max-width: calc(var(--editor-maxlinewidth) + var(--editor-leftPadding));
+  max-width: calc(var(--editor-maxlinewidth) + var(--editor-side-padding));
   padding: 0 0 10em;
   overflow: hidden;
 }
 
-.CodeMirror[data-language=markdown] .CodeMirror-lines {
-  max-width: calc(var(--editor-maxlinewidth) + var(--editor-leftPadding));
+.isOnlyPanel .CodeMirror-lines {
+  margin-top: var(--editor-header-height);
 }
 
 .CodeMirror[data-language=json] .CodeMirror-lines,
 .CodeMirror[data-language=htmlmixed] .CodeMirror-lines {
-  max-width: calc(60em + var(--editor-leftPadding));
+  max-width: calc(60em + var(--editor-side-padding));
 }
 
 .CodeMirror pre.CodeMirror-line,
 .CodeMirror pre.CodeMirror-line-like {
-  padding-left: var(--editor-leftPadding);
+  padding-left: var(--editor-side-padding);
   /* Horizontal padding of content */
 }
 
@@ -977,24 +960,34 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {
 }
 
 .CodeMirror-scroll {
-  overflow: scroll !important;
   /* Things will break if this is overridden */
+  overflow: scroll !important;
   /* 50px is the magic margin used to hide the element's real scrollbars */
   /* See overflow: hidden in .CodeMirror */
   margin-right: -50px;
-  margin-left: calc(var(--editor-leftPadding) * -1);
+  margin-left: 0;
   /* Josh 10/2: Disabled this because it was screwing up keeping cursor visible. When auto-scrolling to keep cursor visible, if we were scrolling down page, it wouldn't scroll far enough, and cursor was not visible. By about one line height. */
   /* margin-bottom: -50px;  */
   /* padding-bottom: 50px; */
   height: 100%;
-  outline: none;
   /* Prevent dragging from highlighting the element */
+  outline: none;
   position: relative;
 }
 
 .CodeMirror-sizer {
   position: relative;
   border-right: 50px solid transparent;
+}
+
+.panel.isOnlyPanel .CodeMirror-sizer {
+  padding-left: calc(calc(50vw - var(--sidebarWidth) * 1px) - calc(var(--editor-maxlinewidth) / 2) - var(--editor-side-padding));
+}
+
+.panel:not(.isOnlyPanel) .CodeMirror-sizer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* The fake, visible scrollbars. Used to force redraw during scrolling
@@ -1123,7 +1116,7 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {
 .CodeMirror-linewidget {
   position: relative;
   z-index: 2;
-  padding-left: var(--editor-leftPadding);
+  padding-left: var(--editor-side-padding);
 }
 
 .CodeMirror-widget {
@@ -1385,7 +1378,9 @@ body {
   --sidebar-tree-icons-color: var(--control-text-color);
   /* --------------------------------- Editor --------------------------------- */
   --editor-background-color: #F7F7F7;
-  --editor-border-radius: 0.2rem;
+  --editor-border-radius: 5px;
+  --editor-header-height: 2.25em;
+  --editor-side-padding: 4em;
   --mark-borderRadius: 0.2rem;
   --mark-borderWidth: 0px;
   /* ---------------------------- Editor characters --------------------------- */
@@ -1432,7 +1427,7 @@ body {
   --footnote-source: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
   --footnote-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
   --footnote-source-md: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.6);
-  --figure-bg: transparent;
+  --figure-bg: rgba(241, 188, 127, 0.2) !important;
   --figure-caption: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + -20%), calc(var(--accent-L) + -10%), 1);
   --figure-options-label: rgba(var(--foregroundColor), 0.4);
   --figure-thumb-bg: transparent;

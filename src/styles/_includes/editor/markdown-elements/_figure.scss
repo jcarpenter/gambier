@@ -1,7 +1,6 @@
 // -------------- Figure -------------- //
 
 .editor:not(.sourceMode) .CodeMirror-line.figure {
-  background-color: var(--figure-bg);
   // max-height: 6em;
   height: auto;
   // We have to set line-height to zero or we get extra
@@ -9,6 +8,10 @@
   line-height: 0;
 
   .CodeMirror-widget {
+    border-radius: var(--mark-borderRadius);
+    background-color: var(--figure-bg);
+    padding: 0.5em;
+
     height: 100%;
     display: grid;
     grid-gap: 1em;
@@ -22,7 +25,7 @@
       height: auto;
       cursor: default;
       overflow: hidden;
-      background-color: var(--figure-thumb-bg);
+      // background-color: var(--figure-thumb-bg);
       border-radius: var(--figure-thumb-borderRadius);
       border-width: var(--figure-thumb-borderWidth);
       border-style: solid;

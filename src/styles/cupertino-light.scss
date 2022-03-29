@@ -18,7 +18,10 @@ body {
   /* --------------------------------- Editor --------------------------------- */
   
   --editor-background-color:      #F7F7F7;
-  --editor-border-radius:         0.2rem;
+  --editor-border-radius:         5px;
+  --editor-header-height:         2.25em;
+  --editor-side-padding:          4em;
+  // --mark-borderRadius: 3px;
   --mark-borderRadius:            0.2rem;
   --mark-borderWidth:             0px;
 
@@ -66,8 +69,8 @@ body {
   --footnote-source-bg:           #{colorVar("accent", $alpha: 0.05)};
   --footnote-source-md:           #{colorVar("accent", $alpha: 0.6)};
   
-  // --figure-bg:                  rgba(241, 188, 127, 0.2) !important;      
-  --figure-bg:                    transparent;
+  --figure-bg:                  rgba(241, 188, 127, 0.2) !important;      
+  // --figure-bg:                    red;
   --figure-caption:               #{accent($light: -10%, $sat: -20%)};
   --figure-options-label:         rgba(var(--foregroundColor), 0.4);
   --figure-thumb-bg:              transparent;

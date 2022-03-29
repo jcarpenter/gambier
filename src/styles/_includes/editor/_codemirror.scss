@@ -2,11 +2,6 @@
 @forward "codemirror-hint";
 @forward "markdown-elements";
 
-body {
-    --editor-leftPadding: 4em;
-    --mark-borderRadius: 3px;
-}
-
 
 
 /* ---------- BASE ---------- */
@@ -26,7 +21,7 @@ body {
     line-height: var(--editor-lineheight);
     // background: transparent;
     direction: ltr;
-    padding-left: 10px;
+    // padding-left: 10px; // Can't remember why this is here
 }
 
 .CodeMirror[data-language='markdown'] {
@@ -63,25 +58,31 @@ body {
     // background-size:
     //     var(--editor-lineheight) var(--editor-lineheight), var(--editor-lineheight) var(--editor-lineheight);
 
-    margin: 1em auto;
+    margin: 0 var(--editor-side-padding) 0 0;
     min-width: 22em;
-    max-width: calc(var(--editor-maxlinewidth) + var(--editor-leftPadding));
+    max-width: calc(var(--editor-maxlinewidth) + var(--editor-side-padding));
+    // outline: 1px solid turquoise;
     padding: 0 0 10em; // Add padding to bottom
     overflow: hidden;
 }
 
+.isOnlyPanel .CodeMirror-lines {
+    margin-top: var(--editor-header-height);
+}
+
 .CodeMirror[data-language='markdown'] .CodeMirror-lines {
-    max-width: calc(var(--editor-maxlinewidth) + var(--editor-leftPadding));
+    // max-width: calc(var(--editor-maxlinewidth) + var(--editor-side-padding));
 }
 
 .CodeMirror[data-language='json'] .CodeMirror-lines,
 .CodeMirror[data-language='htmlmixed'] .CodeMirror-lines {
-    max-width: calc(60em + var(--editor-leftPadding));
+    max-width: calc(60em + var(--editor-side-padding));
 }
 
 .CodeMirror pre.CodeMirror-line,
 .CodeMirror pre.CodeMirror-line-like {
-    padding-left: var(--editor-leftPadding); /* Horizontal padding of content */
+    padding-left: var(--editor-side-padding); /* Horizontal padding of content */
+    // padding-right: var(--editor-side-padding); /* Horizontal padding of content */
 }
 
 .CodeMirror-scrollbar-filler,
@@ -225,21 +226,38 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {
 }
 
 .CodeMirror-scroll {
-    overflow: scroll !important; /* Things will break if this is overridden */
+    /* Things will break if this is overridden */
+    overflow: scroll !important; 
+    
     /* 50px is the magic margin used to hide the element's real scrollbars */
     /* See overflow: hidden in .CodeMirror */
     margin-right: -50px;
-    margin-left: calc(var(--editor-leftPadding) * -1);
+    margin-left: 0;
+    // margin-left: calc(var(--editor-side-padding) * -1);
+    
     /* Josh 10/2: Disabled this because it was screwing up keeping cursor visible. When auto-scrolling to keep cursor visible, if we were scrolling down page, it wouldn't scroll far enough, and cursor was not visible. By about one line height. */
     /* margin-bottom: -50px;  */
     /* padding-bottom: 50px; */
     height: 100%;
-    outline: none; /* Prevent dragging from highlighting the element */
+    
+    /* Prevent dragging from highlighting the element */
+    outline: none; 
     position: relative;
 }
+
 .CodeMirror-sizer {
     position: relative;
     border-right: 50px solid transparent;
+}
+
+.panel.isOnlyPanel .CodeMirror-sizer {
+    padding-left: calc(calc(50vw - var(--sidebarWidth) * 1px) - calc(var(--editor-maxlinewidth) / 2) - var(--editor-side-padding));
+}
+
+.panel:not(.isOnlyPanel) .CodeMirror-sizer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* The fake, visible scrollbars. Used to force redraw during scrolling
@@ -360,7 +378,7 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {
     position: relative;
     z-index: 2;
     // padding: 0.1px; /* Force widget margins to stay inside of the container */
-    padding-left: var(--editor-leftPadding);
+    padding-left: var(--editor-side-padding);
 }
 
 .CodeMirror-widget {

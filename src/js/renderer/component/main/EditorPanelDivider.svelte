@@ -31,15 +31,15 @@
 <style type='text/scss'>
   .divider {
     height: 100%;
-    width: 1px;
-    background: var(--separator-color);
+    width: 10px;
+    // background: var(--separator-color);
     position: relative;
   }
   
   .dragTarget {
     position: absolute;
     top: 0;
-    left: -5px;
+    left: 0;
     width: 10px;
     height: 100%;
     z-index: 10;

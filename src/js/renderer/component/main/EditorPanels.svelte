@@ -178,6 +178,7 @@
     display: flex;
     flex-direction: row;
     overflow: hidden;
+    padding: 0 1em;
   }
 </style>
 

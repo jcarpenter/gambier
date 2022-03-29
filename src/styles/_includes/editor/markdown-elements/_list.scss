@@ -34,31 +34,31 @@
   
   pre.CodeMirror-line.list-1 {
     text-indent: -1em;
-    padding-left: calc(var(--editor-leftPadding) + 2em);
+    padding-left: calc(var(--editor-side-padding) + 2em);
   }
   
   pre.CodeMirror-line.list-2 {
     text-indent: -3em;
-    padding-left: calc(var(--editor-leftPadding) + 4em);
+    padding-left: calc(var(--editor-side-padding) + 4em);
   }
   
   pre.CodeMirror-line.list-3 {
     text-indent: -5em;
-    padding-left: calc(var(--editor-leftPadding) + 6em);
+    padding-left: calc(var(--editor-side-padding) + 6em);
   }
   
   pre.CodeMirror-line.list-4 {
     text-indent: -7em;
-    padding-left: calc(var(--editor-leftPadding) + 8em);
+    padding-left: calc(var(--editor-side-padding) + 8em);
   }
   
   pre.CodeMirror-line.list-5 {
     text-indent: -9em;
-    padding-left: calc(var(--editor-leftPadding) + 10em);
+    padding-left: calc(var(--editor-side-padding) + 10em);
   }
   
   pre.CodeMirror-line.list-6 {
     text-indent: -11em;
-    padding-left: calc(var(--editor-leftPadding) + 12em);
+    padding-left: calc(var(--editor-side-padding) + 12em);
   }
 }

@@ -226,7 +226,7 @@
 		padding: 0;
 		display: block;
 		object-fit: var(--objectFit);
-		z-index: -1;
+		// z-index: -1; 
 	}
 
 	// Hide img if there's an error

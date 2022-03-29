@@ -842,3 +842,19 @@ export function pasteAsPlainText(evt) {
   text = text.replace(/(\r\n|\n|\r)/gm, '')
   document.execCommand("insertText", false, text)
 }
+
+/**
+ * Restore cursor position after a change to the CM contents.
+ * For example, after we toggle source mode or front matter.
+ * Requires the cursor Y position before the change.
+ */
+export function restoreCursorScrollPosition(cm, cursorYPosBefore) {
+  
+  // Get cursor position after change
+  // Restore cursor position by adding cursor position delta
+  // to the scroll value
+
+  const cursorYPosAfter = cm.cursorCoords(true, "window").top
+  const cursorYPosDelta = cursorYPosAfter - cursorYPosBefore
+  cm.scrollTo(0, cm.getScrollInfo().top + cursorYPosDelta)
+}

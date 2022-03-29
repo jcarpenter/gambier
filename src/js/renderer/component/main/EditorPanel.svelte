@@ -251,6 +251,8 @@
 
 <style type="text/scss">
 
+  // ------ Top-level ------ //
+
   .panel {
     display: flex;
     flex-direction: column;
@@ -263,26 +265,45 @@
     // Single panel: Center editor with window
     // by adding right amount of padding-left.
     &.isOnlyPanel {
-      padding-left: calc(calc(50vw - var(--sidebarWidth) * 1px) - calc(var(--editor-maxlinewidth) / 2) - var(--editor-maxpadding));
+      // padding-left: calc(calc(50vw - var(--sidebarWidth) * 1px) - calc(var(--editor-maxlinewidth) / 2) - var(--editor-maxpadding));
     }
   }
 
+  // Styles for .header and .editor child divs
   .panel > :global(div) {
-    background-color: var(--editor-background-color);
-    
-    // min-width = editor-maxlinewidth + minimum padding
+    position: relative;
     width: 100%;
-
-    // max-width = editor-maxlinewidth + optimal padding
-    max-width: calc(var(--editor-maxlinewidth) + calc(var(--editor-maxpadding) * 2));
-    // No padding. We set this on the individual codemirror lines.
+    &::before {
+      content: '';
+      position: absolute;
+      background-color: var(--editor-background-color);
+      width: 100%;
+      height: 100%;
+      left: 0;
+      z-index: -1;
+    }
   }
+
+  // If there's only one panel, we draw it as a floating document.
+  // by limiting the width of the ::before pseudo element which
+  // has the visibile background color
+  .panel.isOnlyPanel > :global(div)::before {
+    position: absolute;
+    width: calc(var(--editor-maxlinewidth) + var(--editor-side-padding) * 2);
+    height: 100%;
+    // left: 50%;
+    left: calc(calc(50vw - var(--sidebarWidth) * 1px) - calc(var(--editor-maxlinewidth) / 2) - var(--editor-side-padding));
+    // transform: translate(-50%, 0);
+  }  
   
-  // .panel.isOnlyPanel > :global(div) {
-  //   position: fixed;
-  //   left: 50%;
-  //   transform: translate(-50%, 0);
-  // }
+  // Round the top edges of the first div
+  // If there are multiple panels, this will be .header
+  // If there's only one panel, this will be .editor
+  .panel > :global(div):first-of-type {
+    &::before {
+      border-radius: var(--editor-border-radius) var(--editor-border-radius) 0 0;
+    }
+  }
 
   .panel:not(.isFocusedPanel) {
     h1 {
@@ -290,7 +311,57 @@
     }
   }
 
-  // Highlights
+
+  // ------ Header ------ //
+
+  .header {
+    // width: 100%;
+    // min-width: 22em;
+    // max-width: calc(var(--editor-maxlinewidth) + var(--editor-side-padding) * 2);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: var(--editor-header-height); // This is set in codemirror.scss
+    flex: none;
+    user-select: none;
+  }
+
+  .tab  {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    overflow: hidden;
+    padding: 0 5px 0 10px;
+  }
+
+  h1 {
+    @include system-regular-font;
+    color: var(--secondary-label-color);
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hasUnsavedChanges {
+    @include title1-emphasized-text;
+    color: var(--secondary-label-color);
+    margin-left: 2px;
+  } 
+
+  .header:not(:hover) .tab .close {
+    display: none;
+  }
+
+  .header:hover .tab .close {
+    margin-left: 3px;
+    display: initial;
+  }
+
+
+  // ------ Highlight ------ //
 
   .highlightAll,
   .highlightLeftEdge,
@@ -347,73 +418,6 @@
     to { box-shadow: inset -50px 0 0 0 var(--keyboardFocusIndicatorColor); }
   }
 
-  // Header
-
-  .header {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: 0 5px 0 10px;
-    height: 30px;
-    flex: none;
-    user-select: none;
-    border-radius: var(--editor-border-radius) var(--editor-border-radius) 0 0;
-  }
-
-  .tab  {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    overflow: hidden;
-  }
-
-  h1 {
-    @include system-regular-font;
-    color: var(--secondary-label-color);
-    margin: 0;
-    padding: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .hasUnsavedChanges {
-    @include title1-emphasized-text;
-    color: var(--secondary-label-color);
-    margin-left: 2px;
-  } 
-
-  .header:not(:hover) .tab .close {
-    display: none;
-  }
-
-  .header:hover .tab .close {
-    margin-left: 3px;
-    display: initial;
-  }
-
-  // Resizable divider
-  // TODO: Don't see where this is being used...
-
-  .divider {
-    height: 100%;
-    width: 1px;
-    background: var(--separator-color);
-    position: relative;
-
-    .dragTarget {
-      position: absolute;
-      top: 0;
-      left: -5px;
-      width: 10px;
-      height: 100%;
-      z-index: 10;
-      background: rgba(0, 200, 100, 0.4);
-    }
-  }
-
 </style>
 
 
@@ -440,59 +444,59 @@
   on:drop={onDrop}
 >
 
-  <div class="header">
-    <span class="tab">  
-      
-      <!-- Only show these if there are multiple panels. -->
-      {#if $project.panels.length > 1}
-        <!-- Name of doc -->
-        <h1 
-          draggable=true
-          on:dragstart={onDragTabStart}
-          on:dragend={onDragTabEnd}
-        >
-          {#if doc}
-            {doc.title ? doc.title : doc.name}
-          {:else}
-            Untitled-1
-          {/if}
-        </h1>
-
-        <!-- Unsaved changes -->
-        {#if panel.unsavedChanges}
-        <span class="hasUnsavedChanges">•</span>
-        {/if}
+  <!-- Only show header if there are multiple panels. -->
+  {#if !isOnlyPanel}
+    <div class="header">
+      <span class="tab">  
         
-        <!-- Close button -->
-        <span class="close">
-          <IconButton 
-            on:mousedown={(domEvent) => {
-              // Stop propogation so we don't trigger `on:mousedown={focusPanel}` on parent div when clicking this button to close the panel. 
-              domEvent.stopPropagation()
-            }}
-            on:mouseup={closeThisPanel} 
-            tooltip='Save changes and close editor' 
-            compact={true} 
-            icon='img-xmark-medium-regular' 
-            padding='0' 
-            iconScale={0.6} 
-          />
-        </span>
-      {/if}
+          <!-- Name of doc -->
+          <h1 
+            draggable=true
+            on:dragstart={onDragTabStart}
+            on:dragend={onDragTabEnd}
+          >
+            {#if doc}
+              {doc.title ? doc.title : doc.name}
+            {:else}
+              Untitled-1
+            {/if}
+          </h1>
 
-    </span>
+          <!-- Unsaved changes -->
+          {#if panel.unsavedChanges}
+          <span class="hasUnsavedChanges">•</span>
+          {/if}
+          
+          <!-- Close button -->
+          <span class="close">
+            <IconButton 
+              on:mousedown={(domEvent) => {
+                // Stop propogation so we don't trigger `on:mousedown={focusPanel}` on parent div when clicking this button to close the panel. 
+                domEvent.stopPropagation()
+              }}
+              on:mouseup={closeThisPanel} 
+              tooltip='Save changes and close editor' 
+              compact={true} 
+              icon='img-xmark-medium-regular' 
+              padding='0' 
+              iconScale={0.6} 
+            />
+          </span>
 
-    <!-- New panel button -->
-    <!-- <IconButton 
-      on:mouseup={openPanelToRight} 
-      padding='0 4px' 
-      tooltip='Add editor to right' 
-      compact={true} 
-      icon='img-square-split-2x1-medium-regular'
-      iconScale={0.8} 
-    /> -->
-  </div>
+      </span>
 
-  <Editor {panel} {doc} {isFocusedPanel} {width} />
+      <!-- New panel button -->
+      <!-- <IconButton 
+        on:mouseup={openPanelToRight} 
+        padding='0 4px' 
+        tooltip='Add editor to right' 
+        compact={true} 
+        icon='img-square-split-2x1-medium-regular'
+        iconScale={0.8} 
+      /> -->
+    </div>
+  {/if}
+
+  <Editor {panel} {doc} {isFocusedPanel} {isOnlyPanel} {width} />
 
 </div>

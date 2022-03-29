@@ -3,7 +3,7 @@
   import { onMount, onDestroy, tick } from 'svelte'
   import { makeEditor, setMode } from '../../editor/editor';
   import { markDoc } from '../../editor/mark';
-  import { loadDoc, saveCursorPosition, loadEmptyDoc, getCmDataByPanelId } from '../../editor/editor-utils';
+  import { loadDoc, saveCursorPosition, loadEmptyDoc, getCmDataByPanelId, restoreCursorScrollPosition } from '../../editor/editor-utils';
 
   export let panel = {}
   export let doc = undefined
@@ -88,12 +88,17 @@
    */
   async function toggleFrontMatterCollapsed() {
     if (!cm) return
-    // Clear current marks, regardless of sourceMode true/false.
+    
+    // Get cursor position before change so we can restore it after
+    const cursorYPosBefore = cm.cursorCoords(true, "window").top
+
     cm.getAllMarks().forEach((m) => m.clear())
     markDoc(cm) 
-    // Refresh to ensure positions are correct
     await tick()
     cm.refresh()
+
+    // Restore cursor position
+    restoreCursorScrollPosition(cm, cursorYPosBefore)
   }
 
 
@@ -101,17 +106,25 @@
   $: sourceMode, toggleSource()
   
   /**
-   * When sourceMode changes, clear marks if true.
-   * Else, if false, create marks.
+   * When sourceMode changes, update marks.
+   * Then restore cursor scroll position.
    */
   async function toggleSource() {
     if (!cm) return
+    
+    // Get cursor position before change so we can restore it after
+    const cursorYPosBefore = cm.cursorCoords(true, "window").top
+    
     // Clear current marks, regardless of sourceMode true/false.
+    // Then mark . Then forece refresh.
+    // Refresh to ensure positions are correct
     cm.getAllMarks().forEach((m) => m.clear())
     markDoc(cm) 
-    // Refresh to ensure positions are correct
     await tick()
     cm.refresh()
+
+    // Restore cursor position
+    restoreCursorScrollPosition(cm, cursorYPosBefore)
   }
 
   $: windowStatus = $project.window.status

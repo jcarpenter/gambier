@@ -7,10 +7,12 @@
 :not(.fencedcodeblock) {
 
   pre.CodeMirror-line.frontmatter {
+    // background-color: rgba(0, 0, 0, 0.025);
+    padding-left: calc(var(--editor-side-padding) + 0.5em);
     padding-top: 0.3em;
     padding-bottom: 0.2em;
-    padding-right: var(--frontmatter-padding);
-    // padding-left: calc(var(--editor-leftPadding) + var(--frontmatter-padding));
+    // padding-right: var(--frontmatter-padding);
+    // padding-left: calc(var(--editor-side-padding) + var(--frontmatter-padding));
   }
  
   pre.CodeMirror-line.frontmatter.list-start {
@@ -46,8 +48,8 @@
   @include code-typography;
   font-size: calc(var(--editor-fontsize) * 0.8);
   width: calc(100% - 1.5em);
-  margin-left: 0.75em;
-  display: block;
+  // margin-left: 0.75em;
+  // display: block;
   // line-height: 1.2em !important;
 }
 
@@ -57,13 +59,16 @@
 .frontmatter::before {
   content: '';
   pointer-events: none;
+  user-select: none;
   display: block;
   position: absolute;
   height: 100%;
   background-color: var(--frontmatter-bg);
-  width: calc(var(--editor-maxlinewidth));
+  // width: calc(var(--editor-maxlinewidth));
+  width: calc(100% - var(--editor-side-padding));
   top: 0;
-  left: var(--editor-maxpadding);
+  left: var(--editor-side-padding);
+  // left: var(--editor-maxpadding);
   padding: 0;
   border-left: var(--frontmatter-border-width) solid var(--frontmatter-border);
   border-right: var(--frontmatter-border-width) solid var(--frontmatter-border);
@@ -71,26 +76,27 @@
   box-sizing: border-box;
 }
 
-.frontmatter-start::before {
-  border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
-  border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
-}
+// .frontmatter-start::before {
+//   border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
+//   border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
+// }
 
-.frontmatter-end::before {
-  border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
-  border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius); 
-}
+// .frontmatter-end::before {
+//   border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
+//   border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius); 
+// }
 
 // Horizontal divider between rows
 .frontmatter:not(.frontmatter-start, .list, .list-end)::after {
   content: '';
   display: block;
   background: var(--frontmatter-dividers);
-  width: calc(100% - var(--editor-maxpadding) - calc(var(--frontmatter-padding) * 2));
+  // width: calc(100% - var(--editor-maxpadding) - calc(var(--frontmatter-padding) * 2));
+  width: calc(100% - var(--editor-side-padding) - 1em);
   height: 1px;
   position: absolute;
   top: 0;
-  left: calc(var(--editor-maxpadding) + var(--frontmatter-padding));
+  // left: calc(var(--editor-maxpadding) + var(--frontmatter-padding));
 }
 
 // Text styling:

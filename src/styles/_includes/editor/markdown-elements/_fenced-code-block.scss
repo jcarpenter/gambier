@@ -43,11 +43,11 @@ pre.CodeMirror-line.htmlBlock {
     @include code-typography;
   }
   line-height: calc(var(--editor-lineheight) - 0.2em);
-  background: linear-gradient(to right, transparent var(--editor-leftPadding), var(--fencedcodeblock-bg) var(--editor-leftPadding));
+  background: linear-gradient(to right, transparent var(--editor-side-padding), var(--fencedcodeblock-bg) var(--editor-side-padding));
   // padding-top: 0.5em;
   // padding-bottom: 0.5em;
   padding-right: 0.5em;
-  padding-left: calc(var(--editor-leftPadding) + 0.5em);
+  padding-left: calc(var(--editor-side-padding) + 0.5em);
 
   // &::before {
   //   content: ' ';

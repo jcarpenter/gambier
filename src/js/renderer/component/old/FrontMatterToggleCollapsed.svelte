@@ -15,7 +15,7 @@
   .collapseButton {
     opacity: 0.75;
     position: absolute;
-    left: calc(var(--editor-leftPadding) - 0em);
+    left: calc(var(--editor-side-padding) - 0em);
     // transition: transform 0.2s ease-in-out, opacity 0.1s;
     // z-index: 100;
   }
