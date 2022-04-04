@@ -7,9 +7,10 @@
 .CodeMirror .mark.footnote {
   color: var(--footnote-mark);
   background-color: var(--footnote-mark-bg);
-  border: var(--mark-borderWidth) solid var(--footnote-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border: var(--mark-border-width) solid var(--footnote-mark-border);
+  border-radius: var(--mark-border-radius);
   font-weight: normal;
+  text-indent: 0; // Fixes alignment issues in lists
 
   &:before {
     content: '^';

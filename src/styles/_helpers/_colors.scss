@@ -1,5 +1,48 @@
 @use 'sass:color';
 
+
+/* ----------------------------- Light vs Dark ---------------------------- */
+
+@mixin dark {
+    @media (prefers-color-scheme: dark) {
+        @content;
+    }
+}
+
+@mixin light {
+    @media (prefers-color-scheme: light) {
+        @content;
+    }
+}
+
+
+// Convenience functions for specifying light and dark-specific styles.
+// To be used from Svelte components, like:
+
+// Before: `.search { @include dark { color: red; } }`
+// After:  `body[data-theme-isDark='true'] .search { color: red; }`
+
+// `:global` tells Svelte that the styles are globally-scoped
+// (otherwise Svelte compiler throws away styles not scoped to
+// the component).
+
+// @at-root tells SCSS compiler something similar: to emit
+// the styles at the root of the document, and to disregard the 
+// any nesting. This lets us still use nesting for organization,
+// but without the style cascade.
+
+// @mixin dark {
+//     @at-root :global(body[data-theme-isDark='true']) & {
+//         @content;
+//     }
+// }
+
+// @mixin light {
+//     @at-root :global(body[data-theme-isDark='false']) & {
+//         @content;
+//     }
+// }
+
 /* ----------------------------- Color functions ---------------------------- */
 
 // Set hsla css variable comprised of individual variables
@@ -36,54 +79,64 @@
     @return hsla(#{$h}, #{$s}, #{$l}, #{$alpha});
 }
 
-// Short-hand concise functions for colors.
-// Use like: `background-color: white(0.2);`
-@function accent($hue: 0, $sat: 0%, $light: 0%, $alpha: 1) {
-    @return hsla(
-        calc(var(--accent-H) + #{$hue}),
-        calc(var(--accent-S) + #{$sat}),
-        calc(var(--accent-L) + #{$light}),
-        #{$alpha}
-    );
+// Get accentColor.
+// By default returns --accentColor, which is a single value.
+// Optionally modify hue, saturation, lightness, or alpha,
+// in which case we return an hsla value comprised of individual
+// css variables for each channel.
+// Arguments work like color.adjust scss function:
+// https://sass-lang.com/documentation/modules/color#adjust
+// Values are relative. E.g. $alpha: -0.4 to reduce alpha
+// by 40$ from base value (which will probably be 1).
+@function accentColor($hue: 0, $sat: 0%, $lightness: 0%, $alpha: 1) {
+
+    @if ($hue == 0 and $sat == 0% and $lightness == 0% and $alpha == 1) {
+        @return var(--accent-color);
+    } @else {
+        $h: var(--accent-color-h);
+        $s: var(--accent-color-s);
+        $l: var(--accent-color-l);
+        $a: 1;
+    
+        @if $hue != 0 {
+            $h: calc(var(--accent-color-h) + #{$hue});
+        }
+    
+        @if $sat != 0% {
+            $s: calc(var(--accent-color-s) + #{$sat});
+        }
+    
+        @if $lightness != 0% {
+            $l: calc(var(--accent-color-l) + #{$lightness});
+        }
+
+        @if $alpha != 1 {
+            $a: 1 + $alpha;
+        }
+        
+        @return hsla(#{$h}, #{$s}, #{$l}, #{$a});
+    }
 }
 
-@function foregroundColor($alpha) {
-    @return rgba(var(--foregroundColor), $alpha);
+@function foregroundColor($alpha: 1) {
+    @return rgba(var(--foreground-color), $alpha);
 }
 
-@function backgroundColor($alpha) {
-    @return rgba(var(--backgroundColor), $alpha);
+@function backgroundColor($alpha: 1) {
+    @return rgba(var(--background-color), $alpha);
 }
 
-@function white($alpha) {
+@function white($alpha: 1) {
     @return rgba(255, 255, 255, $alpha);
 }
 
-@function black($alpha) {
+@function black($alpha: 1) {
     @return rgba(0, 0, 0, $alpha);
 }
 
-@function gray($lightness, $alpha) {
+@function gray($lightness: 50%, $alpha: 1) {
     @return hsla(0, 0%, $lightness, $alpha);
 }
-
-// // User's system accent color preference
-// $accentColor: accent();
-
-// // Color of navigation UI icons
-// $navIconColor: accent();
-
-// // Highlight around focused controls
-// $focusRingColor: accent($light: -2%, $alpha: 0.6);
-
-// // Selected list/menu items
-// $selectedListItemColor: accent($sat: +3%, $light: -6%);
-
-// // Controls that are being clicked or dragged
-// $selectedControlColor: accent($sat: +3%, $light: +35%);
-
-// // Background of selected text
-// $selectedTextBackground: accent($sat: +3%, $light: +35%);
 
 
 /* ----------------------------------- OLD ---------------------------------- */
@@ -92,33 +145,33 @@
 // E.g. gradient backgrounds for buttons.
 // Useful because 1) they're concise, and 2) make re-use easy.
 
-// Slight white gradient over `darkerControlAccentColor`
-$btn-accent-bg: linear-gradient(white(0.15), white(0)), var(--darkerControlAccentColor);
+// // Slight white gradient over `darkerControlAccentColor`
+// $btn-accent-bg: linear-gradient(white(0.15), white(0)), var(--darkerControlAccentColor);
 
-// STANDARD BUTTONS: Push, popup, pulldown, etc.
+// // STANDARD BUTTONS: Push, popup, pulldown, etc.
 
-$dark-btn-bg: var(--button-background);
-$dark-btn-outline: inset 0 0.5px 0 0 white(0.25),
-    // Top bevel
-    0 0 0 0.5px black(0.15),
-    // Outline
-    0 1px 1px 0 black(0.15); // Drop shadow
+// $dark-btn-bg: var(--button-background);
+// $dark-btn-outline: inset 0 0.5px 0 0 white(0.25),
+//     // Top bevel
+//     0 0 0 0.5px black(0.15),
+//     // Outline
+//     0 1px 1px 0 black(0.15); // Drop shadow
 
-$light-btn-bg: var(--button-background);
-// was 'white'
-$light-btn-outline: 0 0 0 0.5px black(0.08),
-    // Outline
-    0 0.5px 1px 0.5px black(0.1); // Drop shadow
+// $light-btn-bg: var(--button-background);
+// // was 'white'
+// $light-btn-outline: 0 0 0 0.5px black(0.08),
+//     // Outline
+//     0 0.5px 1px 0.5px black(0.1); // Drop shadow
 
-// INSET BUTTONS: Radio, checkbox, etc.
+// // INSET BUTTONS: Radio, checkbox, etc.
 
-$dark-inset-btn-bg: linear-gradient(hsla(0, 0%, 100%, 0.27), hsla(0, 0%, 100%, 0.38)), var(--button-background);
-$dark-inset-btn-outline: inset 0 1px 0 0 white(0.15),
-    // Top bevel
-    0 0 0 0.5px black(0.15); // Outline
+// $dark-inset-btn-bg: linear-gradient(hsla(0, 0%, 100%, 0.27), hsla(0, 0%, 100%, 0.38)), var(--button-background);
+// $dark-inset-btn-outline: inset 0 1px 0 0 white(0.15),
+//     // Top bevel
+//     0 0 0 0.5px black(0.15); // Outline
 
-$light-inset-btn-bg: var(--button-background);
-// was 'white'
-$light-inset-btn-outline: inset 0 1.5px 1px 0 black(0.1),
-    // Top inner shadow,
-    inset 0 0 0 0.5px black(0.2); // Outline
+// $light-inset-btn-bg: var(--button-background);
+// // was 'white'
+// $light-inset-btn-outline: inset 0 1.5px 1px 0 black(0.1),
+//     // Top inner shadow,
+//     inset 0 0 0 0.5px black(0.2); // Outline

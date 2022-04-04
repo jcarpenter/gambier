@@ -69,12 +69,12 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
-      // border-top: 1px solid var(--gridColor);
+      // border-top: 1px solid var(--grid-color);
     }
       
     .comment {
       @include system-small-font;
-      color: var(--secondary-label-color);
+      color: var(--label-2-color);
       overflow: hidden;
       white-space: normal;
     }

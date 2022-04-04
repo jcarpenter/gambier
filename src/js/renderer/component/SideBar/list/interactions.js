@@ -6,25 +6,27 @@ import { getCmDataByPanelId } from "../../../editor/editor-utils"
 
 // -------- MOUSE DOWN -------- //
 
+/**
+ * Handle mouse down events on list items in project view.
+ * - MD && NOT selected: Do nothing. We select on MouseUp.
+ * - Shift+MD: Select range of items in list
+ * - Cmd+MD && NOT selected: Add this to existing items
+ * - Cmd+MD && selected: Remove this from existing items
+ * @param {*} domEvent 
+ * @param {*} id 
+ * @param {*} isSelected 
+ * @param {*} tab 
+ * @param {*} tabId 
+ * @param {*} listIds 
+ * @param {*} files 
+ * @returns 
+ */
 export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files) {
 
-  // Shift-click: Select range of items in list
-  // Click while not selected: Make this the only selected item
-  // Cmd-click while not selected: Add this to existing items
-  // Cmd-click while selected: Remove this from existing items
-
-  const normalClicked = !domEvent.shiftKey && !domEvent.metaKey
-
-  if (normalClicked) return
-
-  // const clickedWhileSelected = !domEvent.metaKey && isSelected
-  // const clickedWhileNotSelected = !domEvent.metaKey && !isSelected
-
-  // if (clickedWhileSelected) {
-  // return
-  // } else if (clickedWhileNotSelected) {
-  //   selected = [id]
-  // }
+  // If it's a normal click, do nothing.
+  // We select individual items on mouseup.
+  const isNormalClick = !domEvent.shiftKey && !domEvent.metaKey
+  if (isNormalClick) return
 
   const shiftClicked = domEvent.shiftKey
   const cmdClickedWhileNotSelected = domEvent.metaKey && !isSelected
@@ -73,24 +75,24 @@ export function onMousedown(domEvent, id, isSelected, tab, tabId, listIds, files
 }
 
 /**
- * Open the file `id` in the focused panel, if it's a doc, and only one file is selected.
+ * Select the file.
+ * If it's a doc and not already open, open it. 
  */
 export function onMouseup(domEvent, id, tab, tabId, panel, files) {
 
+  const shiftOrMetaWerePressed = domEvent.shiftKey || domEvent.metaKey  
+  const isDoc = files.byId[id].isDoc
+  const isAlreadyOpen = id == panel.docId
+  
   // If shift or meta were pressed, we read this as a 
-  // "select stuff" action, and don't open docs.
-  const shiftOrMetaWerePressed =
-    domEvent.shiftKey || domEvent.metaKey
+  // "select stuff" action, and already handled it in MouseDown.
+  // So we return without doing anything.
   if (shiftOrMetaWerePressed) return
 
-  const isDoc = files.byId[id].isDoc
-  const isNotAlreadyOpen = id !== panel.docId
-  // const oneFileSelected = tab.selected.length == 1
-
-  // If the selected doc is not already open, open it
-  // The 
-  if (isDoc && isNotAlreadyOpen) {
-
+  // If the selected file is a doc AND it's not already open, open it.
+  // Else, just update the selection to selected the file, and deselect 
+  // any other previously-selected files.
+  if (isDoc && !isAlreadyOpen) {
     window.api.send('dispatch', {
       type: 'OPEN_DOC_IN_PANEL',
       panelIndex: panel.index,
@@ -101,21 +103,15 @@ export function onMouseup(domEvent, id, tab, tabId, panel, files) {
         getCmDataByPanelId(panel.id) : '',
       isNewDoc: panel.docId == 'newDoc'
     })
-
-  } else if (!isNotAlreadyOpen) {
-
-    // If user clicks on already-open doc, we usually don't 
-    // need to do anything. But if multiple items are selected
-    // we should deselect the other docs.
-    if (tab.selected.length > 1) {
-      window.api.send('dispatch', {
-        type: 'SIDEBAR_SET_SELECTED',
-        tabId: tabId,
-        lastSelected: id,
-        selected: [id],
-      })
-    }
+  } else {
+    window.api.send('dispatch', {
+      type: 'SIDEBAR_SET_SELECTED',
+      tabId: tabId,
+      lastSelected: id,
+      selected: [id],
+    }) 
   }
+
 }
 
 // -------- LEFT/RIGHT -------- //

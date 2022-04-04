@@ -55,10 +55,12 @@ const storeDefault = {
   darkMode: 'match-system',
 
   theme: {
-    id: '',
-    installed: [
-      { name: "Cupertino Light", id: "cupertino-light" }
-    ]
+    id: 'cupertino-light',
+    isDark: false,
+    installed: {
+      "cupertino-light": { name: "Cupertino Light", isDark: false },
+      "cupertino-dark": { name: "Cupertino Dark", isDark: true },
+    }
   },
 
   // Array of system colors. E.g.

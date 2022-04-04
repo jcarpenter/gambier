@@ -1,26 +1,35 @@
-@use "../../../_helpers" as *;
-
 // -------------- URL-in-Brackets -------------- //
 // -------------- Email-in-Brackets -------------- //
 
+// In brackets URL: `<https://apple.com>`
+// In brackets email: `<steve@apple.com>`
+// Bare URL: `https://apple.com`
+
 .cm-bare-url,
-.cm-emphasisail-in-brackets,
-.cm-url-in-brackets {
+.cm-email-in-brackets:not(.cm-email-in-brackets-start, .cm-email-in-brackets-end),
+.cm-url-in-brackets:not(.cm-url-in-brackets-start, .cm-url-in-brackets-end) {
   color: var(--in-brackets);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.05em;
+  text-decoration-skip-ink: none;
+  text-decoration-color: var(--in-brackets-underline);
+  transition: text-decoration-color 0.1s;
+}
+
+.cm-bare-url,
+.cm-email-in-brackets,
+.cm-url-in-brackets {
   &.cm-md {
     color: var(--in-brackets-md);
   }
 }
 
 .metaKeyDown {
-  .cm-link.cm-url:hover {
-    cursor: pointer;
-  }
   .cm-bare-url:hover,
   .cm-email-in-brackets:not(.cm-email-in-brackets-start, .cm-email-in-brackets-end):hover,
   .cm-url-in-brackets:not(.cm-url-in-brackets-start, .cm-url-in-brackets-end):hover {
-    // text-decoration: underline;
-    border-bottom: 1px solid var(--in-brackets);
     cursor: pointer;
+    text-decoration-color: var(--in-brackets-hover-underline);
   }
 }

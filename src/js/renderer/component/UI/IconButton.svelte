@@ -10,7 +10,7 @@
 
   const dispatch = createEventDispatcher();
 
-  export let icon = 'img-photo' // CSS url, or name of CSS variable that defines icon.
+  export let icon = 'prefs-tab-media-icon' // CSS url, or name of CSS variable that defines icon.
   export let tooltip = undefined // E.g. 'Select syntax'
   export let compact = false
   export let disabled = false
@@ -47,22 +47,6 @@
 
 <style type="text/scss">
 
-  // NOTE: 4/16/2021: On Windows, I don't see icon buttons
-  // that open menus. But I assume it's okay to use them, 
-  // so long as they match the system style.
-  
-  // TODO: 4/16/2021: Mac vs Windows styling. 
-  // For now this is mac-only.
-
-  // :global(.mac) {
-  //   // TODO
-  // }
-
-  // :global(.win) {
-  //   // TODO
-  // }
-
-  
   .iconButton {
     -webkit-app-region: no-drag;
     display: inline-flex;

@@ -302,7 +302,7 @@ import { wait } from '../../../shared/utils';
   
   <InputText 
     placeholder={'Name'} 
-    icon={'img-magnifyingglass'} 
+    icon={'search-field-icon'} 
     margin={'0 10px 0'} 
     compact={true}
     bind:this={queryInput}

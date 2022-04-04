@@ -27,7 +27,7 @@
 
 <style type="text/scss">
   #background {
-    background-color: var(--windowBackgroundColor);
+    background-color: var(--window-background-color);
     width: 100%;
     height: 100%;
     top: 0;

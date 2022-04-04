@@ -4,17 +4,13 @@
 
 // Focus ring
 
-@mixin focusRingAnimation($platform: 'mac') {
+@mixin focusRingAnimation() {
     animation-fill-mode: forwards;
-    @if $platform == 'mac' {
-        animation-name: focusRingAnimationKeyframesMac;
-        animation-duration: 0.3s;
-    } @else if $platform == 'win' {
-        // TODO
-    }
+    animation-name: focusRingAnimationKeyframes;
+    animation-duration: 0.3s;
 }
 
-@keyframes focusRingAnimationKeyframesMac {
+@keyframes focusRingAnimationKeyframes {
     from {
         box-shadow: 0 0 0 25px transparent;
     }
@@ -25,17 +21,13 @@
 
 // Drag over
 
-@mixin dragOverAnimation($platform: 'mac') {
+@mixin dragOverAnimation() {
     animation-fill-mode: forwards;
-    @if $platform == 'mac' {
-        animation-name: dragOverAnimationKeyframesMac;
-        animation-duration: 0.1s;
-    } @else if $platform == 'win' {
-        // TODO
-    }
+    animation-name: dragOverAnimationKeyframes;
+    animation-duration: 0.1s;
 }
 
-@keyframes dragOverAnimationKeyframesMac {
+@keyframes dragOverAnimationKeyframes {
     from {
         box-shadow: inset 0 0 0 0 transparent;
         background: transparent;
@@ -45,5 +37,3 @@
         background: hsla(var(--accentH), var(--accentS), var(--accentL), 0.2);
     }
 }
-
-

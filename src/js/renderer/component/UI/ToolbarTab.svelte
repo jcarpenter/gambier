@@ -56,7 +56,7 @@
           opacity: 0.75;
         }
         @include dark { 
-          background-color: var(--secondary-label-color); 
+          background-color: var(--label-2-color); 
         }
       }
       .label {
@@ -65,7 +65,7 @@
           opacity: 0.75;
         }
         @include dark { 
-          color: var(--secondary-label-color); 
+          color: var(--label-2-color); 
         }
       }
     }
@@ -131,11 +131,11 @@
     }
 
     .icon {
-      background: var(--secondary-label-color);
+      background: var(--label-2-color);
     }
 
     .label {
-      color: var(--secondary-label-color);
+      color: var(--label-2-color);
     }
   }
 </style>

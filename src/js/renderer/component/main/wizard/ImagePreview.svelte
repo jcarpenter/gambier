@@ -215,7 +215,7 @@
 
 	.imagePreview:focus {
 		outline: none;
-		box-shadow: inset 0 0 0 2px var(--accent-color);
+		box-shadow: inset 0 0 0 2px accentColor();
 		border-radius: 2px;
 	}
 

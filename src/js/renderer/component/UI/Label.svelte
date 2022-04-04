@@ -20,7 +20,7 @@
   }
 
   .isSelected {
-    color: var(--controlColor) !important;
+    color: var(--control-selected-text-color) !important;
   }
 
   div {
@@ -33,15 +33,15 @@
   }
 
   .secondary {
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
   }
 
   .tertiary {
-    color: var(--tertiary-label-color);
+    color: var(--label-3-color);
   }
 
   .quaternary {
-    color: var(--quaternaryLabelColor);
+    color: var(--label-4-color);
   }
 
   // Typography

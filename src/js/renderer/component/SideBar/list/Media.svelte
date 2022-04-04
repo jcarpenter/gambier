@@ -69,7 +69,7 @@
 
 	.metadata {
 		@include system-regular-font;
-		color: var(--secondary-label-color);
+		color: var(--label-2-color);
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 3;
@@ -87,7 +87,7 @@
 		height: 67px; // height minus 1, to create 1px gap below
 		margin-bottom: 1px;
 		.filename, .metadata {
-			color: var(--controlColor);
+			color: var(--control-selected-text-color);
 		}
 		&.isSidebarFocused {
 		  background-color: var(--selected-list-item-color);
@@ -95,7 +95,7 @@
 	
 		// Selected, and parent list NOT focused
 		&:not(.isSidebarFocused) {
-		  background-color: var(--disabledControlTextColor);
+		  background-color: var(--control-disabled-text-color);
 		}
 	}
 

@@ -19,62 +19,49 @@
 
 <style type="text/scss">
 
-  // ------ Mac ------ //
+  .radioButton {
+    @include inset-button;
 
-  :global(.mac) {
-
-    .radioButton {
-      @include inset-button;
-
-      .control { 
-        border-radius: 50%;
-      }
-      
-      // Dot
-      .control::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        border-radius: inherit;
-        width: 100%;
-        height: 100%;
-        transform: scale(0.4);
-      }
+    .control { 
+      border-radius: 50%;
     }
-
-    .radioButton.compact {
-      @include inset-button-compact;
-      
+    
+    // Dot
+    .control::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      border-radius: inherit;
+      width: 100%;
+      height: 100%;
+      transform: scale(0.4);
     }
-
-    .radioButton:focus {
-      @include inset-button-focus;
-    }
-
-    .radioButton.checked {
-      @include inset-button-checked;
-    }
-      
-    .radioButton:not(.disabled):active {
-      @include inset-button-active;
-    }
-
-    .radioButton.disabled {
-      @include inset-button-disabled;
-    }
-
-    .radioButton.windowHidden {
-      @include inset-button-windowHidden;
-    }
-
   }
 
-
-  // ------ Windows ------ //
-
-  :global(.win) {
+  .radioButton.compact {
+    @include inset-button-compact;
     
+  }
+
+  .radioButton:focus {
+    @include inset-button-focus;
+  }
+
+  .radioButton.checked {
+    @include inset-button-checked;
+  }
+    
+  .radioButton:not(.disabled):active {
+    @include inset-button-active;
+  }
+
+  .radioButton.disabled {
+    @include inset-button-disabled;
+  }
+
+  .radioButton.windowHidden {
+    @include inset-button-windowHidden;
   }
 
 </style>

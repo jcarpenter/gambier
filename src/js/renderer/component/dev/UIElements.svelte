@@ -1,6 +1,4 @@
 <script>
-  import { state, project, sidebar, isWindowFocused } from '../../StateManager';
-
   import Checkbox from '../ui/Checkbox.svelte';
   import Description from '../ui/Description.svelte';
   import FormRow from '../ui/FormRow.svelte';
@@ -71,7 +69,7 @@
 <style type="text/scss">
 
   .block {
-    padding: 0rem 1rem;
+    padding: 0rem 1rem 8rem;
     overflow: scroll;
   }
 
@@ -82,11 +80,11 @@
 
   h2 {
     @include system-regular-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
   }
 
   .stateTable {
-    border: 1px solid var(--tertiary-label-color);
+    border: 1px solid var(--label-3-color);
     border-radius: 4px;
     padding: 0.4em 0.4em;
     margin-bottom: 1em;
@@ -172,15 +170,15 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
     </FormRow>
 
     <FormRow label={'With icon:'} {maxWidth} {leftColumn} {gap} {margin}>
-      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' icon='img-magnifyingglass' />
-      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' icon='img-magnifyingglass' />
-      <InputText placeholder={'Replace'} width={'110px'} style='inline' icon='img-magnifyingglass' />
+      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' icon='search-field-icon' />
+      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' icon='search-field-icon' />
+      <InputText placeholder={'Replace'} width={'110px'} style='inline' icon='search-field-icon' />
     </FormRow>
 
     <FormRow label={'With icon & compact:'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
-      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' icon='img-magnifyingglass' compact={true} />
-      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' icon='img-magnifyingglass' compact={true} />
-      <InputText placeholder={'Replace'} width={'110px'} style='inline' icon='img-magnifyingglass' compact={true} />
+      <InputText placeholder={'Replace'} width={'110px'} style='sidebar' icon='search-field-icon' compact={true} />
+      <InputText placeholder={'Replace'} width={'110px'} style='toolbar' icon='search-field-icon' compact={true} />
+      <InputText placeholder={'Replace'} width={'110px'} style='inline' icon='search-field-icon' compact={true} />
     </FormRow>
 
     <FormRow label={'With Description:'} {maxWidth} {leftColumn} {gap} {margin} multiLine={true} labelTopOffset={'7px'}>
@@ -221,14 +219,14 @@ project.focusedSectionId: {$project.focusedSectionId} <br/> -->
 
   <section>
     <FormRow label={'IconButton w/ Menu:'} {maxWidth} {leftColumn} {gap} {margin}>
-      <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} />
-      <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={false} />
-      <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} disabled={true} />
+      <IconButton items={pulldownMenuItems} tooltip='Tooltip' showCaret={true} />
+      <IconButton items={pulldownMenuItems} tooltip='Tooltip' showCaret={false} />
+      <IconButton items={pulldownMenuItems} tooltip='Tooltip' showCaret={true} disabled={true} />
     </FormRow>
     <FormRow label={'IconButton w/ Menu (compact):'} {maxWidth} {leftColumn} {gap} {margin} compact={true}>
-      <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} compact={true} />
-      <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={false} compact={true} />
-      <IconButton items={pulldownMenuItems} tooltip='Tooltip' icon='img-arrow-up-arrow-down' showCaret={true} disabled={true} compact={true} />
+      <IconButton items={pulldownMenuItems} tooltip='Tooltip' showCaret={true} compact={true} />
+      <IconButton items={pulldownMenuItems} tooltip='Tooltip' showCaret={false} compact={true} />
+      <IconButton items={pulldownMenuItems} tooltip='Tooltip' showCaret={true} disabled={true} compact={true} />
     </FormRow>
   </section> 
   

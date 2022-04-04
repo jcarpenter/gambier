@@ -5,8 +5,8 @@
 .CodeMirror-line:not(.figure) .mark.image {
   color: var(--image-mark);
   background-color: var(--image-mark-bg);
-  border: var(--mark-borderWidth) solid var(--image-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border: var(--mark-border-width) solid var(--image-mark-border);
+  border-radius: var(--mark-border-radius);
 
   &::before {
     content: 'i';

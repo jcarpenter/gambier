@@ -103,7 +103,7 @@
     // border-right: var(--sidebar-border-width) solid var(--separator-color);
 
     // Transparent sidebar style:
-    // background-color: var(--windowBackgroundColor);
+    // background-color: var(--window-background-color);
     // background-color: transparent;
     // backdrop-filter: blur(8px);
   }

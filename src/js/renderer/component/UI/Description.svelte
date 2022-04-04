@@ -8,7 +8,7 @@
 
   p {
     @include system-small-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
     flex-basis: 100%;
   }
 

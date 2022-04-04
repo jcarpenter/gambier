@@ -27,12 +27,6 @@ import { checkIfWeShouldCloseHtmlTag } from './editor-utils'
 import { duplicateLine } from './commands/duplicateLine'
 import { togglePlainText } from './commands/togglePlainText'
 
-// console.log(CodeMirror.commands)
-function jimmy(cm) {
-  console.log("Whisper")
-  return CodeMirror.Pass
-}
-CodeMirror.commands.jimmy = jimmy
 
 export function makeEditor(parentElement, parentPanel) {
 

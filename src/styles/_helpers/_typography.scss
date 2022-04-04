@@ -17,50 +17,34 @@
 
 // On mac, corresponds with NSFont.systemFont:
 // https://developer.apple.com/documentation/appkit/nsfont/1530094-systemfont
-@mixin system-regular-font($platform: 'mac') {
+@mixin system-regular-font() {
     font-family: system-ui;
     font-weight: normal;
     font-size: 13px;
     line-height: 15px;
     letter-spacing: -0.08px;
-    @if $platform == 'mac' {
-        // TODO
-    } @else if $platform == 'win' {
-        // TODO
-    }
 }
 
 // On mac, corresponds with NSFont.smallSystemFontSize:
 // https://developer.apple.com/documentation/appkit/nsfont/1535612-smallsystemfontsize
-@mixin system-small-font($platform: 'mac') {
+@mixin system-small-font() {
     font-family: system-ui;
     font-weight: normal;
     font-size: 11px;
     line-height: 13px;
     letter-spacing: 0.07px;
-    // letter-spacing: 0px;
-    @if $platform == 'mac' {
-        // TODO
-    } @else if $platform == 'win' {
-        // TODO
-    }
 }
 
 // On mac, corresponds with NSFont.toolTipsFont
 // "Returns the font used for tool tips labels"
 // https://developer.apple.com/documentation/appkit/nsfont/1527704-tooltipsfont
 
-@mixin tool-tips-font($platform: 'mac') {
+@mixin tool-tips-font() {
     font-weight: normal;
     font-family: system-ui;
     font-size: 11px;
     line-height: 13px;
     letter-spacing: 0.07px;
-    @if $platform == 'mac' {
-        // TODO
-    } @else if $platform == 'win' {
-        // TODO
-    }
 }
 
 
@@ -246,14 +230,10 @@
 
 
 
-@mixin code-typography($platform: 'mac') {
-    @if $platform == 'mac' {
-        font-family: 'SFMono-Regular';
-        font-size: calc(var(--editor-fontsize) * 0.85);
-        letter-spacing: -0.01em;
-    } @else if $platform == 'win' {
-        // TODO
-    }
+@mixin code-typography() {
+    font-family: 'SFMono-Regular';
+    font-size: calc(var(--editor-fontsize) * 0.85);
+    letter-spacing: -0.01em;
 }
 
 

@@ -11,10 +11,10 @@
 
   .token {
     @include system-regular-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
     padding: 0 4px;
     border-radius: 3px;
-    background-color: rgba(var(--foregroundColor), 0.08);
+    background-color: foregroundColor(0.08);
     margin-left: 3px;
     height: 16px;
     display: inline-flex;
@@ -28,8 +28,8 @@
   }
 
   .isSelected {
-    color: var(--controlColor);
-    background-color: rgba(var(--foregroundColor), 0.3);
+    color: var(--control-selected-text-color);
+    background-color: foregroundColor(0.3);
   }
   
 </style>

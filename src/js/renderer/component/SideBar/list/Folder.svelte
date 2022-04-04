@@ -3,9 +3,10 @@
 	import { state, sidebar } from '../../../StateManager.js'
   import { files } from '../../../FilesManager'
 	import { flip } from 'svelte/animate';
+	import { quadIn, linear } from 'svelte/easing'
 	import { setAsCustomPropOnNode } from '../../ui/actions'
 	import { standardEase } from '../../ui/easing'
-	import { slideUp } from '../../ui/transition'
+	import { slideYPosition, testSlide } from '../../ui/transition'
   import { getContext } from 'svelte';
 
 	export let subtree	
@@ -16,7 +17,8 @@
 	let isDragTarget = false
 	
 	const tabId = getContext('tabId')
-	$: duration = $state.timing.treeListFolder
+	// $: duration = $state.timing.treeListFolder
+	$: duration = 1200
 	
 	// When the number of children changes, the height changes. This happens instantly, and can clip the child elements as they animate to their new positions. We want to avoid that. We could animate the height at the same duration and easing as the other transitions, but that's a big performance no-no. So instead we use `step` transitions to wait until the standard transition duration is complete, and then set the new value. OR we set it at the beginning. It depends on whether the folder has grown or shrunk. We determine -that- by comparing the new and old `numVisibleDescendants`.
 
@@ -67,7 +69,7 @@
 		// contain: strict;
 		position: absolute;
 		width: 100%;
-		overflow: hidden;
+		overflow: clip;
 		height: calc(var(--folderHeight) * 1px);
 		
 		// Add delay for border-radius and box-shadow, to prevent flickering when dragging
@@ -87,7 +89,8 @@
 	}
 
   .folder,
-  ul {
+  ul,
+	li {
     // contain: strict;
     // position: absolute;
     transform-origin: left top;
@@ -97,7 +100,7 @@
 	// See note above re: transitions for isDragTarget styles.
 	// Here we turn delay off, so the styles apply instantly when drag starts.
 	.folder.isRoot.isDragTarget {
-		box-shadow: inset 0 0 0 2px var(--keyboardFocusIndicatorColor);
+		box-shadow: inset 0 0 0 2px var(--focus-ring-color);
 		border-radius: 4px;
 		transition-delay: 0; 
 	}
@@ -132,8 +135,15 @@
 	/>
 {/if}
 
-<!-- If the folder is expanded, show the contents. -->
-<!-- When dragging over the folder, toggle `isDragTarget`. This in turn highlights the File (above). -->
+<!-- 
+If the folder is expanded, show the contents.
+When dragging over the folder, toggle `isDragTarget`. 
+This in turn highlights the File (above). 
+-->
+
+<!-- animate:testSlide={{delay: 0, duration: duration }}  -->
+<!-- animate:flip={{duration: duration, easing: quadIn }}  -->
+<!-- animate:testSlide={{delay: 0, duration: duration, easing: linear }} -->
 
 {#if isExpanded}
 	<div 
@@ -145,14 +155,18 @@
 		on:drop|preventDefault={(evt) => { console.log("drop"); if (isRoot) onDrop(evt) }}
 		use:setAsCustomPropOnNode={{folderHeight, folderEasing, duration}}
 		>
-		<ul class="rows" transition:slideUp|local={{ duration: isRoot ? 0 : duration }}>
+		<ul class="rows" transition:slideYPosition|local={{ 
+			delay: 0,
+			duration: isRoot ? 0 : duration,
+			easing: linear
+		}}>
 			{#each subtree.children as child (child.id)}
 				<li 
-					animate:flip={{duration: duration, easing: standardEase }} 
+					animate:flip={{duration: duration, easing: linear }}
 					class:isEmpty={child.id.includes('empty')}
 				>
 					{#if !child.id.includes('empty')}
-						<!-- {#if isExpandedFolder(child.id)} -->
+
 						{#if isFolder(child.id)}
 							
 							<!-- Folder -->

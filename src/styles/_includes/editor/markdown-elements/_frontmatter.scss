@@ -7,12 +7,9 @@
 :not(.fencedcodeblock) {
 
   pre.CodeMirror-line.frontmatter {
-    // background-color: rgba(0, 0, 0, 0.025);
     padding-left: calc(var(--editor-side-padding) + 0.5em);
     padding-top: 0.3em;
     padding-bottom: 0.2em;
-    // padding-right: var(--frontmatter-padding);
-    // padding-left: calc(var(--editor-side-padding) + var(--frontmatter-padding));
   }
  
   pre.CodeMirror-line.frontmatter.list-start {
@@ -48,9 +45,6 @@
   @include code-typography;
   font-size: calc(var(--editor-fontsize) * 0.8);
   width: calc(100% - 1.5em);
-  // margin-left: 0.75em;
-  // display: block;
-  // line-height: 1.2em !important;
 }
 
 // Visible borders and backgrounds:
@@ -76,27 +70,26 @@
   box-sizing: border-box;
 }
 
-// .frontmatter-start::before {
-//   border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
-//   border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
-// }
+// Round the top and bottom rows of the front matter
+.frontmatter-start::before {
+  border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
+}
 
-// .frontmatter-end::before {
-//   border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
-//   border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius); 
-// }
+.frontmatter-end::before {
+  border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius); 
+}
 
 // Horizontal divider between rows
 .frontmatter:not(.frontmatter-start, .list, .list-end)::after {
   content: '';
   display: block;
   background: var(--frontmatter-dividers);
-  // width: calc(100% - var(--editor-maxpadding) - calc(var(--frontmatter-padding) * 2));
   width: calc(100% - var(--editor-side-padding) - 1em);
   height: 1px;
   position: absolute;
   top: 0;
-  // left: calc(var(--editor-maxpadding) + var(--frontmatter-padding));
 }
 
 // Text styling:
@@ -158,7 +151,7 @@ pre.CodeMirror-line.frontmatter.comment {
 }
 
 pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
-  color: accent($light: -30%, $sat: -30%, $alpha: 0.4);
+  color: accentColor($lightness: -30%, $sat: -30%, $alpha: -0.6);
   font-style: italic;
 }
 
@@ -178,7 +171,7 @@ pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
 
 // Tags: underline
 .frontmatter .cm-tag {
-  color: foregroundColor(1);
+  color: foregroundColor();
   text-decoration-color: foregroundColor(0.6);
   text-decoration-line: underline;
   text-decoration-thickness: initial;
@@ -186,7 +179,7 @@ pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
 }
 
 .metaKeyDown .frontmatter .cm-tag:hover {
-  text-decoration-color: foregroundColor(1);
+  text-decoration-color: foregroundColor();
   cursor: pointer;
 } 
 
@@ -204,16 +197,5 @@ pre.CodeMirror-line.frontmatter-start {
   &::before {
     border-radius: var(--frontmatter-borderRadius);
   }
-  &:hover {
-    // .collapseButton {
-    //   opacity: 1;
-    // }
-    // &::before {
-    //   border-color: var(--frontmatter-collapsed-border-hover);
-    //   transition: border-color 0.1s ease-in;
-    // }
-    // .cm-md {
-    //   color: var(--frontmatter-collapsed-border-hover);
-    // }
-  }
+
 }

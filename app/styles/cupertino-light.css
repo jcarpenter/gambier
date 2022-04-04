@@ -1,6 +1,7 @@
+/* ----------------------------- Light vs Dark ---------------------------- */
 /* ----------------------------- Color functions ---------------------------- */
 /* ----------------------------------- OLD ---------------------------------- */
-@keyframes focusRingAnimationKeyframesMac {
+@keyframes focusRingAnimationKeyframes {
   from {
     box-shadow: 0 0 0 25px transparent;
   }
@@ -8,7 +9,7 @@
     box-shadow: 0 0 0 3.5px var(--focus-ring-color);
   }
 }
-@keyframes dragOverAnimationKeyframesMac {
+@keyframes dragOverAnimationKeyframes {
   from {
     box-shadow: inset 0 0 0 0 transparent;
     background: transparent;
@@ -81,14 +82,14 @@ li.CodeMirror-hint.bold-primary p.primary {
 
 li.CodeMirror-hint.CodeMirror-hint-active {
   background-color: var(--selected-list-item-color);
-  color: var(--selected-menuitem-text-color);
+  color: var(--menuitem-selected-text-color);
 }
 li.CodeMirror-hint.CodeMirror-hint-active::after {
-  color: var(--selected-menuitem-text-color);
+  color: var(--menuitem-selected-text-color);
   opacity: 0.5;
 }
 li.CodeMirror-hint.CodeMirror-hint-active p {
-  color: var(--selected-menuitem-text-color);
+  color: var(--menuitem-selected-text-color);
 }
 
 li.CodeMirror-hint::after {
@@ -98,7 +99,7 @@ li.CodeMirror-hint::after {
   position: absolute;
   top: 50%;
   transform: translate(0, -50%);
-  color: var(--tertiary-label-color);
+  color: var(--label-3-color);
   position: absolute;
   right: 0.5em;
   letter-spacing: -0.08em;
@@ -127,16 +128,17 @@ li.CodeMirror-hint.element-inline-link::after {
 .CodeMirror pre.CodeMirror-line.quote .cm-quote-start {
   color: var(--quote-md);
   position: absolute;
-  transform: translate(-100%, 0);
+  transform: translate(-100%, -0.075em);
 }
 
 .CodeMirror .mark.citation {
   color: var(--citation-mark);
   background-color: var(--citation-mark-bg);
-  border: var(--mark-borderWidth) solid var(--citation-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border: var(--mark-border-width) solid var(--citation-mark-border);
+  border-radius: var(--mark-border-radius);
   font-weight: normal;
   width: 1.1em;
+  text-indent: 0;
 }
 .CodeMirror .mark.citation:before {
   content: "@";
@@ -318,7 +320,7 @@ pre.CodeMirror-line.htmlBlock-lastLine {
   line-height: 0;
 }
 .editor:not(.sourceMode) .CodeMirror-line.figure .CodeMirror-widget {
-  border-radius: var(--mark-borderRadius);
+  border-radius: var(--mark-border-radius);
   background-color: var(--figure-bg);
   padding: 0.5em;
   height: 100%;
@@ -361,9 +363,10 @@ pre.CodeMirror-line.htmlBlock-lastLine {
 .CodeMirror .mark.footnote {
   color: var(--footnote-mark);
   background-color: var(--footnote-mark-bg);
-  border: var(--mark-borderWidth) solid var(--footnote-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border: var(--mark-border-width) solid var(--footnote-mark-border);
+  border-radius: var(--mark-border-radius);
   font-weight: normal;
+  text-indent: 0;
 }
 .CodeMirror .mark.footnote:before {
   content: "^";
@@ -431,6 +434,16 @@ pre.CodeMirror-line.htmlBlock-lastLine {
   box-sizing: border-box;
 }
 
+.frontmatter-start::before {
+  border-top: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: var(--frontmatter-borderRadius) var(--frontmatter-borderRadius) 0 0;
+}
+
+.frontmatter-end::before {
+  border-bottom: var(--frontmatter-border-width) solid var(--frontmatter-border);
+  border-radius: 0 0 var(--frontmatter-borderRadius) var(--frontmatter-borderRadius);
+}
+
 .frontmatter:not(.frontmatter-start, .list, .list-end)::after {
   content: "";
   display: block;
@@ -448,31 +461,31 @@ pre.CodeMirror-line.htmlBlock-lastLine {
 }
 
 .frontmatter .cm-atom {
-  color: rgba(var(--foregroundColor), 0.5);
+  color: rgba(var(--foreground-color), 0.5);
   font-weight: 500;
 }
 
 .frontmatter .cm-meta {
-  color: rgba(var(--foregroundColor), 0.6);
+  color: rgba(var(--foreground-color), 0.6);
 }
 
 .frontmatter .cm-null,
 .frontmatter .cm-string {
-  color: rgba(var(--foregroundColor), 0.8);
+  color: rgba(var(--foreground-color), 0.8);
   font-weight: 500;
 }
 
 .frontmatter .cm-def:not(.cm-md) {
-  color: rgba(var(--foregroundColor), 0.8);
+  color: rgba(var(--foreground-color), 0.8);
 }
 
 .frontmatter .cm-keyword {
-  color: rgba(var(--foregroundColor), 0.8);
+  color: rgba(var(--foreground-color), 0.8);
   font-weight: 500;
 }
 
 .frontmatter .cm-number {
-  color: rgba(var(--foregroundColor), 0.8);
+  color: rgba(var(--foreground-color), 0.8);
 }
 
 pre.CodeMirror-line.frontmatter.comment + pre.CodeMirror-line.frontmatter.comment {
@@ -483,20 +496,20 @@ pre.CodeMirror-line.frontmatter.comment + pre.CodeMirror-line.frontmatter.commen
 }
 
 pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
-  color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + -30%), calc(var(--accent-L) + -30%), 0.4);
+  color: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -30%), 0.4);
   font-style: italic;
 }
 
 .frontmatter .cm-tag {
-  color: rgba(var(--foregroundColor), 1);
-  text-decoration-color: rgba(var(--foregroundColor), 0.6);
+  color: rgba(var(--foreground-color), 1);
+  text-decoration-color: rgba(var(--foreground-color), 0.6);
   text-decoration-line: underline;
   text-decoration-thickness: initial;
   text-underline-offset: 0.1em;
 }
 
 .metaKeyDown .frontmatter .cm-tag:hover {
-  text-decoration-color: rgba(var(--foregroundColor), 1);
+  text-decoration-color: rgba(var(--foreground-color), 1);
   cursor: pointer;
 }
 
@@ -510,6 +523,7 @@ pre.CodeMirror-line.frontmatter-start {
 .frontmatter-start.frontmatter-end::before {
   border-radius: var(--frontmatter-borderRadius);
 }
+
 .CodeMirror-line.header.h1 {
   color: var(--h1);
   font-weight: 700;
@@ -568,8 +582,8 @@ pre.CodeMirror-line.frontmatter-start {
 .CodeMirror-line:not(.figure) .mark.image {
   color: var(--image-mark);
   background-color: var(--image-mark-bg);
-  border: var(--mark-borderWidth) solid var(--image-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border: var(--mark-border-width) solid var(--image-mark-border);
+  border-radius: var(--mark-border-radius);
 }
 .CodeMirror-line:not(.figure) .mark.image::before {
   content: "i";
@@ -608,10 +622,9 @@ pre.CodeMirror-line.frontmatter-start {
   text-decoration: underline;
   text-decoration-thickness: 0.15em;
   text-underline-offset: 0.03em;
-  text-decoration-color: inherit;
   text-decoration-color: var(--link-mark-underline);
   text-decoration-skip-ink: none;
-  border-radius: var(--mark-borderRadius);
+  border-radius: var(--mark-border-radius);
 }
 .CodeMirror .mark.link.highlighted {
   color: var(--link-mark-highlight);
@@ -661,6 +674,10 @@ pre.CodeMirror-line.frontmatter-start {
 }
 .cm-reference.cm-label.mark {
   font-weight: normal;
+}
+
+.metaKeyDown .cm-link.cm-url:hover {
+  cursor: pointer;
 }
 
 .CodeMirror-line.link-reference-definition {
@@ -738,7 +755,7 @@ pre.CodeMirror-line.frontmatter-start {
 
 .cm-strikethrough {
   color: var(--strikethrough);
-  background: linear-gradient(transparent 55%, rgba(0, 0, 0, 0.5) 55% 60%, transparent 60%);
+  background: linear-gradient(transparent 55%, var(--strikethrough-line) 55% 60%, transparent 60%);
 }
 .cm-strikethrough.cm-md {
   text-decoration: none;
@@ -751,6 +768,7 @@ pre.CodeMirror-line.frontmatter-start {
   font-weight: 700;
 }
 .cm-strong.cm-md {
+  font-weight: 400;
   color: var(--strong-md);
 }
 
@@ -762,12 +780,11 @@ pre.CodeMirror-line.frontmatter-start {
   margin: 0;
   background-color: var(--task-mark-bg);
   border: 1px solid var(--task-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border-radius: var(--mark-border-radius);
   font-weight: normal;
   width: 1.2em;
   height: 1.2em;
   margin: 0 0.35em 0 0;
-  transform: translate(0, 0.2em);
 }
 .mark.task:before {
   -webkit-mask-size: contain;
@@ -796,28 +813,33 @@ pre.CodeMirror-line.frontmatter-start {
 }
 
 .cm-bare-url,
-.cm-emphasisail-in-brackets,
-.cm-url-in-brackets {
+.cm-email-in-brackets:not(.cm-email-in-brackets-start, .cm-email-in-brackets-end),
+.cm-url-in-brackets:not(.cm-url-in-brackets-start, .cm-url-in-brackets-end) {
   color: var(--in-brackets);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.05em;
+  text-decoration-skip-ink: none;
+  text-decoration-color: var(--in-brackets-underline);
+  transition: text-decoration-color 0.1s;
 }
+
 .cm-bare-url.cm-md,
-.cm-emphasisail-in-brackets.cm-md,
+.cm-email-in-brackets.cm-md,
 .cm-url-in-brackets.cm-md {
   color: var(--in-brackets-md);
 }
 
-.metaKeyDown .cm-link.cm-url:hover {
-  cursor: pointer;
-}
 .metaKeyDown .cm-bare-url:hover,
 .metaKeyDown .cm-email-in-brackets:not(.cm-email-in-brackets-start, .cm-email-in-brackets-end):hover,
 .metaKeyDown .cm-url-in-brackets:not(.cm-url-in-brackets-start, .cm-url-in-brackets-end):hover {
-  border-bottom: 1px solid var(--in-brackets);
   cursor: pointer;
+  text-decoration-color: var(--in-brackets-hover-underline);
 }
 
 /* ---------- BASE ---------- */
 .CodeMirror {
+  color: var(--editor-default-text-color);
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -881,7 +903,7 @@ pre.CodeMirror-line.frontmatter-start {
 
 /* ---------- CURSOR ---------- */
 .CodeMirror-cursor {
-  border-left: 1px solid rgba(var(--foregroundColor), 1);
+  border-left: 1px solid rgba(var(--foreground-color), 1);
   border-right: none;
   width: 0;
 }
@@ -1177,7 +1199,7 @@ div.CodeMirror-dragcursors {
 }
 
 .CodeMirror-focused .CodeMirror-selected {
-  background: var(--selected-text-background);
+  background: var(--text-selected-background);
 }
 
 .CodeMirror-crosshair {
@@ -1187,7 +1209,7 @@ div.CodeMirror-dragcursors {
 .CodeMirror-line::selection,
 .CodeMirror-line > span::selection,
 .CodeMirror-line > span > span::selection {
-  background: var(--selected-text-background);
+  background: var(--text-selected-background);
 }
 
 .CodeMirror-line::-moz-selection,
@@ -1235,128 +1257,110 @@ body {
   padding: 0;
   height: 100%;
   overflow: hidden;
+  color: rgba(var(--foreground-color), 1);
 }
 
 #layout {
   height: 100%;
-  background-color: var(--windowBackgroundColor);
+  background-color: var(--window-background-color);
 }
 
 body {
-  --foregroundColor: 0, 0, 0;
-  --backgroundColor: 255, 255, 255;
+  --foreground-color: 0, 0, 0;
+  --background-color: 255, 255, 255;
+  /* ------ Accent ------ */
+  --accent-color: var(--os-accentColor);
+  --accent-color-h: var(--os-accentColor_h);
+  --accent-color-s: var(--os-accentColor_s);
+  --accent-color-l: var(--os-accentColor_l);
   /* ------ Accent-influenced ------ */
-  --accent-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
-  --focus-ring-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + -2%), 0.5);
-  --selected-list-item-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 3%), calc(var(--accent-L) + -6%), 1);
-  --selected-text-background: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 3%), calc(var(--accent-L) + 35%), 1);
-  /* ------ Lightbox ------ */
-  --lightbox-icon-color: #fff;
+  --nav-icon-color: var(--accent-color);
+  --focus-ring-color: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -2%), 0.5);
+  --selected-list-item-color: hsla(var(--accent-color-h), calc(var(--accent-color-s) + 3%), calc(var(--accent-color-l) + -6%), 1);
+  --text-selected-background: hsla(var(--accent-color-h), calc(var(--accent-color-s) + 3%), calc(var(--accent-color-l) + 35%), 1);
   /* ------ Buttons ------ */
-  --button-label-color: #000000d8;
-  --button-background: #ffffffff;
+  --button-label-color: var(--os-labelColor);
+  --button-background: var(--os-controlBackgroundColor);
   --button-boxshadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 0.5px 1px 0.5px rgba(0, 0, 0, 0.1);
-  --inset-button-background: #ffffffff;
+  --inset-button-background: var(--os-controlBackgroundColor);
   --inset-button-boxshadow: inset 0 1.5px 1px 0 rgba(0, 0, 0, 0.1), inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
   /* ------ Labels ------ */
-  --label-color: #000000d8;
-  --secondary-label-color: #0000007f;
-  --tertiary-label-color: #00000042;
+  --label-color: var(--os-labelColor);
+  --label-2-color: var(--os-secondaryLabelColor);
+  --label-3-color: var(--os-tertiaryLabelColor);
+  --label-4-color: var(--os-quaternaryLabelColor);
   /* ------ Text ------ */
-  --text-color: #000000ff;
-  --placeholder-text-color: #0000003f;
-  --selected-menuitem-text-color: #ffffffff;
-  --control-text-color: #000000d8;
+  --text-color: var(--os-textColor);
+  --text-placeholder-color: var(--os-placeholderTextColor);
+  --menuitem-selected-text-color: var(--os-selectedMenuItemTextColor);
+  --control-text-color: var(--os-controlTextColor);
+  --control-selected-text-color: var(--os-selectedControlTextColor);
+  --control-disabled-text-color: var(--os-disabledControlTextColor);
   /* ------ Misc ------ */
-  --menu-background: hsla(0, 0%, 95%, 0.8);
   --error-color: #fa6e50;
-  --separator-color: #00000019;
-  /* ------ Unused (from mac) ------ */
-  --selected-control-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 3%), calc(var(--accent-L) + 35%), 1);
-  --controlColor: #ffffffff;
-  --controlBackgroundColor: #ffffffff;
-  --alternateSelectedControlTextColor: #ffffffff;
-  --disabledControlTextColor: #0000003f;
-  --findHighlightColor: #ffff00ff;
-  --gridColor: #e6e6e6ff;
-  --headerTextColor: #000000d8;
-  --highlightColor: #ffffffff;
-  --linkColor: #0068daff;
-  --quaternaryLabelColor: #00000019;
-  --selectedControlTextColor: #000000d8;
-  --selectedTextColor: #000000ff;
-  --shadowColor: #000000ff;
-  --textBackgroundColor: #ffffffff;
-  --unemphasizedSelectedContentBackgroundColor: #dcdcdcff;
-  --unemphasizedSelectedTextBackgroundColor: #dcdcdcff;
-  --unemphasizedSelectedTextColor: #000000ff;
-  --windowBackgroundColor: #ecececff;
-  --windowFrameTextColor: #000000d8;
+  --grid-color: var(--os-gridColor);
+  --lightbox-icon-color: #fff;
+  --menu-background: hsla(0, 0%, 95%, 0.8);
+  --separator-color: var(--os-separatorColor);
+  --shadow-color: var(--os-shadowColor);
+  --window-background-color: var(--os-windowBackgroundColor);
+  /* ------ Sidebar ------ */
+  --sidebar-tab-inactive-color: var(--os-controlTextColor);
+  --sidebar-tab-active-color: rgba(var(--foreground-color), 1);
+  --sidebar-tab-selected-color: var(--accent-color);
+  --sidebar-tree-icons-color: rgba(var(--foreground-color), 0.8);
+  /* ------ Editor wizard ------ */
+  --wizard-background-color: var(--os-windowBackgroundColor);
+  --wizard-border-color: var(--os-separatorColor);
+  --wizard-border-radius: 4px;
+  --wizard-border-thickness: 1px;
+  --wizard-error: hsla(0, 100%, 50%, 0.5);
 }
 
 body {
-  --menu-checkmark-img: url(img/ui/checkmark.heavy.svg);
-  --nav-project-icon: url(img/ui/folder.svg);
-  --nav-project-active-icon: url(img/ui/folder.fill.svg);
-  --nav-allDocs-icon: url(img/ui/doc.on.doc.svg);
-  --nav-allDocs-active-icon: url(img/ui/doc.on.doc.fill.svg);
-  --nav-mostRecent-icon: url(img/ui/clock.svg);
-  --nav-mostRecent-active-icon: url(img/ui/clock.fill.svg);
-  --nav-tags-icon: url(img/ui/tag.svg);
-  --nav-tags-active-icon: url(img/ui/tag.fill.svg);
-  --nav-media-icon: url(img/ui/photo.svg);
-  --nav-media-active-icon: url(img/ui/photo.fill.svg);
-  --nav-citations-icon: url(img/ui/quote.bubble.svg);
-  --nav-citations-active-icon: url(img/ui/quote.bubble.fill.svg);
-  --nav-search-icon: url(img/ui/magnifyingglass.svg);
-  --nav-search-active-icon: url(img/ui/magnifyingglass.svg);
-  --new-doc-icon: url(img/ui/plus.medium.regular.svg);
+  --nav-project-icon: url(img/ui/folder.small.medium.svg);
+  --nav-project-active-icon: url(img/ui/folder.fill.small.medium.svg);
+  --nav-allDocs-icon: url(img/ui/doc.on.doc.small.medium.svg);
+  --nav-allDocs-active-icon: url(img/ui/doc.on.doc.fill.small.medium.svg);
+  --nav-mostRecent-icon: url(img/ui/clock.small.regular.svg);
+  --nav-mostRecent-active-icon: url(img/ui/clock.fill.small.regular.svg);
+  --nav-tags-icon: url(img/ui/tag.small.medium.svg);
+  --nav-tags-active-icon: url(img/ui/tag.fill.small.medium.svg);
+  --nav-media-icon: url(img/ui/photo.small.medium.svg);
+  --nav-media-active-icon: url(img/ui/photo.fill.small.medium.svg);
+  --nav-citations-icon: url(img/ui/quote.bubble.small.medium.svg);
+  --nav-citations-active-icon: url(img/ui/quote.bubble.fill.small.medium.svg);
+  --nav-search-icon: url(img/ui/magnifyingglass.small.regular.svg);
+  --nav-search-active-icon: url(img/ui/magnifyingglass.small.regular.svg);
+  --project-av-icon: url(img/ui/play.rectangle.medium.regular.svg);
+  --project-doc-icon: url(img/ui/doc.text.medium.regular.svg);
+  --project-folder-icon: url(img/ui/folder.medium.regular.svg);
+  --project-image-icon: url(img/ui/photo.medium.regular.svg);
   --block-options-expand-icon: url(img/ui/chevron.down.medium.semibold.svg);
-  --checkbox-icon: url(img/ui/checkmark.heavy.svg);
-  --disclosure-chevron-icon: url(img/ui/chevron.down.heavy.svg);
-  --iconbutton-chevron-icon: url(img/ui/chevron.down.heavy.svg);
+  --checkbox-icon: url(img/ui/checkmark.small.heavy.svg);
+  --disclosure-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --iconbutton-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
   --imagepreview-blank-icon: url(img/ui/rectangle.dashed.medium.regular.svg);
   --imagepreview-error-icon: url(img/ui/custom/image-not-found.svg);
-  --input-error-icon: url(img/ui/exclamationmark.circle.fill.svg);
+  --input-error-icon: url(img/ui/exclamationmark.circle.fill.small.medium.svg);
   --lightbox-close-icon: url(img/ui/xmark.medium.regular.svg);
   --lightbox-prev-icon: url(img/ui/chevron.backward.large.light.svg);
-  --popupButton-icon: url(img/ui/chevron.up.down.svg);
+  --menu-checkmark-img: url(img/ui/checkmark.small.heavy.svg);
+  --popupButton-icon: url(img/ui/custom/chevron.up.down.svg);
+  --pulldownButton-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --sortmenu-icon: url(img/ui/arrow.up.arrow.down.small.regular.svg);
+  --stepper-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --toggle-sidebar-icon: url(img/ui/sidebar.left.medium.regular.svg);
+  --search-field-icon: url(img/ui/magnifyingglass.small.regular.svg);
   --prefs-tab-citations-icon: url(img/ui/quote.bubble.medium.regular.svg);
-  --prefs-tab-general-icon: url(img/ui/gearshape.svg);
+  --prefs-tab-general-icon: url(img/ui/gearshape.medium.regular.svg);
   --prefs-tab-markdown-icon: url(img/ui/textformat.medium.regular.svg);
   --prefs-tab-media-icon: url(img/ui/photo.medium.regular.svg);
   --prefs-tab-theme-icon: url(img/ui/paintpalette.medium.regular.svg);
-  --pulldownButton-icon: url(img/ui/chevron.down.heavy.svg);
-  --sortmenu-icon: url(img/ui/arrow.up.arrow.down.svg);
-  --stepper-chevron-icon: url(img/ui/chevron.down.heavy.svg);
-  --img-chevron-down-bold: url(img/ui/chevron.down.bold.svg);
-  --img-chevron-down-heavy: url(img/ui/chevron.down.heavy.svg);
-  --img-chevron-up-down: url(img/ui/chevron.up.down.svg);
-  --img-clock-fill: url(img/ui/clock.fill.svg);
-  --img-clock: url(img/ui/clock.svg);
-  --img-doc-on-doc-fill: url(img/ui/doc.on.doc.fill.svg);
-  --img-doc-on-doc: url(img/ui/doc.on.doc.svg);
-  --img-doc-text: url(img/ui/doc.text.svg);
-  --img-exclamationmark-circle-fill: url(img/ui/exclamationmark.circle.fill.svg);
-  --img-folder: url(img/ui/folder.svg);
-  --img-folder-fill: url(img/ui/folder.fill.svg);
-  --img-gearshape: url(img/ui/gearshape.svg);
-  --img-magnifyingglass: url(img/ui/magnifyingglass.svg);
-  --img-photo-fill: url(img/ui/photo.fill.svg);
-  --img-photo: url(img/ui/photo.svg);
-  --img-photo-medium-regular: url(img/ui/photo.medium.regular.svg);
-  --img-play-rectangle-fill: url(img/ui/play.rectangle.fill.svg);
-  --img-play-rectangle: url(img/ui/play.rectangle.svg);
-  --img-quote-bubble-fill: url(img/ui/quote.bubble.fill.svg);
-  --img-quote-bubble: url(img/ui/quote.bubble.svg);
-  --img-quote-bubble-medium-regular: url(img/ui/quote.bubble.medium.regular.svg);
-  --img-rectangle-grid-2x2: url(img/ui/rectangle.grid.2x2.svg);
-  --img-sidebar-left: url(img/ui/sidebar.left.svg);
-  --img-square-split-2x1-medium-regular: url(img/ui/square.split.2x1.medium.regular.svg);
-  --img-tag-fill: url(img/ui/tag.fill.svg);
-  --img-tag: url(img/ui/tag.svg);
-  --img-textformat-medium-regular: url(img/ui/textformat.medium.regular.svg);
-  --img-xmark-medium-regular: url(img/ui/xmark.medium.regular.svg);
+  --topbar-file-av-icon: url(img/ui/play.rectangle.medium.regular.svg);
+  --topbar-file-doc-icon: url(img/ui/doc.text.medium.regular.svg);
+  --topbar-file-image-icon: url(img/ui/photo.medium.regular.svg);
+  --topbar-new-doc-icon: url(img/ui/plus.medium.regular.svg);
 }
 
 body {
@@ -1371,149 +1375,112 @@ body {
 }
 
 body {
-  /* --------------------------------- Sidebar -------------------------------- */
-  --sidebar-tab-inactive-color: var(--control-text-color);
-  --sidebar-tab-active-color: rgba(var(--foregroundColor), 1);
-  --sidebar-tab-selected-color: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
-  --sidebar-tree-icons-color: var(--control-text-color);
+  /* --------------------------------- UI -------------------------------- */
   /* --------------------------------- Editor --------------------------------- */
-  --editor-background-color: #F7F7F7;
+  --editor-default-text-color: hsl(0, 0%, 25%);
+  --editor-background-color: hsl(0, 0%, 97%);
   --editor-border-radius: 5px;
   --editor-header-height: 2.25em;
   --editor-side-padding: 4em;
-  --mark-borderRadius: 0.2rem;
-  --mark-borderWidth: 0px;
-  /* ---------------------------- Editor characters --------------------------- */
-  --citation-H: 51.884057971deg;
-  --citation-S: 88.8412017167%;
-  --citation-L: 45.6862745098%;
-  --citation-A: 1;
-  --citation-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --citation-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
-  --citation-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --mark-border-radius: 0.2rem;
+  --mark-border-width: 0px;
+  --citation-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --citation-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --citation-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --citation-mark-highlight: white;
-  --citation-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --citation-source: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --citation-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
-  --citation-source-md: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 0.6);
-  --code-H: 0deg;
-  --code-S: 0%;
-  --code-L: 32.5490196078%;
-  --code-A: 1;
-  --code-source: hsla(var(--code-H), var(--code-S), calc(var(--code-L) + -15%), 1);
-  --code-source-bg: hsla(var(--code-H), var(--code-S), var(--code-L), 0.1);
-  --code-source-md: hsla(var(--code-H), var(--code-S), calc(var(--code-L) + -10%), 0.4);
+  --citation-mark-highlight-bg: var(--accent-color);
+  --citation-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --citation-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.05);
+  --citation-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
+  --code-source: #2e2e2e;
+  --code-source-bg: rgba(84, 84, 84, 0.1);
+  --code-source-md: rgba(59, 59, 59, 0.4);
   --code-borderRadius: 2px;
-  --emphasis-H: 0deg;
-  --emphasis-S: 0%;
-  --emphasis-L: 23.9215686275%;
-  --emphasis-A: 1;
-  --emphasis: hsla(var(--emphasis-H), var(--emphasis-S), var(--emphasis-L), 1);
-  --emphasis-md: hsla(var(--emphasis-H), var(--emphasis-S), var(--emphasis-L), 0.4);
-  --fencedcodeblock-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.07);
-  --fencedcodeblock-md: rgba(var(--foregroundColor), 0.4);
-  --fencedcodeblock-options-label: rgba(var(--foregroundColor), 0.25);
+  --emphasis: #3d3d3d;
+  --emphasis-md: rgba(61, 61, 61, 0.4);
+  --fencedcodeblock-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.07);
+  --fencedcodeblock-md: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -10%), var(--accent-color-l), 0.8);
+  --fencedcodeblock-options-label: rgba(var(--foreground-color), 0.25);
   --fencedcodeblock-borderRadius: 0.2em;
-  --fencedcodeblock-syntax-icon: url(img/ui/chevron.down.heavy.svg);
-  --footnote-H: 313.3333333333deg;
-  --footnote-S: 36%;
-  --footnote-L: 49.0196078431%;
-  --footnote-A: 1;
-  --footnote-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --footnote-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
-  --footnote-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --fencedcodeblock-syntax-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --footnote-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --footnote-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --footnote-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --footnote-mark-highlight: white;
-  --footnote-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --footnote-source: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --footnote-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
-  --footnote-source-md: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.6);
-  --figure-bg: rgba(241, 188, 127, 0.2) !important;
-  --figure-caption: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + -20%), calc(var(--accent-L) + -10%), 1);
-  --figure-options-label: rgba(var(--foregroundColor), 0.4);
+  --footnote-mark-highlight-bg: var(--accent-color);
+  --footnote-source: var(--accent-color);
+  --footnote-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.05);
+  --footnote-source-md: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.6);
+  --figure-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.07);
+  --figure-caption: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -20%), calc(var(--accent-color-l) + -10%), 1);
+  --figure-options-label: rgba(var(--foreground-color), 0.4);
   --figure-thumb-bg: transparent;
   --figure-thumb-borderColor: var(--accent-color);
   --figure-thumb-borderRadius: 3.5px;
   --figure-thumb-borderWidth: 1px;
-  --frontmatter-bg: rgba(var(--foregroundColor), 0.03);
+  --frontmatter-bg: rgba(var(--foreground-color), 0.03);
+  --frontmatter-md: rgba(var(--foreground-color), 0.4);
+  --frontmatter-dividers: rgba(var(--foreground-color), 0.03);
   --frontmatter-border-width: 0px;
-  --frontmatter-collapsed-border-hover: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
-  --frontmatter-collapsed-widget-hover: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + 0%), 1);
+  --frontmatter-border: transparent;
   --frontmatter-borderRadius: 0.3em;
-  --frontmatter-md: rgba(var(--foregroundColor), 0.4);
-  --frontmatter-options-label: hsla(calc(var(--accent-H) + 0), calc(var(--accent-S) + 0%), calc(var(--accent-L) + -20%), 0.25);
-  --frontmatter-options-icon: rgba(var(--foregroundColor), 0.4);
-  --frontmatter-dividers: rgba(var(--foregroundColor), 0.03);
-  --frontmatter-padding: 0.6em;
-  --h1: rgba(var(--foregroundColor), 1);
-  --h2: rgba(var(--foregroundColor), 0.8);
-  --h3: rgba(var(--foregroundColor), 0.8);
-  --h4: rgba(var(--foregroundColor), 0.8);
-  --h5: rgba(var(--foregroundColor), 0.8);
-  --h6: rgba(var(--foregroundColor), 0.8);
-  --hr-bg: rgba(198, 198, 198, 0.2);
-  --image-H: 136deg;
-  --image-S: 44.3037974684%;
-  --image-L: 46.4705882353%;
-  --image-A: 1;
-  --image-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --image-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
-  --image-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --h1: rgba(var(--foreground-color), 1);
+  --h2: rgba(var(--foreground-color), 0.8);
+  --h3: rgba(var(--foreground-color), 0.8);
+  --h4: rgba(var(--foreground-color), 0.8);
+  --h5: rgba(var(--foreground-color), 0.8);
+  --h6: rgba(var(--foreground-color), 0.8);
+  --hr-bg: hsla(0, 0%, 78%, 0.2);
+  --image-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --image-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --image-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --image-mark-highlight: white;
-  --image-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --image-source: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 1);
-  --image-source-url: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 0.8);
-  --image-source-title: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 0.6);
-  --image-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
-  --image-source-md: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 0.6);
-  --in-brackets: #0d67dc;
-  --in-brackets-md: rgba(13, 103, 220, 0.4);
-  --link-H: 0deg;
-  --link-S: 0%;
-  --link-L: 11.7647058824%;
-  --link-A: 1;
-  --link-mark: hsla(var(--link-H), var(--link-S), var(--link-L), 1);
-  --link-mark-underline: hsla(var(--link-H), var(--link-S), var(--link-L), 0.4);
+  --image-mark-highlight-bg: var(--accent-color);
+  --image-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 1);
+  --image-source-url: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 0.8);
+  --image-source-title: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 0.6);
+  --image-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 1.05);
+  --image-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
+  --in-brackets: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -10%), 1);
+  --in-brackets-md: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.6);
+  --in-brackets-underline: transparent;
+  --in-brackets-hover-underline: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -10%), 0.8);
+  --link-mark: #1f1f1f;
+  --link-mark-underline: rgba(31, 31, 31, 0.4);
   --link-mark-highlight: white;
-  --link-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --link-mark-borderRadius: 3px;
-  --link-source: #1e1e1e;
-  --link-source-url: rgba(30, 30, 30, 0.8);
-  --link-source-title: rgba(30, 30, 30, 0.6);
-  --link-source-bg: rgba(30, 30, 30, 0.05);
-  --link-source-md: rgba(30, 30, 30, 0.6);
-  --link-ref-definition-bg: rgba(30, 30, 30, 0.1);
-  --list-marker: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --link-mark-highlight-bg: var(--accent-color);
+  --link-mark-border-radius: 3px;
+  --link-source: #1f1f1f;
+  --link-source-url: rgba(31, 31, 31, 0.8);
+  --link-source-title: rgba(31, 31, 31, 0.6);
+  --link-source-bg: transparent;
+  --link-source-md: rgba(31, 31, 31, 0.6);
+  --link-ref-definition-bg: rgba(31, 31, 31, 0.1);
+  --list-marker: var(--accent-color);
   --list-indentation: 1em;
-  --texmath-inline: rgba(214, 214, 214, 0.5);
-  --texmath-display: rgba(214, 214, 214, 0.5);
-  --quote: rgba(var(--foregroundColor), 0.6);
-  --quote-md: rgba(var(--foregroundColor), 0.4);
+  --texmath-inline: hsla(0, 0%, 84%, 0.5);
+  --texmath-display: hsla(0, 0%, 84%, 0.5);
+  --quote: rgba(var(--foreground-color), 0.6);
+  --quote-md: var(--accent-color);
   --quote-indent: 2em;
   --quote-border-bg: transparent;
   --quote-border-width: 0.6em;
-  --strikethrough: rgba(0, 0, 0, 0.45);
-  --strikethrough-md: rgba(0, 0, 0, 0.25);
-  --strong-H: 0deg;
-  --strong-S: 0%;
-  --strong-L: 23.9215686275%;
-  --strong-A: 1;
-  --strong: hsla(var(--strong-H), var(--strong-S), var(--strong-L), 1);
-  --strong-md: hsla(var(--strong-H), var(--strong-S), var(--strong-L), 0.4);
-  --task-mark-icon: url(/img/ui/checkmark.heavy.svg);
+  --strikethrough: #3d3d3d;
+  --strikethrough-line: hsla(0, 0%, 0%, 0.5);
+  --strikethrough-md: rgba(61, 61, 61, 0.6);
+  --strong: #3d3d3d;
+  --strong-md: rgba(61, 61, 61, 0.5);
+  --task-mark-icon: url(/img/ui/checkmark.small.heavy.svg);
   --task-mark-icon-bg: white;
   --task-mark-open-bg: transparent;
-  --task-mark-open-border: rgba(var(--foregroundColor), 0.3);
-  --task-mark-closed-bg: #E44720;
-  --task-mark-closed-border: #E44720;
-  --task-mark-bg: rgba(228, 71, 32, 0.2);
-  --task-mark-border: rgba(95, 28, 12, 0.1);
+  --task-mark-open-border: rgba(var(--foreground-color), 0.3);
+  --task-mark-closed-bg: var(--accent-color);
+  --task-mark-closed-border: var(--accent-color);
+  --task-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --task-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --task-mark-highlight: white;
-  --task-mark-highlight-bg: #E44720;
-  --task-source: #8d2a11;
-  --task-source-bg: rgba(228, 71, 32, 0.05);
-  --task-source-md: rgba(141, 42, 17, 0.6);
-  --wizard-error: rgba(255, 0, 0, 0.5);
-  --wizard-border-color: var(--separator-color);
-  --wizard-border-thickness: 1px;
-  --wizard-border-radius: 4px;
+  --task-mark-highlight-bg: var(--accent-color);
+  --task-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --task-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 1.05);
+  --task-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
 }

@@ -89,7 +89,7 @@
     font-weight: 500;
     
     &:hover {
-      color: foregroundColor(1);
+      color: foregroundColor();
       text-decoration-color: foregroundColor(0.7);
     }
   }

@@ -45,7 +45,7 @@
     
     .numHits {
       @include system-small-font;
-      color: var(--secondary-label-color);
+      color: var(--label-2-color);
       flex-shrink: 0;
     }
   }
@@ -53,7 +53,7 @@
 	.hits {
 		@include system-regular-font;
     @include list-reset;
-		color: var(--secondary-label-color);
+		color: var(--label-2-color);
 		pointer-events: none;
 
     li {
@@ -78,7 +78,7 @@
 		// height: 79px; // height minus 1, to create 1px gap below
 		margin-bottom: 1px;
 		.title, .numHits, .hits {
-			color: var(--selected-menuitem-text-color);
+			color: var(--menuitem-selected-text-color);
 		}
 		&.isSidebarFocused {
 		  background-color: var(--selected-list-item-color);
@@ -86,7 +86,7 @@
 	
 		// Selected, and parent list NOT focused
 		&:not(.isSidebarFocused) {
-		  background-color: var(--disabledControlTextColor);
+		  background-color: var(--control-disabled-text-color);
 		}
 	}
 </style>

@@ -11,7 +11,7 @@
 		color: var(--label-color);
 		display: block;
 		padding: 0;
-		border-top: 1px solid var(--gridColor);
+		border-top: 1px solid var(--grid-color);
 		padding-top: 0.4em;
 	}
 	  
@@ -35,7 +35,7 @@
 		  }
 
 		  .value {
-			color: var(--secondary-label-color);
+			color: var(--label-2-color);
 		  }
 		}
 		.swatch {

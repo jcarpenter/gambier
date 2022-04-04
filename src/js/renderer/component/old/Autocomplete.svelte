@@ -345,10 +345,10 @@
   li.selected {
     background-color: var(--controlAccentColor);
     .label {
-      color: var(--selected-menuitem-text-color);
+      color: var(--menuitem-selected-text-color);
     }
     .preview {
-      color: var(--selected-menuitem-text-color);
+      color: var(--menuitem-selected-text-color);
       opacity: 0.7;
     }
   }
@@ -362,7 +362,7 @@
   .preview {
     @include code-typography;
     flex-shrink: 0;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
   }
 </style>
 

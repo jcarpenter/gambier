@@ -158,7 +158,7 @@ export function update(appMenu) {
   const project = state.projects.byId[state.focusedWindowId];
   const panel = project?.panels[project?.focusedPanelIndex];
   const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
-  const activeDoc = watcher?.files.byId[panel.docId];
+  const activeDoc = watcher?.files?.byId[panel?.docId];
   
   const isActiveDocMarkdownAndEditorFocused = 
     activeDoc?.contentType == 'text/markdown' &&

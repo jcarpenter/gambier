@@ -12,7 +12,7 @@
     // /* Set height, width, borders, and global font properties here */
     // font-family: monospace;
     // height: 300px;
-    // color: black;
+    color: var(--editor-default-text-color);
     // direction: ltr;
     width: 100%;
     height: 100%;
@@ -124,7 +124,7 @@
 
 .CodeMirror-cursor {
     // border-left: 1px solid black;
-    border-left: 1px solid foregroundColor(1);
+    border-left: 1px solid foregroundColor();
     border-right: none;
     width: 0;
 }
@@ -441,7 +441,7 @@ div.CodeMirror-dragcursors {
 // Text selected: CodeMirror focused
 .CodeMirror-focused .CodeMirror-selected {
     // background: #d7d4f0;
-    background: var(--selected-text-background); // TODO
+    background: var(--text-selected-background); // TODO
 }
 .CodeMirror-crosshair {
     // Am disabling showing cross hair when alt is held
@@ -451,7 +451,7 @@ div.CodeMirror-dragcursors {
 .CodeMirror-line::selection,
 .CodeMirror-line > span::selection,
 .CodeMirror-line > span > span::selection {
-    background: var(--selected-text-background);
+    background: var(--text-selected-background);
 }
 .CodeMirror-line::-moz-selection,
 .CodeMirror-line > span::-moz-selection,

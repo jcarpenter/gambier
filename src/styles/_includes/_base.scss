@@ -1,4 +1,5 @@
 @forward "editor/codemirror";
+@use "../_helpers/colors" as *;
 
 * {
     box-sizing: border-box;
@@ -13,9 +14,10 @@ body {
     padding: 0;
     height: 100%;
     overflow: hidden;
+    color: foregroundColor();
 }
 
 #layout {
     height: 100%;
-    background-color: var(--windowBackgroundColor);
+    background-color: var(--window-background-color);
 }

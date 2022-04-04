@@ -10,8 +10,8 @@
     user-select: none;
     border-width: 0 0 1px;
     border-style: solid;
-    background-color: var(--windowBackgroundColor);
-    @include dark { border-color: var(--shadowColor); }
+    background-color: var(--window-background-color);
+    @include dark { border-color: var(--shadow-color); }
     @include light { border-color: var(--separator-color); }
   }
 

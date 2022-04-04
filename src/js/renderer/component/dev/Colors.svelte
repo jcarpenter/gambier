@@ -25,10 +25,10 @@ import { onMount } from 'svelte';
 
     unusedColors = [
       'controlBackgroundColor', 
-      'quaternaryLabelColor', 
+      'label-4-color', 
       'alternateSelectedControlTextColor', 
       'findHighlightColor', 
-      'gridColor', 
+      'grid-color', 
       'headerTextColor', 
       'highlightColor', 
       'linkColor', 
@@ -62,7 +62,7 @@ import { onMount } from 'svelte';
   //   darkerControlAccentColor: colors.darkerControlAccentColor,
   //   keyboardFocusIndicatorColor: colors.keyboardFocusIndicatorColor,
   //   selectedContentBackgroundColor: colors.selectedContentBackgroundColor,
-  //   selectedControlColor: colors.selectedControlColor,
+  //   selectedcontrol-selected-text-color: colors.selectedcontrol-selected-text-color,
   //   selectedTextBackgroundColor: colors.selectedTextBackgroundColor,
   // }
   
@@ -71,7 +71,7 @@ import { onMount } from 'svelte';
   //   labelColor: colors.labelColor,
   //   secondaryLabelColor: colors.secondaryLabelColor,
   //   tertiaryLabelColor: colors.tertiaryLabelColor,
-  //   quaternaryLabelColor: colors.quaternaryLabelColor,
+  //   label-4-color: colors.label-4-color,
   // }
 
   // $: textColors = {
@@ -97,30 +97,30 @@ import { onMount } from 'svelte';
   // }
 
   // $: tableColors = {
-  //   gridColor: colors.gridColor,
+  //   grid-color: colors.grid-color,
   //   headerTextColor: colors.headerTextColor
   // }
 
-  // $: controlColors = {
+  // $: control-selected-text-colors = {
   //   controlAccentColor: colors.controlAccentColor,
-  //   controlColor: colors.controlColor,
+  //   control-selected-text-color: colors.control-selected-text-color,
   //   controlBackgroundColor: colors.controlBackgroundColor,
   //   controlTextColor: colors.controlTextColor,
-  //   disabledControlTextColor: colors.disabledControlTextColor,
-  //   selectedControlColor: colors.selectedControlColor,
+  //   control-disabled-text-color: colors.control-disabled-text-color,
+  //   selectedcontrol-selected-text-color: colors.selectedcontrol-selected-text-color,
   //   selectedControlTextColor: colors.selectedControlTextColor,
   //   alternateSelectedControlTextColor: colors.alternateSelectedControlTextColor,
   // }
 
   // $: windowColors = {
-  //   windowBackgroundColor: colors.windowBackgroundColor,
+  //   window-background-color: colors.window-background-color,
   //   windowFrameTextColor: colors.windowFrameTextColor,
   // }
 
   // $: highlightColors = {
   //   findHighlightColor: colors.findHighlightColor,
   //   highlightColor: colors.highlightColor,
-  //   shadowColor: colors.shadowColor,
+  //   shadow-color: colors.shadow-color,
   // }
 
   // function darken(startingColor) {
@@ -245,13 +245,13 @@ import { onMount } from 'svelte';
         <SwatchLarge name={'buttonBackgroundColor'} {colors} {overriddenVariables}> 
         Button backgrounds. Hovered menu. Has `darker` mixin.
       </SwatchLarge>
-      <SwatchLarge name={'controlColor'} {colors} {overriddenVariables}> 
+      <SwatchLarge name={'control-selected-text-color'} {colors} {overriddenVariables}> 
         Bright in both dark and light modes. Slightly dimmer in dark.
       </SwatchLarge>
       <SwatchLarge name={'controlTextColor'} {colors} {overriddenVariables}> 
         Background color for some UI elements / icons.
       </SwatchLarge>
-      <SwatchLarge name={'disabledControlTextColor'} {colors} {overriddenVariables}> 
+      <SwatchLarge name={'control-disabled-text-color'} {colors} {overriddenVariables}> 
         Unfocused list element backgrounds (Media and Doc).
       </SwatchLarge>
       <SwatchLarge name={'errorColor'} {colors} {overriddenVariables}> 
@@ -267,10 +267,10 @@ import { onMount } from 'svelte';
       <SwatchLarge name={'separatorColor'} {colors} {overriddenVariables}> 
         Lines between sections in layouts.
       </SwatchLarge>
-      <SwatchLarge name={'windowBackgroundColor'} {colors} {overriddenVariables}> 
+      <SwatchLarge name={'window-background-color'} {colors} {overriddenVariables}> 
         Window backgrounds.
       </SwatchLarge>
-      <SwatchLarge name={'shadowColor'} {colors} {overriddenVariables}> 
+      <SwatchLarge name={'shadow-color'} {colors} {overriddenVariables}> 
         Can be an alternative to separatorColor, for dark separations.
       </SwatchLarge>
     </div>

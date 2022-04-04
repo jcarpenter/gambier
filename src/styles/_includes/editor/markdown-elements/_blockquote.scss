@@ -3,7 +3,6 @@
 // -------------- Blockquote -------------- //
 
 .CodeMirror pre.CodeMirror-line.quote {
-  // color: colorVar("quote");
   color: var(--quote);
   // font-style: italic;
   // Creating hanging indentation for >
@@ -13,10 +12,9 @@
 
   // Notch ">" at start
   .cm-quote-start {
-    // color: colorVar("quote", $alpha: 0.6);
     color: var(--quote-md);
     position: absolute;
-    transform: translate(-100%, 0);
+    transform: translate(-100%, -0.075em);
   }
 
   // Vertical left border

@@ -41,59 +41,48 @@
 
 <style type="text/scss">
 
-
-  // ------ Mac ------ //
-
-  :global(.mac) {
-    .popupButton {
-      @include button;
-      padding: 0 2px 0 8px;
-      .label {
-        justify-content: left;
-      }
+.popupButton {
+    @include button;
+    padding: 0 2px 0 8px;
+    .label {
+      justify-content: left;
     }
-
-    .popupButton.compact {
-      @include button-compact;
-      padding: 0 2px 0 6px;
-    }
-
-    .popupButton:focus {
-      @include button-focus;
-    }
-
-    .popupButton:enabled:active,
-    .popupButton.menuOpen {
-      // @include button-active;
-      // We darken the button slightly
-      @include dark { filter: brightness(1.25); }
-      @include light { filter: brightness(0.9); }
-    }
-
-    .popupButton:disabled {
-      @include button-disabled;
-    }
-
-    .popupButton.windowHidden {
-      @include button-windowHidden;
-    }
-
-    .popupButton .icon::before {
-      -webkit-mask-image: var(--popupButton-icon);
-    }
-    
-    :global([slot="description"]) {
-      @include button-description;
-    }
-
   }
 
-  // ------ Windows ------ //
-
-  :global(.win) {
-  // TODO
+  .popupButton.compact {
+    @include button-compact;
+    padding: 0 2px 0 6px;
   }
 
+  .popupButton:focus {
+    @include button-focus;
+  }
+
+  .popupButton:enabled:active,
+  .popupButton.menuOpen {
+    // @include button-active;
+    // We darken the button slightly
+    @include dark { filter: brightness(1.25); }
+    @include light { filter: brightness(0.9); }
+  }
+
+  .popupButton:disabled {
+    @include button-disabled;
+  }
+
+  .popupButton.windowHidden {
+    @include button-windowHidden;
+  }
+
+  .popupButton .icon::before {
+    -webkit-mask-image: var(--popupButton-icon);
+  }
+  
+  :global([slot="description"]) {
+    @include button-description;
+  }
+
+  
 </style>
 
 <button

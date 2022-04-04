@@ -77,7 +77,7 @@
     .counter {
       @include absolute-vertical-center;
       @include system-regular-font;
-      color: var(--tertiary-label-color);
+      color: var(--label-3-color);
       position: absolute;
       right: 7px;
       pointer-events: none;
@@ -86,23 +86,20 @@
 
   // Icons
   .folder .icon {
-    -webkit-mask-image: var(--img-folder);
+    -webkit-mask-image: var(--project-folder-icon);
   }
 
   .doc .icon {
-    -webkit-mask-image: var(--img-doc-text);
+    -webkit-mask-image: var(--project-doc-icon);
   }
 
   .image .icon {
-    -webkit-mask-image: var(--img-photo);
+    -webkit-mask-image: var(--project-image-icon);
   }
 
-  .audio .icon {
-    -webkit-mask-image: var(--img-play-rectangle);
-  }
-
+  .audio .icon,
   .video .icon {
-    -webkit-mask-image: var(--img-play-rectangle);
+    -webkit-mask-image: var(--project-av-icon);
   }
 
   .file.isHighlighted {
@@ -110,19 +107,19 @@
 
     .disclosure [role='button'],
     .icon {
-      background-color: var(--selected-menuitem-text-color);
+      background-color: var(--menuitem-selected-text-color);
     }
     .label {
-      color: var(--selected-menuitem-text-color);
+      color: var(--menuitem-selected-text-color);
     }
     .counter {
-      color: var(--controlColor);
-      // opacity: 0.4;
+      color: var(--menuitem-selected-text-color);
+      opacity: 0.6;
     }
   }
 
   .file.isHighlightedInBg {
-    background-color: rgba(var(--foregroundColor), 0.12);
+    background-color: foregroundColor(0.12);
   }
 
   // File is target of drag operation
@@ -134,13 +131,13 @@
 
   //   .disclosure [role='button'],
   //   .icon {
-  //     background-color: var(--selected-menuitem-text-color);
+  //     background-color: var(--menuitem-selected-text-color);
   //   }
   //   .label {
-  //     color: var(--selected-menuitem-text-color);
+  //     color: var(--menuitem-selected-text-color);
   //   }
   //   .counter {
-  //     color: var(--controlColor);
+  //     color: var(--control-selected-text-color);
   //     // opacity: 0.4;
   //   }
   // }
@@ -186,10 +183,9 @@
         left={leftOffset + 3}
         rotation={isExpanded ? 0 : -90}
         opacity={0.85}
-        iconColor={isHighlighted ? 'selected-menuitem-text-color' : 'control-text-color'}
+        iconColor={isHighlighted ? 'menuitem-selected-text-color' : 'control-text-color'}
         on:toggle={() => toggleExpanded(id, isExpanded, tab, tabId)} 
       />
-
     {/if}
     <div class="icon" />
     <div class="label">{file.title ? file.title : file.name}</div>

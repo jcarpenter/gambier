@@ -1,10 +1,9 @@
 @use 'animations' as *;
 @use 'colors' as *;
 @use 'layout' as *;
-@use 'mediaqueries' as *;
 @use 'typography' as *;
 
-@mixin button($platform: 'mac') {
+@mixin button() {
     @include system-regular-font;
     color: var(--button-label-color);
     background: var(--button-background);
@@ -33,37 +32,33 @@
     }
 
     .icon {
-        @if $platform == 'mac' {
-            width: 16px;
-            height: 16px;
-            flex: none;
-            border-radius: 4px;
-            display: grid;
-            place-items: center;
-            pointer-events: none;
-            background: var(--accent-color);
-            @include dark {
-                // Dark also has top bevel and slight outline
-                box-shadow: inset 0 0.5px 0 0 white(0.25), 0 0 0 0.5px black(0.15);
-            }
+        width: 16px;
+        height: 16px;
+        flex: none;
+        border-radius: 4px;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        background: accentColor();
+        @include dark {
+            // Dark also has top bevel and slight outline
+            box-shadow: inset 0 0.5px 0 0 white(0.25), 0 0 0 0.5px black(0.15);
+        }
 
-            // Icon image
-            &::before {
-                @include centered-mask-image;
-                content: '';
-                background: white;
-                width: 100%;
-                height: 100%;
-                // transform: translate(0, -1px);
-                -webkit-mask-size: 8px auto;
-            }
-        } @else if $platform == 'win' {
-            // TODO
+        // Icon image
+        &::before {
+            @include centered-mask-image;
+            content: '';
+            background: white;
+            width: 100%;
+            height: 100%;
+            // transform: translate(0, -1px);
+            -webkit-mask-size: 8px auto;
         }
     }
 }
 
-@mixin button-compact($platform: 'mac') {
+@mixin button-compact() {
     @include system-small-font;
     height: 16px;
     border-radius: var(--button-border-radius-compact);
@@ -72,55 +67,46 @@
         height: 16px;
     }
     .icon {
-        @if $platform == 'mac' {
-            width: 12px;
-            height: 12px;
-            border-radius: 2.5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 2.5px;
 
-            &::before {
-                transform: translate(0, -1px);
-                -webkit-mask-size: 6px auto;
-            }
-        } @else if $platform == 'win' {
+        &::before {
+            transform: translate(0, -1px);
+            -webkit-mask-size: 6px auto;
         }
     }
 }
 
-@mixin button-focus($platform: 'mac') {
-    @include focusRingAnimation($platform);
+@mixin button-focus() {
+    @include focusRingAnimation();
 }
 
-@mixin button-active($platform: 'mac') {
-    @if $platform == 'mac' {
-        color: white;
+@mixin button-active() {
+    color: white;
 
-        // Slight gradient over accent-color
-        background: linear-gradient(white(0.18), white(0)), var(--accent-color);
+    // Slight gradient over accent-color
+    background: linear-gradient(white(0.18), white(0)), accentColor();
 
-        // Slight bevel on top edge, and dark outline.
-        @include light {
-            // filter: brightness(0.9);
-            box-shadow: none; // Hide outline
-        }
+    // Slight bevel on top edge, and dark outline.
+    @include light {
+        // filter: brightness(0.9);
+        box-shadow: none; // Hide outline
+    }
 
-        @include dark {
-            filter: brightness(1.25);
-        }
-    } @else if $platform == 'win' {
+    @include dark {
+        filter: brightness(1.25);
     }
 }
 
-@mixin button-disabled($platform: 'mac') {
-    @if $platform == 'mac' {
-        opacity: 0.35;
-        .icon {
-            background: none;
-            box-shadow: none;
-            &::before {
-                background: var(--label-color);
-            }
+@mixin button-disabled() {
+    opacity: 0.35;
+    .icon {
+        background: none;
+        box-shadow: none;
+        &::before {
+            background: var(--label-color);
         }
-    } @else if $platform == 'win' {
     }
 }
 
@@ -134,10 +120,8 @@
     }
 }
 
-@mixin button-description($platform: 'mac') {
-    @if $platform == 'mac' {
-        @include system-regular-font;
-        color: var(--label-color);
-        margin-left: 8px;
-    }
+@mixin button-description() {
+    @include system-regular-font;
+    color: var(--label-color);
+    margin-left: 8px;
 }

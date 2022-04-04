@@ -83,7 +83,7 @@
         color: var(--label-color);;
         // font-weight: 500;
       }
-      // border-left: 4px solid var(--tertiary-label-color);
+      // border-left: 4px solid var(--label-3-color);
       @include system-regular-font;
       color: var(--label-color);
       display: -webkit-box;

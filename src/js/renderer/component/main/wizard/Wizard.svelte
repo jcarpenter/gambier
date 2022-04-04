@@ -372,7 +372,7 @@
     --delay: 0.5s;
 
     @include system-regular-font;
-    background-color: var(--windowBackgroundColor);
+    background-color: var(--wizard-background-color);
     box-shadow: 0 0 20px 2px rgba(0, 0, 0, 0.2);
     border: var(--wizard-border-thickness) solid var(--wizard-border-color);
     border-radius: var(--wizard-border-radius);
@@ -496,7 +496,7 @@
   
   #wizard :global(.error-message) {
     @include system-small-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
     margin: 4px; // Nudge into alignment with fields
   }
 

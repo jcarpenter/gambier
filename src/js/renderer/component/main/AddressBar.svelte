@@ -67,7 +67,7 @@
 
   .placeholder {
     @include absolute-vertical-center;
-    color: var(--placeholder-text-color);
+    color: var(--text-placeholder-color);
     left: 24px;
     pointer-events: none;
   }

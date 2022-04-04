@@ -75,16 +75,16 @@
     overflow-x: hidden;
     overflow-y: scroll;
     // align-items: center;
+    background: var(--window-background-color);
 
     // For dark mode, we want the background to be a darker 
-    // shade the usual windowBackgroundColor.
-    @include dark { 
-      filter: brightness(0.6);
-      background: var(--windowBackgroundColor);
-    }
-    @include light {
-      background: var(--windowBackgroundColor);
-    }
+    // shade the usual window-background-color.
+    // @include dark { 
+    //   filter: brightness(0.6);
+    // }
+    // @include light {
+    //   background: var(--window-background-color);
+    // }
   }
 
 </style>

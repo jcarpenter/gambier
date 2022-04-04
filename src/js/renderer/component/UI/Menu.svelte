@@ -252,7 +252,7 @@
 
   // ------ Hover ------ //
   li.hover {
-    background-color: var(--accent-color);
+    background-color: accentColor();
     color: white;
     &::before { background: white; }
   }

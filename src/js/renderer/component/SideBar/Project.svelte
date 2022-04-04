@@ -233,7 +233,7 @@
     <SortMenu items={sortOptions} />
   </Header>
   <Separator margin={'0 12px'} />
-  <SearchField icon='img-magnifyingglass' focused bind:query placeholder={'Name'} margin={'8px 12px 0'} />
+  <SearchField icon='search-field-icon' focused bind:query placeholder={'Name'} margin={'8px 12px 0'} />
   {#if query == ''} 
     <TreeList subtree={data.tree[0]} listIds={data.allIds} />
   {:else}

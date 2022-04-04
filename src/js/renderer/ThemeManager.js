@@ -1,3 +1,4 @@
+import chroma from "chroma-js"
 import { stateHasChanged } from "../shared/utils"
 
 
@@ -8,9 +9,9 @@ import { stateHasChanged } from "../shared/utils"
 export function init(state) {
 
   // Set stylsheets
-  setThemeStylesheet(state)
+  setTheme(state)
   setSystemColorCSSVars(state)
-  setOtherCSSVars(state)
+  setEditorCSSVars(state)
 }
 
 
@@ -22,44 +23,43 @@ export function init(state) {
  */
 export async function updateTheme(newState, patches) {
 
-  // Set theme
-  if (stateHasChanged(patches, "theme")) {
-    setThemeStylesheet(newState)
-  }
-
-  // Set color css variables
-  const darkModeChanged = stateHasChanged(patches, "darkMode")
-  const appThemeChanged = stateHasChanged(patches, "appTheme")
-  const editorThemeChanged = stateHasChanged(patches, "editorTheme")
-  const systemColorsChanged = stateHasChanged(patches, "systemColors")
-
-  // If any of the above changed, 
-  // TODO 4/15: Make it possible to ignore new values from system?
-  // E.g. Re-implement override option... Ugh.
-  if (darkModeChanged || appThemeChanged || editorThemeChanged || systemColorsChanged) {
-    setSystemColorCSSVars(state)
-  }
-
-  // Set other css variables
-  const editorTypographyChanged =
+  // Check what has changed
+  const isThemeChanged = stateHasChanged(patches, "theme")
+  const isSystemColorsChanged = stateHasChanged(patches, "systemColors")
+  const isEditorTypographyChanged =
     stateHasChanged(patches, "editorFont") ||
     stateHasChanged(patches, "editorLineHeight") ||
     stateHasChanged(patches, "editorMaxLineWidth")
 
-  if (editorTypographyChanged) {
-    setOtherCSSVars(state)
-  }
+  // Update
+  if (isThemeChanged) setTheme(newState)
+  if (isThemeChanged || isSystemColorsChanged) setSystemColorCSSVars(newState)
+  if (isEditorTypographyChanged) setEditorCSSVars(newState)
+
+  // const darkModeChanged = stateHasChanged(patches, "darkMode")
+  // If any of the above changed, 
+  // TODO 4/15: Make it possible to ignore new values from system?
+  // E.g. Re-implement override option... Ugh.
+  // if (darkModeChanged || appThemeChanged || editorThemeChanged || systemColorsChanged) {
+  //   setSystemColorCSSVars(state)
+  // }
 }
 
 
 /*
- * Set `theme` id stylesheet href in `index.html`
- * E.g. If state.theme.id is 'gibsons', then stylesheet 
- * href is './styles/themes/gibsons.css'.
+ * Set href of #theme stylesheet on index.html
+ * Set `data-theme-isDark` boolean.
  */
-export function setThemeStylesheet(state) {
+export function setTheme(state) {
+    
+  // Set stylesheet
+  // If state.theme.id is 'gibsons', then stylesheet 
+  // href is './styles/themes/gibsons.css'.
   const stylesheet = document.getElementById('theme')
   stylesheet.setAttribute('href', `styles/${state.theme.id}.css`)
+
+  // Set data-theme-isDark
+  document.body.setAttribute('data-theme-isDark', state.theme.isDark)
 }
 
 
@@ -69,22 +69,21 @@ export function setThemeStylesheet(state) {
  * This shoudn't be called very often, so probably isn't an issue.
  */
  function setSystemColorCSSVars(state) {
-  for (const [varName, rgbaHex] of Object.entries(state.systemColors)) {
-    document.body.style.setProperty(`--${varName}`, rgbaHex)
+  for (const [varName, value] of Object.entries(state.systemColors)) {
+    document.body.style.setProperty(`--os-${varName}`, value)
   }
 }
 
+
 /**
- * Set editor typography values as CSS variables on `body`.
+ * Set CSS variables for editor-specific values that are driven by state.
+ * E.g. Font size, line height.
  */
-function setOtherCSSVars(state) {
+function setEditorCSSVars(state) {
  
   document.body.style.setProperty("--editor-fontsize", `${state.editorFont.size}px`)
-  
   document.body.style.setProperty("--editor-lineheight", `${state.editorLineHeight.size}em`)
-  
   document.body.style.setProperty("--editor-maxlinewidth", `${state.editorMaxLineWidth.size * state.editorFont.size}px`)
-  
   document.body.style.setProperty("--editor-maxpadding", `${state.editorFont.size * 4}px`)
 
   // document.body.style.setProperty("--gridoverlay-display", state.developer.showGrid ? 'none' : 'initial')

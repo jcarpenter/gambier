@@ -18,11 +18,11 @@
 
   h2 {
     @include system-regular-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
   }
 
   .stateTable {
-    border: 1px solid var(--tertiary-label-color);
+    border: 1px solid var(--label-3-color);
     border-radius: 4px;
     padding: 0.4em 0.4em;
     margin-bottom: 1em;
@@ -63,7 +63,7 @@
     .val {
       @include system-small-font;
       flex: 1 1 auto;
-      color: var(--secondary-label-color);
+      color: var(--label-2-color);
     }
   }
 

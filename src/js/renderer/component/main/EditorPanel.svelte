@@ -337,7 +337,7 @@
 
   h1 {
     @include system-regular-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
     margin: 0;
     padding: 0;
     white-space: nowrap;
@@ -347,7 +347,7 @@
 
   .hasUnsavedChanges {
     @include title1-emphasized-text;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
     margin-left: 2px;
   } 
 
@@ -394,28 +394,28 @@
 
 
   @keyframes highlightAll {
-    from { box-shadow: inset 0 0 0 0 var(--keyboardFocusIndicatorColor); }
-    to { box-shadow: inset 0 0 0 5px var(--keyboardFocusIndicatorColor); }
+    from { box-shadow: inset 0 0 0 0 var(--focus-ring-color); }
+    to { box-shadow: inset 0 0 0 5px var(--focus-ring-color); }
   }
 
   @keyframes highlightLeftEdge {
-    from { box-shadow: inset 0 0 0 0 var(--keyboardFocusIndicatorColor); }
-    to { box-shadow: inset 25px 0 0 0 var(--keyboardFocusIndicatorColor); }
+    from { box-shadow: inset 0 0 0 0 var(--focus-ring-color); }
+    to { box-shadow: inset 25px 0 0 0 var(--focus-ring-color); }
   }
 
   @keyframes highlightRightEdge {
-    from { box-shadow: inset 0 0 0 0 var(--keyboardFocusIndicatorColor); }
-    to { box-shadow: inset -25px 0 0 0 var(--keyboardFocusIndicatorColor); }
+    from { box-shadow: inset 0 0 0 0 var(--focus-ring-color); }
+    to { box-shadow: inset -25px 0 0 0 var(--focus-ring-color); }
   }
 
   @keyframes highlightLeftEdgeOfFirstPanel {
-    from { box-shadow: inset 0 0 0 0 var(--keyboardFocusIndicatorColor); }
-    to { box-shadow: inset 50px 0 0 0 var(--keyboardFocusIndicatorColor); }
+    from { box-shadow: inset 0 0 0 0 var(--focus-ring-color); }
+    to { box-shadow: inset 50px 0 0 0 var(--focus-ring-color); }
   }
 
   @keyframes highlightRightEdgeOfLastPanel {
-    from { box-shadow: inset 0 0 0 0 var(--keyboardFocusIndicatorColor); }
-    to { box-shadow: inset -50px 0 0 0 var(--keyboardFocusIndicatorColor); }
+    from { box-shadow: inset 0 0 0 0 var(--focus-ring-color); }
+    to { box-shadow: inset -50px 0 0 0 var(--focus-ring-color); }
   }
 
 </style>

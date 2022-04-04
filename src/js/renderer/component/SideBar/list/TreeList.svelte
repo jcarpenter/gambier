@@ -12,6 +12,8 @@
   $: tab = $sidebar.tabsById[tabId]
   $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
   
+  $: console.log(subtree, listIds)
+
 </script>
 
 <style type="text/scss">

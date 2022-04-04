@@ -76,13 +76,13 @@ li.CodeMirror-hint {
 
 li.CodeMirror-hint.CodeMirror-hint-active {
   background-color: var(--selected-list-item-color);
-  color: var(--selected-menuitem-text-color);
+  color: var(--menuitem-selected-text-color);
   &::after {
-      color: var(--selected-menuitem-text-color);
+      color: var(--menuitem-selected-text-color);
       opacity: 0.5;
   }
   p {
-      color: var(--selected-menuitem-text-color);
+      color: var(--menuitem-selected-text-color);
   }
 }
 
@@ -91,7 +91,7 @@ li.CodeMirror-hint::after {
   position: absolute;
   top: 50%;
   transform: translate(0, -50%);
-  color: var(--tertiary-label-color);
+  color: var(--label-3-color);
   position: absolute;
   right: 0.5em;
   letter-spacing: -0.08em;

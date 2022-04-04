@@ -13,7 +13,7 @@
     margin: 0;
     height: 28px;
     @include dark {
-      color: var(--secondary-label-color);
+      color: var(--label-2-color);
     }
     @include light {
       color: var(--label-color);

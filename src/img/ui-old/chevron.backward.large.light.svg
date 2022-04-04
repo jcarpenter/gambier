@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="59px" height="104px" viewBox="0 0 59 104" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Path</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="chevron.backward" transform="translate(-1116.000000, -1469.000000)" fill="#000000" fill-rule="nonzero">
+            <g id="Symbols" transform="translate(524.676640, 623.685500)">
+                <g id="Light-L" transform="translate(591.400000, 845.693400)">
+                    <path d="M-1.77635684e-15,51.3672 C-1.77635684e-15,52.4414 0.39063,53.3691 1.2207,54.1504 L51.80666,101.6113 C52.49026,102.2949 53.36916,102.6856 54.44336,102.6856 C56.44536,102.6856 58.05666,101.1719 58.05666,99.0234 C58.05666,97.9981 57.66606,97.168 57.03126,96.53321 L8.93556,51.3672 L57.03126,6.2012 C57.66606,5.5664 58.05666,4.6875 58.05666,3.6621 C58.05666,1.5625 56.44536,0 54.44336,0 C53.36916,0 52.49026,0.3906 51.80666,1.0742 L1.2207,48.584 C0.39063,49.3652 -1.77635684e-15,50.2441 -1.77635684e-15,51.3672 Z" id="Path"></path>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -5,11 +5,11 @@
 .CodeMirror .mark.citation {
   color: var(--citation-mark);
   background-color: var(--citation-mark-bg);
-  border: var(--mark-borderWidth) solid var(--citation-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border: var(--mark-border-width) solid var(--citation-mark-border);
+  border-radius: var(--mark-border-radius);
   font-weight: normal;
   width: 1.1em;
-  // padding: 0 0.5em 0.1em;
+  text-indent: 0; // Fixes alignment issues in lists
 
   &:before {
     content: '@';

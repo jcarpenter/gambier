@@ -139,6 +139,7 @@ export const update = (state, action, window) =>
 
       case 'SET_THEME': {
         draft.theme.id = action.id
+        draft.theme.isDark = draft.theme.installed[action.id].isDark
         break
       }
 
@@ -167,6 +168,7 @@ export const update = (state, action, window) =>
       }
 
       // SYSTEM VALUES
+      // E.g. Keyboard navigation turned on...
 
       case 'SET_SYSTEM_VALUES': {
         draft.system = action.values
@@ -174,6 +176,7 @@ export const update = (state, action, window) =>
       }
 
       // CHROMIUM VALUES
+      // E.g. Dark mode, high contrast mode, inverted colors...
 
       case 'SAVE_CHROMIUM_VALUES': {
         draft.chromium = action.values

@@ -183,7 +183,7 @@
   }
 
   .showPlaceholder .input::after {
-    color: var(--placeholder-text-color);
+    color: var(--text-placeholder-color);
   }
 
   .showPlaceholder.isError .input::after {

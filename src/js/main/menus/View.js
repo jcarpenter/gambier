@@ -299,16 +299,14 @@ export function create() {
       new MenuItem({
         label: 'Theme',
         id: 'view-theme',
-        submenu: global.state().theme.installed.map(({ name, id }) => {
+        submenu: Object.entries(global.state().theme.installed).map(([id, theme]) => {
           return new MenuItem({
-            label: name,
+            label: theme.name,
             id: `view-theme-${id}`,
             type: 'checkbox',
             checked: global.state().theme.id == id,
             click(item) {
-              if (!item.checked) {
-                global.store.dispatch({ type: 'SET_THEME', name: id })
-              }
+              global.store.dispatch({ type: 'SET_THEME', id })
             }
           })
         })

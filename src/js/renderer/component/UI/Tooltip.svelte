@@ -91,7 +91,7 @@
     transition: opacity 500ms ease-in-out;
     
     color: var(--label-color);
-    background: var(--windowBackgroundColor);
+    background: var(--window-background-color);
 
     @include dark {
       filter: brightness(0.8);

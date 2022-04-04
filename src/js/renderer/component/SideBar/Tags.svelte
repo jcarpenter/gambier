@@ -131,7 +131,7 @@
 
   .noTags {
     @include system-regular-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
   }
 
 </style>

@@ -2,27 +2,32 @@
 
 body {
 
-  --foregroundColor: 255, 255, 255;
-  --backgroundColor: 0, 0, 0;
+  --foreground-color: 255, 255, 255;
+  --background-color: 0, 0, 0;
 
   /* ------ Accent-influenced ------ */
 
   // User's system accent color preference
-  --accent-color: #{accent()};
+  // Mac equivalent: controlAccentColor
+  --accent-color: #{colorVar("accent")};
 
-  // Color of navigation UI icons
-  --nav-icon-color: #{accent()};
+  // Color of selected navigation UI icons
+  // E.g. Selected Preferences toolbar tabs
+  --nav-icon-color: #{colorVar("accent")};
 
   // Highlight around focused controls
-  --focus-ring-color: #{accent($light: -2%, $alpha: 0.5)};
+  // Mac equivalent: keyboardFocusIndicatorColor
+  --focus-ring-color: #{colorVar("accent", $light: -2%, $alpha: 0.5)};
 
   // Selected list/menu items
-  --selected-list-item-color: #{accent($sat: +3%, $light: -6%)};
+  // Mac equivalent: selectedContentBackgroundColor
+  --selected-list-item-color: #{colorVar("accent", $sat: +3%, $light: -6%)};
 
   // Background of selected text
-  --selected-text-background: #{accent($sat: +3%, $light: +35%)};
+  // Mac equivalent: selectedTextBackgroundColor
+  --text-selected-background: #{colorVar("accent", $sat: -50%, $light: -15%)};
 
-  /* ------ Controls ------ */
+  /* ------ Buttons ------ */
 
   --button-label-color: #ffffffd8;
   --button-background: #555656ff;
@@ -36,52 +41,43 @@ body {
   /* ------ Labels ------ */
 
   --label-color: #ffffffd8;
-  --secondary-label-color: #ffffff8c;
-  --tertiary-label-color: #ffffff3f;
+  --label-2-color: #ffffff8c;
+  --label-3-color: #ffffff3f;
+  --label-4-color: #ffffff19;
 
   /* ------ Text ------ */
 
   --text-color: #ffffffff;
-  --placeholder-text-color: #ffffff3f;
-  --selected-menuitem-text-color: #ffffffff;
+  --text-placeholder-color: #ffffff3f;
+  --menuitem-selected-text-color: #ffffffff;
   --control-text-color: #ffffffd8;
+  --control-selected-text-color: #ffffff3f;
+  --control-disabled-text-color: #ffffff3f;
 
   /* ------ Misc ------ */
 
   --menu-background: hsla(0, 0%, 17%, 0.9);
   --error-color: #fa6e50;
+  --separator-color: #ffffff19;
+  --grid-color: #ffffff19;
+  --shadow-color: #000000ff;
+  --window-background-color: #323232ff;
 
   /* ------ OLD (to be converted) ------ */
 
-  // Controls that are being clicked or dragged
-  // Mac equivalent: selectedControlColor
-  // NOT USED
-  --selected-control-color: #{accent($sat: +3%, $light: +35%)};
-
-  --alternateSelectedControlTextColor: rgb(92, 84, 84);
-  --controlBackgroundColor: #1e1e1eff;
-  --controlColor: #ffffff3f;
-  --disabledControlTextColor: #ffffff3f;
-  --findHighlightColor: #ffff00ff;
-  --gridColor: #ffffff19;
-  --headerTextColor: #ffffffff;
-  --highlightColor: #b4b4b4ff;
-  --label-color: #ffffffd8;
-  --linkColor: #419cffff;
-  --placeholder-text-color: #ffffff3f;
-  --quaternaryLabelColor: #ffffff19;
-  --secondary-label-color: #ffffff8c;
-  --selectedControlTextColor: #ffffffd8;
-  --selected-menuitem-text-color: #ffffffff;
-  --selectedTextColor: #ffffffff;
-  --separator-color: #ffffff19;
-  --shadowColor: #000000ff;
-  --tertiary-label-color: #ffffff3f;
-  --textBackgroundColor: #1e1e1eff;
-  --text-color: #ffffffff;
-  --unemphasizedSelectedContentBackgroundColor: #464646ff;
-  --unemphasizedSelectedTextBackgroundColor: #464646ff;
-  --unemphasizedSelectedTextColor: #ffffffff;
-  --windowBackgroundColor: #323232ff;
-  --windowFrameTextColor: #ffffffd8;
+  // --alternateSelectedControlTextColor: rgb(92, 84, 84);
+  // --controlBackgroundColor: #1e1e1eff;
+  // --findHighlightColor: #ffff00ff;
+  // --headerTextColor: #ffffffff;
+  // --highlightColor: #b4b4b4ff;
+  // --linkColor: #419cffff;
+  // --selectedControlTextColor: #ffffffd8;
+  // --menuitem-selected-text-color: #ffffffff;
+  // --selectedTextColor: #ffffffff;
+  // --textBackgroundColor: #1e1e1eff;
+  // --text-color: #ffffffff;
+  // --unemphasizedSelectedContentBackgroundColor: #464646ff;
+  // --unemphasizedSelectedTextBackgroundColor: #464646ff;
+  // --unemphasizedSelectedTextColor: #ffffffff;
+  // --windowFrameTextColor: #ffffffd8;
 }

@@ -5,7 +5,7 @@
   export let query = ''
   export let focused = false
   export let style = 'sidebar' // 'sidebar', 'toolbar', or 'inline'
-  export let icon = undefined // Eg. 'img-arrow-up-arrow-down'
+  export let icon = undefined // Eg. 'search-field-icon'
   export let width = 'auto' // '100px', 'auto', etc.
   export let padding = '0'
   export let margin = '0'
@@ -29,6 +29,10 @@
 </script>
 
 <style type="text/scss">
+
+  // :global(body[data-theme-isDark='false']) .searchfield {
+  //   outline: 2px solid red !important;
+  // }
 
   // ------ Layout: Normal ------ //
 
@@ -108,7 +112,7 @@
     }
   
     .placeholder {
-      color: var(--placeholder-text-color);
+      color: var(--text-placeholder-color);
     }
   
     input {

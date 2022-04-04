@@ -18,12 +18,12 @@
   @include button-reset; // We use a button element
   background-color: var(--task-mark-bg);
   border: 1px solid var(--task-mark-border);
-  border-radius: var(--mark-borderRadius);
+  border-radius: var(--mark-border-radius);
   font-weight: normal;
   width: 1.2em;
   height: 1.2em;
   margin: 0 0.35em 0 0;
-  transform: translate(0, 0.2em);
+  // transform: translate(0, 0.2em);
 
   &:before {
     @include centered-mask-image;

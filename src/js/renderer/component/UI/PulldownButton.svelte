@@ -50,59 +50,46 @@
 
 <style type="text/scss">
 
-  // ------ Mac ------ //
-
-  :global(.mac) {
-
-    .pulldownButton {
-      @include button;
-      padding: 0 2px 0 8px;
-      .label {
-        justify-content: left;
-      }
-    }
-  
-    .pulldownButton.compact {
-      @include button-compact;
-      padding: 0 2px 0 6px;
-    }
-  
-    .pulldownButton:focus {
-      @include button-focus;
-    }
-
-    .pulldownButton:enabled:active,
-    .pulldownButton.menuOpen {
-      // @include button-active;
-      // We darken the button slightly
-      @include dark { filter: brightness(1.25); }
-      @include light { filter: brightness(0.9); }
-    }
-
-    .pulldownButton:disabled {
-      @include button-disabled;
-    }
-
-    .pulldownButton.windowHidden {
-      @include button-windowHidden;
-    }
-
-    .pulldownButton .icon::before {
-      -webkit-mask-image: var(--pulldownButton-icon);
-    }
-
-    :global([slot="description"]) {
-      @include button-description;
+  .pulldownButton {
+    @include button;
+    padding: 0 2px 0 8px;
+    .label {
+      justify-content: left;
     }
   }
 
-  
-  // ------ Windows ------ //
-  
-  :global(.win) {
-    // TODO
-  } 
+  .pulldownButton.compact {
+    @include button-compact;
+    padding: 0 2px 0 6px;
+  }
 
+  .pulldownButton:focus {
+    @include button-focus;
+  }
+
+  .pulldownButton:enabled:active,
+  .pulldownButton.menuOpen {
+    // @include button-active;
+    // We darken the button slightly
+    @include dark { filter: brightness(1.25); }
+    @include light { filter: brightness(0.9); }
+  }
+
+  .pulldownButton:disabled {
+    @include button-disabled;
+  }
+
+  .pulldownButton.windowHidden {
+    @include button-windowHidden;
+  }
+
+  .pulldownButton .icon::before {
+    -webkit-mask-image: var(--pulldownButton-icon);
+  }
+
+  :global([slot="description"]) {
+    @include button-description;
+  }
 
 </style>
 

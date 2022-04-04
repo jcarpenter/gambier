@@ -46,8 +46,8 @@ body {
         // --emphasis-md:                  #{color.adjust($emphasis, $alpha: -0.6)};
         
         // --fencedcodeblock-bg:         hsla(0, 0%, 0%, 0.02);
-        // --fencedcodeblock-md:           rgba(var(--foregroundColor), 0.4);
-        // --fencedcodeblock-options-label: rgba(var(--foregroundColor), 0.25);
+        // --fencedcodeblock-md:           rgba(var(--foreground-color), 0.4);
+        // --fencedcodeblock-options-label: rgba(var(--foreground-color), 0.25);
         // --fencedcodeblock-borderRadius: 0.2em;
         // --fencedcodeblock-syntax-icon:  url(img/ui/chevron.down.heavy.svg);
 
@@ -59,9 +59,9 @@ body {
         // --figure-thumb-borderRadius:    3.5px;
         // --figure-thumb-borderWidth:     1px;
         // --figure-thumb-borderColor:     var(--accent-color);
-        // --figure-options-label:    rgba(var(--foregroundColor), 0.4);
+        // --figure-options-label:    rgba(var(--foreground-color), 0.4);
 
-        // --frontmatter-bg:               rgba(var(--foregroundColor), 0.03);
+        // --frontmatter-bg:               rgba(var(--foreground-color), 0.03);
         // --frontmatter-bg:               #{foregroundColor($alpha: 0.04)};
         // --frontmatter-border-width:     1px;
         // --frontmatter-border:           #{accent($light: 30%, $sat: -75%, $alpha: 1)};
@@ -73,12 +73,12 @@ body {
         // --frontmatter-options-icon:     #{accent($light: -20%, $alpha: 0.35)};
         // --frontmatter-dividers:         #{foregroundColor(0.05)};
         
-        --h1:                           rgba(var(--foregroundColor), 1);
-        --h2:                           rgba(var(--foregroundColor), 0.8);
-        --h3:                           rgba(var(--foregroundColor), 0.8);
-        --h4:                           rgba(var(--foregroundColor), 0.8);
-        --h5:                           rgba(var(--foregroundColor), 0.8);
-        --h6:                           rgba(var(--foregroundColor), 0.8);
+        --h1:                           rgba(var(--foreground-color), 1);
+        --h2:                           rgba(var(--foreground-color), 0.8);
+        --h3:                           rgba(var(--foreground-color), 0.8);
+        --h4:                           rgba(var(--foreground-color), 0.8);
+        --h5:                           rgba(var(--foreground-color), 0.8);
+        --h6:                           rgba(var(--foreground-color), 0.8);
         --hr-bg:                      rgba(198, 198, 198, 0.2);
         
         $image: #42ab5e;
@@ -116,7 +116,7 @@ body {
         --link-mark-border-width:       1px;
         --link-mark-highlight:          white;
         --link-mark-highlight-bg:       #{$link};
-        --link-mark-borderRadius:       3px;
+        --link-mark-border-radius:       3px;
         --link-source:                  #{$link};
         --link-source-url:              #{color.adjust($link, $alpha: -0.2)};
         --link-source-title:            #{color.adjust($link, $alpha: -0.4)};
@@ -143,7 +143,7 @@ body {
         --task-mark-icon:               url(/img/ui/checkmark.heavy.svg);
         --task-mark-icon-bg:          white;
         --task-mark-open-bg:            transparent;
-        --task-mark-open-border:        rgba(var(--foregroundColor), 0.3);
+        --task-mark-open-border:        rgba(var(--foreground-color), 0.3);
         --task-mark-closed-bg:          #{$task};
         --task-mark-closed-border:      #{$task};
 

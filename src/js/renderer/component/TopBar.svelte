@@ -65,16 +65,16 @@
 
     .icon {
       @include centered-mask-image;
-      background-color: var(--secondary-label-color);
+      background-color: var(--label-2-color);
       width: 14px;
       height: 14px;
       margin-right: 6px; // Gap between icon and title
       margin-top: -1px; // Better vertically align with title
       pointer-events: none;
 
-      &.doc { -webkit-mask-image: var(--img-doc-text); }
-      &.img { -webkit-mask-image: var(--img-photo); }
-      &.av { -webkit-mask-image: var(--img-play-rectangle); }
+      &.doc { -webkit-mask-image: var(--topbar-file-doc-icon); }
+      &.img { -webkit-mask-image: var(--topbar-file-image-icon); }
+      &.av { -webkit-mask-image: var(--topbar-file-av-icon); }
     }
 
     .title {
@@ -88,7 +88,7 @@
 
     .unsavedChanges {
       @include system-regular-font;
-      color: var(--secondary-label-color);
+      color: var(--label-2-color);
       white-space: nowrap;
     }
   }
@@ -137,7 +137,7 @@
   >
     <IconButton 
       tooltip={'Toggle Sidebar'} 
-      icon={'img-sidebar-left'} 
+      icon={'toggle-sidebar-icon'} 
       padding={'0 8px'}
       on:mouseup={() => {
         window.api.send('dispatch', {
@@ -156,7 +156,7 @@
     <span id="left-area">
       <!-- <IconButton 
         tooltip={'New Document'} 
-        icon={'new-doc-icon'} 
+        icon={'topbar-new-doc-icon'} 
         iconScale={0.8}
         padding={'0 8px'}
         on:mouseup={() => {
@@ -187,7 +187,7 @@
     </span> -->
 
     <span id="right-area">
-      <!-- <SearchField icon='img-magnifyingglass' style={'toolbar'} compact focused placeholder={'Search'} margin={'0 8px 0'} /> -->
+      <!-- <SearchField icon='search-field-icon' style={'toolbar'} compact focused placeholder={'Search'} margin={'0 8px 0'} /> -->
     </span>
     
   </span>

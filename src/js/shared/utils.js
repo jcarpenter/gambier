@@ -65,6 +65,15 @@ String.prototype.lastChar = function () {
   return this.charAt(this.length - 1)
 }
 
+/**
+ * Round a number to two decimal places
+ * From: https://www.delftstack.com/howto/javascript/javascript-round-to-2-decimal-places/
+ */
+Number.prototype.roundToTwo = function() {
+  return +(Math.round(this + "e+2")  + "e-2")
+}
+
+
 
 /* -------------------------------------------------------------------------- */
 /*                                MISC HELPERS                                */

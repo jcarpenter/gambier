@@ -6,10 +6,9 @@
   text-decoration: underline;
   text-decoration-thickness: 0.15em;
   text-underline-offset: 0.03em;
-  text-decoration-color: inherit;
   text-decoration-color: var(--link-mark-underline);
   text-decoration-skip-ink: none;
-  border-radius: var(--mark-borderRadius);
+  border-radius: var(--mark-border-radius);
 
   &.highlighted {
     color: var(--link-mark-highlight);
@@ -19,8 +18,10 @@
   }
 }
 
-.metaKeyDown .mark.link:hover {
-  cursor: pointer;
+.metaKeyDown {
+  .mark.link:hover {
+    cursor: pointer;
+  }
 }
 
 // Source
@@ -61,6 +62,12 @@
   }
 }
 
+.metaKeyDown {
+  .cm-link.cm-url:hover {
+    cursor: pointer;
+  }
+}
+
 // Line
 
 .CodeMirror-line.link-reference-definition {
@@ -74,7 +81,7 @@
 //   color: var(--link-mark);
 //   background-color: var(--link-mark-bg);
 //   border: var(--link-mark-border-width) solid var(--link-mark-border);
-//   border-radius: var(--link-mark-borderRadius);
+//   border-radius: var(--link-mark-border-radius);
 //   font-weight: normal;
 //   padding: 0 0.2em;
 //   position: relative;

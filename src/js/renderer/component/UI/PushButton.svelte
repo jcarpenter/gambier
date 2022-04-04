@@ -14,46 +14,33 @@
 
 <style type="text/scss">
 
-  // ------ Mac ------ //
-
-  :global(.mac) {
-
-    .pushButton {
-      @include button;
-    }
-
-    .pushButton.compact {
-      @include button-compact;
-    }
-
-    .pushButton:focus {
-      @include button-focus;
-    }
-      
-    .pushButton:enabled:active {
-      @include button-active;
-    }
-
-    .pushButton:disabled {
-      @include button-disabled;
-    }
-
-    .pushButton.windowHidden {
-      @include button-windowHidden;
-    }
-
-    :global([slot="description"]) {
-      @include button-description;
-    }
+  .pushButton {
+    @include button;
   }
 
-  // ------ Windows ------ //
-  
-  :global(.win) {
-    // TODO
-  } 
+  .pushButton.compact {
+    @include button-compact;
+  }
 
+  .pushButton:focus {
+    @include button-focus;
+  }
+    
+  .pushButton:enabled:active {
+    @include button-active;
+  }
 
+  .pushButton:disabled {
+    @include button-disabled;
+  }
+
+  .pushButton.windowHidden {
+    @include button-windowHidden;
+  }
+
+  :global([slot="description"]) {
+    @include button-description;
+  }
 
   // ------ Window not focused ------ //
   // PushButton `emphasized` takes on look of non-emphasized version, 

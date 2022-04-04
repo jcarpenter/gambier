@@ -13,11 +13,6 @@
 
 <style type="text/scss">
 
-
-  // ------ Mac ------ //
-
-  :global(.mac) {
-
   .checkbox {
     @include inset-button;
 
@@ -71,18 +66,6 @@
   .checkbox.windowHidden {
     @include inset-button-windowHidden;
   }
-
-  }
-
-
-  // ------ Windows ------ //
-
-  :global(.win) {
-
-  }
-
-
-
 
 </style>
 

@@ -17,7 +17,7 @@ function drop(evt) {
 <style type="text/scss">
   #firstrun {
     padding: 4rem;
-    // background-color: var(--windowBackgroundColor);
+    // background-color: var(--window-background-color);
     overflow: scroll;
     height: 100%;
   }
@@ -29,7 +29,7 @@ function drop(evt) {
 
   h2 {
     @include system-regular-font;
-    color: var(--secondary-label-color);
+    color: var(--label-2-color);
   }
 
 </style>
