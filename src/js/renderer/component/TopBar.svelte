@@ -39,7 +39,7 @@
     flex-grow: 0;
     flex-shrink: 0;
     // Flex basis is set in style tag on the element.
-    transition: flex-basis var(--sidebar-openClose-duration) var(--standard-ease);
+    transition: flex-basis var(--sidebar-openClose-duration) var(--macos-default-easing);
 
     #toggle-button-wrapper {
       right: 0;

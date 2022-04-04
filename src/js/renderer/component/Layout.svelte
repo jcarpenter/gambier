@@ -76,7 +76,7 @@
     // transform: translate(calc(var(--sidebarWidth) * 1px), 0); 
     // transform-origin: left top;
     // Animate when sidebar opens/closes
-    transition: width var(--sidebar-openClose-duration) var(--standard-ease);
+    transition: width var(--sidebar-openClose-duration);
   }
 </style>
 

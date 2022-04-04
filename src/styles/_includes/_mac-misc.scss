@@ -2,11 +2,11 @@
 
 body {
 
-    // Timing and animation
-    // Taken from Material Design
-    // Per: https://material.io/design/motion/speed.html#easing
-    --standard-ease: cubic-bezier(0.4, 0, 0.2, 1);
-    // --decelerate-ease: cubic-bezier(0, 0, 0.2, 1);
+    // "The system default timing function. Use this function to ensure that the timing of your animations matches that of most system animations."
+    // https://cubic-bezier.com/#.25,.1,.25,1
+    // https://developer.apple.com/documentation/quartzcore/camediatimingfunctionname/1521854-default
+    --macos-default-easing: cubic-bezier(0.25, 0.1, 0.25, 1);
+
     --sidebar-openClose-duration: 200ms;
    
     // Border radius

@@ -14,7 +14,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { getCssProp, throttle } from '../../../shared/utils';
-  import { mask } from '../ui/transition';
+  import { mask } from '../ui/svelte-transitions';
 
   let component // Component to render
   let componentEl // Rendered component DOM element

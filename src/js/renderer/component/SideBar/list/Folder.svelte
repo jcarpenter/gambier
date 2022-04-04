@@ -2,11 +2,9 @@
 	import File from './File.svelte'
 	import { state, sidebar } from '../../../StateManager.js'
   import { files } from '../../../FilesManager'
-	import { flip } from 'svelte/animate';
-	import { quadIn, linear } from 'svelte/easing'
 	import { setAsCustomPropOnNode } from '../../ui/actions'
-	import { standardEase } from '../../ui/easing'
-	import { slideYPosition, testSlide } from '../../ui/transition'
+	import { macOsDefaultEasing } from '../../ui/svelte-easing'
+	import { slideVertically } from '../../ui/svelte-transitions'
   import { getContext } from 'svelte';
 
 	export let subtree	
@@ -17,8 +15,7 @@
 	let isDragTarget = false
 	
 	const tabId = getContext('tabId')
-	// $: duration = $state.timing.treeListFolder
-	$: duration = 1200
+	$: duration = $state.timing.treeListFolder
 	
 	// When the number of children changes, the height changes. This happens instantly, and can clip the child elements as they animate to their new positions. We want to avoid that. We could animate the height at the same duration and easing as the other transitions, but that's a big performance no-no. So instead we use `step` transitions to wait until the standard transition duration is complete, and then set the new value. OR we set it at the beginning. It depends on whether the folder has grown or shrunk. We determine -that- by comparing the new and old `numVisibleDescendants`.
 
@@ -67,7 +64,7 @@
 
   .folder {
 		// contain: strict;
-		position: absolute;
+		position: relative;
 		width: 100%;
 		overflow: clip;
 		height: calc(var(--folderHeight) * 1px);
@@ -77,7 +74,7 @@
 		// adding a delay to the removal of the styles helps hide that.
 		// Height delay is unrelated (is for the transition between open/close).
 		transition: 
-			height calc(var(--duration) * 1ms) var(--folderEasing),
+      height calc(var(--duration) * 1ms) var(--folderEasing),
 			border-radius 1ms 50ms,
 			box-shadow 1ms 50ms; 
 		
@@ -92,7 +89,6 @@
   ul,
 	li {
     // contain: strict;
-    // position: absolute;
     transform-origin: left top;
     will-change: transform;
 	}
@@ -110,9 +106,16 @@
 		@include list-reset;
 	}
 
+  ul {
+    position: relative;
+    height: 100%;
+  }
+
 	li {
-		position: relative;
+		position: absolute;
+    width: 100%;
 		display: block;
+    transition: transform calc(var(--duration) * 1ms) var(--macos-default-easing);
 
 		&.isEmpty {
 			height: 28px;
@@ -145,50 +148,50 @@ This in turn highlights the File (above).
 <!-- animate:flip={{duration: duration, easing: quadIn }}  -->
 <!-- animate:testSlide={{delay: 0, duration: duration, easing: linear }} -->
 
-{#if isExpanded}
-	<div 
-		class="folder" 
-		class:isRoot
-		class:isDragTarget
-		on:dragover|preventDefault={() => { if (isRoot) onDragOver() }} 
-		on:dragleave|preventDefault={() => { if (isRoot) onDragLeave() }}
-		on:drop|preventDefault={(evt) => { console.log("drop"); if (isRoot) onDrop(evt) }}
-		use:setAsCustomPropOnNode={{folderHeight, folderEasing, duration}}
-		>
-		<ul class="rows" transition:slideYPosition|local={{ 
-			delay: 0,
-			duration: isRoot ? 0 : duration,
-			easing: linear
-		}}>
-			{#each subtree.children as child (child.id)}
-				<li 
-					animate:flip={{duration: duration, easing: linear }}
-					class:isEmpty={child.id.includes('empty')}
-				>
-					{#if !child.id.includes('empty')}
+<div 
+  class="folder" 
+  class:isRoot
+  class:isDragTarget
+  on:dragover|preventDefault={() => { if (isRoot) onDragOver() }} 
+  on:dragleave|preventDefault={() => { if (isRoot) onDragLeave() }}
+  on:drop|preventDefault={(evt) => { console.log("drop"); if (isRoot) onDrop(evt) }}
+  use:setAsCustomPropOnNode={{folderHeight, folderEasing, duration}}
+  >
+  {#if isExpanded}
+    <ul
+      class="rows"
+      transition:slideVertically|local={{ 
+        duration: duration,
+        easing: macOsDefaultEasing
+      }}
+    >
+      {#each subtree.children as child, index (child.id)}
+        {#if !child.id.includes('empty')}
+          <li
+            style={`transform: translate(0, ${29 * index}px)`}
+          >
+            {#if isFolder(child.id)}
+              
+              <!-- Folder -->
+              <svelte:self
+              subtree={child}
+              {listIds}
+              isRoot={false}
+              nestDepth={nestDepth+1}
+              />
 
-						{#if isFolder(child.id)}
-							
-							<!-- Folder -->
-							<svelte:self
-							subtree={child}
-							{listIds}
-							isRoot={false}
-							nestDepth={nestDepth+1}
-							/>
+            {:else}
 
-						{:else}
+              <!-- File -->
+              <File id={child.id} {listIds} nestDepth={nestDepth}  
+              on:dragover={onDragOver} 
+              on:dragleave={onDragLeave} 
+              on:drop={onDrop}/>
 
-							<!-- File -->
-							<File id={child.id} {listIds} nestDepth={nestDepth}  
-							on:dragover={onDragOver} 
-							on:dragleave={onDragLeave} 
-							on:drop={onDrop}/>
-
-						{/if}
-					{/if}
-				</li>
-			{/each}
-		</ul>
-	</div>
-{/if}
+            {/if}
+          </li>
+        {/if}
+      {/each}
+    </ul>
+  {/if}
+</div>

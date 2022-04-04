@@ -1003,7 +1003,7 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {
 }
 
 .panel.isOnlyPanel .CodeMirror-sizer {
-  padding-left: calc(calc(50vw - var(--sidebarWidth) * 1px) - calc(var(--editor-maxlinewidth) / 2) - var(--editor-side-padding));
+  padding-left: calc(50vw - var(--sidebarWidth) * 1px - var(--editor-maxlinewidth) / 2 - var(--editor-side-padding));
 }
 
 .panel:not(.isOnlyPanel) .CodeMirror-sizer {
@@ -1349,7 +1349,7 @@ body {
 }
 
 body {
-  --standard-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --macos-default-easing: cubic-bezier(0.25, 0.1, 0.25, 1);
   --sidebar-openClose-duration: 200ms;
   --button-border-radius: 5.5px;
   --button-border-radius-compact: 4px;
