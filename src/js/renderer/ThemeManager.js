@@ -97,59 +97,51 @@ function setEditorCSSVars(state) {
 
 
 /**
- * Whenever theme changes, go through CSS files, find
- * linked images, and force them to preload.
+ * Preload theme's CSS images.
+ * Whenever theme changes, find the CSS image variables defined
+ * in the new theme, and add a `link rel=preload` for each.
+ * This forces the browser to preload the images.
  */
 function preloadCssImages() {
-
-  let cssVars = []
 
   // Get theme stylesheet
   const stylesheets = [...document.styleSheets] // Have to convert to Array
   const themeStylesheet = stylesheets.find((s) => s.ownerNode.id == "theme")
   
-  // Get rules with "body {...}" selector
+  // Get theme stylesheet's rules for the body element.
+  // By convention we define theme image CSS variables
+  // on the body (and most/all other variables).
   const bodyRules = [...themeStylesheet.rules].filter((r) => r.selectorText == "body")
   
-  // Get all css variables on body.
-  // Each body rule contains a style object (a `CSSStyleDeclaration`)
-  // which is an array of keys, without values. For each body rule, 
-  // we iterate the style object and get the values
-  let bodyCssVars = []
-
-
-
+  // Find the CSS variables on body that include a `url(...)` 
+  // in their value, and then force those URLs to preload by
+  // creating `link rel=preload` elements in `head` for each.
   for (const rule of bodyRules) {
-    for (const style of rule.style) {
-      if (style.startsWith("--")) {
-        const value = rule.style.getPropertyValue(style)
+
+    // Each body rule contains a style object (a `CSSStyleDeclaration`)
+    // which is an array of keys, without values. For each body rule, 
+    // we go through the style array, find entries that are CSS variables
+    // (they start with `--`), and if their value contains URL, create
+    // link elements for that URL.
+    for (const key of rule.style) {
+      if (key.startsWith("--")) {
+        const value = rule.style.getPropertyValue(key)
         if (value.includes("url(")) {
+          // Clean up the returned URL.
+          // Before: url(\/img\/ui\/checkmark\.small\.heavy\.svg)
+          // After:  /img/ui/checkmark.small.heavy.svg
           const url = value.replace(/\s?url\(/, "").replace(")", "").replaceAll(/\\\//g, "/").replaceAll(/\\\./g, ".")
-          const preloadLink = document.createElement("link")
-          preloadLink.href = "./" + url
-          preloadLink.rel = "preload"
-          preloadLink.as = "image"
-          preloadLink.crossOrigin = "anonymous"
-          document.head.appendChild(preloadLink)
+          const isAlreadyPreloaded = document.head.querySelector(`link[href="${url}"]`)
+          if (!isAlreadyPreloaded) {
+            const preloadLink = document.createElement("link")
+            preloadLink.href = url
+            preloadLink.rel = "preload"
+            preloadLink.as = "image"
+            preloadLink.crossOrigin = "anonymous"
+            document.head.appendChild(preloadLink)
+          }
         }
       }
     }
   }
-
-
-  // console.log(bodyCssVars)
-
-  // Get variable names from `rules`
-  // for (const s of stylesheets) {
-  //   console.log(bodyRules)
-  // }
-
-
-  // Get variable values from body
-
-  // 2. Document.styleSheets
-  // 3. getComputedStyle on body (where, by convention, we set variables)
-
-
-
 }

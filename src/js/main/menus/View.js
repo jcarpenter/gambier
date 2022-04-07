@@ -1,5 +1,6 @@
 
 import { app, MenuItem } from "electron";
+import { setMenuEnabled } from "./setMenuEnabled.js";
 import { ______________________________ } from './Separator.js'
 
 const isMac = process.platform === 'darwin'
@@ -8,6 +9,7 @@ export function create() {
 
   return new MenuItem({
     label: 'View',
+    id: 'view',
     submenu: [
 
       new MenuItem({
@@ -37,7 +39,7 @@ export function create() {
       //     const panel = project?.panels[project?.focusedPanelIndex]
       //     const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId)
       //     const activeDoc = watcher.files.byId[panel.docId]
-          
+
       //     if (focusedWindow) {
       //       console.log(global.state().frontMatterCollapsed)
       //       global.store.dispatch({
@@ -350,52 +352,19 @@ export function create() {
 
 
 
-export function update(appMenu) {
-
-  const m = appMenu
-  const state = global.state()
-  const project = state.projects.byId[state.focusedWindowId]
-  const panel = project?.panels[project?.focusedPanelIndex]
-  const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId)
-  // const activeDoc = watcher?.files.byId[panel.docId]
-  // const prefsIsFocused = state.focusedWindowId == 'preferences'
-
-  m.getMenuItemById('view-sourceMode').checked = state.sourceMode
-  m.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max
-  m.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min
-  m.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
-  m.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
-
-  m.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen
-
-  const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search']
-  sidebarTabs.forEach((id) => {
-    const item = m.getMenuItemById(`view-${id}`)
-    item.enabled = project !== undefined
-    item.checked = project?.sidebar.activeTabId == id
-  })
-
-  // View > Theme submenu: set `checked`
-  m.getMenuItemById('view-theme').submenu.items.forEach((item) => {
-    const id = item.id.replace('view-theme-', '')
-    item.checked = id == state.theme.id
-  })
-}
-
 /**
  * Determine whether we need to update the menu,
  * based on what has changed.
  */
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, appMenu) {
+export function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, appMenu) {
 
-  if (state.appStatus == 'coldStarting') {
-    update()
-    return
-  }
+  // if (state.appStatus == 'coldStarting') {
+  //   update()
+  //   return
+  // }
 
-  const oldProject = oldState.projects.byId[oldState.focusedWindowId]
-
-  const somethingChanged =
+  const somethingChangedWeCareAbout =
+    state.appStatus !== oldState.appStatus || 
     state.focusedWindowId !== oldState.focusedWindowId ||
     state.sourceMode !== oldState.sourceMode ||
     state.editorFont.size !== oldState.editorFont.size ||
@@ -404,5 +373,57 @@ export function onStateChanged(state, oldState, project, panel, prefsIsFocused, 
     project?.sidebar.activeTabId !== oldProject?.sidebar.activeTabId ||
     state.theme.id !== oldState.theme.id
 
-  if (somethingChanged) update(appMenu)
+  if (!somethingChangedWeCareAbout) return
+
+  /* --------------------------------- Update --------------------------------- */
+
+  const isProjectDirectoryDefined = project?.directory
+
+  // Disable all and return if project directory is not yet defined. 
+  if (!isProjectDirectoryDefined) {
+    setMenuEnabled("view", false)
+    return
+  }
+
+  // Disable most (but not all) items when preferences are focused
+  if (prefsIsFocused) {
+    appMenu.getMenuItemById('view-sourceMode').enabled = false
+    appMenu.getMenuItemById('view-sidebar').enabled = false
+    appMenu.getMenuItemById('view-project').enabled = false
+    appMenu.getMenuItemById('view-allDocs').enabled = false
+    appMenu.getMenuItemById('view-mostRecent').enabled = false
+    appMenu.getMenuItemById('view-tags').enabled = false
+    appMenu.getMenuItemById('view-media').enabled = false
+    appMenu.getMenuItemById('view-search').enabled = false
+    appMenu.getMenuItemById('view-fontsize-default').enabled = false
+    appMenu.getMenuItemById('view-fontsize-increase').enabled = false
+    appMenu.getMenuItemById('view-fontsize-decrease').enabled = false
+    appMenu.getMenuItemById('view-lineheight-default').enabled = false
+    appMenu.getMenuItemById('view-lineheight-increase').enabled = false
+    appMenu.getMenuItemById('view-lineheight-decrease').enabled = false
+  }
+
+  // Disable increase/decrease menu items (e.g. increase font size)
+  // when they're already at their thresholds (e.g. can't go higher).
+  appMenu.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max
+  appMenu.getMenuItemById('view-fontsize-decrease').enabled = state.editorFont.size > state.editorFont.min
+  appMenu.getMenuItemById('view-lineheight-increase').enabled = state.editorLineHeight.size < state.editorLineHeight.max
+  appMenu.getMenuItemById('view-lineheight-decrease').enabled = state.editorLineHeight.size > state.editorLineHeight.min
+  
+  // Set check menu items. E.g. Which theme is selected.
+  appMenu.getMenuItemById('view-sourceMode').checked = state.sourceMode
+  appMenu.getMenuItemById('view-sidebar').checked = project?.sidebar.isOpen
+  appMenu.getMenuItemById('view-theme').submenu.items.forEach((item) => {
+    const id = item.id.replace('view-theme-', '')
+    item.checked = id == state.theme.id
+  })
+
+  // Set Sidebar menu items enabled and checked
+  const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search']
+  sidebarTabs.forEach((id) => {
+    const item = appMenu.getMenuItemById(`view-${id}`)
+    item.enabled = project !== undefined
+    item.checked = project?.sidebar.activeTabId == id
+  })
+
 }

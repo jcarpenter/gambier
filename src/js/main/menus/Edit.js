@@ -1,10 +1,12 @@
 import { MenuItem } from "electron";
 import { ______________________________ } from './Separator.js'
+import { setMenuEnabled } from "./setMenuEnabled.js";
 
 export function create() {
 
   return new MenuItem({
     label: 'Edit',
+    id: 'edit',
     submenu: [
   
       new MenuItem({
@@ -95,32 +97,34 @@ export function create() {
 }
 
 
-export function update(applicationMenu) {
-  const m = applicationMenu
-  const state = global.state()
-  const project = state.projects.byId[state.focusedWindowId]
-  const panel = project?.panels[project?.focusedPanelIndex]
-  const focusedSectionId = project?.focusedSectionId
-  const prefsIsFocused = state.focusedWindowId == 'preferences'  
 
-  const aProjectWindowIsFocused = project !== undefined
-  const isSideBarFocused = project && focusedSectionId == 'sidebar'
+
+export function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, appMenu) {
+  
+  /* --------------------------------- Update --------------------------------- */
+
+  const isProjectDirectoryDefined = project?.directory
+
+  // Disable all and return if project directory is not yet defined. 
+  if (!isProjectDirectoryDefined) {
+    setMenuEnabled("edit", false)
+    return
+  }
+
+  const focusedSectionId = project?.focusedSectionId
+  const isAProjectWindowFocused = project !== undefined
   const isAPanelFocused = panel && focusedSectionId == 'editor'
 
-  m.getMenuItemById('edit-undo').enabled = isAPanelFocused
-  m.getMenuItemById('edit-redo').enabled = isAPanelFocused
+  appMenu.getMenuItemById('edit-undo').enabled = isAPanelFocused
+  appMenu.getMenuItemById('edit-redo').enabled = isAPanelFocused
 
-  m.getMenuItemById('edit-cut').enabled = isAPanelFocused
-  m.getMenuItemById('edit-copy').enabled = isAPanelFocused
-  m.getMenuItemById('edit-paste').enabled = isAPanelFocused
-  m.getMenuItemById('edit-pasteAsPlainText').enabled = isAPanelFocused
-  m.getMenuItemById('edit-selectAll').enabled = isAPanelFocused
+  appMenu.getMenuItemById('edit-cut').enabled = isAPanelFocused
+  appMenu.getMenuItemById('edit-copy').enabled = isAPanelFocused
+  appMenu.getMenuItemById('edit-paste').enabled = isAPanelFocused
+  appMenu.getMenuItemById('edit-pasteAsPlainText').enabled = isAPanelFocused
+  appMenu.getMenuItemById('edit-selectAll').enabled = isAPanelFocused
 
-  m.getMenuItemById('edit-findInFiles').enabled = aProjectWindowIsFocused
-  m.getMenuItemById('edit-replaceInFiles').enabled = aProjectWindowIsFocused
+  appMenu.getMenuItemById('edit-findInFiles').enabled = isAProjectWindowFocused
+  appMenu.getMenuItemById('edit-replaceInFiles').enabled = isAProjectWindowFocused
 
-}
-
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update(applicationMenu)
 }

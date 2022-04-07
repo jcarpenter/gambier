@@ -19,7 +19,7 @@
 }
 
 .metaKeyDown {
-  .CodeMirror .mark.link:hover {
+  .mark.link:hover {
     cursor: pointer;
     color: var(--link-hover);
     text-decoration-color: var(--link-hover);

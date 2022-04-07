@@ -38,13 +38,7 @@ export function create() {
 }
 
 
-export function update(applicationMenu) {
-
-  // Nothing in app menu is dynamic...
-
-}
-
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, menu) {
+export function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, appMenu) {
 
   // Nothing in app menu is dynamic...
 

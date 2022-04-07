@@ -73,8 +73,6 @@
 		} else {
 			formattedUrl = getLocalPathWithFileScheme(cm, userSpecifiedUrl)
 		}	
-
-		// Set `span`. This holds where
 	}
 
 

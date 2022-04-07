@@ -1,6 +1,7 @@
 import { MenuItem } from "electron";
 import { selectProjectDirectoryFromDialog } from "../actions/index.js";
 import { ______________________________ } from './Separator.js'
+import { setMenuEnabled } from "./setMenuEnabled.js";
 
 
 // function isMoveToTrashEnabled() {
@@ -15,6 +16,7 @@ import { ______________________________ } from './Separator.js'
 export function create() {
   return new MenuItem({
     label: 'Select',
+    id: 'select',
     submenu: [      
       new MenuItem({
         label: 'Select Next Entity',
@@ -112,34 +114,23 @@ export function create() {
   })
 }
 
-export function update(appMenu) {
-  const m = appMenu
-  const state = global.state()
-  const project = state.projects.byId[state.focusedWindowId]
-  const panel = project?.panels[project?.focusedPanelIndex]
+
+
+/**
+ * Update menu when state changes
+ */
+export function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, appMenu) {
+  
+  /* --------------------------------- Update --------------------------------- */
+  
+  const isProjectDirectoryDefined = project?.directory
   const focusedSectionId = project?.focusedSectionId
   const editorIsFocused = focusedSectionId == "editor"
     
-  // Disable when editor is not focused
-
-  m.getMenuItemById('select-selectNextEntity').enabled = editorIsFocused
-  m.getMenuItemById('select-selectPrevEntity').enabled = editorIsFocused
-  m.getMenuItemById('select-selectNextOccurence').enabled = editorIsFocused
-  m.getMenuItemById('select-selectLine').enabled = editorIsFocused
-  m.getMenuItemById('select-cutLine').enabled = editorIsFocused
-  m.getMenuItemById('select-deleteLine').enabled = editorIsFocused
-  m.getMenuItemById('select-duplicateLine').enabled = editorIsFocused
-  m.getMenuItemById('select-moveLineUp').enabled = editorIsFocused
-  m.getMenuItemById('select-moveLineDown').enabled = editorIsFocused
-  m.getMenuItemById('select-addCursorToPrevLine').enabled = editorIsFocused
-  m.getMenuItemById('select-addCursorToNextLine').enabled = editorIsFocused
-
-}
-
-/**
- * Determine whether we need to update the menu,
- * based on what has changed.
- */
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, appMenu) {
-  update(appMenu)
+  // Disable all and return if project directory is not yet defined. 
+  // Disable all when editor is not focused.
+  if (!isProjectDirectoryDefined || !editorIsFocused) {
+    setMenuEnabled("select", false)
+    return
+  }
 }

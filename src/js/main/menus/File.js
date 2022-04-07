@@ -1,6 +1,7 @@
 import { MenuItem } from "electron";
 import { selectProjectDirectoryFromDialog } from "../actions/index.js";
 import { ______________________________ } from './Separator.js'
+import { setMenuEnabled } from "./setMenuEnabled.js";
 
 
 function isMoveToTrashEnabled() {
@@ -16,6 +17,7 @@ export function create() {
 
   return new MenuItem({
     label: 'File',
+  id: "file",
     submenu: [
   
       new MenuItem({
@@ -166,32 +168,33 @@ export function create() {
 
 
 
-export function update(appMenu) {
 
-  const m = appMenu
-  const state = global.state()
-  const project = state.projects.byId[state.focusedWindowId]
-  const panel = project?.panels[project?.focusedPanelIndex]
-  const prefsIsFocused = state.focusedWindowId == 'preferences'  
-
-  m.getMenuItemById('file-newDocument').enabled = project !== undefined
-  m.getMenuItemById('file-newEditor').enabled = project !== undefined
-  // m.getMenuItemById('file-newWindow').enabled = true
+export function onStateChanged(state, oldState, project, oldProject,panel, prefsIsFocused, appMenu) {
   
-  m.getMenuItemById('file-openProject').enabled = project !== undefined
-  
-  m.getMenuItemById('file-save').enabled = project !== undefined
-  m.getMenuItemById('file-saveAs').enabled = project !== undefined
-  m.getMenuItemById('file-saveAll').enabled = project !== undefined
-  m.getMenuItemById('file-moveToTrash').enabled = isMoveToTrashEnabled()
-  
-  m.getMenuItemById('file-closeEditor').enabled = panel !== undefined
-  // m.getMenuItemById('file-closeWindow').label = prefsIsFocused ? 'Winder' : 'Close Window'
-  // m.getMenuItemById('file-closeWindow').accelerator = prefsIsFocused ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Shift+W',
-  m.getMenuItemById('file-closeWindow').enabled = prefsIsFocused || project !== undefined
+  /* --------------------------------- Update --------------------------------- */
 
-}
+  const isProjectDirectoryDefined = project?.directory
 
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, appMenu) {
-  update(appMenu)
+  // Disable all and return if project directory is not yet defined. 
+  if (!isProjectDirectoryDefined) {
+    setMenuEnabled("file", false)
+    return
+  }
+
+  appMenu.getMenuItemById('file-newDocument').enabled = project !== undefined
+  appMenu.getMenuItemById('file-newEditor').enabled = project !== undefined
+  // appMenu.getMenuItemById('file-newWindow').enabled = true
+  
+  appMenu.getMenuItemById('file-openProject').enabled = project !== undefined
+  
+  appMenu.getMenuItemById('file-save').enabled = project !== undefined
+  appMenu.getMenuItemById('file-saveAs').enabled = project !== undefined
+  appMenu.getMenuItemById('file-saveAll').enabled = project !== undefined
+  appMenu.getMenuItemById('file-moveToTrash').enabled = isMoveToTrashEnabled()
+  
+  appMenu.getMenuItemById('file-closeEditor').enabled = panel !== undefined
+  // appMenu.getMenuItemById('file-closeWindow').label = prefsIsFocused ? 'Winder' : 'Close Window'
+  // appMenu.getMenuItemById('file-closeWindow').accelerator = prefsIsFocused ? 'CmdOrCtrl+W' : 'CmdOrCtrl+Shift+W',
+  appMenu.getMenuItemById('file-closeWindow').enabled = prefsIsFocused || project !== undefined
+
 }

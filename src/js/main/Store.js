@@ -55,10 +55,10 @@ const storeDefault = {
   darkMode: 'match-system',
 
   theme: {
-    id: 'cupertino-light',
+    id: 'warm',
     isDark: false,
     installed: {
-      "cupertino-light": { name: "Cupertino Light", isDark: false },
+      "warm": { name: "Warm", isDark: false },
       "cupertino-dark": { name: "Cupertino Dark", isDark: true },
       "dracula": { name: "Dracula", isDark: true }
     }

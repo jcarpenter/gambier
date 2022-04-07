@@ -1,24 +1,18 @@
 import { MenuItem } from "electron";
 import { ______________________________ } from './Separator.js'
+import { setMenuEnabled } from "./setMenuEnabled.js";
 
 export function create() {
 
   return new MenuItem({
     label: 'Window',
+    id: 'window',
     submenu: []
   })
 }
 
-
-export function update(applicationMenu) {
-  const m = applicationMenu
-  const state = global.state()
-  const project = state.projects.byId[state.focusedWindowId]
-  const panel = project?.panels[project?.focusedPanelIndex]
-  const prefsIsFocused = state.focusedWindowId == 'preferences'  
-
+export function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, applicationMenu) {
+  
+  // TODO
 }
 
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, applicationMenu) {
-  update(applicationMenu)
-}

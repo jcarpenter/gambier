@@ -14,24 +14,6 @@ import * as windowMenu from './menus/Window.js'
  */
 export function init() {
 
-  // const darkModeChanged = stateHasChanged(global.patches, "darkMode")
-  // if (darkModeChanged) setNativeTheme(false)
-
-  /*
-  If project directory is not yet specified, do not show menu?
-  */
-
-  // global.store.onDidAnyChange((state, oldState) => {
-
-  //   // Get window
-  //   // Get project
-  //   // Get project.directory
-
-  //   const project = state.projects.byId[state.focusedWindowId]
-  //   if (!)
-
-  // })
-
   // Create menu
   const menu = new Menu()
   menu.append(appMenu.create())
@@ -44,27 +26,28 @@ export function init() {
   Menu.setApplicationMenu(menu)
  
   // Set initial values by triggering update()
-  appMenu.update(menu)
-  fileMenu.update(menu)
-  editMenu.update(menu)
-  selectMenu.update(menu)
-  formatMenu.update(menu)
-  viewMenu.update(menu)
-  windowMenu.update(menu)
+  // appMenu.update(menu)
+  // fileMenu.update(menu)
+  // editMenu.update(menu)
+  // selectMenu.update(menu)
+  // formatMenu.update(menu)
+  // viewMenu.update(menu)
+  // windowMenu.update(menu)
 
   // On state change, trigger update() 
   global.store.onDidAnyChange((state, oldState) => {
 
     const project = state.projects.byId[state.focusedWindowId]
+    const oldProject = oldState.projects.byId[oldState.focusedWindowId]
     const panel = project?.panels[project?.focusedPanelIndex]
     const prefsIsFocused = state.focusedWindowId == 'preferences'  
 
-    appMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
-    fileMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
-    editMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
-    selectMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
-    formatMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
-    viewMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
-    windowMenu.onStateChanged(state, oldState, project, panel, prefsIsFocused, menu)
+    appMenu.onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, menu)
+    fileMenu.onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, menu)
+    editMenu.onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, menu)
+    selectMenu.onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, menu)
+    formatMenu.onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, menu)
+    viewMenu.onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, menu) //
+    windowMenu.onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, menu)
   })  
 }

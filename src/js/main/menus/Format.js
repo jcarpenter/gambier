@@ -1,10 +1,12 @@
 import { MenuItem } from "electron";
+import { setMenuEnabled } from "./setMenuEnabled.js";
 import { ______________________________ } from './Separator.js'
 
 export function create() {
 
   return new MenuItem({
     label: 'Format',
+    id: "format",
     submenu: [
 
       new MenuItem({
@@ -15,7 +17,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'plainText')
         }
       }),
-  
+
       ______________________________,
 
       new MenuItem({
@@ -27,9 +29,9 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'heading')
         }
       }),
-  
+
       ______________________________,
-  
+
       new MenuItem({
         label: 'Strong',
         id: 'format-strong',
@@ -38,7 +40,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'strong')
         }
       }),
-  
+
       new MenuItem({
         label: 'Emphasis',
         id: 'format-emphasis',
@@ -47,7 +49,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'emphasis')
         }
       }),
-  
+
       new MenuItem({
         label: 'Code',
         id: 'format-code',
@@ -56,7 +58,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'code')
         }
       }),
-  
+
       new MenuItem({
         label: 'Strikethrough',
         id: 'format-strikethrough',
@@ -65,9 +67,9 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'strikethrough')
         }
       }),
-  
+
       ______________________________,
-  
+
       new MenuItem({
         label: 'Link',
         id: 'format-link',
@@ -76,7 +78,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'link')
         }
       }),
-  
+
       new MenuItem({
         label: 'Image',
         id: 'format-image',
@@ -85,7 +87,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'image')
         }
       }),
-  
+
       new MenuItem({
         label: 'Footnote',
         id: 'format-footnote',
@@ -94,7 +96,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'footnote')
         }
       }),
-  
+
       new MenuItem({
         label: 'Citation',
         id: 'format-citation',
@@ -103,9 +105,9 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'citation')
         }
       }),
-  
+
       ______________________________,
-  
+
       new MenuItem({
         label: 'Unordered List',
         id: 'format-ul',
@@ -114,7 +116,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'ul')
         }
       }),
-  
+
       new MenuItem({
         label: 'Ordered List',
         id: 'format-ol',
@@ -123,9 +125,9 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'ol')
         }
       }),
-  
+
       ______________________________,
-  
+
       new MenuItem({
         label: 'Task List',
         id: 'format-taskList',
@@ -134,7 +136,7 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'taskList')
         }
       }),
-  
+
       new MenuItem({
         label: 'Toggle Checked',
         id: 'format-taskChecked',
@@ -143,48 +145,64 @@ export function create() {
           focusedWindow.webContents.send('setFormat', 'taskChecked')
         }
       }),
-  
+
       ______________________________,
-  
+
     ]
   })
 }
 
+/**
+ * 
+ * @param {boolean} enable 
+ */
+function setEnabledOnAll(appMenu, enable) {
+  appMenu.getMenuItemById('format-citation').enabled = enable
+  appMenu.getMenuItemById('format-code').enabled = enable
+  appMenu.getMenuItemById('format-emphasis').enabled = enable
+  appMenu.getMenuItemById('format-footnote').enabled = enable
+  appMenu.getMenuItemById('format-heading').enabled = enable
+  appMenu.getMenuItemById('format-image').enabled = enable
+  appMenu.getMenuItemById('format-link').enabled = enable
+  appMenu.getMenuItemById('format-ol').enabled = enable
+  appMenu.getMenuItemById('format-plaintext').enabled = enable
+  appMenu.getMenuItemById('format-strikethrough').enabled = enable
+  appMenu.getMenuItemById('format-strong').enabled = enable
+  appMenu.getMenuItemById('format-taskChecked').enabled = enable
+  appMenu.getMenuItemById('format-taskList').enabled = enable
+  appMenu.getMenuItemById('format-ul').enabled = enable
+}
 
-export function update(appMenu) {
 
-  const m = appMenu
-  const state = global.state()
-  const project = state.projects.byId[state.focusedWindowId];
-  const panel = project?.panels[project?.focusedPanelIndex];
+
+/**
+ * Update menu when state changes
+ */
+export function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocused, appMenu) {
+
+
+  /* --------------------------------- Update --------------------------------- */
+
+  const isProjectDirectoryDefined = project?.directory
+
+  // Disable all and return if project directory is not yet defined. 
+  if (!isProjectDirectoryDefined) {
+    setMenuEnabled("format", false)
+    return
+  }
+
+  // Else, disable all if 1) editor is not focused, or 2) doc is not markdown.
   const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
   const activeDoc = watcher?.files?.byId[panel?.docId];
-  
-  const isActiveDocMarkdownAndEditorFocused = 
+
+  const isActiveDocMarkdownAndEditorFocused =
     activeDoc?.contentType == 'text/markdown' &&
     project?.focusedSectionId == 'editor'
 
-  // Disable when editor is not focused,
-  // or if editor document is not markdown
+  // Set enabled on all
+  setMenuEnabled("format", isActiveDocMarkdownAndEditorFocused)
 
-  m.getMenuItemById('format-citation').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-code').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-emphasis').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-footnote').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-heading').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-image').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-link').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-ol').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-plaintext').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-strikethrough').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-strikethrough').visible = state.markdown.strikethrough
-  m.getMenuItemById('format-strong').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-taskChecked').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-taskList').enabled = isActiveDocMarkdownAndEditorFocused
-  m.getMenuItemById('format-ul').enabled = isActiveDocMarkdownAndEditorFocused
+  // Strikethrough menu item visibility is driven by a preference.
+  appMenu.getMenuItemById('format-strikethrough').visible = state.markdown.strikethrough
 
-}
-
-export function onStateChanged(state, oldState, project, panel, prefsIsFocused, appMenu) {
-  update(appMenu)
 }

@@ -630,7 +630,7 @@ pre.CodeMirror-line.frontmatter-start {
   text-decoration-color: var(--link-mark-highlight-bg);
 }
 
-.metaKeyDown .CodeMirror .mark.link:hover {
+.metaKeyDown .mark.link:hover {
   cursor: pointer;
   color: var(--link-hover);
   text-decoration-color: var(--link-hover);
