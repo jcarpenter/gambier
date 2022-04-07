@@ -114,7 +114,7 @@ export function onMouseup(domEvent, id, tab, tabId, panel, files) {
 
 }
 
-// -------- LEFT/RIGHT -------- //
+// -------- ARROW -------- //
 
 export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files, project) {
 
@@ -208,8 +208,11 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
     }
   } else {
     // Select previous or next
-    id = key == 'ArrowUp' ? listIds[lastSelectedIndex - 1] : listIds[lastSelectedIndex + 1]
+    id = key == 'ArrowUp' ? 
+      listIds[lastSelectedIndex - 1] : 
+      listIds[lastSelectedIndex + 1]
     selected = [id]
+    console.log(selected)
   }
 
   // If there are multiple selected, select them (but don't open).
@@ -232,7 +235,9 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
 
     const isDoc = files.byId[id]?.isDoc
     
-    // Open doc
+    // If selected is doc, open it.
+    // Else, update the selection.
+
     if (isDoc) {
 
       const panel = project.panels.find(({index}) => index == project.focusedPanelIndex)
@@ -247,6 +252,15 @@ export function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, 
           getCmDataByPanelId(panel.id) : '',
         isNewDoc: panel.docId == 'newDoc'
       })
+
+    } else {
+    
+      window.api.send('dispatch', {
+        type: 'SIDEBAR_SET_SELECTED',
+        tabId,
+        lastSelected: id,
+        selected: [id],
+      }) 
 
     }
   }

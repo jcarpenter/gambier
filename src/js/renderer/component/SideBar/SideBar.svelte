@@ -100,7 +100,7 @@
     margin: 0;
     transform-origin: left top;
     overflow: hidden;
-    // border-right: var(--sidebar-border-width) solid var(--separator-color);
+    border-right: 1px solid var(--sidebar-border-color);
 
     // Transparent sidebar style:
     // background-color: var(--window-background-color);

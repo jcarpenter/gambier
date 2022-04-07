@@ -1814,8 +1814,8 @@ String.prototype.lastChar = function () {
  * Round a number to two decimal places
  * From: https://www.delftstack.com/howto/javascript/javascript-round-to-2-decimal-places/
  */
-Number.prototype.roundToTwo = function() {
-  return +(Math.round(this + "e+2")  + "e-2")
+Number.prototype.roundToTwo = function () {
+  return +(Math.round(this + "e+2") + "e-2")
 };
 
 /**
@@ -5500,8 +5500,8 @@ async function updateTheme(newState, patches) {
  * Set href of #theme stylesheet on index.html
  * Set `data-theme-isDark` boolean.
  */
-function setTheme(state) {
-    
+async function setTheme(state) {
+
   // Set stylesheet
   // If state.theme.id is 'gibsons', then stylesheet 
   // href is './styles/themes/gibsons.css'.
@@ -5510,6 +5510,12 @@ function setTheme(state) {
 
   // Set data-theme-isDark
   document.body.setAttribute('data-theme-isDark', state.theme.isDark);
+
+  // Preload theme images.
+  // Have to insert brief pause before-hand, to account for time
+  // it takes to load the new stylesheet.
+  await wait(25);
+  preloadCssImages();
 }
 
 
@@ -5518,7 +5524,7 @@ function setTheme(state) {
  * TODO: Might want to check if there's a mismatch before updating?
  * This shoudn't be called very often, so probably isn't an issue.
  */
- function setSystemColorCSSVars(state) {
+function setSystemColorCSSVars(state) {
   for (const [varName, value] of Object.entries(state.systemColors)) {
     document.body.style.setProperty(`--os-${varName}`, value);
   }
@@ -5530,13 +5536,64 @@ function setTheme(state) {
  * E.g. Font size, line height.
  */
 function setEditorCSSVars(state) {
- 
+
   document.body.style.setProperty("--editor-fontsize", `${state.editorFont.size}px`);
   document.body.style.setProperty("--editor-lineheight", `${state.editorLineHeight.size}em`);
   document.body.style.setProperty("--editor-maxlinewidth", `${state.editorMaxLineWidth.size * state.editorFont.size}px`);
   document.body.style.setProperty("--editor-maxpadding", `${state.editorFont.size * 4}px`);
 
   // document.body.style.setProperty("--gridoverlay-display", state.developer.showGrid ? 'none' : 'initial')
+}
+
+
+/**
+ * Whenever theme changes, go through CSS files, find
+ * linked images, and force them to preload.
+ */
+function preloadCssImages() {
+
+  // Get theme stylesheet
+  const stylesheets = [...document.styleSheets]; // Have to convert to Array
+  const themeStylesheet = stylesheets.find((s) => s.ownerNode.id == "theme");
+  
+  // Get rules with "body {...}" selector
+  const bodyRules = [...themeStylesheet.rules].filter((r) => r.selectorText == "body");
+
+
+
+  for (const rule of bodyRules) {
+    for (const style of rule.style) {
+      if (style.startsWith("--")) {
+        const value = rule.style.getPropertyValue(style);
+        if (value.includes("url(")) {
+          const url = value.replace(/\s?url\(/, "").replace(")", "").replaceAll(/\\\//g, "/").replaceAll(/\\\./g, ".");
+          const preloadLink = document.createElement("link");
+          preloadLink.href = "./" + url;
+          preloadLink.rel = "preload";
+          preloadLink.as = "image";
+          preloadLink.crossOrigin = "anonymous";
+          document.head.appendChild(preloadLink);
+        }
+      }
+    }
+  }
+
+
+  // console.log(bodyCssVars)
+
+  // Get variable names from `rules`
+  // for (const s of stylesheets) {
+  //   console.log(bodyRules)
+  // }
+
+
+  // Get variable values from body
+
+  // 2. Document.styleSheets
+  // 3. getComputedStyle on body (where, by convention, we set variables)
+
+
+
 }
 
 T(); // Required by immer
@@ -19880,7 +19937,7 @@ function onMouseup(domEvent, id, tab, tabId, panel, files) {
 
 }
 
-// -------- LEFT/RIGHT -------- //
+// -------- ARROW -------- //
 
 function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files, project) {
 
@@ -19974,8 +20031,11 @@ function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files, 
     }
   } else {
     // Select previous or next
-    id = key == 'ArrowUp' ? listIds[lastSelectedIndex - 1] : listIds[lastSelectedIndex + 1];
+    id = key == 'ArrowUp' ? 
+      listIds[lastSelectedIndex - 1] : 
+      listIds[lastSelectedIndex + 1];
     selected = [id];
+    console.log(selected);
   }
 
   // If there are multiple selected, select them (but don't open).
@@ -19998,7 +20058,9 @@ function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files, 
 
     const isDoc = files.byId[id]?.isDoc;
     
-    // Open doc
+    // If selected is doc, open it.
+    // Else, update the selection.
+
     if (isDoc) {
 
       const panel = project.panels.find(({index}) => index == project.focusedPanelIndex);
@@ -20013,6 +20075,15 @@ function arrowUpDown(key, shiftPressed, altPressed, tab, tabId, listIds, files, 
           getCmDataByPanelId(panel.id) : '',
         isNewDoc: panel.docId == 'newDoc'
       });
+
+    } else {
+    
+      window.api.send('dispatch', {
+        type: 'SIDEBAR_SET_SELECTED',
+        tabId,
+        lastSelected: id,
+        selected: [id],
+      }); 
 
     }
   }

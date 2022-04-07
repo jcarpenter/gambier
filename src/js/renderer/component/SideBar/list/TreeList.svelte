@@ -11,8 +11,6 @@
   const tabId = getContext('tabId')
   $: tab = $sidebar.tabsById[tabId]
   $: isSidebarFocused = $project.focusedSectionId == 'sidebar'
-  
-  $: console.log(subtree, listIds)
 
 </script>
 

@@ -985,6 +985,7 @@ const storeDefault = {
     installed: {
       "cupertino-light": { name: "Cupertino Light", isDark: false },
       "cupertino-dark": { name: "Cupertino Dark", isDark: true },
+      "dracula": { name: "Dracula", isDark: true }
     }
   },
 
@@ -1293,8 +1294,8 @@ String.prototype.lastChar = function () {
  * Round a number to two decimal places
  * From: https://www.delftstack.com/howto/javascript/javascript-round-to-2-decimal-places/
  */
-Number.prototype.roundToTwo = function() {
-  return +(Math.round(this + "e+2")  + "e-2")
+Number.prototype.roundToTwo = function () {
+  return +(Math.round(this + "e+2") + "e-2")
 };
 
 /**
@@ -1336,13 +1337,13 @@ const formats = {
   document: ['.md', '.markdown'],
   image: ['.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'],
   av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'],
-  
+
   // Video containers (file types)
   // If a container supports both audio and video (e.g. WebM), we categorize as video,
   // since <video> also works for audio, but <audio> does not work for video.
   // See: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#index_of_media_container_formats_file_types
   // video: [
-    
+
   //   // Mp4
   //   // Supported by Chrome? - Y
   //   '.mp4', 
@@ -1350,7 +1351,7 @@ const formats = {
   //   // WebM
   //   // Supported by Chrome? - Y
   //   '.webm',
-    
+
   //   // Ogg
   //   // Supported by Chrome? - Y
   //   '.ogg',
@@ -1370,7 +1371,7 @@ const formats = {
   // ],
 
   // audio: [
-    
+
   //   // "The Free Lossless Audio Codec (FLAC) is a lossless audio codec; there is also an associated simple container format, also called FLAC, that can contain this audio."
   //   // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#flac
   //   '.flac', 

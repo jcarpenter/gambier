@@ -432,17 +432,16 @@ div.CodeMirror-dragcursors {
     visibility: visible;
 }
 
-// Text selected: CodeMirror NOT focused
-:not(.CodeMirror-focused) .CodeMirror-selected {
-    background: #d9d9d9;
-    // max-width: 100%; // Feb 11: Am attempting to fix issue where .CodeMirror-selected div is too wide, and extends off to right.
-}
-
 // Text selected: CodeMirror focused
 .CodeMirror-focused .CodeMirror-selected {
-    // background: #d7d4f0;
-    background: var(--text-selected-background); // TODO
+    background: var(--editor-selected-text-color);
 }
+
+// Text selected: CodeMirror NOT focused
+.CodeMirror:not(.CodeMirror-focused) .CodeMirror-selected {
+    background: var(--editor-not-focused-selected-text-color);
+}
+
 .CodeMirror-crosshair {
     // Am disabling showing cross hair when alt is held
     cursor: text;

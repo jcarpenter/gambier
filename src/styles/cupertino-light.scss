@@ -7,13 +7,48 @@
 
 body {
 
-  /* --------------------------------- UI -------------------------------- */
+  /* -------------------------------------------------------------------------- */
+  /*                                 UI ELEMENTS                                */
+  /* -------------------------------------------------------------------------- */
 
 
-  /* --------------------------------- Editor --------------------------------- */
+
+  /* -------------------------------------------------------------------------- */
+  /*                                 UI ELEMENTS                                */
+  /* -------------------------------------------------------------------------- */
   
+  /* ------ Sidebar ------ */
+  --sidebar-tab-inactive-color:     var(--os-controlTextColor);
+  --sidebar-tab-active-color:       #{foregroundColor()};
+  --sidebar-tab-selected-color:     #{accentColor()};
+  --sidebar-tree-icons-color:       #{foregroundColor(0.8)};
+  --sidebar-border-color:           transparent;
+  
+  /* ------ Editor wizard ------ */
+  --wizard-background-color:        var(--os-windowBackgroundColor);
+  --wizard-border-color:            var(--os-separatorColor);
+  --wizard-border-radius:           4px;
+  --wizard-border-thickness:        1px;
+  --wizard-error:                 hsla(0, 100%, 50%, 0.5);
+
+  /* ------ Misc ------ */
+  --error-color:                  #fa6e50;
+  --lightbox-icon-color:          #fff;
+  --menu-background:              hsla(0, 0%, 95%, 0.8);
+  --topbar-border-color:            transparent;
+  
+
+/* -------------------------------------------------------------------------- */
+/*                                   EDITOR                                   */
+/* -------------------------------------------------------------------------- */
+  
+  // Shared style, since many `md` characters should look the same
+  $common-md-color:                 accentColor($l:-20%, $a:-0.4);
+
   --editor-default-text-color:    hsl(0, 0%, 25%);
-  --editor-background-color:      hsl(0, 0%, 97%);
+  --editor-selected-text-color:     var(--text-selected-background); 
+  --editor-not-focused-selected-text-color:     hsl(0, 0%, 90%);
+  --editor-background-color:        hsl(0, 0%, 97%);
   --editor-border-radius:           5px;
   --editor-header-height:           2.25em;
   --editor-side-padding:            4em;
@@ -21,14 +56,14 @@ body {
   --mark-border-radius:              0.2rem;
   --mark-border-width:               0px;
 
-  --citation-mark:                  #{accentColor($lightness: -20%)};
-  --citation-mark-bg:               #{accentColor($alpha: -0.8)};
-  --citation-mark-border:           #{accentColor($lightness: -30%, $alpha: -0.9)};
+  --citation-mark:                  #{accentColor($l:-20%)};
+  --citation-mark-bg:               #{accentColor($a:-0.8)};
+  --citation-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
   --citation-mark-highlight:      white;
   --citation-mark-highlight-bg:     #{accentColor()};
-  --citation-source:                #{accentColor($lightness: -20%)};
-  --citation-source-bg:             #{accentColor($alpha: -0.95)};
-  --citation-source-md:             #{accentColor($lightness: -20%, $alpha: -0.4)};
+  --citation-source:                #{accentColor($l:-20%)};
+  --citation-source-bg:             #{accentColor($a:-0.95)};
+  --citation-source-md:             #{$common-md-color};
 
   $code: hsl(0, 0%, 33%);
   --code-source:                    #{color.adjust($code, $lightness: -15%)};
@@ -40,32 +75,37 @@ body {
   --emphasis:                       #{$emphasis};
   --emphasis-md:                    #{color.adjust($emphasis, $alpha: -0.6)};
 
-  --fencedcodeblock-bg:             #{accentColor($alpha: -0.93)};
-  --fencedcodeblock-md:             #{accentColor($sat: -10%, $alpha: -0.2)};
+  --fencedcodeblock-bg:             #{accentColor($a:-0.93)};
+  --fencedcodeblock-md:             #{accentColor($s: -10%, $a:-0.2)};
   --fencedcodeblock-options-label:  #{foregroundColor(0.25)};
   --fencedcodeblock-borderRadius:   0.2em;
   --fencedcodeblock-syntax-icon:    url(img/ui/chevron.down.small.heavy.svg);
 
-  --footnote-mark:                  #{accentColor($lightness: -20%)};
-  --footnote-mark-bg:               #{accentColor($alpha: -0.8)};
-  --footnote-mark-border:           #{accentColor($lightness: -30%, $alpha: -0.9)};
+  --footnote-mark:                  #{accentColor($l:-20%)};
+  --footnote-mark-bg:               #{accentColor($a:-0.8)};
+  --footnote-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
   --footnote-mark-highlight:      white;
   --footnote-mark-highlight-bg:     #{accentColor()};
   --footnote-source:                #{accentColor()};
-  --footnote-source-bg:             #{accentColor($alpha: -0.95)};
-  --footnote-source-md:             #{accentColor($alpha: -0.4)};
+  --footnote-source-bg:             #{accentColor($a:-0.95)};
+  --footnote-source-md:             #{accentColor($a:-0.4)};
   
-  --figure-bg:                      #{accentColor($alpha: -0.93)};
-  --figure-caption:                 #{accentColor($lightness: -10%, $sat: -20%)};
+  --figure-bg:                      #{accentColor($a:-0.93)};
+  --figure-caption:                 #{accentColor($l:-10%, $s: -20%)};
   --figure-options-label:           #{foregroundColor(0.4)};
   --figure-thumb-bg:                transparent;
   --figure-thumb-borderColor:       #{accentColor()};
   --figure-thumb-borderRadius:      3.5px;
   --figure-thumb-borderWidth:       1px;
 
-  --frontmatter-bg:                 #{foregroundColor(0.03)};
-  --frontmatter-md:                 #{foregroundColor(0.4)};
-  --frontmatter-dividers:           #{foregroundColor(0.03)};
+  --frontmatter-text:               #{accentColor($l:-35%, $s: -50%)};
+  --frontmatter-atom:               #{accentColor($l:-10%, $s: -60%, $a:-0.1)};
+  --frontmatter-meta:               #{accentColor($l:-10%, $s: -50%, $a:-0.1)};
+  --frontmatter-tag:                #{accentColor($l:-35%, $s: -50%)};
+  --frontmatter-tag-underline:      #{accentColor($l:-35%, $s: -50%, $a:-0.6)};
+  --frontmatter-md:                 #{accentColor($l:-10%, $s: -50%, $a:-0.5)};
+  --frontmatter-bg:                 #{accentColor($s: -10%, $a:-0.94)};
+  --frontmatter-dividers:           #{accentColor($a:-0.9)};
   --frontmatter-border-width:       0px;
   --frontmatter-border:             transparent;
   --frontmatter-borderRadius:       0.3em;
@@ -78,38 +118,40 @@ body {
   --h6:                             #{foregroundColor(0.8)};
   --hr-bg:                        hsla(0, 0%, 78%, 0.2);
 
-  --image-mark:                     #{accentColor($lightness: -20%)};
-  --image-mark-bg:                  #{accentColor($alpha: -0.8)};
-  --image-mark-border:              #{accentColor($lightness: -30%, $alpha: -0.9)};
+  --image-mark:                     #{accentColor($l:-20%)};
+  --image-mark-bg:                  #{accentColor($a:-0.8)};
+  --image-mark-border:              #{accentColor($l:-30%, $a:-0.9)};
   --image-mark-highlight:         white;
   --image-mark-highlight-bg:        #{accentColor()};
-  --image-source:                   #{accentColor($lightness: -15%)};
-  --image-source-url:               #{accentColor($lightness: -15%, $alpha: -0.2)};
-  --image-source-title:             #{accentColor($lightness: -15%, $alpha: -0.4)};
-  --image-source-bg:                #{accentColor($alpha: 0.05)};
-  --image-source-md:                #{accentColor($lightness: -20%, $alpha: -0.4)};
+  --image-source:                   #{accentColor($l:-15%)};
+  --image-source-url:               #{accentColor($l:-15%, $a:-0.2)};
+  --image-source-title:             #{accentColor($l:-15%, $a:-0.4)};
+  --image-source-bg:                #{accentColor($a:0.05)};
+  --image-source-md:                #{accentColor($l:-20%, $a:-0.4)};
+  
+  $link-text:                       accentColor($s:-30%, $l:-25%);
+  $link-underline:                  accentColor($s:-30%, $l:-25%, $a: -0.5);
+  $link-hover:                      accentColor($s:-30%, $l:-35%);
   
   // Applies to url-in-brackets and email-in-brackets
-  --in-brackets:                    #{accentColor($lightness: -10%)};
-  --in-brackets-md:                 #{accentColor($alpha: -0.4)};
-  --in-brackets-underline:          transparent;
-  --in-brackets-hover-underline:    #{accentColor($lightness: -10%, $alpha: -0.2)};
+  --in-brackets:                    #{$link-text};
+  --in-brackets-underline:          #{$link-underline};
+  --in-brackets-hover-underline:    #{accentColor($l:-10%, $a:-0.2)};
+  --in-brackets-md:                 #{accentColor($a:-0.4)};
 
-  $link: hsl(0, 0%, 12%);
-  --link-mark:                      #{$link};
-  --link-mark-underline:            #{color.adjust($link, $alpha: -0.6)};
-  // --link-mark-bg:                #{color.adjust($link, $alpha: -0.9)};
-  // --link-mark-border:            #{color.adjust($link, $lightness: -20%, $alpha: -0.9)};
-  // --link-mark-border-width:      1px;
-  --link-mark-highlight:          white;
+  --link-mark:                      #{$link-text};
+  --link-mark-underline:            #{$link-underline};
+  --link-hover:                     #{$link-hover};
+  --link-mark-highlight:            white;
   --link-mark-highlight-bg:         #{accentColor()};
   --link-mark-border-radius:         3px;
-  --link-source:                    #{$link};
-  --link-source-url:                #{color.adjust($link, $alpha: -0.2)};
-  --link-source-title:              #{color.adjust($link, $alpha: -0.4)};
+  --link-weight:                    400;
+  --link-source-text:               #{accentColor($l:-5%)};
+  --link-source-url:                #{accentColor($l:-20%)};
+  --link-source-title:              #{accentColor($s: -20%)};
   --link-source-bg:                 transparent;
-  --link-source-md:                 #{color.adjust($link, $alpha: -0.4)};
-  --link-ref-definition-bg:         #{color.adjust($link, $alpha: -0.9)};
+  --link-source-md:                 #{$common-md-color};
+  // --link-ref-definition-bg:         #{color.adjust($link, $alpha: -0.9)};
 
   --list-marker:                    #{accentColor()};
   --list-indentation:               1em;
@@ -138,11 +180,11 @@ body {
   --task-mark-open-border:          #{foregroundColor(0.3)};
   --task-mark-closed-bg:            #{accentColor()};
   --task-mark-closed-border:        #{accentColor()};
-  --task-mark-bg:                   #{accentColor($alpha: -0.8)};
-  --task-mark-border:               #{accentColor($lightness: -30%, $alpha: -0.9)};
+  --task-mark-bg:                   #{accentColor($a:-0.8)};
+  --task-mark-border:               #{accentColor($l:-30%, $a:-0.9)};
   --task-mark-highlight:            white;
   --task-mark-highlight-bg:         #{accentColor()};
-  --task-source:                    #{accentColor($lightness: -20%)};
-  --task-source-bg:                 #{accentColor($alpha: 0.05)};
-  --task-source-md:                 #{accentColor($lightness: -20%, $alpha: -0.4)};
+  --task-source:                    #{accentColor($l:-20%)};
+  --task-source-bg:                 #{accentColor($a:0.05)};
+  --task-source-md:                 #{accentColor($l:-20%, $a:-0.4)};
 }

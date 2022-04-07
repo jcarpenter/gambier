@@ -60,6 +60,7 @@ const storeDefault = {
     installed: {
       "cupertino-light": { name: "Cupertino Light", isDark: false },
       "cupertino-dark": { name: "Cupertino Dark", isDark: true },
+      "dracula": { name: "Dracula", isDark: true }
     }
   },
 

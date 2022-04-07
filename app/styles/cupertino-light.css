@@ -152,7 +152,7 @@ li.CodeMirror-hint.element-inline-link::after {
 }
 
 .cm-citation {
-  color: var(--citation-source) !important;
+  color: var(--citation-source);
   background-color: var(--citation-source-bg) !important;
 }
 .cm-citation.cm-key {
@@ -409,10 +409,7 @@ pre.CodeMirror-line.htmlBlock-lastLine {
 }
 
 .CodeMirror pre.CodeMirror-line.frontmatter > [role=presentation] {
-  font-family: "SFMono-Regular";
-  font-size: calc(var(--editor-fontsize) * 0.85);
-  letter-spacing: -0.01em;
-  font-size: calc(var(--editor-fontsize) * 0.8);
+  font-size: calc(var(--editor-fontsize) * 0.9);
   width: calc(100% - 1.5em);
 }
 
@@ -461,31 +458,31 @@ pre.CodeMirror-line.htmlBlock-lastLine {
 }
 
 .frontmatter .cm-atom {
-  color: rgba(var(--foreground-color), 0.5);
-  font-weight: 500;
+  color: var(--frontmatter-atom);
+  font-weight: 400;
 }
 
 .frontmatter .cm-meta {
-  color: rgba(var(--foreground-color), 0.6);
+  color: var(--frontmatter-meta);
 }
 
 .frontmatter .cm-null,
 .frontmatter .cm-string {
-  color: rgba(var(--foreground-color), 0.8);
-  font-weight: 500;
+  color: var(--frontmatter-text);
+  font-weight: 400;
 }
 
 .frontmatter .cm-def:not(.cm-md) {
-  color: rgba(var(--foreground-color), 0.8);
+  color: var(--frontmatter-text);
 }
 
 .frontmatter .cm-keyword {
-  color: rgba(var(--foreground-color), 0.8);
-  font-weight: 500;
+  color: var(--frontmatter-text);
+  font-weight: 400;
 }
 
 .frontmatter .cm-number {
-  color: rgba(var(--foreground-color), 0.8);
+  color: var(--frontmatter-text);
 }
 
 pre.CodeMirror-line.frontmatter.comment + pre.CodeMirror-line.frontmatter.comment {
@@ -501,15 +498,15 @@ pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
 }
 
 .frontmatter .cm-tag {
-  color: rgba(var(--foreground-color), 1);
-  text-decoration-color: rgba(var(--foreground-color), 0.6);
+  color: var(--frontmatter-tag);
+  text-decoration-color: var(--frontmatter-tag-underline);
   text-decoration-line: underline;
   text-decoration-thickness: initial;
-  text-underline-offset: 0.1em;
+  text-underline-offset: 0.05em;
 }
 
 .metaKeyDown .frontmatter .cm-tag:hover {
-  text-decoration-color: rgba(var(--foreground-color), 1);
+  filter: brightness(0.2);
   cursor: pointer;
 }
 
@@ -618,10 +615,10 @@ pre.CodeMirror-line.frontmatter-start {
 
 .CodeMirror .mark.link {
   color: var(--link-mark);
-  font-weight: 500;
+  font-weight: var(--link-weight);
   text-decoration: underline;
-  text-decoration-thickness: 0.15em;
-  text-underline-offset: 0.03em;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.025em;
   text-decoration-color: var(--link-mark-underline);
   text-decoration-skip-ink: none;
   border-radius: var(--mark-border-radius);
@@ -633,16 +630,23 @@ pre.CodeMirror-line.frontmatter-start {
   text-decoration-color: var(--link-mark-highlight-bg);
 }
 
-.metaKeyDown .mark.link:hover {
+.metaKeyDown .CodeMirror .mark.link:hover {
   cursor: pointer;
+  color: var(--link-hover);
+  text-decoration-color: var(--link-hover);
 }
 
 .cm-link,
 .cm-autolink-url,
 .cm-autolink-email {
-  color: var(--link-source);
   background-color: var(--link-source-bg);
   text-decoration: none;
+}
+.cm-link.cm-text,
+.cm-autolink-url.cm-text,
+.cm-autolink-email.cm-text {
+  color: var(--link-source-text);
+  font-weight: var(--link-weight);
 }
 .cm-link.cm-url,
 .cm-autolink-url.cm-url,
@@ -693,6 +697,7 @@ pre.CodeMirror-line.frontmatter-start {
   letter-spacing: 0.2325em;
 }
 .CodeMirror pre.CodeMirror-line.ul .cm-list-marker {
+  font-weight: 500;
   letter-spacing: 0.1em;
 }
 .CodeMirror pre.CodeMirror-line.ol .cm-indent {
@@ -765,10 +770,10 @@ pre.CodeMirror-line.frontmatter-start {
 
 .cm-strong {
   color: var(--strong);
-  font-weight: 700;
+  font-weight: 600;
 }
 .cm-strong.cm-md {
-  font-weight: 400;
+  font-weight: 300;
   color: var(--strong-md);
 }
 
@@ -1194,12 +1199,12 @@ div.CodeMirror-dragcursors {
   visibility: visible;
 }
 
-:not(.CodeMirror-focused) .CodeMirror-selected {
-  background: #d9d9d9;
+.CodeMirror-focused .CodeMirror-selected {
+  background: var(--editor-selected-text-color);
 }
 
-.CodeMirror-focused .CodeMirror-selected {
-  background: var(--text-selected-background);
+.CodeMirror:not(.CodeMirror-focused) .CodeMirror-selected {
+  background: var(--editor-not-focused-selected-text-color);
 }
 
 .CodeMirror-crosshair {
@@ -1297,24 +1302,10 @@ body {
   --control-selected-text-color: var(--os-selectedControlTextColor);
   --control-disabled-text-color: var(--os-disabledControlTextColor);
   /* ------ Misc ------ */
-  --error-color: #fa6e50;
   --grid-color: var(--os-gridColor);
-  --lightbox-icon-color: #fff;
-  --menu-background: hsla(0, 0%, 95%, 0.8);
   --separator-color: var(--os-separatorColor);
   --shadow-color: var(--os-shadowColor);
   --window-background-color: var(--os-windowBackgroundColor);
-  /* ------ Sidebar ------ */
-  --sidebar-tab-inactive-color: var(--os-controlTextColor);
-  --sidebar-tab-active-color: rgba(var(--foreground-color), 1);
-  --sidebar-tab-selected-color: var(--accent-color);
-  --sidebar-tree-icons-color: rgba(var(--foreground-color), 0.8);
-  /* ------ Editor wizard ------ */
-  --wizard-background-color: var(--os-windowBackgroundColor);
-  --wizard-border-color: var(--os-separatorColor);
-  --wizard-border-radius: 4px;
-  --wizard-border-thickness: 1px;
-  --wizard-error: hsla(0, 100%, 50%, 0.5);
 }
 
 body {
@@ -1370,14 +1361,38 @@ body {
   --button-border-radius-compact: 4px;
   --menu-border-radius: 5.5px;
   --menu-border-radius-compact: 3.5px;
-  --topbar-border-width: 1px;
-  --sidebar-border-width: 1px;
 }
 
 body {
-  /* --------------------------------- UI -------------------------------- */
-  /* --------------------------------- Editor --------------------------------- */
+  /* -------------------------------------------------------------------------- */
+  /*                                 UI ELEMENTS                                */
+  /* -------------------------------------------------------------------------- */
+  /* -------------------------------------------------------------------------- */
+  /*                                 UI ELEMENTS                                */
+  /* -------------------------------------------------------------------------- */
+  /* ------ Sidebar ------ */
+  --sidebar-tab-inactive-color: var(--os-controlTextColor);
+  --sidebar-tab-active-color: rgba(var(--foreground-color), 1);
+  --sidebar-tab-selected-color: var(--accent-color);
+  --sidebar-tree-icons-color: rgba(var(--foreground-color), 0.8);
+  --sidebar-border-color: transparent;
+  /* ------ Editor wizard ------ */
+  --wizard-background-color: var(--os-windowBackgroundColor);
+  --wizard-border-color: var(--os-separatorColor);
+  --wizard-border-radius: 4px;
+  --wizard-border-thickness: 1px;
+  --wizard-error: hsla(0, 100%, 50%, 0.5);
+  /* ------ Misc ------ */
+  --error-color: #fa6e50;
+  --lightbox-icon-color: #fff;
+  --menu-background: hsla(0, 0%, 95%, 0.8);
+  --topbar-border-color: transparent;
+  /* -------------------------------------------------------------------------- */
+  /*                                   EDITOR                                   */
+  /* -------------------------------------------------------------------------- */
   --editor-default-text-color: hsl(0, 0%, 25%);
+  --editor-selected-text-color: var(--text-selected-background);
+  --editor-not-focused-selected-text-color: hsl(0, 0%, 90%);
   --editor-background-color: hsl(0, 0%, 97%);
   --editor-border-radius: 5px;
   --editor-header-height: 2.25em;
@@ -1418,9 +1433,14 @@ body {
   --figure-thumb-borderColor: var(--accent-color);
   --figure-thumb-borderRadius: 3.5px;
   --figure-thumb-borderWidth: 1px;
-  --frontmatter-bg: rgba(var(--foreground-color), 0.03);
-  --frontmatter-md: rgba(var(--foreground-color), 0.4);
-  --frontmatter-dividers: rgba(var(--foreground-color), 0.03);
+  --frontmatter-text: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -50%), calc(var(--accent-color-l) + -35%), 1);
+  --frontmatter-atom: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -60%), calc(var(--accent-color-l) + -10%), 0.9);
+  --frontmatter-meta: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -50%), calc(var(--accent-color-l) + -10%), 0.9);
+  --frontmatter-tag: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -50%), calc(var(--accent-color-l) + -35%), 1);
+  --frontmatter-tag-underline: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -50%), calc(var(--accent-color-l) + -35%), 0.4);
+  --frontmatter-md: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -50%), calc(var(--accent-color-l) + -10%), 0.5);
+  --frontmatter-bg: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -10%), var(--accent-color-l), 0.06);
+  --frontmatter-dividers: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.1);
   --frontmatter-border-width: 0px;
   --frontmatter-border: transparent;
   --frontmatter-borderRadius: 0.3em;
@@ -1441,21 +1461,22 @@ body {
   --image-source-title: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 0.6);
   --image-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 1.05);
   --image-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
-  --in-brackets: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -10%), 1);
-  --in-brackets-md: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.6);
-  --in-brackets-underline: transparent;
+  --in-brackets: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -25%), 1);
+  --in-brackets-underline: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -25%), 0.5);
   --in-brackets-hover-underline: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -10%), 0.8);
-  --link-mark: hsl(0deg, 0%, 12%);
-  --link-mark-underline: rgba(31, 31, 31, 0.4);
+  --in-brackets-md: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.6);
+  --link-mark: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -25%), 1);
+  --link-mark-underline: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -25%), 0.5);
+  --link-hover: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -35%), 1);
   --link-mark-highlight: white;
   --link-mark-highlight-bg: var(--accent-color);
   --link-mark-border-radius: 3px;
-  --link-source: hsl(0deg, 0%, 12%);
-  --link-source-url: rgba(31, 31, 31, 0.8);
-  --link-source-title: rgba(31, 31, 31, 0.6);
+  --link-weight: 400;
+  --link-source-text: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -5%), 1);
+  --link-source-url: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --link-source-title: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -20%), var(--accent-color-l), 1);
   --link-source-bg: transparent;
-  --link-source-md: rgba(31, 31, 31, 0.6);
-  --link-ref-definition-bg: rgba(31, 31, 31, 0.1);
+  --link-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
   --list-marker: var(--accent-color);
   --list-indentation: 1em;
   --texmath-inline: hsla(0, 0%, 84%, 0.5);

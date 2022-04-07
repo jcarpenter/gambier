@@ -88,33 +88,33 @@
 // https://sass-lang.com/documentation/modules/color#adjust
 // Values are relative. E.g. $alpha: -0.4 to reduce alpha
 // by 40$ from base value (which will probably be 1).
-@function accentColor($hue: 0, $sat: 0%, $lightness: 0%, $alpha: 1) {
+@function accentColor($h:0, $s:0%, $l:0%, $a:1) {
 
-    @if ($hue == 0 and $sat == 0% and $lightness == 0% and $alpha == 1) {
+    @if ($h == 0 and $s == 0% and $l == 0% and $a == 1) {
         @return var(--accent-color);
     } @else {
-        $h: var(--accent-color-h);
-        $s: var(--accent-color-s);
-        $l: var(--accent-color-l);
-        $a: 1;
+        $hue: var(--accent-color-h);
+        $saturation: var(--accent-color-s);
+        $lightness: var(--accent-color-l);
+        $alpha: 1;
     
-        @if $hue != 0 {
-            $h: calc(var(--accent-color-h) + #{$hue});
+        @if $h != 0 {
+            $hue: calc(var(--accent-color-h) + #{$h});
         }
     
-        @if $sat != 0% {
-            $s: calc(var(--accent-color-s) + #{$sat});
+        @if $s != 0% {
+            $saturation: calc(var(--accent-color-s) + #{$s});
         }
     
-        @if $lightness != 0% {
-            $l: calc(var(--accent-color-l) + #{$lightness});
+        @if $l != 0% {
+            $lightness: calc(var(--accent-color-l) + #{$l});
         }
 
-        @if $alpha != 1 {
-            $a: 1 + $alpha;
+        @if $a != 1 {
+            $alpha: 1 + $a;
         }
         
-        @return hsla(#{$h}, #{$s}, #{$l}, #{$a});
+        @return hsla(#{$hue}, #{$saturation}, #{$lightness}, #{$alpha});
     }
 }
 

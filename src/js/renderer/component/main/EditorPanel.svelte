@@ -497,6 +497,6 @@
     </div>
   {/if}
 
-  <Editor {panel} {doc} {isFocusedPanel} {isOnlyPanel} {width} />
+  <Editor {panel} {doc} {isFocusedPanel} {width} />
 
 </div>

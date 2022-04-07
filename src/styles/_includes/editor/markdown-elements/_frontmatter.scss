@@ -42,9 +42,11 @@
 }
 
 .CodeMirror pre.CodeMirror-line.frontmatter > [role='presentation'] {
-  @include code-typography;
-  font-size: calc(var(--editor-fontsize) * 0.8);
+  font-size: calc(var(--editor-fontsize) * 0.9);
   width: calc(100% - 1.5em);
+  // Monospace fonts:
+  // @include code-typography;
+  // font-size: calc(var(--editor-fontsize) * 0.8);
 }
 
 // Visible borders and backgrounds:
@@ -101,8 +103,8 @@
 }
 
 .frontmatter .cm-atom {
-  color: foregroundColor(0.5);
-  font-weight: 500;
+  color: var(--frontmatter-atom);
+  font-weight: 400;
   
   // Pill-style:
   // border-radius: 0.2em;
@@ -117,27 +119,27 @@
 }
 
 .frontmatter .cm-meta {
-  color: foregroundColor(0.6);
+  color: var(--frontmatter-meta);
 }
 
 .frontmatter .cm-null,
 .frontmatter .cm-string {
-  color: foregroundColor(0.8);
-  font-weight: 500;
+  color: var(--frontmatter-text);
+  font-weight: 400;
 }
 
 .frontmatter .cm-def:not(.cm-md) {
-  color: foregroundColor(0.8);
+  color: var(--frontmatter-text);
 }
 
 // E.g. true/false boolean
 .frontmatter .cm-keyword {
-  color: foregroundColor(0.8);
-  font-weight: 500;
+  color: var(--frontmatter-text);
+  font-weight: 400;
 }
 
 .frontmatter .cm-number {
-  color: foregroundColor(0.8);
+  color: var(--frontmatter-text);
 }
 
 // Remove gap and divider from consecutive comments
@@ -151,7 +153,7 @@ pre.CodeMirror-line.frontmatter.comment {
 }
 
 pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
-  color: accentColor($lightness: -30%, $sat: -30%, $alpha: -0.6);
+  color: accentColor($l: -30%, $s: -30%, $a: -0.6);
   font-style: italic;
 }
 
@@ -171,15 +173,16 @@ pre.CodeMirror-line.frontmatter:not(.fencedcodeblock) .cm-comment {
 
 // Tags: underline
 .frontmatter .cm-tag {
-  color: foregroundColor();
-  text-decoration-color: foregroundColor(0.6);
+  color: var(--frontmatter-tag);
+  text-decoration-color: var(--frontmatter-tag-underline);
   text-decoration-line: underline;
   text-decoration-thickness: initial;
-  text-underline-offset: 0.1em;
+  text-underline-offset: 0.05em;
 }
 
 .metaKeyDown .frontmatter .cm-tag:hover {
-  text-decoration-color: foregroundColor();
+  // text-decoration-color: foregroundColor();
+  filter: brightness(0.2);
   cursor: pointer;
 } 
 

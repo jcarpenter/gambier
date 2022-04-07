@@ -19,15 +19,15 @@ body {
 
   // Highlight around focused controls
   // TODO: Change to var(--os-keyboardFocusIndicatorColor)
-  --focus-ring-color: #{accentColor($lightness: -2%, $alpha: -0.5)};
+  --focus-ring-color: #{accentColor($l: -2%, $a: -0.5)};
 
   // Selected list/menu items
   // TODO: Change to var(--os-selectedContentBackgroundColor)
-  --selected-list-item-color: #{accentColor($sat: +3%, $lightness: -6%)};
+  --selected-list-item-color: #{accentColor($s: +3%, $l: -6%)};
 
   // Background of selected text
   // TODO: Change to var(--os-selectedTextBackgroundColor) 
-  --text-selected-background: #{accentColor($sat: +3%, $lightness: +35%)};
+  --text-selected-background: #{accentColor($s: +3%, $l: +35%)};
 
   /* ------ Buttons ------ */
 
@@ -56,25 +56,9 @@ body {
   --control-disabled-text-color: var(--os-disabledControlTextColor);
 
   /* ------ Misc ------ */
-  --error-color: #fa6e50;
   --grid-color: var(--os-gridColor);
-  --lightbox-icon-color: #fff;
-  --menu-background: hsla(0, 0%, 95%, 0.8);
   --separator-color: var(--os-separatorColor);
   --shadow-color: var(--os-shadowColor);
   --window-background-color: var(--os-windowBackgroundColor);
-
-  /* ------ Sidebar ------ */
-  --sidebar-tab-inactive-color:     var(--os-controlTextColor);
-  --sidebar-tab-active-color:       #{foregroundColor()};
-  --sidebar-tab-selected-color:     #{accentColor()};
-  --sidebar-tree-icons-color:       #{foregroundColor(0.8)};
-  
-  /* ------ Editor wizard ------ */
-  --wizard-background-color:        var(--os-windowBackgroundColor);
-  --wizard-border-color:            var(--os-separatorColor);
-  --wizard-border-radius:           4px;
-  --wizard-border-thickness:        1px;
-  --wizard-error:                 hsla(0, 100%, 50%, 0.5);
 
 }

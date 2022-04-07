@@ -1271,43 +1271,6 @@ body {
 }
 
 body {
-  --foreground-color: 255, 255, 255;
-  --background-color: 0, 0, 0;
-  /* ------ Accent-influenced ------ */
-  --accent-color: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --nav-icon-color: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --focus-ring-color: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -2%), 0.5);
-  --selected-list-item-color: hsla(var(--accent-H), calc(var(--accent-S) + 3%), calc(var(--accent-L) + -6%), 1);
-  --text-selected-background: hsla(var(--accent-H), calc(var(--accent-S) + -50%), calc(var(--accent-L) + -15%), 1);
-  /* ------ Buttons ------ */
-  --button-label-color: #ffffffd8;
-  --button-background: #555656ff;
-  --button-boxshadow: inset 0 0.5px 0 0 rgba(255, 255, 255, 0.25), 0 0 0 0.5px rgba(0, 0, 0, 0.15), 0 1px 1px 0 rgba(0, 0, 0, 0.15);
-  --inset-button-background: linear-gradient(hsla(0, 0%, 0%, 0.2), hsla(0, 0%, 0%, 0)), var(--button-background);
-  --inset-button-boxshadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15), 0 0 0 0.5px rgba(0, 0, 0, 0.15);
-  /* ------ Labels ------ */
-  --label-color: #ffffffd8;
-  --label-2-color: #ffffff8c;
-  --label-3-color: #ffffff3f;
-  --label-4-color: #ffffff19;
-  /* ------ Text ------ */
-  --text-color: #ffffffff;
-  --text-placeholder-color: #ffffff3f;
-  --menuitem-selected-text-color: #ffffffff;
-  --control-text-color: #ffffffd8;
-  --control-selected-text-color: #ffffff3f;
-  --control-disabled-text-color: #ffffff3f;
-  /* ------ Misc ------ */
-  --menu-background: hsla(0, 0%, 17%, 0.9);
-  --error-color: #fa6e50;
-  --separator-color: #ffffff19;
-  --grid-color: #ffffff19;
-  --shadow-color: #000000ff;
-  --window-background-color: #323232ff;
-  /* ------ OLD (to be converted) ------ */
-}
-
-body {
   --nav-project-icon: url(img/ui/folder.small.medium.svg);
   --nav-project-active-icon: url(img/ui/folder.fill.small.medium.svg);
   --nav-allDocs-icon: url(img/ui/doc.on.doc.small.medium.svg);
@@ -1364,64 +1327,104 @@ body {
 
 body {
   /* --------------------------------- UI -------------------------------- */
-  --sidebar-tab-inactive-color: var(--control-text-color);
+  --foreground-color: 255, 255, 255;
+  --background-color: 0, 0, 0;
+  --accent-color: #ff79c6;
+  --accent-color-h: 326;
+  --accent-color-s: 100%;
+  --accent-color-l: 74%;
+  /* ------ Accent-influenced ------ */
+  --nav-icon-color: var(--accent-color);
+  --focus-ring-color: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -2%), 0.5);
+  --selected-list-item-color: hsla(var(--accent-color-h), calc(var(--accent-color-s) + 3%), calc(var(--accent-color-l) + -6%), 1);
+  --text-selected-background: #44475a;
+  /* ------ Buttons ------ */
+  --button-label-color: #f8f8f2;
+  --button-background: #44475a;
+  --button-boxshadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 0.5px 1px 0.5px rgba(0, 0, 0, 0.1);
+  --inset-button-background: #44475a;
+  --inset-button-boxshadow: inset 0 1.5px 1px 0 rgba(0, 0, 0, 0.1), inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+  /* ------ Labels ------ */
+  --label-color: #8be9fd;
+  --label-2-color: var(--os-secondaryLabelColor);
+  --label-3-color: var(--os-tertiaryLabelColor);
+  --label-4-color: var(--os-quaternaryLabelColor);
+  /* ------ Text ------ */
+  --text-color: var(--os-textColor);
+  --text-placeholder-color: var(--os-placeholderTextColor);
+  --menuitem-selected-text-color: var(--os-selectedMenuItemTextColor);
+  --control-text-color: #8be9fd;
+  --control-selected-text-color: var(--os-selectedControlTextColor);
+  --control-disabled-text-color: var(--os-disabledControlTextColor);
+  /* ------ Misc ------ */
+  --grid-color: #44475a;
+  --separator-color: #44475a;
+  --shadow-color: black;
+  --window-background-color: #282a36;
+  /* -------------------------------------------------------------------------- */
+  /*                                 UI ELEMENTS                                */
+  /* -------------------------------------------------------------------------- */
+  /* ------ Sidebar ------ */
+  --sidebar-tab-inactive-color: var(--os-controlTextColor);
   --sidebar-tab-active-color: rgba(var(--foreground-color), 1);
-  --sidebar-tab-selected-color: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --sidebar-tree-icons-color: var(--control-text-color);
+  --sidebar-tab-selected-color: #ff79c6;
+  --sidebar-tree-icons-color: rgba(255, 121, 198, 0.8);
+  --sidebar-border-color: rgba(var(--foreground-color), 0.1);
+  /* ------ Editor wizard ------ */
+  --wizard-background-color: #44475a;
+  --wizard-border-color: #44475a;
+  --wizard-border-radius: 4px;
+  --wizard-border-thickness: 1px;
+  --wizard-error: #ff5555;
+  /* ------ Misc ------ */
+  --error-color: #ff5555;
   --lightbox-icon-color: #fff;
-  /* --------------------------------- Editor --------------------------------- */
-  --editor-default-text-color: rgb(200, 200, 200);
-  --editor-background-color: rgb(68, 68, 68);
+  --menu-background: #44475a;
+  --topbar-border-color: rgba(var(--foreground-color), 0.1);
+  /* -------------------------------------------------------------------------- */
+  /*                                   EDITOR                                   */
+  /* -------------------------------------------------------------------------- */
+  --editor-default-text-color: #f8f8f2;
+  --editor-selected-text-color: #44475a;
+  --editor-not-focused-selected-text-color: #2e303d;
+  --editor-background-color: transparent;
   --editor-border-radius: 5px;
   --editor-header-height: 2.25em;
   --editor-side-padding: 4em;
-  --wizard-background-color: var(--window-background-color);
-  --wizard-error: rgba(255, 0, 0, 0.5);
-  --wizard-border-color: var(--separator-color);
-  --wizard-border-thickness: 1px;
-  --wizard-border-radius: 4px;
   --mark-border-radius: 0.2rem;
   --mark-border-width: 0px;
-  --citation-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --citation-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
-  --citation-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --citation-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --citation-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --citation-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --citation-mark-highlight: white;
-  --citation-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --citation-source: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --citation-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
-  --citation-source-md: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 0.6);
-  --code-H: 0deg;
-  --code-S: 0%;
-  --code-L: 32.5490196078%;
-  --code-A: 1;
-  --code-source: hsla(var(--code-H), var(--code-S), calc(var(--code-L) + -15%), 1);
-  --code-source-bg: hsla(var(--code-H), var(--code-S), var(--code-L), 0.1);
-  --code-source-md: hsla(var(--code-H), var(--code-S), calc(var(--code-L) + -10%), 0.4);
+  --citation-mark-highlight-bg: var(--accent-color);
+  --citation-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --citation-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.05);
+  --citation-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
+  --code-source: #bd93f9;
+  --code-source-bg: rgba(189, 147, 249, 0.15);
+  --code-source-md: rgba(189, 147, 249, 0.4);
   --code-borderRadius: 2px;
-  --emphasis-H: 0deg;
-  --emphasis-S: 0%;
-  --emphasis-L: 23.9215686275%;
-  --emphasis-A: 1;
-  --emphasis: hsla(var(--emphasis-H), var(--emphasis-S), var(--emphasis-L), 1);
-  --emphasis-md: hsla(var(--emphasis-H), var(--emphasis-S), var(--emphasis-L), 0.4);
-  --fencedcodeblock-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.07);
-  --fencedcodeblock-md: hsla(var(--accent-H), calc(var(--accent-S) + -10%), var(--accent-L), 0.8);
+  --emphasis: #bd93f9;
+  --emphasis-md: rgba(189, 147, 249, 0.6);
+  --fencedcodeblock-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.07);
+  --fencedcodeblock-md: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -10%), var(--accent-color-l), 0.8);
   --fencedcodeblock-options-label: rgba(var(--foreground-color), 0.25);
   --fencedcodeblock-borderRadius: 0.2em;
   --fencedcodeblock-syntax-icon: url(img/ui/chevron.down.small.heavy.svg);
-  --footnote-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --footnote-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
-  --footnote-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --footnote-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --footnote-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --footnote-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --footnote-mark-highlight: white;
-  --footnote-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --footnote-source: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --footnote-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
-  --footnote-source-md: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.6);
-  --figure-bg: rgba(241, 188, 127, 0.2) !important;
-  --figure-caption: hsla(var(--accent-H), calc(var(--accent-S) + -20%), calc(var(--accent-L) + -10%), 1);
+  --footnote-mark-highlight-bg: var(--accent-color);
+  --footnote-source: var(--accent-color);
+  --footnote-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.05);
+  --footnote-source-md: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.6);
+  --figure-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.07);
+  --figure-caption: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -20%), calc(var(--accent-color-l) + -10%), 1);
   --figure-options-label: rgba(var(--foreground-color), 0.4);
   --figure-thumb-bg: transparent;
-  --figure-thumb-borderColor: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --figure-thumb-borderColor: var(--accent-color);
   --figure-thumb-borderRadius: 3.5px;
   --figure-thumb-borderWidth: 1px;
   --frontmatter-bg: rgba(var(--foreground-color), 0.03);
@@ -1430,78 +1433,63 @@ body {
   --frontmatter-border-width: 0px;
   --frontmatter-border: transparent;
   --frontmatter-borderRadius: 0.3em;
-  --h1: rgba(var(--foreground-color), 1);
-  --h2: rgba(var(--foreground-color), 0.8);
+  --h1: #f1fa8c;
+  --h2: #f1fa8c;
   --h3: rgba(var(--foreground-color), 0.8);
   --h4: rgba(var(--foreground-color), 0.8);
   --h5: rgba(var(--foreground-color), 0.8);
   --h6: rgba(var(--foreground-color), 0.8);
-  --hr-bg: rgba(198, 198, 198, 0.2);
-  --image-H: 136deg;
-  --image-S: 44.3037974684%;
-  --image-L: 46.4705882353%;
-  --image-A: 1;
-  --image-mark: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --image-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
-  --image-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --hr-bg: hsla(0, 0%, 78%, 0.2);
+  --image-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --image-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --image-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --image-mark-highlight: white;
-  --image-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --image-source: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 1);
-  --image-source-url: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 0.8);
-  --image-source-title: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -15%), 0.6);
-  --image-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
-  --image-source-md: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 0.6);
-  --in-brackets: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -10%), 1);
-  --in-brackets-md: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.6);
+  --image-mark-highlight-bg: var(--accent-color);
+  --image-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 1);
+  --image-source-url: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 0.8);
+  --image-source-title: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 0.6);
+  --image-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 1.05);
+  --image-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
+  --in-brackets: #8be9fd;
+  --in-brackets-md: rgba(139, 233, 253, 0.5);
   --in-brackets-underline: transparent;
-  --in-brackets-hover-underline: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -10%), 0.8);
-  --link-H: 0deg;
-  --link-S: 0%;
-  --link-L: 11.7647058824%;
-  --link-A: 1;
-  --link-mark: hsla(var(--link-H), var(--link-S), var(--link-L), 1);
-  --link-mark-underline: hsla(var(--link-H), var(--link-S), var(--link-L), 0.4);
+  --in-brackets-hover-underline: rgba(139, 233, 253, 0.7);
+  --link-mark: #8be9fd;
+  --link-mark-underline: rgba(139, 233, 253, 0.4);
   --link-mark-highlight: white;
-  --link-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --link-mark-highlight-bg: var(--accent-color);
   --link-mark-border-radius: 3px;
-  --link-source: hsla(var(--link-H), var(--link-S), var(--link-L), 1);
-  --link-source-url: hsla(var(--link-H), var(--link-S), var(--link-L), 0.8);
-  --link-source-title: hsla(var(--link-H), var(--link-S), var(--link-L), 0.6);
-  --link-source-bg: hsla(var(--link-H), var(--link-S), var(--link-L), 0.05);
-  --link-source-md: hsla(var(--link-H), var(--link-S), var(--link-L), 0.6);
-  --link-ref-definition-bg: hsla(var(--link-H), var(--link-S), var(--link-L), 0.1);
-  --list-marker: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --link-source: #8be9fd;
+  --link-source-url: rgba(139, 233, 253, 0.8);
+  --link-source-title: rgba(139, 233, 253, 0.6);
+  --link-source-bg: transparent;
+  --link-source-md: rgba(139, 233, 253, 0.6);
+  --link-ref-definition-bg: rgba(139, 233, 253, 0.1);
+  --list-marker: var(--accent-color);
   --list-indentation: 1em;
-  --texmath-inline: rgba(214, 214, 214, 0.5);
-  --texmath-display: rgba(214, 214, 214, 0.5);
-  --quote: rgba(var(--foreground-color), 0.6);
-  --quote-md: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
+  --texmath-inline: hsla(0, 0%, 84%, 0.5);
+  --texmath-display: hsla(0, 0%, 84%, 0.5);
+  --quote: hsla(calc(var(--accent-color-h) + 0.6), var(--accent-color-s), var(--accent-color-l), 1);
+  --quote-md: var(--accent-color);
   --quote-indent: 2em;
   --quote-border-bg: transparent;
   --quote-border-width: 0.6em;
-  --strikethrough-H: 0deg;
-  --strikethrough-S: 0%;
-  --strikethrough-L: 23.9215686275%;
-  --strikethrough-A: 1;
-  --strikethrough: hsla(var(--strikethrough-H), var(--strikethrough-S), var(--strikethrough-L), 1);
-  --strikethrough-md: hsla(var(--strikethrough-H), var(--strikethrough-S), var(--strikethrough-L), 0.8);
-  --strong-H: 0deg;
-  --strong-S: 0%;
-  --strong-L: 23.9215686275%;
-  --strong-A: 1;
-  --strong: hsla(var(--strong-H), var(--strong-S), var(--strong-L), 1);
-  --strong-md: hsla(var(--strong-H), var(--strong-S), var(--strong-L), 0.5);
+  --strikethrough: rgba(248, 248, 242, 0.6);
+  --strikethrough-line: rgba(248, 248, 242, 0.8);
+  --strikethrough-md: rgba(248, 248, 242, 0.4);
+  --strong: #bd93f9;
+  --strong-md: rgba(189, 147, 249, 0.6);
   --task-mark-icon: url(/img/ui/checkmark.small.heavy.svg);
   --task-mark-icon-bg: white;
   --task-mark-open-bg: transparent;
   --task-mark-open-border: rgba(var(--foreground-color), 0.3);
-  --task-mark-closed-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --task-mark-closed-border: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --task-mark-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.2);
-  --task-mark-border: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -30%), 0.1);
+  --task-mark-closed-bg: var(--accent-color);
+  --task-mark-closed-border: var(--accent-color);
+  --task-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
+  --task-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
   --task-mark-highlight: white;
-  --task-mark-highlight-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 1);
-  --task-source: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 1);
-  --task-source-bg: hsla(var(--accent-H), var(--accent-S), var(--accent-L), 0.05);
-  --task-source-md: hsla(var(--accent-H), var(--accent-S), calc(var(--accent-L) + -20%), 0.6);
+  --task-mark-highlight-bg: var(--accent-color);
+  --task-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
+  --task-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 1.05);
+  --task-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
 }

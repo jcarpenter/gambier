@@ -69,8 +69,8 @@ String.prototype.lastChar = function () {
  * Round a number to two decimal places
  * From: https://www.delftstack.com/howto/javascript/javascript-round-to-2-decimal-places/
  */
-Number.prototype.roundToTwo = function() {
-  return +(Math.round(this + "e+2")  + "e-2")
+Number.prototype.roundToTwo = function () {
+  return +(Math.round(this + "e+2") + "e-2")
 }
 
 
@@ -224,6 +224,21 @@ export function stringify(value) {
   return JSON.stringify(value, null, '\t')
 }
 
+/** 
+ * Unescape HTML characters in string
+ * Before: `&lt;script&gt;alert(&#39;hi&#39;)&lt;/script&gt;`
+ * After:  `<script>alert("hi")</script>`
+ * From: https://www.educative.io/edpresso/how-to-escape-unescape-html-characters-in-string-in-javascript
+ */
+export function unEscape(htmlStr) {
+  htmlStr = htmlStr.replace(/&lt;/g, "<")
+  htmlStr = htmlStr.replace(/&gt;/g, ">")
+  htmlStr = htmlStr.replace(/&quot;/g, "\"")
+  htmlStr = htmlStr.replace(/&#39;/g, "\'")
+  htmlStr = htmlStr.replace(/&amp;/g, "&")
+  return htmlStr;
+}
+
 /**
  * Wrap setTimeout in a promise so we can use with async/await. 
  * Use like: `await wait(1000);`
@@ -260,13 +275,13 @@ const formats = {
   document: ['.md', '.markdown'],
   image: ['.apng', '.bmp', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.png', '.svg', '.tif', '.tiff', '.webp'],
   av: ['.flac', '.mp4', '.m4a', '.mp3', '.ogv', '.ogm', '.ogg', '.oga', '.opus', '.webm'],
-  
+
   // Video containers (file types)
   // If a container supports both audio and video (e.g. WebM), we categorize as video,
   // since <video> also works for audio, but <audio> does not work for video.
   // See: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#index_of_media_container_formats_file_types
   // video: [
-    
+
   //   // Mp4
   //   // Supported by Chrome? - Y
   //   '.mp4', 
@@ -274,7 +289,7 @@ const formats = {
   //   // WebM
   //   // Supported by Chrome? - Y
   //   '.webm',
-    
+
   //   // Ogg
   //   // Supported by Chrome? - Y
   //   '.ogg',
@@ -294,7 +309,7 @@ const formats = {
   // ],
 
   // audio: [
-    
+
   //   // "The Free Lossless Audio Codec (FLAC) is a lossless audio codec; there is also an associated simple container format, also called FLAC, that can contain this audio."
   //   // https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#flac
   //   '.flac', 

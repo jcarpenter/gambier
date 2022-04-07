@@ -1,0 +1,247 @@
+@use "_helpers" as *;
+@use "_includes/base" as *;
+// @use "_includes/mac-colors-light" as *;
+@use "_includes/mac-images" as *;
+@use "_includes/mac-misc" as *;
+@use "sass:color";
+
+body {
+
+  $drac-background:	#282a36;
+  $drac-current-line:	#44475a;
+  $drac-foreground:	#f8f8f2;
+  $drac-cyan:	#8be9fd;
+  $drac-comment:	#6272a4;
+  $drac-green:	#50fa7b;
+  $drac-orange:	#ffb86c;
+  $drac-pink:	#ff79c6;
+  $drac-purple:	#bd93f9;
+  $drac-red:	#ff5555;
+  $drac-yellow:	#f1fa8c;
+
+  // Sidebar selected item when sidebar is not focused
+  // Sidebar list item text color
+  // Editor cursor
+  // Wizard colors
+
+
+  /* --------------------------------- UI -------------------------------- */
+
+  --foreground-color: 255, 255, 255;
+  --background-color: 0, 0, 0;
+
+  --accent-color:   #{$drac-pink};
+  --accent-color-h: 326;
+  --accent-color-s: 100%;
+  --accent-color-l: 74%;
+
+  /* ------ Accent-influenced ------ */
+
+  // Color of selected navigation UI icons
+  // E.g. Selected Preferences toolbar tabs
+  --nav-icon-color: #{accentColor()};
+
+  // Highlight around focused controls
+  // TODO: Change to var(--os-keyboardFocusIndicatorColor)
+  --focus-ring-color: #{accentColor($l: -2%, $a: -0.5)};
+
+  // Selected list/menu items
+  // TODO: Change to var(--os-selectedContentBackgroundColor)
+  --selected-list-item-color: #{accentColor($s: +3%, $l: -6%)};
+
+  // Background of selected text
+  // TODO: Change to var(--os-selectedTextBackgroundColor) 
+  --text-selected-background: #{$drac-current-line};
+
+  /* ------ Buttons ------ */
+
+  --button-label-color: #{$drac-foreground};
+  --button-background: #{$drac-current-line};
+  // Outline and drop shadow
+  --button-boxshadow: 0 0 0 0.5px #{black(0.08)}, 0 0.5px 1px 0.5px #{black(0.1)};
+  --inset-button-background: #{$drac-current-line};
+  // Outline and drop shadow
+  --inset-button-boxshadow: inset 0 1.5px 1px 0 #{black(0.1)}, inset 0 0 0 0.5px #{black(0.2)};
+
+  /* ------ Labels ------ */
+
+  --label-color: #{$drac-cyan};
+  --label-2-color: var(--os-secondaryLabelColor);
+  --label-3-color: var(--os-tertiaryLabelColor);
+  --label-4-color: var(--os-quaternaryLabelColor);
+
+  /* ------ Text ------ */
+
+  --text-color: var(--os-textColor);
+  --text-placeholder-color: var(--os-placeholderTextColor);
+  --menuitem-selected-text-color: var(--os-selectedMenuItemTextColor);
+  --control-text-color: #{$drac-cyan};
+  --control-selected-text-color: var(--os-selectedControlTextColor);
+  --control-disabled-text-color: var(--os-disabledControlTextColor);
+
+  /* ------ Misc ------ */
+  --grid-color: #{$drac-current-line};
+  --separator-color: #{$drac-current-line};
+  --shadow-color: black;
+  --window-background-color: #{$drac-background};
+
+  /* -------------------------------------------------------------------------- */
+  /*                                 UI ELEMENTS                                */
+  /* -------------------------------------------------------------------------- */
+
+  /* ------ Sidebar ------ */
+  --sidebar-tab-inactive-color:     var(--os-controlTextColor);
+  --sidebar-tab-active-color:       #{foregroundColor()};
+  --sidebar-tab-selected-color:     #{$drac-pink};
+  --sidebar-tree-icons-color:       #{color.adjust($drac-pink, $alpha: -0.2)};
+  --sidebar-border-color:           #{foregroundColor(0.1)};
+  
+  /* ------ Editor wizard ------ */
+  --wizard-background-color:        #{$drac-current-line};
+  --wizard-border-color:            #{$drac-current-line};
+  --wizard-border-radius:           4px;
+  --wizard-border-thickness:        1px;
+  --wizard-error:                   #{$drac-red};
+
+  /* ------ Misc ------ */
+  --error-color:                    #{$drac-red};
+  --lightbox-icon-color:          #fff;
+  --menu-background:                #{$drac-current-line};
+  --topbar-border-color:            #{foregroundColor(0.1)};
+
+
+/* -------------------------------------------------------------------------- */
+/*                                   EDITOR                                   */
+/* -------------------------------------------------------------------------- */
+  
+  --editor-default-text-color:      #{$drac-foreground};
+  --editor-selected-text-color:     #{$drac-current-line};
+  --editor-not-focused-selected-text-color:     #{color.adjust($drac-current-line, $lightness: -10%)};
+  --editor-background-color:        transparent;
+  --editor-border-radius:           5px;
+  --editor-header-height:           2.25em;
+  --editor-side-padding:            4em;
+  
+  --mark-border-radius:              0.2rem;
+  --mark-border-width:               0px;
+
+  --citation-mark:                  #{accentColor($l: -20%)};
+  --citation-mark-bg:               #{accentColor($a: -0.8)};
+  --citation-mark-border:           #{accentColor($l: -30%, $a: -0.9)};
+  --citation-mark-highlight:      white;
+  --citation-mark-highlight-bg:     #{accentColor()};
+  --citation-source:                #{accentColor($l: -20%)};
+  --citation-source-bg:             #{accentColor($a: -0.95)};
+  --citation-source-md:             #{accentColor($l: -20%, $a: -0.4)};
+
+  --code-source:                    #{color.adjust($drac-purple)};
+  --code-source-bg:                 #{color.adjust($drac-purple, $alpha: -0.85)};
+  --code-source-md:                 #{color.adjust($drac-purple, $alpha: -0.6)};
+  --code-borderRadius:              2px;
+
+  --emphasis:                       #{$drac-purple};
+  --emphasis-md:                    #{color.adjust($drac-purple, $alpha: -0.4)};
+
+  --fencedcodeblock-bg:             #{accentColor($a: -0.93)};
+  --fencedcodeblock-md:             #{accentColor($s: -10%, $a: -0.2)};
+  --fencedcodeblock-options-label:  #{foregroundColor(0.25)};
+  --fencedcodeblock-borderRadius:   0.2em;
+  --fencedcodeblock-syntax-icon:    url(img/ui/chevron.down.small.heavy.svg);
+
+  --footnote-mark:                  #{accentColor($l: -20%)};
+  --footnote-mark-bg:               #{accentColor($a: -0.8)};
+  --footnote-mark-border:           #{accentColor($l: -30%, $a: -0.9)};
+  --footnote-mark-highlight:      white;
+  --footnote-mark-highlight-bg:     #{accentColor()};
+  --footnote-source:                #{accentColor()};
+  --footnote-source-bg:             #{accentColor($a: -0.95)};
+  --footnote-source-md:             #{accentColor($a: -0.4)};
+  
+  --figure-bg:                      #{accentColor($a: -0.93)};
+  --figure-caption:                 #{accentColor($l: -10%, $s: -20%)};
+  --figure-options-label:           #{foregroundColor(0.4)};
+  --figure-thumb-bg:                transparent;
+  --figure-thumb-borderColor:       #{accentColor()};
+  --figure-thumb-borderRadius:      3.5px;
+  --figure-thumb-borderWidth:       1px;
+
+  --frontmatter-bg:                 #{foregroundColor(0.03)};
+  --frontmatter-md:                 #{foregroundColor(0.4)};
+  --frontmatter-dividers:           #{foregroundColor(0.03)};
+  --frontmatter-border-width:       0px;
+  --frontmatter-border:             transparent;
+  --frontmatter-borderRadius:       0.3em;
+
+  --h1:                             #{$drac-yellow};
+  --h2:                             #{$drac-yellow};
+  --h3:                             #{foregroundColor(0.8)};
+  --h4:                             #{foregroundColor(0.8)};
+  --h5:                             #{foregroundColor(0.8)};
+  --h6:                             #{foregroundColor(0.8)};
+  --hr-bg:                        hsla(0, 0%, 78%, 0.2);
+
+  --image-mark:                     #{accentColor($l: -20%)};
+  --image-mark-bg:                  #{accentColor($a: -0.8)};
+  --image-mark-border:              #{accentColor($l: -30%, $a: -0.9)};
+  --image-mark-highlight:         white;
+  --image-mark-highlight-bg:        #{accentColor()};
+  --image-source:                   #{accentColor($l: -15%)};
+  --image-source-url:               #{accentColor($l: -15%, $a: -0.2)};
+  --image-source-title:             #{accentColor($l: -15%, $a: -0.4)};
+  --image-source-bg:                #{accentColor($a: 0.05)};
+  --image-source-md:                #{accentColor($l: -20%, $a: -0.4)};
+  
+  // Applies to url-in-brackets and email-in-brackets
+  --in-brackets:                    #{$drac-cyan};
+  --in-brackets-md:                 #{color.adjust($drac-cyan, $alpha: -0.5)};
+  --in-brackets-underline:          transparent;
+  --in-brackets-hover-underline:    #{color.adjust($drac-cyan, $alpha: -0.3)};
+
+  --link-mark:                      #{$drac-cyan};
+  --link-mark-underline:            #{color.adjust($drac-cyan, $alpha: -0.6)};
+  // --link-mark-bg:                #{color.adjust($link, $alpha: -0.9)};
+  // --link-mark-border:            #{color.adjust($link, $lightness: -20%, $alpha: -0.9)};
+  // --link-mark-border-width:      1px;
+  --link-mark-highlight:          white;
+  --link-mark-highlight-bg:         #{accentColor()};
+  --link-mark-border-radius:         3px;
+  --link-source:                    #{$drac-cyan};
+  --link-source-url:                #{color.adjust($drac-cyan, $alpha: -0.2)};
+  --link-source-title:              #{color.adjust($drac-cyan, $alpha: -0.4)};
+  --link-source-bg:                 transparent;
+  --link-source-md:                 #{color.adjust($drac-cyan, $alpha: -0.4)};
+  --link-ref-definition-bg:         #{color.adjust($drac-cyan, $alpha: -0.9)};
+
+  --list-marker:                    #{accentColor()};
+  --list-indentation:               1em;
+
+  --texmath-inline:               hsla(0, 0%, 84%, 0.5);
+  --texmath-display:              hsla(0, 0%, 84%, 0.5);
+
+  --quote:                          #{accentColor(0.6)};
+  --quote-md:                       #{accentColor()};
+  --quote-indent:                   2em;
+  --quote-border-bg:                transparent;
+  --quote-border-width:             0.6em;
+
+  --strikethrough:                  #{color.adjust($drac-foreground, $alpha: -0.4)};
+  --strikethrough-line:             #{color.adjust($drac-foreground, $alpha: -0.2)};
+  --strikethrough-md:               #{color.adjust($drac-foreground, $alpha: -0.6)};
+
+  --strong:                         #{$drac-purple};
+  --strong-md:                      #{color.adjust($drac-purple, $alpha: -0.4)};
+
+  --task-mark-icon:                 url(/img/ui/checkmark.small.heavy.svg);
+  --task-mark-icon-bg:            white;
+  --task-mark-open-bg:              transparent;
+  --task-mark-open-border:          #{foregroundColor(0.3)};
+  --task-mark-closed-bg:            #{accentColor()};
+  --task-mark-closed-border:        #{accentColor()};
+  --task-mark-bg:                   #{accentColor($a: -0.8)};
+  --task-mark-border:               #{accentColor($l: -30%, $a: -0.9)};
+  --task-mark-highlight:            white;
+  --task-mark-highlight-bg:         #{accentColor()};
+  --task-source:                    #{accentColor($l: -20%)};
+  --task-source-bg:                 #{accentColor($a: 0.05)};
+  --task-source-md:                 #{accentColor($l: -20%, $a: -0.4)};
+}

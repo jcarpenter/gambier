@@ -2,10 +2,10 @@
 
 .CodeMirror .mark.link {
   color: var(--link-mark);
-  font-weight: 500;
+  font-weight: var(--link-weight);
   text-decoration: underline;
-  text-decoration-thickness: 0.15em;
-  text-underline-offset: 0.03em;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.025em;
   text-decoration-color: var(--link-mark-underline);
   text-decoration-skip-ink: none;
   border-radius: var(--mark-border-radius);
@@ -19,8 +19,11 @@
 }
 
 .metaKeyDown {
-  .mark.link:hover {
+  .CodeMirror .mark.link:hover {
     cursor: pointer;
+    color: var(--link-hover);
+    text-decoration-color: var(--link-hover);
+
   }
 }
 
@@ -29,9 +32,13 @@
 .cm-link,
 .cm-autolink-url,
 .cm-autolink-email {
-  color: var(--link-source);
   background-color: var(--link-source-bg);
   text-decoration: none;
+  
+  &.cm-text {
+    color: var(--link-source-text);
+    font-weight: var(--link-weight);
+  }
 
   &.cm-url {
     color: var(--link-source-url);

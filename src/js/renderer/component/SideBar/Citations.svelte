@@ -38,7 +38,7 @@
 
 <div class="section">
   <Header title={tab.title} hoverToShowSlot={true}>
-    <!-- <SortMenu options={sortOptions} /> -->
+    <!-- <SortMenu items={sortOptions} /> -->
   </Header>
   <Separator margin={'0 10px'} />
   {#if citations}

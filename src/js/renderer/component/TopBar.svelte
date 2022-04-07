@@ -27,7 +27,7 @@
     align-items: center;
     width: 100%;
     height: 36px;
-    // border-bottom: var(--topbar-border-width) solid var(--separator-color);
+    border-bottom: 1px solid var(--topbar-border-color);
   }
 
   #sidebar-block {
