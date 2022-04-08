@@ -3568,7 +3568,8 @@ function onStateChanged$2(state, oldState, project, oldProject, panel, prefsIsFo
   // Disable all when editor is not focused.
   if (!isProjectDirectoryDefined || !editorIsFocused) {
     setMenuEnabled("select", false);
-    return
+  } else {
+    setMenuEnabled("select", true);
   }
 }
 
@@ -3742,7 +3743,11 @@ function onStateChanged$1(state, oldState, project, oldProject, panel, prefsIsFo
 
   // Else, disable all if 1) editor is not focused, or 2) doc is not markdown.
   const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
-  const activeDoc = watcher?.files?.byId[panel?.docId];
+  const activeDoc = watcher?.files?.byId?.[panel?.docId];
+
+  // TODO: Fix error on startup, after picking project directoty from dialogue.
+  // We get error right after `watcher?.files?.byId...`
+  // "UnhandledPromiseRejectionWarning: TypeError: Cannot read properties of undefined (reading '')"
 
   const isActiveDocMarkdownAndEditorFocused =
     activeDoc?.contentType == 'text/markdown' &&
@@ -4155,6 +4160,10 @@ function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocu
     appMenu.getMenuItemById('view-lineheight-increase').enabled = false;
     appMenu.getMenuItemById('view-lineheight-decrease').enabled = false;
   }
+
+  // Enable SourceMode and SideBar toggles
+  appMenu.getMenuItemById('view-sourceMode').enabled = true;
+  appMenu.getMenuItemById('view-sidebar').enabled = true;
 
   // Disable increase/decrease menu items (e.g. increase font size)
   // when they're already at their thresholds (e.g. can't go higher).

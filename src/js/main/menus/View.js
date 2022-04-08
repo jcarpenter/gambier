@@ -403,6 +403,10 @@ export function onStateChanged(state, oldState, project, oldProject, panel, pref
     appMenu.getMenuItemById('view-lineheight-decrease').enabled = false
   }
 
+  // Enable SourceMode and SideBar toggles
+  appMenu.getMenuItemById('view-sourceMode').enabled = true
+  appMenu.getMenuItemById('view-sidebar').enabled = true
+
   // Disable increase/decrease menu items (e.g. increase font size)
   // when they're already at their thresholds (e.g. can't go higher).
   appMenu.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max

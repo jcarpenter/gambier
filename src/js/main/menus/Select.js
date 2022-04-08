@@ -131,6 +131,7 @@ export function onStateChanged(state, oldState, project, oldProject, panel, pref
   // Disable all when editor is not focused.
   if (!isProjectDirectoryDefined || !editorIsFocused) {
     setMenuEnabled("select", false)
-    return
+  } else {
+    setMenuEnabled("select", true)
   }
 }
