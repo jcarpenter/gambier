@@ -21,7 +21,7 @@
       return
     }
 
-    console.log(element)
+    // console.log(element)
 
     // If citation is empty, leave things blank and return
     const isEmpty = element.markdown == "[@]"

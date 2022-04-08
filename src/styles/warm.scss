@@ -11,7 +11,17 @@ body {
   /*                                 UI ELEMENTS                                */
   /* -------------------------------------------------------------------------- */
 
+  --foreground-color: 0, 0, 0;
+  --background-color: 255, 255, 255;
 
+  // Force accent color to an orange
+  --accent-color:   #f7821b;
+  --accent-color-h: 28;
+  --accent-color-s: 93%;
+  --accent-color-l: 54%;
+
+  // Warm window background
+  --window-background-color: #{accentColor($s:-85%, $l:+40%)};
 
   /* -------------------------------------------------------------------------- */
   /*                                 UI ELEMENTS                                */
@@ -44,6 +54,8 @@ body {
   
   // Shared style, since many `md` characters should look the same
   $common-md-color:                 accentColor($l:-20%, $a:-0.4);
+  $common-mark-highlighted-text:    accentColor($l:-30%);
+  $common-mark-highlighted-bg:      accentColor($l:+20%);
 
   --editor-default-text-color:    hsl(0, 0%, 25%);
   --editor-selected-text-color:     var(--text-selected-background); 
@@ -59,8 +71,8 @@ body {
   --citation-mark:                  #{accentColor($l:-20%)};
   --citation-mark-bg:               #{accentColor($a:-0.8)};
   --citation-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
-  --citation-mark-highlight:      white;
-  --citation-mark-highlight-bg:     #{accentColor()};
+  --citation-mark-highlight:        #{$common-mark-highlighted-text};
+  --citation-mark-highlight-bg:     #{$common-mark-highlighted-bg};
   --citation-source:                #{accentColor($l:-20%)};
   --citation-source-bg:             #{accentColor($a:-0.95)};
   --citation-source-md:             #{$common-md-color};
@@ -84,8 +96,8 @@ body {
   --footnote-mark:                  #{accentColor($l:-20%)};
   --footnote-mark-bg:               #{accentColor($a:-0.8)};
   --footnote-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
-  --footnote-mark-highlight:      white;
-  --footnote-mark-highlight-bg:     #{accentColor()};
+  --footnote-mark-highlight:        #{$common-mark-highlighted-text};
+  --footnote-mark-highlight-bg:     #{$common-mark-highlighted-bg};
   --footnote-source:                #{accentColor()};
   --footnote-source-bg:             #{accentColor($a:-0.95)};
   --footnote-source-md:             #{accentColor($a:-0.4)};
@@ -121,8 +133,8 @@ body {
   --image-mark:                     #{accentColor($l:-20%)};
   --image-mark-bg:                  #{accentColor($a:-0.8)};
   --image-mark-border:              #{accentColor($l:-30%, $a:-0.9)};
-  --image-mark-highlight:         white;
-  --image-mark-highlight-bg:        #{accentColor()};
+  --image-mark-highlight:           #{$common-mark-highlighted-text};
+  --image-mark-highlight-bg:        #{$common-mark-highlighted-bg};
   --image-source:                   #{accentColor($l:-15%)};
   --image-source-url:               #{accentColor($l:-15%, $a:-0.2)};
   --image-source-title:             #{accentColor($l:-15%, $a:-0.4)};
@@ -142,8 +154,8 @@ body {
   --link-mark:                      #{$link-text};
   --link-mark-underline:            #{$link-underline};
   --link-hover:                     #{$link-hover};
-  --link-mark-highlight:            white;
-  --link-mark-highlight-bg:         #{accentColor()};
+  --link-mark-highlight:            #{$common-mark-highlighted-text};
+  --link-mark-highlight-bg:         var(--text-selected-background);
   --link-mark-border-radius:         3px;
   --link-weight:                    400;
   --link-source-text:               #{accentColor($l:-5%)};
@@ -182,8 +194,8 @@ body {
   --task-mark-closed-border:        #{accentColor()};
   --task-mark-bg:                   #{accentColor($a:-0.8)};
   --task-mark-border:               #{accentColor($l:-30%, $a:-0.9)};
-  --task-mark-highlight:            white;
-  --task-mark-highlight-bg:         #{accentColor()};
+  --task-mark-highlight:            #{$common-mark-highlighted-text};
+  --task-mark-highlight-bg:         #{$common-mark-highlighted-bg};
   --task-source:                    #{accentColor($l:-20%)};
   --task-source-bg:                 #{accentColor($a:0.05)};
   --task-source-md:                 #{accentColor($l:-20%, $a:-0.4)};

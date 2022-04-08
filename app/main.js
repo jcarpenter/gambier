@@ -2279,8 +2279,6 @@ async function deleteFiles(paths) {
 
 async function selectProjectDirectoryFromDialog () {
 
-  console.log("selectProjectDirectoryFromDialog");
-
   const win = electron.BrowserWindow.getFocusedWindow();
 
   const selection = await electron.dialog.showOpenDialog(win, {

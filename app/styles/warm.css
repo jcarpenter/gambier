@@ -626,14 +626,17 @@ pre.CodeMirror-line.frontmatter-start {
 .CodeMirror .mark.link.highlighted {
   color: var(--link-mark-highlight);
   background-color: var(--link-mark-highlight-bg);
-  border-color: var(--link-mark-highlight-bg);
-  text-decoration-color: var(--link-mark-highlight-bg);
+  border-radius: 0;
+  text-decoration-color: var(--link-mark-underline);
+  box-shadow: 0 -0.175em 0 0.025em var(--link-mark-highlight-bg), 0 0.175em 0 0.025em var(--link-mark-highlight-bg);
 }
 
 .metaKeyDown .mark.link:hover {
   cursor: pointer;
   color: var(--link-hover);
-  text-decoration-color: var(--link-hover);
+  border-radius: 0;
+  background-color: var(--link-mark-highlight-bg);
+  box-shadow: 0 -0.175em 0 0.025em var(--link-mark-highlight-bg), 0 0.175em 0 0.025em var(--link-mark-highlight-bg);
 }
 
 .cm-link,
@@ -1367,6 +1370,13 @@ body {
   /* -------------------------------------------------------------------------- */
   /*                                 UI ELEMENTS                                */
   /* -------------------------------------------------------------------------- */
+  --foreground-color: 0, 0, 0;
+  --background-color: 255, 255, 255;
+  --accent-color: #f7821b;
+  --accent-color-h: 28;
+  --accent-color-s: 93%;
+  --accent-color-l: 54%;
+  --window-background-color: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -85%), calc(var(--accent-color-l) + 40%), 1);
   /* -------------------------------------------------------------------------- */
   /*                                 UI ELEMENTS                                */
   /* -------------------------------------------------------------------------- */
@@ -1402,8 +1412,8 @@ body {
   --citation-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
   --citation-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
   --citation-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
-  --citation-mark-highlight: white;
-  --citation-mark-highlight-bg: var(--accent-color);
+  --citation-mark-highlight: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 1);
+  --citation-mark-highlight-bg: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + 20%), 1);
   --citation-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
   --citation-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.05);
   --citation-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);
@@ -1421,8 +1431,8 @@ body {
   --footnote-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
   --footnote-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
   --footnote-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
-  --footnote-mark-highlight: white;
-  --footnote-mark-highlight-bg: var(--accent-color);
+  --footnote-mark-highlight: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 1);
+  --footnote-mark-highlight-bg: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + 20%), 1);
   --footnote-source: var(--accent-color);
   --footnote-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.05);
   --footnote-source-md: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.6);
@@ -1454,8 +1464,8 @@ body {
   --image-mark: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
   --image-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
   --image-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
-  --image-mark-highlight: white;
-  --image-mark-highlight-bg: var(--accent-color);
+  --image-mark-highlight: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 1);
+  --image-mark-highlight-bg: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + 20%), 1);
   --image-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 1);
   --image-source-url: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 0.8);
   --image-source-title: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -15%), 0.6);
@@ -1468,8 +1478,8 @@ body {
   --link-mark: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -25%), 1);
   --link-mark-underline: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -25%), 0.5);
   --link-hover: hsla(var(--accent-color-h), calc(var(--accent-color-s) + -30%), calc(var(--accent-color-l) + -35%), 1);
-  --link-mark-highlight: white;
-  --link-mark-highlight-bg: var(--accent-color);
+  --link-mark-highlight: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 1);
+  --link-mark-highlight-bg: var(--text-selected-background);
   --link-mark-border-radius: 3px;
   --link-weight: 400;
   --link-source-text: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -5%), 1);
@@ -1499,8 +1509,8 @@ body {
   --task-mark-closed-border: var(--accent-color);
   --task-mark-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 0.2);
   --task-mark-border: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 0.1);
-  --task-mark-highlight: white;
-  --task-mark-highlight-bg: var(--accent-color);
+  --task-mark-highlight: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -30%), 1);
+  --task-mark-highlight-bg: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + 20%), 1);
   --task-source: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 1);
   --task-source-bg: hsla(var(--accent-color-h), var(--accent-color-s), var(--accent-color-l), 1.05);
   --task-source-md: hsla(var(--accent-color-h), var(--accent-color-s), calc(var(--accent-color-l) + -20%), 0.6);

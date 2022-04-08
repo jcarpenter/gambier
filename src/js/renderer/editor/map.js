@@ -60,11 +60,14 @@ export function getSpansAt(cm, line, ch) {
  */
 export function getElementAt(cm, line, ch, type = undefined, inclusive = false) {
   const lineElements = getLineElements(cm, line, type)
-  return lineElements.find((e) =>
+  // console.log(lineElements)
+  const element = lineElements.find((e) =>
     e.line == line &&
     (inclusive ? e.start <= ch : e.start < ch) &&
     (inclusive ? e.end >= ch : e.end > ch)
   )
+  // console.log(element)
+  return element
 }
 
 /**

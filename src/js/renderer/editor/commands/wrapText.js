@@ -1,5 +1,4 @@
 import { Pos } from "codemirror";
-import { getElementsInsideRange } from "../map";
 
 /**
  * Wrap `from` `to` range in the selected char

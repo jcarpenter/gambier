@@ -5,7 +5,7 @@
   import ImagePreview from "../component/main/wizard/ImagePreview.svelte";
   import * as WizardManager from "../WizardManager";
   import { getFromAndTo, pasteAsPlainText, writeToDoc } from "./editor-utils";
-  import { getDocElements, getElementAt } from "./map";
+  import { getDocElements, getElementAt, getLineElements } from "./map";
 
   export let cm
   export let textMarker = null
@@ -31,8 +31,10 @@
 
     if (!textMarker) return
     
-    const { from, to } = textMarker.find()
-    element = getElementAt(cm, from.line, from.ch + 1)
+    // Get element at the TextMarker
+    const { from, to } = textMarker.find()    
+    const lineElements = getLineElements(cm, from.line)
+    element = lineElements.find((e) => e.start == from.ch && e.end == to.ch)
     isEditable = element?.mark.isEditable
 
     if (!isEditable) return
@@ -210,19 +212,6 @@
     }
   }
 
-  // /**
-  //  * Notice we seem to select from end-to-start. With `setSelection`
-  //  * the first value is the anchor, and second is the head. So we're
-  //  * telling CM to place the anchor on the right. We do this so that
-  //  * when alt-tabbing, we skip over the element child spans.
-  //  * console.log(from, to)
-  //  */
-  //  function selectMarkRange() {
-  //   cm.setSelection(
-  //     Pos(element.line, element.start),
-  //     Pos(element.line, element.end)
-  //   )
-  // }
 
   /**
    * Called by keymapActions alt-tab handlers.

@@ -1,6 +1,6 @@
 import { Pos } from "codemirror"
 import { getFromAndTo } from "../editor-utils"
-import { getLineElements } from "../map"
+import { getElementAt, getLineElements } from "../map"
 
 
 
@@ -85,7 +85,7 @@ export function tabToNextSpanOrMarker(cm) {
       spans.push(...e.spans)
     })
   }
-
+    
   // Find next span
   nextSpan = spans.find(({ line, start, end }) => {
 
@@ -116,6 +116,13 @@ export function tabToNextSpanOrMarker(cm) {
   // Select the TextMarker or span
   // (the former gets priority).
   if (textMarkerAtSpan) {
+    const { from, to } = textMarkerAtSpan.find()
+    const element = getElementAt(cm, from.line, from.ch)
+    
+    console.log(textMarkerAtSpan)
+    console.log(from.line, from.ch, to.ch)
+    console.log(element)
+
     textMarkerAtSpan.component.altTabTo()
   } else if (nextSpan) {
     cm.setSelection(
