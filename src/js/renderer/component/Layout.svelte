@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { project, sidebar } from '../StateManager'
   import { files } from '../FilesManager'
   import Background from './backgrounds/Background.svelte'
@@ -55,7 +55,7 @@
   
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   #main {
     position: fixed;

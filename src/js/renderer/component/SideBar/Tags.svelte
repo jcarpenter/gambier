@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { project, sidebar } from '../../StateManager'
   import { files } from '../../FilesManager'
   import produce from 'immer'
@@ -123,7 +123,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   #tagsList {
     padding: 8px 10px;

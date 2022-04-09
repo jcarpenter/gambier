@@ -1,9 +1,9 @@
-<script>
+<script lang='js'>
   export let src
   export let margin = '0 0 0 0'
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   .thumbnail {
     overflow: hidden;
     width: 100%;

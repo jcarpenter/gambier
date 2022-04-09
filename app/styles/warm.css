@@ -1009,6 +1009,9 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {
   position: relative;
   border-right: 50px solid transparent;
 }
+.CodeMirror-sizer > div {
+  width: 100%;
+}
 
 .panel.isOnlyPanel .CodeMirror-sizer {
   padding-left: calc(50vw - var(--sidebarWidth) * 1px - var(--editor-maxlinewidth) / 2 - var(--editor-side-padding));
@@ -1327,12 +1330,15 @@ body {
   --nav-search-icon: url(img/ui/magnifyingglass.small.regular.svg);
   --nav-search-active-icon: url(img/ui/magnifyingglass.small.regular.svg);
   --project-av-icon: url(img/ui/play.rectangle.medium.regular.svg);
-  --project-doc-icon: url(img/ui/doc.text.medium.regular.svg);
   --project-folder-icon: url(img/ui/folder.medium.regular.svg);
   --project-image-icon: url(img/ui/photo.medium.regular.svg);
+  --project-json-icon: url(img/ui/custom/doc.json.medium.regular.svg);
+  --project-markdown-icon: url(img/ui/doc.text.medium.regular.svg);
+  --project-xml-icon: url(img/ui/custom/doc.xml.medium.regular.svg);
   --block-options-expand-icon: url(img/ui/chevron.down.medium.semibold.svg);
   --checkbox-icon: url(img/ui/checkmark.small.heavy.svg);
   --disclosure-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --editor-panel-close-icon: url(img/ui/xmark.medium.regular.svg);
   --iconbutton-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
   --imagepreview-blank-icon: url(img/ui/rectangle.dashed.medium.regular.svg);
   --imagepreview-error-icon: url(img/ui/custom/image-not-found.svg);
@@ -1342,10 +1348,10 @@ body {
   --menu-checkmark-img: url(img/ui/checkmark.small.heavy.svg);
   --popupButton-icon: url(img/ui/custom/chevron.up.down.svg);
   --pulldownButton-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --search-field-icon: url(img/ui/magnifyingglass.small.regular.svg);
   --sortmenu-icon: url(img/ui/arrow.up.arrow.down.small.regular.svg);
   --stepper-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
   --toggle-sidebar-icon: url(img/ui/sidebar.left.medium.regular.svg);
-  --search-field-icon: url(img/ui/magnifyingglass.small.regular.svg);
   --prefs-tab-citations-icon: url(img/ui/quote.bubble.medium.regular.svg);
   --prefs-tab-general-icon: url(img/ui/gearshape.medium.regular.svg);
   --prefs-tab-markdown-icon: url(img/ui/textformat.medium.regular.svg);

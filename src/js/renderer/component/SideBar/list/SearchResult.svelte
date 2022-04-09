@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 	import { project, sidebar } from '../../../StateManager'
   import { files } from '../../../FilesManager'
   import { onMousedown, onMouseup } from './interactions'
@@ -17,7 +17,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 	.result {
 		// contain: strict;
 		user-select: none;

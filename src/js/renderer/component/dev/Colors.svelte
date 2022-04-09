@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 import { onMount } from 'svelte';
 
   import { stringify } from '../../../shared/utils'
@@ -134,7 +134,7 @@ import { onMount } from 'svelte';
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   section {
     padding: 0rem 1rem;

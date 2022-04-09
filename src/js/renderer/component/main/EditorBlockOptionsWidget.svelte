@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { state } from "../../StateManager";
 import DisclosureButton from "../ui/DisclosureButton.svelte";
   import IconButton from "../ui/IconButton.svelte";
@@ -9,7 +9,7 @@ import DisclosureButton from "../ui/DisclosureButton.svelte";
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   .blockOptions {
     position: absolute;
     // right: 0.35em;

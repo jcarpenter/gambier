@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { createEventDispatcher, afterUpdate } from 'svelte'
   import { state, project, sidebar, isWindowFocused } from '../../../StateManager'
   import { files } from '../../../FilesManager'
@@ -11,6 +11,7 @@
 	export let listIds = []
   export let nestDepth = 0  
   export let isDragTarget = false
+
   
 	const tabId = getContext('tabId')
 	$: tab = $sidebar.tabsById[tabId]
@@ -25,6 +26,25 @@
 
   $: isHighlighted = ($isWindowFocused && isSelected && isSectionFocused && !isWindowDraggedOver) || isDragTarget
   $: isHighlightedInBg = ($isWindowFocused && isSelected && !isSectionFocused) || (isSelected && !$isWindowFocused) || (isSelected && isWindowDraggedOver && !isDragTarget)
+
+  // Determine which icon to use
+  // Icon variable is set as `--icon` css variable on the node.
+  let icon = "" // 
+  $: {
+    if (file?.isFolder) {
+      icon = "var(--project-folder-icon)"
+    } else if (file?.contentType?.includes('markdown')) {
+      icon = "var(--project-markdown-icon)"
+    } else if (file?.contentType?.includes('json')) {
+      icon = "var(--project-json-icon)"
+    } else if (file?.contentType?.includes('xml')) {
+      icon = "var(--project-xml-icon)"
+    } else if (file?.contentType?.includesAny('video', 'audio')) {
+      icon = "var(--project-av-icon)"
+    } else if (file?.contentType?.includesAny('image')) {
+      icon = "var(--project-image-icon)"
+    }
+  }
 
   /**
    * On drag start, if the dragged file is a doc, set it's 
@@ -44,7 +64,7 @@
 
 </script>
 
-<style type='text/scss'>
+<style lang="scss">='text/scss'>
   .file {
     contain: strict;
     user-select: none;
@@ -63,6 +83,7 @@
       width: 14px;
       height: 14px;
       pointer-events: none;
+      -webkit-mask-image: var(--icon); // Set by `icon` variable
     }
 
     .label {
@@ -82,24 +103,6 @@
       right: 7px;
       pointer-events: none;
     }
-  }
-
-  // Icons
-  .folder .icon {
-    -webkit-mask-image: var(--project-folder-icon);
-  }
-
-  .doc .icon {
-    -webkit-mask-image: var(--project-doc-icon);
-  }
-
-  .image .icon {
-    -webkit-mask-image: var(--project-image-icon);
-  }
-
-  .audio .icon,
-  .video .icon {
-    -webkit-mask-image: var(--project-av-icon);
   }
 
   .file.isHighlighted {
@@ -158,12 +161,8 @@
 {#if file}
   <div
     use:setAsCustomPropOnNode={{ leftOffset }}
+    use:setAsCustomPropOnNode={{icon}}
     class="file"
-    class:folder={file?.isFolder}
-    class:doc={file?.isDoc}
-    class:video={file?.contentType?.includes('video')}
-    class:audio={file?.contentType?.includes('audio')}
-    class:image={file?.contentType?.includes('image')}
     class:isHighlighted
     class:isHighlightedInBg
     draggable=true

@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { Pos } from "codemirror";
   import { tick } from "svelte";
   import { setCaretPositionByIndex } from "../../shared/utils";
@@ -157,12 +157,7 @@
       setCaretPositionByIndex(el, caretIndex)
       el.focus()
 
-    }
-
-    // const previousPosition = cm.getCursor('from')
-    // console.log(selectionFrom)
-    // console.log(charAt)
-    
+    }   
   }
 
   /**
@@ -428,7 +423,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 </style>
 
 <svelte:options accessors={true}/>

@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 
   export let cm = null
   export let element = null
@@ -47,7 +47,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   #preview {
     // width: 20em;
     // height: 20em;

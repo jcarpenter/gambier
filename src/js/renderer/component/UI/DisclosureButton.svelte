@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { setAsCustomPropOnNode, setSize } from '../ui/actions'
   import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
@@ -14,7 +14,7 @@
 
 </script>
 
-<style type='text/scss'>
+<style lang="scss">='text/scss'>
 
   button {
     // @include absolute-vertical-center;

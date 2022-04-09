@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { isWindowFocused, state } from '../../StateManager'
   import Checkbox from '../ui/Checkbox.svelte'
   import Description from '../ui/Description.svelte'
@@ -48,7 +48,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   #main {
     width: 100%;

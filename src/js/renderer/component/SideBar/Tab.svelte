@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { sidebar, state } from '../../StateManager'
   import { setTooltip } from '../../TooltipManager'
 
@@ -10,7 +10,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   li {
     padding: 0;

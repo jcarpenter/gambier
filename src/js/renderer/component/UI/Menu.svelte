@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { wait } from '../../../shared/utils';
   import { closeMenu, menu } from "../../MenuManager";
   import { isWindowFocused } from "../../StateManager";
@@ -143,7 +143,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   // ------ Cover ------ //
 

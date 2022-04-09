@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import Checkbox from '../ui/Checkbox.svelte';
   import Description from '../ui/Description.svelte';
   import FormRow from '../ui/FormRow.svelte';
@@ -66,7 +66,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .block {
     padding: 0rem 1rem 8rem;

@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 	import { project, sidebar } from '../../../StateManager'
   import { files } from '../../../FilesManager'
 	import Token from '../../ui/Token.svelte'
@@ -22,7 +22,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 	.doc {
 		contain: strict;
 		user-select: none;

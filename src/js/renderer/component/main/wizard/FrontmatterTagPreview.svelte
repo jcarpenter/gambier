@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
  
   export let cm = null
   export let element = null
@@ -18,6 +18,6 @@
 
 </script>
 
-<style type="text/scss"></style>
+<style lang="scss"></style>
 
 Search documents tagged {element.markdown}.

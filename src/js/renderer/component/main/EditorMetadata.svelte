@@ -1,8 +1,8 @@
-<script>
+<script lang='js'>
   
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 </style>
 
 <div class="metadata">

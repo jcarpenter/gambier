@@ -67,8 +67,8 @@ if (!app.isPackaged) {
     argv: ['--inspect=5858', '--enable-transparent-visuals'],
   })
 
-  console.log('// - - - - - - - - - - - - - - - //')
-  console.log(`Gambier... Electron ${process.versions.electron}. Chrome ${process.versions['chrome']}`)
+  // console.log('// - - - - - - - - - - - - - - - //')
+  // console.log(`Gambier... Electron ${process.versions.electron}. Chrome ${process.versions['chrome']}`)
 }
 
 

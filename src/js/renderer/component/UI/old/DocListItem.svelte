@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { onMount } from "svelte";
   import { fade, fly } from 'svelte/transition';
 
@@ -11,7 +11,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 </style>
 
 <div

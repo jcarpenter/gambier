@@ -1,9 +1,9 @@
-<script>
+<script lang='js'>
   import { isWindowFocused } from "../../StateManager";
   export let title = ''
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   header {
     @include system-regular-font;
     font-weight: bold;

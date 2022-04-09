@@ -1,8 +1,9 @@
-<script>
+<script lang='js'>
   import { files } from "../FilesManager";
   import { project, sidebar } from "../StateManager";
   import IconButton from "./ui/IconButton.svelte";
   import SearchField from "./ui/SearchField.svelte";
+  import { setAsCustomPropOnNode } from './ui/actions'
 
   $: focusedPanel = $project.panels[$project.focusedPanelIndex]
   $: file = $files?.byId[focusedPanel?.docId]
@@ -12,9 +13,27 @@
   // need a minimum width, to avoid overlap with window buttons.
   $: sidebarWidth = $sidebar.isOpen ? $sidebar.width : 116
 
+  // Determine which icon to use
+  // Icon variable is set as `--icon` css variable on the node.
+  // (This is same as File.svelte)
+  let icon = "" // 
+  $: {
+    if (file?.contentType?.includes('markdown')) {
+      icon = "var(--project-markdown-icon)"
+    } else if (file?.contentType?.includes('json')) {
+      icon = "var(--project-json-icon)"
+    } else if (file?.contentType?.includes('xml')) {
+      icon = "var(--project-xml-icon)"
+    } else if (file?.contentType?.includesAny('video', 'audio')) {
+      icon = "var(--project-av-icon)"
+    } else if (file?.contentType?.includesAny('image')) {
+      icon = "var(--project-image-icon)"
+    }
+  }
+
 </script>
 
-<style type='text/scss'>
+<style lang="scss">='text/scss'>
 
   #topbar {
     -webkit-app-region: drag;
@@ -71,10 +90,7 @@
       margin-right: 6px; // Gap between icon and title
       margin-top: -1px; // Better vertically align with title
       pointer-events: none;
-
-      &.doc { -webkit-mask-image: var(--topbar-file-doc-icon); }
-      &.img { -webkit-mask-image: var(--topbar-file-image-icon); }
-      &.av { -webkit-mask-image: var(--topbar-file-av-icon); }
+      -webkit-mask-image: var(--icon); // Set by `icon` variable
     }
 
     .title {
@@ -113,14 +129,11 @@
 <span id="focused-file">
   <span 
     class="icon"
-    class:doc={file?.isDoc}
-    class:video={file?.contentType?.includes('video')}
-    class:audio={file?.contentType?.includes('audio')}
-    class:image={file?.contentType?.includes('image')}    
+    use:setAsCustomPropOnNode={{icon}}
   >
   </span>
   <span class="title">
-    {file?.title}
+    {file.title ? file.title : file.name}
   </span>
   {#if focusedPanel.unsavedChanges}
     <span class="unsavedChanges">

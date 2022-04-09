@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   export let state = {}
   export let placeholder = 'Search'
   export let query = ''
@@ -16,7 +16,7 @@
   }
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   #addressbar {
     margin: 0 auto;

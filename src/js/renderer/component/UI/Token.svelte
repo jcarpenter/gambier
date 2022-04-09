@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
 
@@ -7,7 +7,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .token {
     @include system-regular-font;

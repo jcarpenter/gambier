@@ -1,8 +1,8 @@
-<script>
+<script lang='js'>
   import { state } from "../../StateManager";
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   #grid {
     position: fixed;
     top: 0;

@@ -9,9 +9,9 @@ export async function mapProject (projectPath) {
   try {
 
     const files = {
-      tree: [],
+      allIds: [],
       byId: {},
-      allIds: []
+      tree: []
     }
 
     // Map project path, recursively

@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 	import { state } from "../../../StateManager";
 	import { files } from "../../../FilesManager";
   import { getDocElements } from '../../../editor/map';
@@ -174,7 +174,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 	
 	.imagePreview {
 		@include system-small-font;

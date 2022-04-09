@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { isWindowFocused, state } from "../../StateManager";
   import { menu, openMenu } from "../../MenuManager";
   import { setTooltip } from "../../TooltipManager";
@@ -45,7 +45,7 @@
   
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .iconButton {
     -webkit-app-region: no-drag;

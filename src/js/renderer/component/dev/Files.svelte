@@ -1,10 +1,10 @@
-<script>
+<script lang='js'>
   import { stringify } from '../../../shared/utils'
   import { files } from '../../FilesManager'
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   section {
     padding: 0rem 1rem;

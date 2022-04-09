@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { arrowUpDown } from './list/interactions';
   import { project, sidebar } from '../../StateManager'
   import { files } from '../../FilesManager'
@@ -261,7 +261,7 @@ import { wait } from '../../../shared/utils';
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .numberOfResults {
     @include system-small-font;

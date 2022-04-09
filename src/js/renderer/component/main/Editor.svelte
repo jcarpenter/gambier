@@ -1,20 +1,20 @@
-<script>
+<script lang='js'>
   import { state, project, isMetaKeyDown, markdownOptions } from '../../StateManager'
   import { onMount, onDestroy, tick } from 'svelte'
   import { makeEditor, setMode } from '../../editor/editor';
   import { markDoc } from '../../editor/mark';
-  import { loadDoc, saveCursorPosition, loadEmptyDoc, getCmDataByPanelId, restoreCursorScrollPosition } from '../../editor/editor-utils';
+  import { loadDoc, saveCursorPosition, getCmDataByPanelId, restoreCursorScrollPosition } from '../../editor/editor-utils';
 
   export let panel = {}
   export let doc = undefined
-  export let isFocusedPanel = false // 1/18: Not using these yet
+  export let isFocusedPanel = false
   export let visible = false
   export let width = 0
-  // export let parentEl
   
   let cm // CodeMirror (Editor) instance
   let el // This element
-  let widgets // Widgets element
+  
+  $: isNewDoc = panel?.docId == 'newDoc'
 
   // We have to call `cm.refresh()` when the panel size
   // changes or selections and cursors don't update.
@@ -35,7 +35,6 @@
 
     // Determine what's changed
     // const statusHasChanged = panel.status !== cm.panel.status
-    const isNewDoc = panel.docId == 'newDoc'
     const docHasChanged = panel.docId !== cm.panel.docId
     const saveStatusHasChanged = panel.unsavedChanges !== cm.panel.unsavedChanges
 
@@ -47,11 +46,7 @@
     // This will also load initial doc, on Editor creation.
     if (docHasChanged) {
       saveCursorPosition(cm)
-      if (isNewDoc) {
-        loadEmptyDoc(cm)
-      } else {
-        loadDoc(cm, doc)
-      }
+      loadDoc(cm, doc)
     }
 
     // If save status has changed, and it's now "no unsaved changes", mark the doc clean
@@ -141,7 +136,7 @@
         panelIndex: panel.index,
         outgoingDoc: doc,
         outgoingDocData: cm.getValue(),
-        isNewDoc: panel.docId == 'newDoc'
+        isNewDoc
       })
     }
   }
@@ -184,7 +179,7 @@
     // ------ CREATE LISTENERS ------ //
 
     const newDocListener = window.api.receive('mainRequestsCreateNewDocInFocusedPanel', () => {
-      const isNewDoc = panel.docId == 'newDoc'
+
       if (isFocusedPanel) {
         window.api.send('dispatch', { 
         type: 'OPEN_NEW_DOC_IN_PANEL', 
@@ -201,7 +196,7 @@
     const saveListener = window.api.receive('mainRequestsSaveFocusedPanel', () => {
       if (isFocusedPanel && panel.unsavedChanges) {
         console.log(panel)
-        const isNewDoc = panel.docId == 'newDoc'
+  
         if (isNewDoc) {
           window.api.send('dispatch', {
             type: 'SAVE_DOC_AS',
@@ -224,7 +219,7 @@
     // Save As
     const saveAsListener = window.api.receive('mainRequestsSaveAsFocusedPanel', () => {
       if (isFocusedPanel) {
-        const isNewDoc = panel.docId == 'newDoc'
+  
         window.api.send('dispatch', {
           type: 'SAVE_DOC_AS',
           panelIndex: panel.index,
@@ -238,7 +233,7 @@
     // Save All
     const saveAllListener = window.api.receive('mainRequestsSaveAll', () => {
       if (panel.unsavedChanges) {
-        const isNewDoc = panel.docId == 'newDoc'
+  
         if (isNewDoc) {
           window.api.send('dispatch', {
             type: 'SAVE_DOC_AS',
@@ -269,7 +264,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .editor {
     position: relative;
@@ -290,4 +285,3 @@
   class:metaKeyDown={$isMetaKeyDown}
   on:click
 />
-

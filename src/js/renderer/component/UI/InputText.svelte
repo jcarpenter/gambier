@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { onMount, tick } from "svelte";
   import { selectInputContents } from "../../../shared/utils";
   import { pasteAsPlainText } from "../../editor/editor-utils";
@@ -54,7 +54,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   // ------ Layout: Normal ------ //
 

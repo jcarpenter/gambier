@@ -1,9 +1,9 @@
-<script>
+<script lang='js'>
   export let title = 'Title'
   export let hoverToShowSlot = false
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   header {
     padding: 0 12px;
     display: flex;

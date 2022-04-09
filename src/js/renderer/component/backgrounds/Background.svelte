@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 
   // NOTE: 3/11/22: Some holdover code from when backgrounds could be set by theme.
   // I removed this functionality to simplify scope.
@@ -25,7 +25,7 @@
   // }
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   #background {
     background-color: var(--window-background-color);
     width: 100%;

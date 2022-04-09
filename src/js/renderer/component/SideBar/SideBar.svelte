@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { project, sidebar } from '../../StateManager'
   import Tab from './Tab.svelte'
   import Separator from '../ui/Separator.svelte'
@@ -90,7 +90,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   #sidebar {
     position: fixed;
     width: calc(var(--sidebarWidth) * 1px);
@@ -114,12 +114,6 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-  }
-
-  #top-area {
-    -webkit-app-region: drag;
-    height: 40px;
-    flex: none;
   }
 
   #tabs {

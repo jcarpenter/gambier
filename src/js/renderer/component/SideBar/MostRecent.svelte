@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { project, sidebar } from '../../StateManager'
   import { files } from '../../FilesManager'
   import produce from 'immer'
@@ -60,7 +60,7 @@
 
 </script>
 
-<style type="text/css">
+<style lang="scss">="text/css">
 </style>
 
 <div class="section">

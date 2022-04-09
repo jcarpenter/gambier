@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 	import File from './File.svelte'
 	import { state, sidebar } from '../../../StateManager.js'
   import { files } from '../../../FilesManager'
@@ -60,7 +60,7 @@
 	}
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .folder {
 		// contain: strict;

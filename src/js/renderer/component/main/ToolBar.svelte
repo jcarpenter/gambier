@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 	import IconButton from "../ui/IconButton.svelte";
 	import AddressBar from "./AddressBar.svelte";
 
@@ -8,7 +8,7 @@
 		
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 	#address-bar {
     -webkit-app-region: drag;
 		width: 100%;

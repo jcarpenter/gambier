@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 	import { project, sidebar } from '../../../StateManager'
   import { files } from '../../../FilesManager'
 	import { arrowLeftRight, arrowUpDown} from './interactions'
@@ -14,7 +14,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 	.list {
     // padding: 10px 10px 0 10px;
     padding: 10px;

@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   //   import { onMount } from "svelte";
 
   export let caption;
@@ -15,7 +15,7 @@
   //   });
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   figure {
     width: 100%;
     margin: 0;

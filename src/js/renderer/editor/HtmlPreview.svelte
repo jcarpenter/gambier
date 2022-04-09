@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import debounce from "debounce"
   import { onMount } from "svelte"
   import { isValidHttpUrl } from "../../shared/utils"
@@ -95,7 +95,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
 
   .htmlPreview { 

@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { setAsCustomPropOnNode } from '../ui/actions'
   
   export let opacity = '1'
@@ -10,7 +10,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   div, span {
     --opacity: 1;

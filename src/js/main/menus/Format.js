@@ -195,10 +195,6 @@ export function onStateChanged(state, oldState, project, oldProject, panel, pref
   const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
   const activeDoc = watcher?.files?.byId?.[panel?.docId];
 
-  // TODO: Fix error on startup, after picking project directoty from dialogue.
-  // We get error right after `watcher?.files?.byId...`
-  // "UnhandledPromiseRejectionWarning: TypeError: Cannot read properties of undefined (reading '')"
-
   const isActiveDocMarkdownAndEditorFocused =
     activeDoc?.contentType == 'text/markdown' &&
     project?.focusedSectionId == 'editor'

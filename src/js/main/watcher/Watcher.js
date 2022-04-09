@@ -74,6 +74,23 @@ export class Watcher {
     // Send initial files to browser window
     this.window.webContents.send('initialFilesFromMain', this.files)
 
+    // Insert blank "newDoc", for new documents.
+    // See mapDocument.js for structure of file
+    this.files.allIds.push('newDoc')
+    this.files.byId['newDoc'] = {
+      isDoc: true,
+      isMedia: false,
+      contentType: 'text/markdown',
+      name: 'untitled',
+      title: 'Untitled',
+      path: null,
+      id: 'newDoc',
+      parentId: null,
+      created: null,
+      modified: null,
+      nestDepth: null
+    }
+
     // Tell reducers when first project map is complete, 
     // and pass along first file. If a file as not been 
     // selected yet, reducer selects this.
@@ -273,12 +290,14 @@ export class Watcher {
  */
 function insertAllDocsIntoDb(files) {
   const filesForDb = []
-  files.allIds.forEach((id) => {
+  for (const id of files.allIds) {
+    // Skip the "newDoc" file
+    if (id == 'newDoc') continue
     const file = files.byId[id]
     if (file.isDoc) {
       filesForDb.push(getDbReadyFile(file))
     }
-  })
+  }
   // Insert the files into the db
   global.db.insertMany(filesForDb)
 }

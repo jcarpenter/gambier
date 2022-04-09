@@ -137,9 +137,6 @@ export function makeEditor(parentElement, parentPanel) {
 
   // ------ SET PROPERTIES ------ //
 
-  // Set mode
-  setMode(cm)
-
   // Set initial editor theme
   // NOTE 3/25/2022: I don't think we're using this anymore
   // cm.setOption('theme', window.state.theme.id)
@@ -155,6 +152,10 @@ export function makeEditor(parentElement, parentPanel) {
     isMetaKeyDown: false,
     unsavedChanges: false,
   }
+
+  // Set mode
+  setMode(cm)
+
 
 
   // ------ CREATE CM and CODEMIRROR LISTENERS ------ //
@@ -311,6 +312,7 @@ function isFocusedPanel(cm) {
 export function setMode(cm) {
 
   const doc = window.files.byId[cm.panel?.docId]
+
   if (!doc) return
 
   const wrapper = cm.getWrapperElement()
@@ -320,12 +322,12 @@ export function setMode(cm) {
       name: 'gambier',
       markdownOptions: { ...window.state.markdown }
     })
-    wrapper.dataset.language = "markdown"
+    wrapper.dataset.language = 'markdown'
   } else if (doc.contentType == 'application/json') {
     cm.setOption('mode', { name: 'javascript', json: true })
-    wrapper.dataset.language = "json"
+    wrapper.dataset.language = 'json'
   } else {
     cm.setOption('mode', { name: 'htmlmixed' })
-    wrapper.dataset.language = "htmlmixed"
+    wrapper.dataset.language = 'htmlmixed'
   }
 }

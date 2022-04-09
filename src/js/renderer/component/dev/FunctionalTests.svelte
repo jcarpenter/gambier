@@ -1,9 +1,9 @@
-<script>
+<script lang='js'>
   import { files } from "../../FilesManager";
   import { project } from "../../StateManager";
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   #functionalTests {
     @include system-regular-font;
     margin: 5em;

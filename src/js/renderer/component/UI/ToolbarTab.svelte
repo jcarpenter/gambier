@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { isWindowFocused, state } from "../../StateManager";
 
   export let label = '' // 'Settings'
@@ -9,7 +9,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   // Layout
   .tab {    

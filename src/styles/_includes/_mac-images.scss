@@ -18,14 +18,17 @@ body {
   
   // Sidebar > Project list icons
   --project-av-icon: url(img/ui/play.rectangle.medium.regular.svg);
-  --project-doc-icon: url(img/ui/doc.text.medium.regular.svg);
   --project-folder-icon: url(img/ui/folder.medium.regular.svg);
   --project-image-icon: url(img/ui/photo.medium.regular.svg);
+  --project-json-icon: url(img/ui/custom/doc.json.medium.regular.svg);
+  --project-markdown-icon: url(img/ui/doc.text.medium.regular.svg);
+  --project-xml-icon: url(img/ui/custom/doc.xml.medium.regular.svg);
 
   // Button icons
   --block-options-expand-icon: url(img/ui/chevron.down.medium.semibold.svg);
   --checkbox-icon: url(img/ui/checkmark.small.heavy.svg);
   --disclosure-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --editor-panel-close-icon: url(img/ui/xmark.medium.regular.svg);
   --iconbutton-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
   --imagepreview-blank-icon: url(img/ui/rectangle.dashed.medium.regular.svg);
   --imagepreview-error-icon: url(img/ui/custom/image-not-found.svg);
@@ -35,10 +38,10 @@ body {
   --menu-checkmark-img: url(img/ui/checkmark.small.heavy.svg);
   --popupButton-icon: url(img/ui/custom/chevron.up.down.svg);
   --pulldownButton-icon: url(img/ui/chevron.down.small.heavy.svg);
+  --search-field-icon: url(img/ui/magnifyingglass.small.regular.svg);
   --sortmenu-icon: url(img/ui/arrow.up.arrow.down.small.regular.svg);
   --stepper-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
   --toggle-sidebar-icon: url(img/ui/sidebar.left.medium.regular.svg);
-  --search-field-icon: url(img/ui/magnifyingglass.small.regular.svg);
   
   // Tabs in Preferences panel
   --prefs-tab-citations-icon: url(img/ui/quote.bubble.medium.regular.svg);

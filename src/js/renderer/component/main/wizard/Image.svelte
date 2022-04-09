@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import ImagePreview from './ImagePreview.svelte'
   import Expandable from '../../ui/Expandable.svelte';
   import InputText from '../../ui/InputText.svelte';
@@ -90,7 +90,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   .preview {
     width: 100%;
     height: 9em;

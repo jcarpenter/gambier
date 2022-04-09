@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 
 function drop(evt) {
   const file = evt.dataTransfer.files[0]
@@ -14,7 +14,7 @@ function drop(evt) {
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   #firstrun {
     padding: 4rem;
     // background-color: var(--window-background-color);
@@ -25,11 +25,6 @@ function drop(evt) {
   h1 {
     @include title1-emphasized-text;
     color: var(--label-color);
-  }
-
-  h2 {
-    @include system-regular-font;
-    color: var(--label-2-color);
   }
 
 </style>

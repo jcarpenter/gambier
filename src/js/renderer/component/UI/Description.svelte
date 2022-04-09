@@ -1,10 +1,10 @@
-<script>
+<script lang='js'>
   import { setSize } from "./actions";
   export let compact = false
   export let margin = '0'
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   p {
     @include system-small-font;

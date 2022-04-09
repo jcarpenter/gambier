@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { prettySize } from '../../../../shared/utils'
 	import { createEventDispatcher, afterUpdate } from 'svelte'
 	import { state, project, sidebar } from '../../../StateManager'
@@ -20,7 +20,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 		
 	.media {
 		contain: strict;

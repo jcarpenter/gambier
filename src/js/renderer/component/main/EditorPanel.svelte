@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { project, sidebar } from '../../StateManager';
   import { files } from '../../FilesManager';
   import { onMount, onDestroy } from 'svelte'
@@ -24,8 +24,6 @@
   $: doc = $files.byId[panel.docId]
   $: isOnlyPanel = isFirstPanel && isLastPanel
   $: isFocusedPanel = index == $project.focusedPanelIndex
-
-  // We set `sidebarWidth` as a custom property on #sidebar
   $: sidebarWidth = $sidebar.width
   
   let el // This element
@@ -249,7 +247,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   // ------ Top-level ------ //
 
@@ -477,7 +475,7 @@
               on:mouseup={closeThisPanel} 
               tooltip='Save changes and close editor' 
               compact={true} 
-              icon='img-xmark-medium-regular' 
+              icon='editor-panel-close-icon' 
               padding='0' 
               iconScale={0.6} 
             />

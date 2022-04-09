@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { setAsCustomPropOnNode, setSize } from "./actions";
   import { fade } from 'svelte/transition';
 import AddressBar from "../main/AddressBar.svelte";
@@ -33,7 +33,7 @@ import AllDocuments from "../sidebar/AllDocuments.svelte";
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .row {
     display: flex;

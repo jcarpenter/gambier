@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 
   /*
   TODO: Mar 3 2022: I think this is outdated and can be removed. Switched to CodeMirror's built-in solution.
@@ -302,7 +302,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   ul {
     @include system-small-font;
     backdrop-filter: blur(8px);

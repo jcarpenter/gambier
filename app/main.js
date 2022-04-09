@@ -42,7 +42,7 @@ var url__default = /*#__PURE__*/_interopDefaultLegacy(url);
 produce.enablePatches();
 
 const update = (state, action, window) =>
-  produce__default['default'](state, (draft) => {
+  produce__default["default"](state, (draft) => {
 
     // Set a few useful, commonly-used variables
     const project = draft.projects.byId[window?.projectId];
@@ -320,7 +320,6 @@ const update = (state, action, window) =>
         }
 
         // Reset panels
-        // Tell panel to load first file in project
         project.focusedPanelIndex = 0;
         project.panels = [{ ...newPanel, id: nonSecure.nanoid() }];
 
@@ -633,7 +632,7 @@ const update = (state, action, window) =>
         panel.docId = 'newDoc';
         // Focus the editor
         project.focusedSectionId = 'editor';
-        // Deselect everything in active sidebar tab
+      // Deselect everything in active sidebar tab
         const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId];
         activeTab.selected = [];
         break
@@ -643,12 +642,9 @@ const update = (state, action, window) =>
 
         const panel = project.panels[action.panelIndex];
 
-        const canCreateNewDoc =
-          action.saveOutcome == "noUnsavedChanges" ||
-          action.saveOutcome == "saved" ||
-          action.saveOutcome == "dontSave";
+        const isSafeToCreateNewDoc = action.saveOutcome.equalsAny("noUnsavedChanges", "saved", "dontSave");
 
-        if (canCreateNewDoc) {
+        if (isSafeToCreateNewDoc) {
           panel.docId = 'newDoc';
           panel.unsavedChanges = false;
         }
@@ -923,14 +919,14 @@ function closePanel(project, panelIndex) {
  */
 function isDirectoryAccessible(directory) {
   try {
-    fsExtra.accessSync(directory, fs__default['default'].constants.W_OK);
+    fsExtra.accessSync(directory, fs__default["default"].constants.W_OK);
     return true
   } catch (err) {
     return false
   }
 }
 
-class Store extends ElectronStore__default['default'] {
+class Store extends ElectronStore__default["default"] {
   constructor() {
     // Note: `super` lets us access and call functions on object's parent (MDN)
     // We pass in our config options for electron-store
@@ -1619,10 +1615,10 @@ function setChromiumDarkMode(isFirstRun) {
  */
  async function saveSystemColors() {
   
-  const accentColor = chroma__default['default'](electron.systemPreferences.getAccentColor()).hex();
-  let accentColor_h = chroma__default['default'](accentColor).get("hsl.h").roundToTwo(); 
-  const accentColor_s = (chroma__default['default'](accentColor).get("hsl.s") * 100).roundToTwo().toString() + "%";
-  const accentColor_l = (chroma__default['default'](accentColor).get("hsl.l") * 100).roundToTwo().toString() + "%";
+  const accentColor = chroma__default["default"](electron.systemPreferences.getAccentColor()).hex();
+  let accentColor_h = chroma__default["default"](accentColor).get("hsl.h").roundToTwo(); 
+  const accentColor_s = (chroma__default["default"](accentColor).get("hsl.s") * 100).roundToTwo().toString() + "%";
+  const accentColor_l = (chroma__default["default"](accentColor).get("hsl.l") * 100).roundToTwo().toString() + "%";
   
   // Annoyingly, Chroma sets 0 hue values to NaN.
   // so we have to manually correct them to zero.
@@ -2121,7 +2117,7 @@ class DbManager {
 
     // Create database
     // Pass ":memory:" as the first argument to create an in-memory db.
-    this.db = new Database__default['default'](':memory:');
+    this.db = new Database__default["default"](':memory:');
     // this.db = new Database(':memory:', { verbose: console.log })
 
     // Create table
@@ -2310,13 +2306,13 @@ let citeproc;
  */
 async function makeCiteprocEngine() {
 
-  const stylePath = path__default['default'].join(electron.app.getAppPath(), 'app/references/joshcarpenter-custom-csl.csl');
-  const localePath = path__default['default'].join(electron.app.getAppPath(), 'app/references/locales-en-US.xml');
+  const stylePath = path__default["default"].join(electron.app.getAppPath(), 'app/references/joshcarpenter-custom-csl.csl');
+  const localePath = path__default["default"].join(electron.app.getAppPath(), 'app/references/locales-en-US.xml');
   
   const style = await fsExtra.readFile(stylePath, 'utf8');
   const locale = await fsExtra.readFile(localePath, 'utf8');
 
-  const engine = new CSL__default['default'].Engine({
+  const engine = new CSL__default["default"].Engine({
 
     // We'll populate this with citable items
     items: {},
@@ -2378,7 +2374,7 @@ function getCitationLocatorLabels(locale) {
   // Convert XML to JS object.
   // `compact: false` to preserve positions of comments (otherwise they get batched)
   // `trim: true` to remove white space.
-  const localeJs = convert__default['default'].xml2js(locale, { compact: false, trim: true, spaces: 4 });
+  const localeJs = convert__default["default"].xml2js(locale, { compact: false, trim: true, spaces: 4 });
 
   // Get "terms" array. 
   // Yes, this is ugly; log localeJs to console to see the hierarchy.
@@ -2697,8 +2693,8 @@ function init$3() {
     let wasSuccess = false;
 
     // Get destination
-    const fileName = path__default['default'].basename(filePath);
-    let destinationPath = path__default['default'].format({
+    const fileName = path__default["default"].basename(filePath);
+    let destinationPath = path__default["default"].format({
       dir: folderPath,
       base: fileName
     });
@@ -2842,7 +2838,7 @@ async function saveDoc(action, win) {
 
 
 function getTitleFromDoc(data) {
-  const { data: frontMatter, content, isEmpty } = matter__default['default'](data);
+  const { data: frontMatter, content, isEmpty } = matter__default["default"](data);
 
   // Get first header in content
   // https://regex101.com/r/oR5sec/1
@@ -3026,9 +3022,9 @@ async function promptToSaveChangesThenForwardAction(action, win) {
  */
 function getIncrementedFileName(origPath) {
 
-  const directory = path__default['default'].dirname(origPath); // /Users/Susan/Notes
-  const extension = path__default['default'].extname(origPath); // .jpg
-  const name = path__default['default'].basename(origPath, extension); // ship
+  const directory = path__default["default"].dirname(origPath); // /Users/Susan/Notes
+  const extension = path__default["default"].extname(origPath); // .jpg
+  const name = path__default["default"].basename(origPath, extension); // ship
 
   const allFilesInDirectory = fsExtra.readdirSync(directory);
 
@@ -3051,7 +3047,7 @@ function getIncrementedFileName(origPath) {
   }
 
   // /Users/Susan/Notes/ship 2.jpg
-  return path__default['default'].format({
+  return path__default["default"].format({
     dir: directory,
     base: newBase
   })
@@ -3743,10 +3739,6 @@ function onStateChanged$1(state, oldState, project, oldProject, panel, prefsIsFo
   const watcher = global.watchers.find((watcher) => watcher.id == state.focusedWindowId);
   const activeDoc = watcher?.files?.byId?.[panel?.docId];
 
-  // TODO: Fix error on startup, after picking project directoty from dialogue.
-  // We get error right after `watcher?.files?.byId...`
-  // "UnhandledPromiseRejectionWarning: TypeError: Cannot read properties of undefined (reading '')"
-
   const isActiveDocMarkdownAndEditorFocused =
     activeDoc?.contentType == 'text/markdown' &&
     project?.focusedSectionId == 'editor';
@@ -4249,7 +4241,7 @@ async function mapDocument(filepath, parentId, nestDepth, stats = undefined) {
 	const file = {
 		isDoc: true,
 		isMedia: false,
-		contentType: mime__default['default'].lookup(filepath), // 'text/markdown', etc
+		contentType: mime__default["default"].lookup(filepath), // 'text/markdown', etc
 		name: '',
 		path: filepath,
 		id: `doc-${stats.ino}`,
@@ -4273,7 +4265,7 @@ async function mapDocument(filepath, parentId, nestDepth, stats = undefined) {
 	if (isMarkdown) {
 
 		// Get front matter
-		const gm = matter__default['default'].read(filepath);
+		const gm = matter__default["default"].read(filepath);
 	
 		// Set excerpt
 		// `md.contents` is the original input string passed to gray-matter, stripped of front matter.
@@ -4301,11 +4293,11 @@ async function mapDocument(filepath, parentId, nestDepth, stats = undefined) {
 		}
 	
 		// Set title, if present. E.g. "Sea Level Rise"
-		file.title = getTitle(gm, path__default['default'].basename(filepath));
+		file.title = getTitle(gm, path__default["default"].basename(filepath));
 	}
 
 	// Set name from filename (minus file extension)
-	file.name = path__default['default'].basename(filepath);
+	file.name = path__default["default"].basename(filepath);
 	// file.name = file.name.slice(0, file.name.lastIndexOf('.'))
 
 	return file
@@ -4368,7 +4360,7 @@ function removeMarkdown(content, trimToLength = undefined) {
 	// Remove markdown formatting. Start with remove-markdown rules.
 	// Per: https://github.com/stiang/remove-markdown/blob/master/index.js
 	// Then add whatever additional changes I want (e.g. new lines).
-	text = removeMd__default['default'](text)
+	text = removeMd__default["default"](text)
 		.replace(blockQuotes, '')
 		.replace(newLines, '')         // New lines at start of line (usually doc)
 		.replace(unwantedWhiteSpace, ' ')
@@ -4399,9 +4391,9 @@ async function getBibliography(file, frontmatter) {
 		return { path: "", exists: false, isCslJson: false }
 	}
 
-	const absolutePath = path__default['default'].resolve(path__default['default'].dirname(file.path), frontmatter.bibliography);
+	const absolutePath = path__default["default"].resolve(path__default["default"].dirname(file.path), frontmatter.bibliography);
 	const exists = await fsExtra.existsSync(absolutePath);
-	const isCslJson = path__default['default'].extname(absolutePath).slice(1).toUpperCase() == "JSON";
+	const isCslJson = path__default["default"].extname(absolutePath).slice(1).toUpperCase() == "JSON";
 	
 	// If specified bibliography does not exist, warn
 	if (!exists) {
@@ -4421,14 +4413,14 @@ async function getBibliography(file, frontmatter) {
 async function mapMedia (filepath, parentId, nestDepth, projectId, stats = undefined) {
 
 	if (stats == undefined) stats = await fsExtra.stat(filepath);
-	const extension = path__default['default'].extname(filepath);
+	const extension = path__default["default"].extname(filepath);
 	const type = getMediaType(extension);
 
 	const file = {
 		isDoc: false,
 		isMedia: true,
-		contentType: mime__default['default'].lookup(filepath), // 'image/png', 'video/mp4', etc.
-		name: path__default['default'].basename(filepath),
+		contentType: mime__default["default"].lookup(filepath), // 'image/png', 'video/mp4', etc.
+		name: path__default["default"].basename(filepath),
 		path: filepath,
 		id: `${type}-${stats.ino}`,
 		parentId,
@@ -4441,7 +4433,7 @@ async function mapMedia (filepath, parentId, nestDepth, projectId, stats = undef
 	};
 
 	if (file.contentType.includes('image'))	{
-		const { width, height, type: format } = sizeOf__default['default'](filepath);
+		const { width, height, type: format } = sizeOf__default["default"](filepath);
 		file.dimensions = { width, height };
 		file.format = format;
 	}
@@ -4506,13 +4498,13 @@ async function mapFolder(files, parentTreeItem, folderPath, stats = undefined, p
     directoryContents.map(async (f) => {
 
       // Get path by combining folderPath with file name.
-      const filepath = path__default['default'].join(folderPath, f.name);
+      const filepath = path__default["default"].join(folderPath, f.name);
 
       // Get extension
-      path__default['default'].extname(f.name);
+      path__default["default"].extname(f.name);
 
       // Determine type
-      const contentType = mime__default['default'].lookup(filepath);
+      const contentType = mime__default["default"].lookup(filepath);
       const isDirectory = f.isDirectory();
       contentType && contentType.includes('markdown');
       const isMedia = contentType && contentType.includesAny('video', 'audio', 'image');
@@ -4561,9 +4553,9 @@ async function mapProject (projectPath) {
   try {
 
     const files = {
-      tree: [],
+      allIds: [],
       byId: {},
-      allIds: []
+      tree: []
     };
 
     // Map project path, recursively
@@ -4624,7 +4616,7 @@ class Watcher {
   async start() {
 
     // Start watcher
-    this.chokidarInstance = chokidar__default['default'].watch(this.directory, chokidarConfig);
+    this.chokidarInstance = chokidar__default["default"].watch(this.directory, chokidarConfig);
 
     // On any event, track changes. Some events include `stats`.
     this.chokidarInstance
@@ -4639,6 +4631,23 @@ class Watcher {
 
     // Send initial files to browser window
     this.window.webContents.send('initialFilesFromMain', this.files);
+
+    // Insert blank "newDoc", for new documents.
+    // See mapDocument.js for structure of file
+    this.files.allIds.push('newDoc');
+    this.files.byId['newDoc'] = {
+      isDoc: true,
+      isMedia: false,
+      contentType: 'text/markdown',
+      name: 'untitled',
+      title: 'Untitled',
+      path: null,
+      id: 'newDoc',
+      parentId: null,
+      created: null,
+      modified: null,
+      nestDepth: null
+    };
 
     // Tell reducers when first project map is complete, 
     // and pass along first file. If a file as not been 
@@ -4741,10 +4750,10 @@ class Watcher {
 
       // Update `files` using Immer: 
 
-      this.files = await produce__default['default'](this.files, async (draft) => {
+      this.files = await produce__default["default"](this.files, async (draft) => {
         for (const c of changes) {
-          const ext = path__default['default'].extname(c.path);
-          const parentPath = path__default['default'].dirname(c.path);
+          const ext = path__default["default"].extname(c.path);
+          const parentPath = path__default["default"].dirname(c.path);
           const parentId = draft.allIds.find((id) => draft.byId[id].path == parentPath);
           const parentFolder = draft.byId[parentId];
           const parentTreeItem = findInTree(draft.tree, parentFolder.id, 'id');
@@ -4839,12 +4848,14 @@ class Watcher {
  */
 function insertAllDocsIntoDb(files) {
   const filesForDb = [];
-  files.allIds.forEach((id) => {
+  for (const id of files.allIds) {
+    // Skip the "newDoc" file
+    if (id == 'newDoc') continue
     const file = files.byId[id];
     if (file.isDoc) {
       filesForDb.push(getDbReadyFile(file));
     }
-  });
+  }
   // Insert the files into the db
   global.db.insertMany(filesForDb);
 }
@@ -4863,7 +4874,7 @@ function insertDocIntoDb(file) {
 function getDbReadyFile(file) {
 
   // Get doc text, minus any front matter
-  let { content } = matter__default['default'].read(file.path);
+  let { content } = matter__default["default"].read(file.path);
 
   // Remove markdown formatting from text
   content = removeMarkdown(content);
@@ -4900,7 +4911,7 @@ const browserWindowConfig = {
     webSecurity: true,
     webviewTag: false,
     // Preload
-    preload: path__default['default'].join(__dirname, 'js/preload.js')
+    preload: path__default["default"].join(__dirname, 'js/preload.js')
   }
 };
 
@@ -5021,7 +5032,7 @@ async function createWindow(id, project) {
   // Load local index.html file
   // "Electron by default allows local resources to be accessed by render processes only when their html files are loaded from local sources with the file:// protocol for security reasons."
 
-  await win.loadURL(url__default['default'].format({
+  await win.loadURL(url__default["default"].format({
     pathname: 'index.html',
     protocol: 'file:',
     slashes: true,
@@ -5198,7 +5209,7 @@ const preferencesWindowConfig = {
     webSecurity: true,
     webviewTag: false,
     // Preload
-    preload: path__default['default'].join(__dirname, 'js/preload.js')
+    preload: path__default["default"].join(__dirname, 'js/preload.js')
   }
 };
 
@@ -5273,7 +5284,7 @@ async function open() {
   //     id: win.projectId
   //   },
   // })
-  await win.loadURL(url__default['default'].format({
+  await win.loadURL(url__default["default"].format({
     pathname: 'preferences.html',
     protocol: 'file:',
     slashes: true,
@@ -5299,9 +5310,9 @@ electron.app.commandLine.appendSwitch('enable-transparent-visuals');
 if (!electron.app.isPackaged) {
 
   const thingsToWatchForReload = [
-    path__default['default'].join(__dirname, '**/*.js'),
+    path__default["default"].join(__dirname, '**/*.js'),
     // path.join(__dirname, '**/*.html'),
-    path__default['default'].join(__dirname, '**/*.css'),
+    path__default["default"].join(__dirname, '**/*.css'),
     // path.join(__dirname, '**/*.xml')
     // 'main.js',
     // '**/*.js',
@@ -5324,7 +5335,7 @@ if (!electron.app.isPackaged) {
     // We reset electron each time (starting a new electron process, and
     // not just restarting web contents, which the default) by specifying 
     // the path to the electron package.
-    electron: path__default['default'].join(__dirname, '../node_modules', '.bin', 'electron'),
+    electron: path__default["default"].join(__dirname, '../node_modules', '.bin', 'electron'),
 
     // "If your app overrides some of the default quit or close actions 
     // (e.g. closing the last app window hides the window instead of 
@@ -5339,8 +5350,8 @@ if (!electron.app.isPackaged) {
     argv: ['--inspect=5858', '--enable-transparent-visuals'],
   });
 
-  console.log('// - - - - - - - - - - - - - - - //');
-  console.log(`Gambier... Electron ${process.versions.electron}. Chrome ${process.versions['chrome']}`);
+  // console.log('// - - - - - - - - - - - - - - - //')
+  // console.log(`Gambier... Electron ${process.versions.electron}. Chrome ${process.versions['chrome']}`)
 }
 
 
@@ -5426,7 +5437,7 @@ electron.app.whenReady()
         // Before: file:///Users/josh/Desktop/Notes/climate%20graph.jpg
         // After:  /Users/josh/Desktop/Notes/climate graph.jpg
         let url = request.url.substr('file://'.length);
-        url = path__default['default'].normalize(url);
+        url = path__default["default"].normalize(url);
         url = url.replaceAll('%20', ' ');
         // console.log(url)
         callback({ path: url });
@@ -5436,7 +5447,7 @@ electron.app.whenReady()
       let url = request.url.substr('file'.length + 1);
 
       // Build complete path for node require function
-      url = path__default['default'].join(__dirname, url);
+      url = path__default["default"].join(__dirname, url);
 
       const containsQuery = url.includes('?');
       if (containsQuery) {
@@ -5444,7 +5455,7 @@ electron.app.whenReady()
       }
 
       // Replace backslashes by forward slashes (windows)
-      url = path__default['default'].normalize(url);
+      url = path__default["default"].normalize(url);
       
       // console.log(url)
 

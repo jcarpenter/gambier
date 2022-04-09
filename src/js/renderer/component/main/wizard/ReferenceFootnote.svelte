@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import InputText from '../../ui/InputText.svelte';
   import Separator from '../../ui/Separator.svelte';
   import { writeToDoc, getReferenceDefinitions } from '../../../editor/editor-utils';
@@ -41,7 +41,7 @@
 
 </script>
 
-<style type="text/scss"></style>
+<style lang="scss"></style>
 
 <header>
   <h1>Reference Footnote</h1>

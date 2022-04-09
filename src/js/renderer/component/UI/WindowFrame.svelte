@@ -1,9 +1,9 @@
-<script>
+<script lang='js'>
   import { isWindowFocused } from "../../StateManager";
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   
   .window-frame {
     -webkit-app-region: drag;

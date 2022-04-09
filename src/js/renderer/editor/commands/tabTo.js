@@ -119,10 +119,6 @@ export function tabToNextSpanOrMarker(cm) {
     const { from, to } = textMarkerAtSpan.find()
     const element = getElementAt(cm, from.line, from.ch)
     
-    console.log(textMarkerAtSpan)
-    console.log(from.line, from.ch, to.ch)
-    console.log(element)
-
     textMarkerAtSpan.component.altTabTo()
   } else if (nextSpan) {
     cm.setSelection(

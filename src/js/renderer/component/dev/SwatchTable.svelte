@@ -1,9 +1,9 @@
-<script>
+<script lang='js'>
 	export let title = ''
 	export let colors = {}
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   
 	h3 {
 		@include system-small-font;

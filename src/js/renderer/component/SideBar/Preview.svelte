@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { prettySize } from '../../../shared/utils'
   import { sidebar } from '../../StateManager'
   import { files } from '../../FilesManager'
@@ -35,7 +35,7 @@
   }
 </script>
 
-<style type="text/scss">  
+<style lang="scss">  
   #preview {
     display: flex;
     flex-shrink: 0;

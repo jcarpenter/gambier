@@ -1,5 +1,5 @@
 
-<script>
+<script lang='js'>
   import { project } from '../../StateManager';
   import EditorPanel from './EditorPanel.svelte';
   import EditorPanelDivider from './EditorPanelDivider.svelte';
@@ -171,7 +171,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   .panels {
     width: 100%;
     flex-grow: 1;

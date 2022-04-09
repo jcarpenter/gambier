@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { state } from "../../StateManager";
   import { getFocusableElements } from "../../../shared/utils";
   import { tick } from "svelte";
@@ -87,7 +87,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   #lightbox {
     color: white;
@@ -326,6 +326,7 @@
         on:click|stopPropagation
         on:error={() => isError = true}
         on:load={() => isError = false}
+        alt="Lightbox"
       />
     </div>
 
@@ -350,8 +351,8 @@
     >
     </button>
     
-    {#if images.length > 1}
-    {/if}
+    <!-- {#if images.length > 1}
+    {/if} -->
 
   {/if}
 </div>

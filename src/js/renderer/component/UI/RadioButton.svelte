@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { isWindowFocused, state } from "../../StateManager";
   import { setSize } from "./actions";
 
@@ -17,7 +17,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .radioButton {
     @include inset-button;

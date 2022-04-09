@@ -462,23 +462,18 @@ export function setUnsavedChanges(cm) {
 }
 
 /**
- * Load empty doc into editor, and clear history
- * @param {*} cm 
- */
-export function loadEmptyDoc(cm) {
-  if (!cm) return
-
-  cm.swapDoc(CodeMirror.Doc('', 'gambier'))
-  cm.focus()
-}
-
-/**
  * Load doc into the editor, and clear history
  * @param {*} doc - Instance of an object from `files.byId`
  */
 export async function loadDoc(cm, doc) {
 
   if (!cm || !doc) return
+
+  if (doc.id == 'newDoc') {
+    cm.swapDoc(CodeMirror.Doc('', 'gambier'))
+    cm.focus()
+    return
+  }
 
   // Get the doc text
   const text = doc.path ?

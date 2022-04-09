@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 
   /*
   NOTE: 3/15/22: Disabled Citations sidebar tab for now. 
@@ -28,7 +28,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .selectCitationsPrompt {
     @include system-regular-font;

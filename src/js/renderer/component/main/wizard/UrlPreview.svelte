@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { store } from "../../../WizardManager"
 
   export let cm = null
@@ -10,7 +10,7 @@
 </script>
 
 <svelte:options accessors={true} />
-<style type="text/scss"></style>
+<style lang="scss"></style>
 
 <span 
   on:mouseenter={() => {

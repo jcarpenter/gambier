@@ -1,10 +1,10 @@
-<script>
+<script lang='js'>
   import { setAsCustomPropOnNode } from '../actions';
   export let label
   export let padding = 8
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   span {
     position: absolute;
     left: 0;

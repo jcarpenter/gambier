@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 	import { sidebar } from '../../StateManager'
   import { getContext } from 'svelte';
   import IconButton from '../ui/IconButton.svelte';
@@ -34,7 +34,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   .sortMenu {
     transform: translate(0, 0);
   }

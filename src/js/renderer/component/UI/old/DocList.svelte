@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   /**
    * Render docs in a folder as a vertical list
    */
@@ -300,7 +300,7 @@
   }
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 </style>
 
 <svelte:window on:keydown={handleKeydown} />

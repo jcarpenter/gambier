@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { state } from "../../StateManager";
   import FormRow from "../ui/FormRow.svelte";
   import PopupButton from "../ui/PopupButton.svelte";
@@ -24,7 +24,7 @@
 
 </script>
 
-<style type='text/scss'></style>
+<style lang="scss">='text/scss'></style>
 
 <FormRow label={'Font size:'} {leftColumn} margin={'8px 0 0'} labelTopOffset={'3px'}>
   <PopupButton 

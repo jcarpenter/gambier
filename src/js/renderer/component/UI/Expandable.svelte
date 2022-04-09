@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { setAsCustomPropOnNode, setSize } from '../ui/actions'
   import DisclosureButton from './DisclosureButton.svelte';
 
@@ -14,7 +14,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .expandable {
     display: flex;

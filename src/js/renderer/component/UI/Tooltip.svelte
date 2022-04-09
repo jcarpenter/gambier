@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { tooltip } from '../../TooltipManager'
   import { setAsCustomPropOnNode } from './actions'
 
@@ -70,7 +70,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   #tooltip {
     @include tool-tips-font;

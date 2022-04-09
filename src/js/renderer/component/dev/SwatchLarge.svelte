@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { setAsCustomPropOnNode } from "../ui/actions";
 
 	export let name = ''
@@ -9,7 +9,7 @@
   $: isOverridden = overriddenVariables.includes(name)
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .isOverridden {
     @include system-small-font;

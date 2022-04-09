@@ -1,4 +1,4 @@
-<script>  
+<script lang='js'>  
   import { onMount, tick } from 'svelte'
   import Citation from './Citation.svelte'
   import Footnote from './Footnote.svelte'
@@ -353,7 +353,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
     
   // #wizard.isVisible:focus-within {
   //   outline: 2px solid green !important;
@@ -407,9 +407,9 @@
       transition-timing-function: ease-in;
     }
 
-    &.error {
-      border: 1px solid var(--wizard-error);
-    }
+    // &.error {
+    //   border: 1px solid var(--wizard-error);
+    // }
 
     /* Notch */
     // &::before {

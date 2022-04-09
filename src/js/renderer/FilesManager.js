@@ -52,7 +52,6 @@ export function init(initialFiles) {
     window.tags = tagsAsArray
     setStore()
   })
-
 }
 
 /**

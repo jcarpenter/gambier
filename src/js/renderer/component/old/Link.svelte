@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
 
   export let text;
   export let url;
@@ -6,7 +6,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   @import "../../../styles/_variables.scss";
 </style>
 

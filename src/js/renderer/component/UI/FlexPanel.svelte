@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { onMount, tick } from "svelte";
   import { clamp } from "../utils";
 
@@ -46,7 +46,7 @@
   });
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   .flexPanel {
     height: 100%;
     overflow-x: hidden;

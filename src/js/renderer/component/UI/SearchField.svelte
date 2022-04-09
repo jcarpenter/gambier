@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { setSize } from "./actions";
 
   export let placeholder = 'Search'
@@ -28,7 +28,7 @@
   // }
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   // :global(body[data-theme-isDark='false']) .searchfield {
   //   outline: 2px solid red !important;

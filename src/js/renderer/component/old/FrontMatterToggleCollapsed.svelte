@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import { state } from "../../StateManager";
   import IconButton from "../ui/IconButton.svelte";   
   // import { Pos } from "codemirror"  
@@ -7,7 +7,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   // Opacity is set to 1 when parent front matter
   // line is hovered over.

@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import Expandable from '../../ui/Expandable.svelte';
   import InputText from '../../ui/InputText.svelte';
   import Separator from '../../ui/Separator.svelte';
@@ -61,7 +61,7 @@
 
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 </style>
 
 <header>

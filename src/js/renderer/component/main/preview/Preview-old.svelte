@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   export let cm = null
   export let target = null // An inlineElement
   export let editorState = {}

@@ -290,7 +290,6 @@ export const update = (state, action, window) =>
         }
 
         // Reset panels
-        // Tell panel to load first file in project
         project.focusedPanelIndex = 0
         project.panels = [{ ...newPanel, id: nanoid() }]
 
@@ -603,7 +602,7 @@ export const update = (state, action, window) =>
         panel.docId = 'newDoc'
         // Focus the editor
         project.focusedSectionId = 'editor'
-        // Deselect everything in active sidebar tab
+      // Deselect everything in active sidebar tab
         const activeTab = project.sidebar.tabsById[project.sidebar.activeTabId]
         activeTab.selected = []
         break
@@ -613,12 +612,9 @@ export const update = (state, action, window) =>
 
         const panel = project.panels[action.panelIndex]
 
-        const canCreateNewDoc =
-          action.saveOutcome == "noUnsavedChanges" ||
-          action.saveOutcome == "saved" ||
-          action.saveOutcome == "dontSave"
+        const isSafeToCreateNewDoc = action.saveOutcome.equalsAny("noUnsavedChanges", "saved", "dontSave")
 
-        if (canCreateNewDoc) {
+        if (isSafeToCreateNewDoc) {
           panel.docId = 'newDoc'
           panel.unsavedChanges = false
         } else {

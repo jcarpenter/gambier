@@ -1,4 +1,4 @@
-<script>
+<script lang='js'>
   import Separator from '../../ui/Separator.svelte';
   import { writeToDoc } from '../../../editor/editor-utils';
   import FormRow from '../../ui/FormRow.svelte';
@@ -74,7 +74,7 @@
   
 </script>
 
-<style type="text/scss">
+<style lang="scss">
 
   .definition {
     opacity: 0.8;

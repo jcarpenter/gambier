@@ -248,6 +248,10 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {
 .CodeMirror-sizer {
     position: relative;
     border-right: 50px solid transparent;
+
+    > div {
+        width: 100%;
+    }
 }
 
 .panel.isOnlyPanel .CodeMirror-sizer {

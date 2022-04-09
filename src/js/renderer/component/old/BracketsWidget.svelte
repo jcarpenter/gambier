@@ -1,6 +1,6 @@
 <svelte:options accessors={true}/>
 
-<script>
+<script lang='js'>
   //   import { onMount } from "svelte";
 
   export let element
@@ -23,7 +23,7 @@
   //   });
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   @import "../../../styles/_variables.scss";
   .link {
     position: absolute;
