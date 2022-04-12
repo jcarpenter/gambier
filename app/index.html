@@ -11,48 +11,51 @@
         <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src http:; script-src 'self'; img-src * ; style-src 'unsafe-inline' 'self';">
 
         <!-- CodeMirror (UMD module, exports `CodeMirror` to global namespace) -->
-        <script src="js/third-party/codemirror/lib/codemirror.js"></script>
+        <script src="third-party/codemirror/lib/codemirror.js"></script>
         <!-- CodeMirror: Add Ons -->
-        <script src="js/third-party/codemirror/addon/edit/closebrackets.js"></script>
-        <script src="js/third-party/codemirror/addon/edit/closetag.js"></script>
-        <script src="js/third-party/codemirror/addon/edit/continuelist.js"></script>
-        <script src="js/third-party/codemirror/addon/mode/overlay.js"></script>
-        <script src="js/third-party/codemirror/addon/hint/show-hint.js"></script>
-        <script src="js/third-party/codemirror/addon/mode/simple.js"></script>
-        <script src="js/third-party/codemirror/addon/scroll/scrollpastend.js"></script>
-        <script src="js/third-party/codemirror/addon/search/searchcursor.js"></script>
-        <script src="js/third-party/codemirror/keymap/sublime.js"></script>
+        <script src="third-party/codemirror/addon/edit/closebrackets.js"></script>
+        <script src="third-party/codemirror/addon/edit/closetag.js"></script>
+        <script src="third-party/codemirror/addon/edit/continuelist.js"></script>
+        <script src="third-party/codemirror/addon/mode/overlay.js"></script>
+        <script src="third-party/codemirror/addon/hint/show-hint.js"></script>
+        <script src="third-party/codemirror/addon/mode/simple.js"></script>
+        <script src="third-party/codemirror/addon/scroll/scrollpastend.js"></script>
+        <script src="third-party/codemirror/addon/search/searchcursor.js"></script>
+        <script src="third-party/codemirror/keymap/sublime.js"></script>
         <!-- CodeMirror: Modes -->
-        <script src="js/third-party/codemirror/mode/clike/clike.js"></script>
-        <script src="js/third-party/codemirror/mode/css/css.js"></script>
-        <script src="js/third-party/codemirror/mode/elm/elm.js"></script>
-        <script src="js/third-party/codemirror/mode/gfm/gfm.js"></script>
-        <script src="js/third-party/codemirror/mode/htmlmixed/htmlmixed.js"></script>
-        <script src="js/third-party/codemirror/mode/javascript/javascript.js"></script>
-        <script src="js/third-party/codemirror/mode/lua/lua.js"></script>
-        <script src="js/third-party/codemirror/mode/markdown/markdown.js"></script>
-        <script src="js/third-party/codemirror/mode/meta.js"></script>
-        <script src="js/third-party/codemirror/mode/php/php.js"></script>
-        <script src="js/third-party/codemirror/mode/python/python.js"></script>
-        <script src="js/third-party/codemirror/mode/ruby/ruby.js"></script>
-        <script src="js/third-party/codemirror/mode/rust/rust.js"></script>
-        <script src="js/third-party/codemirror/mode/sql/sql.js"></script>
-        <script src="js/third-party/codemirror/mode/stex/stex.js"></script>
-        <script src="js/third-party/codemirror/mode/swift/swift.js"></script>
-        <script src="js/third-party/codemirror/mode/xml/xml.js"></script>
-        <script src="js/third-party/codemirror/mode/yaml/yaml.js"></script>
-        <!--<script src="js/third-party/codemirror/mode/htmlembedded/htmlembedded.js"></script>-->
+        <script src="third-party/codemirror/mode/clike/clike.js"></script>
+        <script src="third-party/codemirror/mode/css/css.js"></script>
+        <script src="third-party/codemirror/mode/elm/elm.js"></script>
+        <script src="third-party/codemirror/mode/gfm/gfm.js"></script>
+        <script src="third-party/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+        <script src="third-party/codemirror/mode/javascript/javascript.js"></script>
+        <script src="third-party/codemirror/mode/lua/lua.js"></script>
+        <script src="third-party/codemirror/mode/markdown/markdown.js"></script>
+        <script src="third-party/codemirror/mode/meta.js"></script>
+        <script src="third-party/codemirror/mode/php/php.js"></script>
+        <script src="third-party/codemirror/mode/python/python.js"></script>
+        <script src="third-party/codemirror/mode/ruby/ruby.js"></script>
+        <script src="third-party/codemirror/mode/rust/rust.js"></script>
+        <script src="third-party/codemirror/mode/sql/sql.js"></script>
+        <script src="third-party/codemirror/mode/stex/stex.js"></script>
+        <script src="third-party/codemirror/mode/swift/swift.js"></script>
+        <script src="third-party/codemirror/mode/xml/xml.js"></script>
+        <script src="third-party/codemirror/mode/yaml/yaml.js"></script>
+        <!--<script src="third-party/codemirror/mode/htmlembedded/htmlembedded.js"></script>-->
 
         <!-- Citeproc (raw JS, exports `CSL` to global namespace) -->
-        <script src="js/third-party/citeproc/citeproc.js"></script>
+        <script src="third-party/citeproc/citeproc.js"></script>
 
         <!-- Turndown (ES6 module) -->
-        <script src="js/third-party/turndown/turndown.es.js" type="module"></script>
+        <script src="third-party/turndown/turndown.es.js" type="module"></script>
 
-        <!-- Styles -->       
+        <!-- Svelte component styles -->
+        <link rel="stylesheet" type="text/css" href="styles/components.css" >
+        
+        <!-- Theme styles -->
         <link rel="stylesheet" type="text/css" id="theme" href="" >
 
-        <!-- Dark mode -->
+        <!-- Dark mode-related -->
         <meta name="color-scheme" content="dark light">
 
     </head>
@@ -64,6 +67,6 @@
 
         <!--<span class="cm-citation-collapsed"><button class="icon"></button><div class="popup" tabindex="0"><header><h1>Citation</h1><span class="instructions"><span class="update">Enter to Update, </span>Esc to Cancel</span></header><p class="wrapper"></p><p contenteditable="true" class="input"></p></div><div class="tooltip"></div></span>-->
 
-        <script src="js/renderer.js" type="module"></script>
+        <script src="app.js" type="module"></script>
     </body>
 </html>

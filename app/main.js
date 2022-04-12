@@ -4911,7 +4911,7 @@ const browserWindowConfig = {
     webSecurity: true,
     webviewTag: false,
     // Preload
-    preload: path__default["default"].join(__dirname, 'js/preload.js')
+    preload: path__default["default"].join(__dirname, 'preload.js')
   }
 };
 
@@ -5209,7 +5209,7 @@ const preferencesWindowConfig = {
     webSecurity: true,
     webviewTag: false,
     // Preload
-    preload: path__default["default"].join(__dirname, 'js/preload.js')
+    preload: path__default["default"].join(__dirname, 'preload.js')
   }
 };
 
@@ -5285,7 +5285,7 @@ async function open() {
   //   },
   // })
   await win.loadURL(url__default["default"].format({
-    pathname: 'preferences.html',
+    pathname: 'index-preferences.html',
     protocol: 'file:',
     slashes: true,
     query: {

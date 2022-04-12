@@ -26,7 +26,7 @@ const browserWindowConfig = {
     webSecurity: true,
     webviewTag: false,
     // Preload
-    preload: path.join(__dirname, 'js/preload.js')
+    preload: path.join(__dirname, 'preload.js')
   }
 }
 

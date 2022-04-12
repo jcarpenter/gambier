@@ -1,7 +1,12 @@
+@charset "UTF-8";
 /* ----------------------------- Light vs Dark ---------------------------- */
 /* ----------------------------- Color functions ---------------------------- */
 /* ----------------------------------- OLD ---------------------------------- */
-@keyframes focusRingAnimationKeyframes {
+/*
+Svelte docs: "If you want to make @keyframes that are accessible globally, you need to prepend your keyframe names with -global-. The -global- part will be removed when compiled, and the keyframe then be referenced using just my-animation-name elsewhere in your code." — 
+
+*/
+@keyframes -global-focusRingAnimationKeyframes {
   from {
     box-shadow: 0 0 0 25px transparent;
   }
@@ -9,7 +14,7 @@
     box-shadow: 0 0 0 3.5px var(--focus-ring-color);
   }
 }
-@keyframes dragOverAnimationKeyframes {
+@keyframes -global-dragOverAnimationKeyframes {
   from {
     box-shadow: inset 0 0 0 0 transparent;
     background: transparent;
@@ -1277,52 +1282,52 @@ body {
 }
 
 body {
-  --nav-project-icon: url(img/ui/folder.small.medium.svg);
-  --nav-project-active-icon: url(img/ui/folder.fill.small.medium.svg);
-  --nav-allDocs-icon: url(img/ui/doc.on.doc.small.medium.svg);
-  --nav-allDocs-active-icon: url(img/ui/doc.on.doc.fill.small.medium.svg);
-  --nav-mostRecent-icon: url(img/ui/clock.small.regular.svg);
-  --nav-mostRecent-active-icon: url(img/ui/clock.fill.small.regular.svg);
-  --nav-tags-icon: url(img/ui/tag.small.medium.svg);
-  --nav-tags-active-icon: url(img/ui/tag.fill.small.medium.svg);
-  --nav-media-icon: url(img/ui/photo.small.medium.svg);
-  --nav-media-active-icon: url(img/ui/photo.fill.small.medium.svg);
-  --nav-citations-icon: url(img/ui/quote.bubble.small.medium.svg);
-  --nav-citations-active-icon: url(img/ui/quote.bubble.fill.small.medium.svg);
-  --nav-search-icon: url(img/ui/magnifyingglass.small.regular.svg);
-  --nav-search-active-icon: url(img/ui/magnifyingglass.small.regular.svg);
-  --project-av-icon: url(img/ui/play.rectangle.medium.regular.svg);
-  --project-folder-icon: url(img/ui/folder.medium.regular.svg);
-  --project-image-icon: url(img/ui/photo.medium.regular.svg);
-  --project-json-icon: url(img/ui/custom/doc.json.medium.regular.svg);
-  --project-markdown-icon: url(img/ui/doc.text.medium.regular.svg);
-  --project-xml-icon: url(img/ui/custom/doc.xml.medium.regular.svg);
-  --block-options-expand-icon: url(img/ui/chevron.down.medium.semibold.svg);
-  --checkbox-icon: url(img/ui/checkmark.small.heavy.svg);
-  --disclosure-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
-  --editor-panel-close-icon: url(img/ui/xmark.medium.regular.svg);
-  --iconbutton-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
-  --imagepreview-blank-icon: url(img/ui/rectangle.dashed.medium.regular.svg);
-  --imagepreview-error-icon: url(img/ui/custom/image-not-found.svg);
-  --input-error-icon: url(img/ui/exclamationmark.circle.fill.small.medium.svg);
-  --lightbox-close-icon: url(img/ui/xmark.medium.regular.svg);
-  --lightbox-prev-icon: url(img/ui/chevron.backward.large.light.svg);
-  --menu-checkmark-img: url(img/ui/checkmark.small.heavy.svg);
-  --popupButton-icon: url(img/ui/custom/chevron.up.down.svg);
-  --pulldownButton-icon: url(img/ui/chevron.down.small.heavy.svg);
-  --search-field-icon: url(img/ui/magnifyingglass.small.regular.svg);
-  --sortmenu-icon: url(img/ui/arrow.up.arrow.down.small.regular.svg);
-  --stepper-chevron-icon: url(img/ui/chevron.down.small.heavy.svg);
-  --toggle-sidebar-icon: url(img/ui/sidebar.left.medium.regular.svg);
-  --prefs-tab-citations-icon: url(img/ui/quote.bubble.medium.regular.svg);
-  --prefs-tab-general-icon: url(img/ui/gearshape.medium.regular.svg);
-  --prefs-tab-markdown-icon: url(img/ui/textformat.medium.regular.svg);
-  --prefs-tab-media-icon: url(img/ui/photo.medium.regular.svg);
-  --prefs-tab-theme-icon: url(img/ui/paintpalette.medium.regular.svg);
-  --topbar-file-av-icon: url(img/ui/play.rectangle.medium.regular.svg);
-  --topbar-file-doc-icon: url(img/ui/doc.text.medium.regular.svg);
-  --topbar-file-image-icon: url(img/ui/photo.medium.regular.svg);
-  --topbar-new-doc-icon: url(img/ui/plus.medium.regular.svg);
+  --nav-project-icon: url(/img/sf/folder.small.medium.svg);
+  --nav-project-active-icon: url(/img/sf/folder.fill.small.medium.svg);
+  --nav-allDocs-icon: url(/img/sf/doc.on.doc.small.medium.svg);
+  --nav-allDocs-active-icon: url(/img/sf/doc.on.doc.fill.small.medium.svg);
+  --nav-mostRecent-icon: url(/img/sf/clock.small.regular.svg);
+  --nav-mostRecent-active-icon: url(/img/sf/clock.fill.small.regular.svg);
+  --nav-tags-icon: url(/img/sf/tag.small.medium.svg);
+  --nav-tags-active-icon: url(/img/sf/tag.fill.small.medium.svg);
+  --nav-media-icon: url(/img/sf/photo.small.medium.svg);
+  --nav-media-active-icon: url(/img/sf/photo.fill.small.medium.svg);
+  --nav-citations-icon: url(/img/sf/quote.bubble.small.medium.svg);
+  --nav-citations-active-icon: url(/img/sf/quote.bubble.fill.small.medium.svg);
+  --nav-search-icon: url(/img/sf/magnifyingglass.small.regular.svg);
+  --nav-search-active-icon: url(/img/sf/magnifyingglass.small.regular.svg);
+  --project-av-icon: url(/img/sf/play.rectangle.medium.regular.svg);
+  --project-folder-icon: url(/img/sf/folder.medium.regular.svg);
+  --project-image-icon: url(/img/sf/photo.medium.regular.svg);
+  --project-json-icon: url(/img/sf/custom/doc.json.medium.regular.svg);
+  --project-markdown-icon: url(/img/sf/doc.text.medium.regular.svg);
+  --project-xml-icon: url(/img/sf/custom/doc.xml.medium.regular.svg);
+  --block-options-expand-icon: url(/img/sf/chevron.down.medium.semibold.svg);
+  --checkbox-icon: url(/img/sf/checkmark.small.heavy.svg);
+  --disclosure-chevron-icon: url(/img/sf/chevron.down.small.heavy.svg);
+  --editor-panel-close-icon: url(/img/sf/xmark.medium.regular.svg);
+  --iconbutton-chevron-icon: url(/img/sf/chevron.down.small.heavy.svg);
+  --imagepreview-blank-icon: url(/img/sf/rectangle.dashed.medium.regular.svg);
+  --imagepreview-error-icon: url(/img/sf/custom/image-not-found.svg);
+  --input-error-icon: url(/img/sf/exclamationmark.circle.fill.small.medium.svg);
+  --lightbox-close-icon: url(/img/sf/xmark.medium.regular.svg);
+  --lightbox-prev-icon: url(/img/sf/chevron.backward.large.light.svg);
+  --menu-checkmark-img: url(/img/sf/checkmark.small.heavy.svg);
+  --popupButton-icon: url(/img/sf/custom/chevron.up.down.svg);
+  --pulldownButton-icon: url(/img/sf/chevron.down.small.heavy.svg);
+  --search-field-icon: url(/img/sf/magnifyingglass.small.regular.svg);
+  --sortmenu-icon: url(/img/sf/arrow.up.arrow.down.small.regular.svg);
+  --stepper-chevron-icon: url(/img/sf/chevron.down.small.heavy.svg);
+  --toggle-sidebar-icon: url(/img/sf/sidebar.left.medium.regular.svg);
+  --prefs-tab-citations-icon: url(/img/sf/quote.bubble.medium.regular.svg);
+  --prefs-tab-general-icon: url(/img/sf/gearshape.medium.regular.svg);
+  --prefs-tab-markdown-icon: url(/img/sf/textformat.medium.regular.svg);
+  --prefs-tab-media-icon: url(/img/sf/photo.medium.regular.svg);
+  --prefs-tab-theme-icon: url(/img/sf/paintpalette.medium.regular.svg);
+  --topbar-file-av-icon: url(/img/sf/play.rectangle.medium.regular.svg);
+  --topbar-file-doc-icon: url(/img/sf/doc.text.medium.regular.svg);
+  --topbar-file-image-icon: url(/img/sf/photo.medium.regular.svg);
+  --topbar-new-doc-icon: url(/img/sf/plus.medium.regular.svg);
 }
 
 body {

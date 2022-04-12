@@ -25,7 +25,7 @@ const preferencesWindowConfig = {
     webSecurity: true,
     webviewTag: false,
     // Preload
-    preload: path.join(__dirname, 'js/preload.js')
+    preload: path.join(__dirname, 'preload.js')
   }
 }
 
@@ -101,7 +101,7 @@ async function open() {
   //   },
   // })
   await win.loadURL(url.format({
-    pathname: 'preferences.html',
+    pathname: 'index-preferences.html',
     protocol: 'file:',
     slashes: true,
     query: {

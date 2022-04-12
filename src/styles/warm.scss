@@ -91,7 +91,7 @@ body {
   --fencedcodeblock-md:             #{accentColor($s: -10%, $a:-0.2)};
   --fencedcodeblock-options-label:  #{foregroundColor(0.25)};
   --fencedcodeblock-borderRadius:   0.2em;
-  --fencedcodeblock-syntax-icon:    url(img/ui/chevron.down.small.heavy.svg);
+  --fencedcodeblock-syntax-icon:    url(/img/sf/chevron.down.small.heavy.svg);
 
   --footnote-mark:                  #{accentColor($l:-20%)};
   --footnote-mark-bg:               #{accentColor($a:-0.8)};
@@ -186,7 +186,7 @@ body {
   --strong:                         #{$strong};
   --strong-md:                      #{color.adjust($strong, $alpha: -0.5)};
 
-  --task-mark-icon:                 url(/img/ui/checkmark.small.heavy.svg);
+  --task-mark-icon:                 url(/img/sf/checkmark.small.heavy.svg);
   --task-mark-icon-bg:            white;
   --task-mark-open-bg:              transparent;
   --task-mark-open-border:          #{foregroundColor(0.3)};
