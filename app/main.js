@@ -4155,6 +4155,10 @@ function onStateChanged(state, oldState, project, oldProject, panel, prefsIsFocu
   appMenu.getMenuItemById('view-sourceMode').enabled = true;
   appMenu.getMenuItemById('view-sidebar').enabled = true;
 
+  // Always enable font-size and line-height default options. 
+  appMenu.getMenuItemById('view-fontsize-default').enabled = true;
+  appMenu.getMenuItemById('view-lineheight-default').enabled = true;
+
   // Disable increase/decrease menu items (e.g. increase font size)
   // when they're already at their thresholds (e.g. can't go higher).
   appMenu.getMenuItemById('view-fontsize-increase').enabled = state.editorFont.size < state.editorFont.max;
