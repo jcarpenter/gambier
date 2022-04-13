@@ -30,13 +30,6 @@ if (!app.isPackaged) {
     // path.join(__dirname, '**/*.html'),
     path.join(__dirname, '**/*.css'),
     // path.join(__dirname, '**/*.xml')
-    // 'main.js',
-    // '**/*.js',
-    // '**/*.html',
-    // '**/*.css',
-    // '**/*.xml',
-    // '**/*.png',
-    // '**/*.jpg',
   ]
 
   // We use `electron-reload` package to do a hard reset of electron

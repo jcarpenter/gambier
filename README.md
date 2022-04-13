@@ -6,16 +6,17 @@ A work-in-progress Markdown editor.
 
 Built with [Svelte](https://svelte.dev/) | [CodeMirror](https://codemirror.net/) | [Electron](https://www.electronjs.org/)
 
-## Local development
+## Development
 
-1. Open a terminal session and run `npm run dev` to tell Rollup to process `src` files into `/app` and start watching for changes.
-1. Open a second terminal session and run `npm run start` to open Electron (the local copy, found in `/node_modules/electron`), and load the contents of `/app`. Dependency NPM packages will also be loaded from `/node_modules`.
+1. Run `npm install` to install dependencies. `electron-builder install-app-deps` will automatically run afterwards. It rebuilds dependencies for the version of Node that Electron is using, instead of the system version (which will rarely match).
+1. Run `npm run dev` to bundle JS, compile SCSS, copy assets, etc. Watches for changes to `src/js` and `src/styles`. If changes are made to other `src` directories, we must re-run this script manually. 
+1. Run `npm run start` to open Electron from `/node_modules/electron` and run the app. 
 
-When we make changes to files in `/src`, Rollup watch will catch them, run itself again, and output files to `/app`. When Electron sees changes to the contents of `/app`, it will reload itself. This is implemented in `main.js` using [electron-reload](https://www.npmjs.com/package/electron-reload).
+Electron will reload when changes are made to css or js files in `app`. This is implemented in `main.js` with [electron-reload](https://www.npmjs.com/package/electron-reload).
 
 ### Directories
 
-* `/src` - Files that require processing (transpile / compile). Are output into `/app`.
-* `/app` - Files that don’t require further processing. Are ready to go.
-* `/assets` - Support assets for our builds. E.g. icons, marketing images, etc .
-* `/dist` - Builds are output here.
+* `src` - Source files.
+* `app` - Run-time app files. Copied or built from `src`.
+* `assets` - Support assets for our builds. Icons, marketing images, etc .
+* `dist` - Packaged distributable app will be output here.
