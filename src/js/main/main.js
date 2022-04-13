@@ -1,5 +1,5 @@
 // External dependencies
-import { app, BrowserWindow, clipboard, dialog, protocol, shell, systemPreferences, webFrame } from 'electron'
+import { app, protocol, systemPreferences } from 'electron'
 import path from 'path'
 
 // Bundled dependencies
@@ -11,7 +11,6 @@ import * as MenuBarManager from './MenuBarManager'
 import * as ProjectManager from './ProjectManager'
 import * as PreferencesManager from './PreferencesManager'
 import { propHasChangedTo } from '../shared/utils'
-import { userInfo } from 'os'
 
 
 // -------- Process variables -------- //

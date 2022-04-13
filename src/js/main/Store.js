@@ -1,8 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import ElectronStore from 'electron-store'
 import { update } from './reducers'
-
-import colors from 'colors'
+import colors from '@colors/colors'
 
 
 export class Store extends ElectronStore {

@@ -7,7 +7,7 @@ var produce = require('immer');
 var fsExtra = require('fs-extra');
 var fs = require('fs');
 var nonSecure = require('nanoid/non-secure');
-require('colors');
+require('@colors/colors');
 var chroma = require('chroma-js');
 require('deep-eql');
 var Database = require('better-sqlite3');
@@ -20,7 +20,6 @@ var mime = require('mime-types');
 var sizeOf = require('image-size');
 var debounce = require('debounce');
 var url = require('url');
-require('os');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
