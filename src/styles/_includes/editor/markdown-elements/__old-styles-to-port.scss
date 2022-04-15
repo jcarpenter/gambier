@@ -31,7 +31,7 @@ body {
         // --citation-mark-border:         #{color.adjust($citation, $lightness: -30%, $alpha: -0.9)};
         // --citation-mark-highlight:      white;
         // --citation-mark-highlight-bg:   #{$citation};
-        // --citation-source:              #{color.adjust($citation, $lightness: -20%)};
+        // --citation-source-text:              #{color.adjust($citation, $lightness: -20%)};
         // --citation-source-bg:           #{color.adjust($citation, $alpha: -0.95)};
         // --citation-source-md:           #{color.adjust($citation, $lightness: -20%, $alpha: -0.4)};
         
@@ -87,11 +87,11 @@ body {
         --image-mark-border:            #{color.adjust($image, $lightness: -30%, $alpha: -0.9)};
         --image-mark-highlight:         white;
         --image-mark-highlight-bg:      #{$image};
-        --image-source:                 #{color.adjust($image, $lightness: -15%)};
-        --image-source-url:             #{color.adjust($image, $lightness: -15%, $alpha: -0.2)};
-        --image-source-title:           #{color.adjust($image, $lightness: -15%, $alpha: -0.4)};
-        --image-source-bg:              #{color.adjust($image, $alpha: -0.95)};
-        --image-source-md:              #{color.adjust($image, $lightness: -20%, $alpha: -0.4)};
+        --image-source-text:                 #{color.adjust($image, $lightness: -15%)};
+        --image-source-text-url:             #{color.adjust($image, $lightness: -15%, $alpha: -0.2)};
+        --image-source-text-title:           #{color.adjust($image, $lightness: -15%, $alpha: -0.4)};
+        --image-source-text-bg:              #{color.adjust($image, $alpha: -0.95)};
+        --image-source-text-md:              #{color.adjust($image, $lightness: -20%, $alpha: -0.4)};
 
         $footnote: #aa5096;
         --footnote-mark:                #{$footnote};
@@ -99,7 +99,7 @@ body {
         --footnote-mark-border:         #{color.adjust($footnote, $lightness: -30%, $alpha: -0.9)};
         --footnote-mark-highlight:      white;
         --footnote-mark-highlight-bg:   #{$footnote};
-        --footnote-source:              #{$footnote};
+        --footnote-source-text:              #{$footnote};
         --footnote-source-bg:           #{color.adjust($footnote, $alpha: -0.95)};
         --footnote-source-md:           #{color.adjust($footnote, $alpha: -0.4)};
         
@@ -151,9 +151,9 @@ body {
         --task-mark-border:             #{color.adjust($task, $lightness: -30%, $alpha: -0.9)};
         --task-mark-highlight:          white;
         --task-mark-highlight-bg:       #{$task};
-        --task-source:                  #{color.adjust($task, $lightness: -20%)};
-        --task-source-bg:               #{color.adjust($task, $alpha: -0.95)};
-        --task-source-md:               #{color.adjust($task, $lightness: -20%, $alpha: -0.4)};
+        --task-source-text:                  #{color.adjust($task, $lightness: -20%)};
+        --task-source-text-bg:               #{color.adjust($task, $alpha: -0.95)};
+        --task-source-text-md:               #{color.adjust($task, $lightness: -20%, $alpha: -0.4)};
 
 
         // Applies to url-in-brackets and email-in-brackets

@@ -10,16 +10,33 @@
   export let suppressWarnings = false
   
   let content
-  let renderedCitation = "<br><br>"
+  let renderedCitation = ""
+  let cachedElement
 
   $: element, onElementUpdate()
 
   async function onElementUpdate() {
 
+    // Else if there's no element, return
     if (!element) {
       renderedCitation = ""
       return
     }
+    // If we're actually targeting a new element we want the 
+    // string to start off blank. OTOH, if the user is typing
+    // into the citation field (to add a suffix, for example),
+    // we don't want the string to reset with each keystroke,
+    // because that would create flickering, as the user waits
+    // for the updated rendered citation to appear.
+    const isTargetingNewElement = 
+      element.start !== cachedElement?.start || 
+      element.line !== cachedElement?.line
+
+    if (isTargetingNewElement) {
+      renderedCitation = ""
+    }
+
+    cachedElement = element
 
     // console.log(element)
 
@@ -80,6 +97,8 @@
     opacity: 0.8;
     line-height: 1.4em;
     padding: 8px 10px !important;
+    border-radius: 0 0 var(--wizard-border-radius) var(--wizard-border-radius);
+    min-height: calc(1.4em * 5);
   }
 
   .definition :global(a) {
@@ -100,7 +119,7 @@
   <h1>Citation</h1>
 </header>
 
-<Separator margin={'0'} />
+<Separator margin={'0'} color={'wizard-separator'} />
 
 <FormRow margin={'8px 8px'}>
   <InputText

@@ -6,8 +6,8 @@
   text-decoration: underline;
   text-decoration-thickness: 0.1em;
   text-underline-offset: 0.025em;
+  // text-decoration-skip-ink: none;
   text-decoration-color: var(--link-mark-underline);
-  text-decoration-skip-ink: none;
   border-radius: var(--mark-border-radius);
 
   &.highlighted {
@@ -48,7 +48,8 @@
   &.cm-url {
     color: var(--link-source-url);
     text-decoration: underline;
-    text-decoration-skip: edges;
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.025em;
     opacity: 0.8;
     word-break: break-all;
 

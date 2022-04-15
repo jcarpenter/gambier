@@ -2,17 +2,7 @@
 
 // -------------- Task List -------------- //
 
-.taskList .cm-task {
-  // @include code-typography;
-}
-
-.taskList .cm-md:first-of-type {
-  // background: red;
-}
-
-.taskList .cm-task {
-  // border-bottom: 2px solid turquoise;
-}
+// Mark
 
 .mark.task {
   @include button-reset; // We use a button element
@@ -59,54 +49,16 @@
   // }
 }
 
-// .mark.test {
-//   display: inline-block;
-//   // place-items: center;
-//   // border: 1px solid red;
-//   // box-shadow: inset 0 0 0 1px red;
-//   width: 1em;
-//   margin: 0;
-//   padding: 0;
-//   height: var(--editor-lineheight);
-//   // height: 100%;
-//   background: rgba(255, 0, 100, 0.4);
-//   position: relative;
-// }
+// Source
 
-// .mark.task {
-//   // @include button-reset;
+.taskList .cm-task {
+  color: var(--task-source-text);
+}
 
-//   // display: inline-flex;
-//   // place-items: center;
-//   // transform: translate(0, 2px);
-//   display: inline-block;
-//   width: 100%;
-//   height: 14px;
-//   // position: absolute;
-//   // top: 0;
-//   // left: 0;
-//   opacity: 0.5;
+.taskList .cm-md:first-of-type {
+  // background: red;
+}
 
-//   // &::before {
-//   //   @include centered-mask-image;
-//   //   opacity: 0;
-//   //   content: '';
-//   //   width: 100%;
-//   //   height: 100%;
-//   //   transform: translate(0, 0.5px);
-//   //   -webkit-mask-size: 10px;
-//   //   -webkit-mask-image: var(--img-checkmark-heavy);
-//   //   background: red;
-//   // }
-
-//   // margin: 0 0.5em 0 0;
-//   // width: 1em;
-//   // height: 1em;
-//   // border-radius: 0.1em;
-
-//   // display: inline-block;
-//   // &::after {
-//   //   content: ' ';
-//   // }
-
-// }
+.taskList .cm-task {
+  // border-bottom: 2px solid turquoise;
+}

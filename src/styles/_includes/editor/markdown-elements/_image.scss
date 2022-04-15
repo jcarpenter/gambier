@@ -45,22 +45,22 @@
 // Source
 
 .cm-image {
-  color: var(--image-source);
-  background-color: var(--image-source-bg);
+  color: var(--image-source-text);
+  background-color: var(--image-source-text-bg);
 
   &.cm-url {
-    color: var(--image-source-url);
+    color: var(--image-source-text-url);
     text-decoration: underline;
     text-decoration-skip: edges;
     word-break: break-all;
   }
 
   &.cm-title {
-    color: var(--image-source-title);
+    color: var(--image-source-text-title);
     // font-style: italic;
   }
 
   &.cm-md {
-    color: var(--image-source-md);
+    color: var(--image-source-text-md);
   }
 }

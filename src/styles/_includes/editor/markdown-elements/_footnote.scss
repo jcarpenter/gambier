@@ -26,10 +26,18 @@
 // Source
 
 .cm-footnote {
-  color: var(--footnote-source);
+  color: var(--footnote-source-text);
   background-color: var(--footnote-source-bg);
   &.cm-md {
     color: var(--footnote-source-md);
+  }
+
+  &.cm-footnote-inline-start {
+    border-radius: var(--source-bg-borderRadius) 0 0 var(--source-bg-borderRadius);
+  }
+
+  &.cm-footnote-inline-end {
+    border-radius: 0 var(--source-bg-borderRadius) var(--source-bg-borderRadius) 0;
   }
 }
 

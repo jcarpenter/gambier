@@ -35,9 +35,11 @@ body {
   --sidebar-border-color:           transparent;
   
   /* ------ Editor wizard ------ */
-  --wizard-background-color:        var(--os-windowBackgroundColor);
-  --wizard-border-color:            var(--os-separatorColor);
-  --wizard-border-radius:           4px;
+  --wizard-bg:                    #F3F3F3;
+  --wizard-definition-bg:         #ebebeb;
+  --wizard-separator:             hsl(0, 0%, 90%);
+  --wizard-border-color:          hsla(0, 0%, 0%, 0.15);
+  --wizard-border-radius:           6px;
   --wizard-border-thickness:        1px;
   --wizard-error:                 hsla(0, 100%, 50%, 0.5);
 
@@ -53,7 +55,9 @@ body {
 /* -------------------------------------------------------------------------- */
   
   // Shared style, since many `md` characters should look the same
-  $common-md-color:                 accentColor($l:-20%, $a:-0.4);
+  $common-source-text:              accentColor($s:-20%, $l:-20%);
+  $common-source-bg:                accentColor($a:-0.9);
+  $common-md:                       accentColor($s:-40%, $a:-0.2);
   $common-mark-highlighted-text:    accentColor($l:-30%);
   $common-mark-highlighted-bg:      accentColor($l:+20%);
 
@@ -65,17 +69,18 @@ body {
   --editor-header-height:           2.25em;
   --editor-side-padding:            4em;
   
-  --mark-border-radius:              0.2rem;
-  --mark-border-width:               0px;
+  --mark-border-radius:             0.2rem;
+  --mark-border-width:              0px;
+  --source-bg-borderRadius:         0.2em;
 
   --citation-mark:                  #{accentColor($l:-20%)};
   --citation-mark-bg:               #{accentColor($a:-0.8)};
   --citation-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
   --citation-mark-highlight:        #{$common-mark-highlighted-text};
   --citation-mark-highlight-bg:     #{$common-mark-highlighted-bg};
-  --citation-source:                #{accentColor($l:-20%)};
-  --citation-source-bg:             #{accentColor($a:-0.95)};
-  --citation-source-md:             #{$common-md-color};
+  --citation-source-text:           #{$common-source-text};
+  --citation-source-bg:             #{$common-source-bg};
+  --citation-source-md:             #{$common-md};
 
   $code: hsl(0, 0%, 33%);
   --code-source:                    #{color.adjust($code, $lightness: -15%)};
@@ -98,9 +103,9 @@ body {
   --footnote-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
   --footnote-mark-highlight:        #{$common-mark-highlighted-text};
   --footnote-mark-highlight-bg:     #{$common-mark-highlighted-bg};
-  --footnote-source:                #{accentColor()};
-  --footnote-source-bg:             #{accentColor($a:-0.95)};
-  --footnote-source-md:             #{accentColor($a:-0.4)};
+  --footnote-source-text:           #{$common-source-text};
+  --footnote-source-bg:             #{$common-source-bg};
+  --footnote-source-md:             #{$common-md};
   
   --figure-bg:                      #{accentColor($a:-0.93)};
   --figure-caption:                 #{accentColor($l:-10%, $s: -20%)};
@@ -135,11 +140,11 @@ body {
   --image-mark-border:              #{accentColor($l:-30%, $a:-0.9)};
   --image-mark-highlight:           #{$common-mark-highlighted-text};
   --image-mark-highlight-bg:        #{$common-mark-highlighted-bg};
-  --image-source:                   #{accentColor($l:-15%)};
-  --image-source-url:               #{accentColor($l:-15%, $a:-0.2)};
-  --image-source-title:             #{accentColor($l:-15%, $a:-0.4)};
-  --image-source-bg:                #{accentColor($a:0.05)};
-  --image-source-md:                #{accentColor($l:-20%, $a:-0.4)};
+  --image-source-text:              #{accentColor($l:-15%)};
+  --image-source-text-url:          #{accentColor($l:-15%, $a:-0.2)};
+  --image-source-text-title:        #{accentColor($l:-15%, $a:-0.4)};
+  --image-source-text-bg:           #{accentColor($a:0.05)};
+  --image-source-text-md:           #{$common-md};
   
   $link-text:                       accentColor($s:-30%, $l:-25%);
   $link-underline:                  accentColor($s:-30%, $l:-25%, $a: -0.5);
@@ -149,20 +154,21 @@ body {
   --in-brackets:                    #{$link-text};
   --in-brackets-underline:          #{$link-underline};
   --in-brackets-hover-underline:    #{accentColor($l:-10%, $a:-0.2)};
-  --in-brackets-md:                 #{accentColor($a:-0.4)};
+  --in-brackets-md:                 #{$common-md};
 
-  --link-mark:                      #{$link-text};
+  --link-mark:                      #{$common-source-text};
   --link-mark-underline:            #{$link-underline};
   --link-hover:                     #{$link-hover};
   --link-mark-highlight:            #{$common-mark-highlighted-text};
   --link-mark-highlight-bg:         var(--text-selected-background);
   --link-mark-border-radius:         3px;
   --link-weight:                    400;
-  --link-source-text:               #{accentColor($l:-5%)};
-  --link-source-url:                #{accentColor($l:-20%)};
+  
+  --link-source-text:               #{$common-source-text};
+  --link-source-url:                #{accentColor($l:5%, $s:-20%)};
   --link-source-title:              #{accentColor($s: -20%)};
   --link-source-bg:                 transparent;
-  --link-source-md:                 #{$common-md-color};
+  --link-source-md:                 #{$common-md};
   // --link-ref-definition-bg:         #{color.adjust($link, $alpha: -0.9)};
 
   --list-marker:                    #{accentColor()};
@@ -196,7 +202,8 @@ body {
   --task-mark-border:               #{accentColor($l:-30%, $a:-0.9)};
   --task-mark-highlight:            #{$common-mark-highlighted-text};
   --task-mark-highlight-bg:         #{$common-mark-highlighted-bg};
-  --task-source:                    #{accentColor($l:-20%)};
-  --task-source-bg:                 #{accentColor($a:0.05)};
-  --task-source-md:                 #{accentColor($l:-20%, $a:-0.4)};
+  
+  --task-source-text:               #{accentColor($s:-30%, $l:-25%)};
+  --task-source-text-bg:            #{accentColor($a:0.05)};
+  --task-source-text-md:            #{$common-md};
 }

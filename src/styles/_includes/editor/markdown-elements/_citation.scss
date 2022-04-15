@@ -27,8 +27,16 @@
 // Source
 
 .cm-citation {
-  color: var(--citation-source);
+  color: var(--citation-source-text);
   background-color: var(--citation-source-bg) !important;
+
+  &.cm-citation-start {
+    border-radius: var(--source-bg-borderRadius) 0 0 var(--source-bg-borderRadius);
+  }
+
+  &.cm-citation-end {
+    border-radius: 0 var(--source-bg-borderRadius) var(--source-bg-borderRadius) 0;
+  }
 
   &.cm-key {
     text-decoration: underline;

@@ -26,13 +26,12 @@
 
   // How many pixels to offset the wizard vertically from the 
   // target DOM element (e.g. inline link mark).
-  let wizardOffset = 5 
-  
-  // Min width of the wizard. If 0, content determines 
-  // the rendered width. Varies based on the component
-  // being rendered. E.g. Most editable components like
-  // Link are 20em, but UrlPreview is 0.
+  let wizardOffset = 8
+   
+  // Min/Max widths of the wizard. We can set it based on the 
+  // component being rendered.
   let minWidth = 0
+  let maxWidth = 0
 
   // ------- LISTEN FOR STORE CHANGES ------ //
 
@@ -40,8 +39,6 @@
   // $: ({suppressWarnings} = $store)
 
   // When CM changes, we update cm listeners (e.g. changes, scroll)/
-  // let panelId = $store.panelId
-  // $: console.log(panelId)
   $: $store.panelId, onCmChanged()
 
   // Close wizard if isVisible changes
@@ -164,12 +161,30 @@
 
     }
 
-    // Set minWidth based on component
     if (component == UrlPreview) {
-      minWidth = 0
+      minWidth = '0'
+      maxWidth = '22em'
+    } else if (component == Citation) {
+      minWidth = '24em'
+      maxWidth = '24em'
     } else {
       minWidth = '20em'
+      maxWidth = '22em'
     }
+
+    // Set minWidth and maxWidth, based on component
+    // switch (component) {
+    //   case UrlPreview:
+    //     minWidth = '0'
+    //     maxWidth = '22em'
+    //     break
+    //   case Citation:
+    //     minWidth, maxWidth = '22em'
+    //     break
+    //   default:
+    //     minWidth = '20em'
+    //     maxWidth = '22em'
+    // }
 
     // Autoscroll to ensure wizard is visible. We need to call this manually, AFTER the wizard has repositioned itself (using `tick`), so autoscroll takes the wizard element into account. Otherwise it either doesn't fire, or fires too early (e.g. when the selection was set that triggered the wizard opening)
     // await tick()
@@ -187,9 +202,6 @@
     if (componentInstance?.writeDelayedChanges) {
       componentInstance?.writeDelayedChanges()
     }
-    
-    // Refocus cm
-    // cm?.focus()
   }
 
   /**
@@ -345,7 +357,7 @@
     // const rect = textMarker.replacedWith.getBoundingClientRect() 
     if (!$store.domElement) return
     const rect = $store.domElement.getBoundingClientRect() 
-    domEl.style.left = `${rect.left}px` 
+    domEl.style.left = `${rect.left + rect.width / 2}px` 
     domEl.style.top = `${rect.top - wizardOffset}px`
 
     // el.style.left = `${cm.cursorCoords(true, 'window').left}px`
@@ -373,23 +385,22 @@
     --delay: 0.5s;
 
     @include system-regular-font;
-    background-color: var(--wizard-background-color);
-    box-shadow: 0 0 20px 2px rgba(0, 0, 0, 0.2);
-    border: var(--wizard-border-thickness) solid var(--wizard-border-color);
+    background-color: var(--wizard-bg);
+    box-shadow: 0 0 0 var(--wizard-border-thickness) var(--wizard-border-color), 0 0 20px 2px rgba(0, 0, 0, 0.2);
+    // border: var(--wizard-border-thickness) solid var(--wizard-border-color);
     border-radius: var(--wizard-border-radius);
     color: var(--label-color);
     // opacity: 1;
     // padding: 0 0 4px 0;
     padding: 0;
     position: absolute;
-    transform: translate(0, -100%);
+    transform: translate(-50%, -100%);
     transition-delay: 0.5s;
     transition-timing-function: ease-out;
     transition: opacity 0.05s;
     white-space: normal;
-    min-width: 20em;
-    max-width: 22em;
-    // width: 20em;
+    min-width: var(--minWidth);
+    max-width: var(--maxWidth);
     z-index: 10;
     height: auto;
     
@@ -411,6 +422,37 @@
     // &.error {
     //   border: 1px solid var(--wizard-error);
     // }
+    
+    svg.notch {
+      position: absolute;
+      bottom: 1px;
+      left: 50%;
+      transform: translate(-50%, 100%);
+      filter: drop-shadow(0 1px 0 var(--wizard-border-color));
+      path { fill: var(--wizard-bg); }
+    }
+
+    // > .notch {
+    //   @include centered-mask-image;
+    //   // box-shadow: 0 0 0 var(--wizard-border-thickness) var(--wizard-border-color);
+    //   position: absolute;
+    //   bottom: 0;
+    //   left: 50%;
+    //   transform: translate(-50%, 100%);
+    //   width: 2em;
+    //   height: 1em;
+    //   background-color: var(--wizard-bg);
+    //   -webkit-mask-image: url(/img/notch.svg); // Set by `icon` variable
+    //   filter: drop-shadow(0 1px 5px red);
+    // }
+
+    // > img.notch {
+    //   position: absolute;
+    //   bottom: 0;
+    //   left: 50%;
+    //   transform: translate(-50%, 100%);
+    //   fill: red;
+    // }
 
     /* Notch */
     // &::before {
@@ -421,6 +463,10 @@
     //     transform: rotate(45deg);
     //     z-index: -1;
     //     background-color: inherit;
+    //     bottom: 0.05em;
+    //     left: 50%;
+    //     transform: translate(-50%, 50%) rotate(45deg);
+    //     box-shadow: 0 0 0 var(--wizard-border-thickness) var(--wizard-border-color);
     // }
 
     // &.above {
@@ -490,8 +536,8 @@
   }
 
   #wizard :global(.definition) {
-    background-color: black(0.06);
-    border-top: 1px solid rgba(var(--foregroundColor), 0.05);
+    background-color: var(--wizard-definition-bg);
+    border-top: 1px solid var(--wizard-separator);
     padding: 8px;
   }
   
@@ -518,7 +564,7 @@
 <div 
   id="wizard"
   bind:this={domEl}
-  use:setAsCustomPropOnNode={{wizardOffset, minWidth}}
+  use:setAsCustomPropOnNode={{wizardOffset, minWidth, maxWidth}}
   class:isVisible={$store.isVisible}
   class:isIncomplete={element?.isIncomplete}
   tabindex="-1"
@@ -574,5 +620,9 @@
       suppressWarnings={$store.suppressWarnings}
     />
   {/if}
+  <!-- <div class="notch"></div> -->
+  <!-- <img class="notch" src="img/notch.svg"> -->
+
+  <svg class="notch" width="16" height="8" xmlns="http://www.w3.org/2000/svg"><path d="M6.857 6.857 0 0h16L9.143 6.857a1.616 1.616 0 0 1-2.286 0Z" fill="#000" fill-rule="evenodd"/></svg>
 
 </div>

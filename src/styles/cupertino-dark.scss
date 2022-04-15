@@ -23,7 +23,7 @@ body {
   --editor-header-height:           2.25em;
   --editor-side-padding:            4em;
   
-  --wizard-background-color:        var(--window-background-color);
+  --wizard-bg:        var(--window-background-color);
   --wizard-error:                 rgba(255, 0, 0, 0.5);
   --wizard-border-color:            var(--separator-color);
   --wizard-border-thickness:        1px;
@@ -38,7 +38,7 @@ body {
   --citation-mark-border:           #{colorVar("accent", $light: -30%, $alpha: 0.1)};
   --citation-mark-highlight:      white;
   --citation-mark-highlight-bg:     #{colorVar("accent")};
-  --citation-source:                #{colorVar("accent", $light: -20%)};
+  --citation-source-text:                #{colorVar("accent", $light: -20%)};
   --citation-source-bg:             #{colorVar("accent", $alpha: 0.05)};
   --citation-source-md:             #{colorVar("accent", $light: -20%, $alpha: 0.6)};
 
@@ -66,7 +66,7 @@ body {
   --footnote-mark-border:           #{colorVar("accent", $light: -30%, $alpha: 0.1)};
   --footnote-mark-highlight:      white;
   --footnote-mark-highlight-bg:     #{colorVar("accent")};
-  --footnote-source:                #{colorVar("accent")};
+  --footnote-source-text:                #{colorVar("accent")};
   --footnote-source-bg:             #{colorVar("accent", $alpha: 0.05)};
   --footnote-source-md:             #{colorVar("accent", $alpha: 0.6)};
   
@@ -99,11 +99,11 @@ body {
   --image-mark-border:              #{colorVar("accent", $light: -30%, $alpha: 0.1)};
   --image-mark-highlight:         white;
   --image-mark-highlight-bg:        #{colorVar("accent")};
-  --image-source:                   #{colorVar("accent", $light: -15%)};
-  --image-source-url:               #{colorVar("accent", $light: -15%, $alpha: 0.8)};
-  --image-source-title:             #{colorVar("accent", $light: -15%, $alpha: 0.6)};
-  --image-source-bg:                #{colorVar("accent", $alpha: 0.05)};
-  --image-source-md:                #{colorVar("accent", $light: -20%, $alpha: 0.6)};
+  --image-source-text:                   #{colorVar("accent", $light: -15%)};
+  --image-source-text-url:               #{colorVar("accent", $light: -15%, $alpha: 0.8)};
+  --image-source-text-title:             #{colorVar("accent", $light: -15%, $alpha: 0.6)};
+  --image-source-text-bg:                #{colorVar("accent", $alpha: 0.05)};
+  --image-source-text-md:                #{colorVar("accent", $light: -20%, $alpha: 0.6)};
   
   // Applies to url-in-brackets and email-in-brackets
   --in-brackets:                    #{colorVar("accent", $light: -10%)};
@@ -157,8 +157,8 @@ body {
   --task-mark-border:               #{colorVar("accent", $light: -30%, $alpha: 0.1)};
   --task-mark-highlight:            white;
   --task-mark-highlight-bg:         #{colorVar("accent")};
-  --task-source:                    #{colorVar("accent", $light: -20%)};
-  --task-source-bg:                 #{colorVar("accent", $alpha: 0.05)};
-  --task-source-md:                 #{colorVar("accent", $light: -20%, $alpha: 0.6)};
+  --task-source-text:                    #{colorVar("accent", $light: -20%)};
+  --task-source-text-bg:                 #{colorVar("accent", $alpha: 0.05)};
+  --task-source-text-md:                 #{colorVar("accent", $light: -20%, $alpha: 0.6)};
 
 }
