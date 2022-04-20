@@ -165,8 +165,8 @@
       minWidth = '0'
       maxWidth = '22em'
     } else if (component == Citation) {
-      minWidth = '24em'
-      maxWidth = '24em'
+      minWidth = '23em'
+      maxWidth = '23em'
     } else {
       minWidth = '20em'
       maxWidth = '22em'

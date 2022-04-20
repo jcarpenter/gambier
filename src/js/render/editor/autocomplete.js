@@ -300,7 +300,10 @@ function findHints(cm, options) {
 
         // Is string a citation? E.g. "[@|]"
         const isCitation = string.substring(0, 2) == "[@" && /\[@[^\]]*?\]/.test(string)
+
         if (isCitation) {
+
+          console.log(cm)
          
           const text = string.slice(2, string.length - 1) // Text inside brackets
           const textIsEmpty = text == ""

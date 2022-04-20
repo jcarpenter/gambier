@@ -4,9 +4,9 @@ import svelte from 'rollup-plugin-svelte'
 import cssOnly from 'rollup-plugin-css-only'
 import sveltePreprocess from 'svelte-preprocess'
 
+// const isMac = process.platform === 'darwin'
+// const isWin = process.platform === 'win32'
 const production = !process.env.ROLLUP_WATCH
-const isMac = process.platform === 'darwin'
-const isWin = process.platform === 'win32'
 
 export default [
 
@@ -49,9 +49,17 @@ export default [
     input: 'src/js/render/app.js',
     plugins: [
       svelte({
+        // Set Svelte compiler options:
+        // Docs: https://svelte.dev/docs#compile-time-svelte-compile
+        compilerOptions: {
+          // "If true, Svelte generate sourcemaps for components. Use an object with js or css for more granular control of sourcemap generation. By default, this is true."
+          enableSourcemap: !production,
+          // "If true, causes extra code to be added to components that will perform runtime checks and provide debugging information during development."
+          dev: !production,
+        },
         // Svelte preprocessors allow us to (among other things) use SCSS, Typescript (etc) in our components. `svelte-preprocess` is "a Svelte preprocessor with sensible defaults for SCSS, Less, Typescript, etc." It includes out-of-the-box support for SCSS. We can create our Svelte processors, but using one off the shelf saves us the hassle. If we declare styles in our components with `<style lang="scss">`, it will process them as SCSS.
-        // svelte-preprocess docs: https://github.com/sveltejs/svelte-preprocess 
-        // Svelte docs: https://svelte.dev/docs#compile-time-svelte-preprocess
+        // svelte-preprocess (plugin) docs: https://github.com/sveltejs/svelte-preprocess 
+        // Preprocessor docs: https://svelte.dev/docs#compile-time-svelte-preprocess
         preprocess: sveltePreprocess(
           {
             scss: {
@@ -60,12 +68,6 @@ export default [
             }
           }
         ),
-        // Set Svelte compiler options:
-        // Docs: https://svelte.dev/docs#compile-time-svelte-compile
-        compilerOptions: {
-          // "If true, causes extra code to be added to components that will perform runtime checks and provide debugging information during development."
-          dev: !production,
-        }
       }),
       // Extract Svelte component CSS into a separate file. This is allegeldy better for performance, and also required by rollup-plugin-svelte as of v7.
       // Per the docs: https://github.com/sveltejs/rollup-plugin-svelte#extracting-css 
@@ -80,7 +82,7 @@ export default [
       commonjs()
     ],
     output: {
-      sourcemap: !production,
+      sourcemap: production ? false : "inline",
       format: 'es',
       file: 'app/app.js',
       banner: '// WORKAROUND for immer.js esm (see https://github.com/immerjs/immer/issues/557)\nwindow.process = { env: { NODE_ENV: "production" } };',

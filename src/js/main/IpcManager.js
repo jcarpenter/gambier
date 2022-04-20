@@ -281,35 +281,6 @@ export function init() {
 // //   // }
 // // })
 
-// // ipcMain.handle('getResolvedPath', async (event, basePath, filepath) => {
-// //   return path.resolve(basePath, filepath)
-// // })
-
-// // ipcMain.handle('getParsedPath', async (event, filepath) => {
-// //   return path.parse(filepath)
-// // })
-
-// // ipcMain.handle('ifPathExists', async (event, filepath) => {
-// //   const exists = await pathExists(filepath)
-// //   return { path: filepath, exists: exists }
-// // })
-
-
-// // ipcMain.handle('getFileById', async (event, id, encoding) => {
-
-// //   // Get path of file with matching id
-// //   const filePath = store.store.contents.find((f) => f.id == id).path
-
-// //   // Load file and return
-// //   let file = await readFile(filePath, encoding)
-// //   return file
-// // })
-
-// // ipcMain.handle('pathJoin', async (event, path1, path2) => {
-// //   return path.join(path1, path2)
-// // })
-
-
 /**
  * Save the selected doc
  */
