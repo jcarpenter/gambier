@@ -58,6 +58,12 @@ export function makeEditor(parentElement, parentPanel) {
     // replaced by N tabs. Default is false."
     indentWithTabs: false,
 
+    // "Choos a scrollbar implementation." We use with the Simple Scrollbars addon
+    // to enable more control over style. "Overlay" is one of the two addon modes.
+    // Docs: https://codemirror.net/doc/manual.html#option_scrollbarStyle
+    // Docs: https://codemirror.net/doc/manual.html#addon_simplescrollbars
+    scrollbarStyle: "overlay",
+
     // gutters: [{className: 'toby', style: 'background: red;'}],
 
     // "If set to true (the default), will keep the cursor height constant for an entire line (or wrapped part of a line). When false, the cursor's height is based on the height of the adjacent reference character."

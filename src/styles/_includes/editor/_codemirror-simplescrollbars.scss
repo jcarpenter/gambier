@@ -1,0 +1,74 @@
+.CodeMirror-overlayscroll .CodeMirror-scrollbar-filler, 
+.CodeMirror-overlayscroll .CodeMirror-gutter-filler {
+  display: none;
+}
+
+.CodeMirror-overlayscroll-horizontal, 
+.CodeMirror-overlayscroll-vertical {
+  position: absolute;
+  z-index: 6;
+  div {
+    position: absolute;
+    background: var(--editor-scrollbar);
+    border-radius: 3px;
+  }
+}
+
+.CodeMirror-overlayscroll-horizontal {
+  bottom: 2px; 
+  left: 0;
+  height: 6px;
+  div {
+    bottom: 0;
+    height: 100%;
+  }
+}
+
+.CodeMirror-overlayscroll-vertical {
+  right: 2px; 
+  top: 0;
+  width: 6px;
+  div {
+    right: 0;
+    width: 100%;
+  }
+}
+
+// NOTE: These styles apply to the second, "simple" mode
+// of the Simple Scrollbars addon, which we don't use.
+// See: https://codemirror.net/demo/simplescrollbars.html
+
+// .CodeMirror-simplescroll-horizontal div, 
+// .CodeMirror-simplescroll-vertical div {
+//   position: absolute;
+//   background: #ccc;
+//   -moz-box-sizing: border-box;
+//   box-sizing: border-box;
+//   border: 1px solid #bbb;
+//   border-radius: 2px;
+// }
+
+// .CodeMirror-simplescroll-horizontal, 
+// .CodeMirror-simplescroll-vertical {
+//   position: absolute;
+//   z-index: 6;
+//   background: #eee;
+// }
+
+// .CodeMirror-simplescroll-horizontal {
+//   bottom: 0; left: 0;
+//   height: 8px;
+// }
+// .CodeMirror-simplescroll-horizontal div {
+//   bottom: 0;
+//   height: 100%;
+// }
+
+// .CodeMirror-simplescroll-vertical {
+//   right: 0; top: 0;
+//   width: 8px;
+// }
+// .CodeMirror-simplescroll-vertical div {
+//   right: 0;
+//   width: 100%;
+// }

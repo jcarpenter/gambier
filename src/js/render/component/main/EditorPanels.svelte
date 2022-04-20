@@ -178,7 +178,7 @@
     display: flex;
     flex-direction: row;
     overflow: hidden;
-    padding: 0 1em;
+    padding: 0 0 0 1em;
   }
 </style>
 

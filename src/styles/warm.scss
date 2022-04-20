@@ -1,5 +1,6 @@
 @use "_helpers" as *;
 @use "_includes/base" as *;
+@use "_includes/editor/codemirror" as *;
 @use "_includes/mac-colors-light" as *;
 @use "_includes/mac-images" as *;
 @use "_includes/mac-misc" as *;
@@ -61,14 +62,15 @@ body {
   $common-mark-highlighted-text:    accentColor($l:-30%);
   $common-mark-highlighted-bg:      accentColor($l:+20%);
 
-  --editor-default-text-color:    hsl(0, 0%, 25%);
-  --editor-selected-text-color:     var(--text-selected-background); 
-  --editor-not-focused-selected-text-color:     hsl(0, 0%, 90%);
   --editor-background-color:        hsl(0, 0%, 97%);
   --editor-border-radius:           5px;
+  --editor-default-text-color:    hsl(0, 0%, 25%);
   --editor-header-height:           2.25em;
+  --editor-not-focused-selected-text-color:     hsl(0, 0%, 90%);
+  --editor-scrollbar:               #{foregroundColor(0.25)};
+  --editor-selected-text-color:     var(--text-selected-background); 
   --editor-side-padding:            4em;
-  
+
   --mark-border-radius:             0.2rem;
   --mark-border-width:              0px;
   --source-bg-borderRadius:         0.2em;
