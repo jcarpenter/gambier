@@ -3,8 +3,6 @@
   import FormRow from "../ui/FormRow.svelte";
   import PopupButton from "../ui/PopupButton.svelte";
 
-  export let leftColumn
-
   let items = []
 
   $: size = $state.editorFont.size
@@ -26,7 +24,7 @@
 
 <style lang="scss"></style>
 
-<FormRow label={'Font size:'} {leftColumn} margin={'8px 0 0'} labelTopOffset={'3px'}>
+<FormRow label={'Font size:'} labelTopOffset={'2px'}>
   <PopupButton 
     width='60px' 
     {items}

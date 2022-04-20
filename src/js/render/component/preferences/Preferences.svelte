@@ -65,26 +65,27 @@
   }
 
   .window-body {
+    width: fit-content;
     max-width: 600px;
     margin: 0 auto;
-    height: 100%;
     padding: 20px;
-    // display: flex;
-    // flex-direction: column;
-    // gap: 10px 0;
     overflow-x: hidden;
     overflow-y: scroll;
-    // align-items: center;
     background: var(--window-background-color);
 
-    // For dark mode, we want the background to be a darker 
-    // shade the usual window-background-color.
-    // @include dark { 
-    //   filter: brightness(0.6);
-    // }
-    // @include light {
-    //   background: var(--window-background-color);
-    // }
+    // Force all child rows into grid with two-columns,
+    // to ensure that row contents align, regardless of
+    // individual content sizes. This is a patter we
+    // can use with FormRows.
+    display: grid;
+    grid-template-columns: auto fit-content(340px);
+    row-gap: 8px;
+
+    > :global(div.row) {
+      // Ignore top-level FormRow div and access child
+      // elements.
+      display: contents;
+    }
   }
 
 </style>
@@ -117,10 +118,9 @@
 
     {#if activeTab=='general'} 
 
-      <EditorFontSize leftColumn={'200px'} />
-      <EditorLineHeight leftColumn={'200px'} />
-      <EditorMaxLineWidth leftColumn={'200px'} />
-
+      <EditorFontSize/>
+      <EditorLineHeight/>
+      <EditorMaxLineWidth/>
     
     <!---------- markdown ---------->
 
@@ -128,8 +128,7 @@
 
       <!-- Strikethrough -->
 
-      <FormRow label={'Strong delimiters:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
-
+      <FormRow label={'Strong delimiters:'} multiLine={true} labelTopOffset={'3px'}>
         <PopupButton 
           width='110px' 
           items={[
@@ -154,7 +153,7 @@
 
       <!-- Strikethrough -->
 
-      <FormRow label={'Strikethrough:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+      <FormRow label={'Strikethrough:'} multiLine={true} labelTopOffset={'3px'}>
         <Checkbox 
           label={'Strikethrough'}
           checked={$state.markdown.strikethrough}
@@ -175,7 +174,7 @@
 
       <!-- Figures -->
 
-      <FormRow label={'Figures:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+      <FormRow label={'Figures:'} multiLine={true} labelTopOffset={'3px'}>
         <Checkbox 
           label={'Implicit Figures'}
           checked={$state.markdown.implicitFigures}
@@ -194,7 +193,7 @@
         </Description>  
       </FormRow>
       
-      <FormRow leftColumn={'200px'} margin={'8px 0 0'}>
+      <FormRow margin={'8px 0 0'}>
         <Checkbox 
           label={'Show Thumbnail'}
           disabled={!$state.markdown.implicitFigures}
@@ -211,7 +210,7 @@
         />
       </FormRow>
 
-      <FormRow leftColumn={'200px'} margin={'4px 0 0'}>
+      <FormRow margin={'4px 0 0'}>
         <Checkbox 
           label={'Show Caption'}
           disabled={!$state.markdown.implicitFigures}
@@ -231,7 +230,7 @@
 
     {:else if activeTab=='media'} 
 
-      <FormRow label={'Images:'} leftColumn={'200px'} margin={'8px 0 0'} multiLine={true} labelTopOffset={'3px'}>
+      <FormRow label={'Images:'} multiLine={true} labelTopOffset={'3px'}>
         <Checkbox 
           label={'Always copy image files into project'}
           checked={$state.markdown.strikethrough}

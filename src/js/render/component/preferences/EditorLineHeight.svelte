@@ -3,8 +3,6 @@
   import FormRow from "../ui/FormRow.svelte";
   import PopupButton from "../ui/PopupButton.svelte";
 
-  export let leftColumn
-
   let items = []
 
   $: size = $state.editorLineHeight.size
@@ -27,7 +25,7 @@
 
 <style lang="scss"></style>
 
-<FormRow label={'Line height:'} {leftColumn} margin={'8px 0 0'} labelTopOffset={'3px'}>
+<FormRow label={'Line height:'} labelTopOffset={'2px'}>
   <PopupButton 
     width='60px' 
     {items}

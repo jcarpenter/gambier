@@ -1,11 +1,11 @@
 <script lang='js'>
   import { setAsCustomPropOnNode, setSize } from "./actions";
   import { fade } from 'svelte/transition';
-import AddressBar from "../main/AddressBar.svelte";
-import AllDocuments from "../sidebar/AllDocuments.svelte";
+  // import AddressBar from "../main/AddressBar.svelte";
+  // import AllDocuments from "../sidebar/AllDocuments.svelte";
   
   export let maxWidth = '100%'
-  export let leftColumn = '' // '100px'
+  export let leftColumn = 'fit-content' // '100px'
   export let labelTopOffset = '0'
   export let margin = '0'
   export let multiLine = false
@@ -61,6 +61,7 @@ import AllDocuments from "../sidebar/AllDocuments.svelte";
     @include system-regular-font;
     user-select: none;
     flex-basis: var(--leftColumn);
+    min-width: fit-content;
     text-align: right;
     color: var(--label-color);
     flex-shrink: 0;

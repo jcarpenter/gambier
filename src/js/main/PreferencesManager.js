@@ -6,8 +6,8 @@ import url from 'url'
 const preferencesWindowConfig = {
   show: false,
   // width: 1060, // With dev tools open
-  width: 700,
-  height: 480,
+  width: 560,
+  height: 460,
   zoomFactor: 1.0,
   titleBarStyle: 'hidden',
   // resizable: false,
@@ -89,10 +89,10 @@ async function open() {
     global.store.dispatch({ type: 'CLOSE_PREFERENCES' })
   })
 
-  if (!app.isPackaged) {
-    win.webContents.openDevTools();
-    win.setBounds({ width: 1000 })
-  }
+  // if (!app.isPackaged) {
+  //   win.webContents.openDevTools();
+  //   win.setBounds({ width: 1000 })
+  // }
 
   // Load index.html
   // await win.loadFile(path.join(__dirname, 'preferences.html'), {
