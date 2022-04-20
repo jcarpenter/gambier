@@ -89,10 +89,10 @@ async function open() {
     global.store.dispatch({ type: 'CLOSE_PREFERENCES' })
   })
 
-  // if (!app.isPackaged) {
-  //   win.webContents.openDevTools();
-  //   win.setBounds({ width: 1000 })
-  // }
+  if (!app.isPackaged) {
+    win.webContents.openDevTools();
+    win.setBounds({ width: 1000 })
+  }
 
   // Load index.html
   // await win.loadFile(path.join(__dirname, 'preferences.html'), {
