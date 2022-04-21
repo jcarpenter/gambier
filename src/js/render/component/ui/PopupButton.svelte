@@ -120,5 +120,5 @@
 
 {#if $$slots}
   <span class="description"></span>
-  <slot></slot>
+  <slot name="description"></slot>
 {/if}

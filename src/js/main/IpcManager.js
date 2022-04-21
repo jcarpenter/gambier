@@ -21,6 +21,9 @@ export function init() {
 
   ipcMain.on('showWindow', (evt) => {
     const win = BrowserWindow.fromWebContents(evt.sender)
+    // Update state
+    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
+    // Show window
     win.show()
   })
 

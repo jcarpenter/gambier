@@ -9,6 +9,7 @@
   import Separator from './ui/Separator.svelte'
   import Menu from './ui/Menu.svelte'
   import Tooltip from './ui/Tooltip.svelte'
+  import { onMount } from 'svelte';
   
   import { setAsCustomPropOnNode } from './ui/actions';
   import Lightbox from './main/Lightbox.svelte';
@@ -23,12 +24,15 @@
   // import State from './dev/State.svelte'
   // import FunctionalTests from './dev/FunctionalTests.svelte';
 
-
   $: directoryIsSet = $project.directory
   $: filesPopulated = $files.tree
   $: isWindowDraggedOver = $project.window.isDraggedOver
 
   $: sidebarWidth = $sidebar.isOpen ? $sidebar.width : 0
+
+  onMount(async () => {
+    console.log("Mounted")
+  })
 
   /**
    * This function and the next set the `isDraggedOver` bool on the window.
@@ -55,7 +59,7 @@
   
 </script>
 
-<style lang="scss">@use "src/styles/_helpers" as *;
+<style lang="scss">
 
   #main {
     position: fixed;
@@ -86,7 +90,7 @@
   on:drop|preventDefault={onDrop} 
 /> 
 
-<OverlayGrid />
+<!-- <OverlayGrid /> -->
 <Tooltip />
 <Menu />
 <Wizard />

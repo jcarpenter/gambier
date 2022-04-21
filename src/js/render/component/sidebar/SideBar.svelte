@@ -90,7 +90,7 @@
 
 </script>
 
-<style lang="scss">@use "src/styles/_helpers" as *;
+<style lang="scss">
   #sidebar {
     position: fixed;
     width: calc(var(--sidebarWidth) * 1px);

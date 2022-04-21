@@ -4,6 +4,8 @@ import path from 'path'
 import url from 'url'
 import { wait } from '../shared/utils'
 
+const showDevTools = app.isPackaged
+
 const browserWindowConfig = {
   show: false,
   width: 700,
@@ -74,7 +76,6 @@ export async function createWindow(id, project) {
   // win.webContents.zoomFactor = 1.0
 
   // Listen for 'close' action. Can be triggered by either 1) manually closing individual window, (e.g. click close button on window, or type Cmd-W), or 2) quitting the app. 
-
   // If closed manually, this event is triggered twice. The first time, we prevent the default and tell webContents to save open documents. That process results in window.status being set to `safeToClose`. ProjectManager catches that state change, and tells this window to close again.
   win.on('close', async (evt) => {
 
@@ -115,8 +116,12 @@ export async function createWindow(id, project) {
   win.on('move', debounce(() => { saveWindowBoundsToState(win) }, 1000))
 
   // On focus, set `focusedWindowId` to win.id
+  // (after checking that it's not already).
   win.on('focus', () => {
-    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
+    const isAlreadyFocusedInState = global.state().focusedWindowId == win.projectId
+    if (!isAlreadyFocusedInState) {
+      global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
+    }
   })
 
   /*
@@ -139,11 +144,8 @@ export async function createWindow(id, project) {
     global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
   })
 
-  // Open DevTools
-  if (!app.isPackaged) win.webContents.openDevTools();
- 
-  // Load index.html (old way)
-  // await win.loadFile(path.join(__dirname, 'index.html'), {
+  // Open DevTools if boolean is true
+  if (showDevTools) win.webContents.openDevTools();
   
   // Load local index.html file
   // "Electron by default allows local resources to be accessed by render processes only when their html files are loaded from local sources with the file:// protocol for security reasons."

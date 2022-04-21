@@ -1,15 +1,14 @@
-import chroma from "chroma-js"
-import { stateHasChanged, unEscape, wait } from "../shared/utils"
+import { stateHasChanged, wait } from "../shared/utils"
 
 
 /**
  * Set initial theme values
  * @param {*} initialColors 
  */
-export function init(state) {
+export async function init(state) {
 
   // Set stylsheets
-  setTheme(state)
+  await setTheme(state)
   setSystemColorCSSVars(state)
   setEditorCSSVars(state)
 }
@@ -32,7 +31,7 @@ export async function updateTheme(newState, patches) {
     stateHasChanged(patches, "editorMaxLineWidth")
 
   // Update
-  if (isThemeChanged) setTheme(newState)
+  if (isThemeChanged) await setTheme(newState)
   if (isThemeChanged || isSystemColorsChanged) setSystemColorCSSVars(newState)
   if (isEditorTypographyChanged) setEditorCSSVars(newState)
 
@@ -56,16 +55,22 @@ export async function setTheme(state) {
   // If state.theme.id is 'gibsons', then stylesheet 
   // href is './styles/themes/gibsons.css'.
   const stylesheet = document.getElementById('theme')
-  stylesheet.setAttribute('href', `styles/${state.theme.id}.css`)
+  const url = `styles/${state.theme.id}.css`
+  stylesheet.setAttribute('href', url)
 
   // Set data-theme-isDark
   document.body.setAttribute('data-theme-isDark', state.theme.isDark)
+
+  // Wait for stylesheet to load
+  // await new Promise((resolve) => {
+  //   stylesheet.onload = () => resolve()
+  // })
 
   // Preload theme images.
   // Have to insert brief pause before-hand, to account for time
   // it takes to load the new stylesheet.
   await wait(25)
-  preloadCssImages()
+  await preloadCssImages()
 }
 
 
@@ -102,7 +107,7 @@ function setEditorCSSVars(state) {
  * in the new theme, and add a `link rel=preload` for each.
  * This forces the browser to preload the images.
  */
-function preloadCssImages() {
+async function preloadCssImages() {
 
   // Get theme stylesheet
   const stylesheets = [...document.styleSheets] // Have to convert to Array
@@ -112,7 +117,11 @@ function preloadCssImages() {
   // By convention we define theme image CSS variables
   // on the body (and most/all other variables).
   const bodyRules = [...themeStylesheet.rules].filter((r) => r.selectorText == "body")
-  
+ 
+  // We listen for all images to load before finished function
+  // We push a promise 
+  let imagesLoading = []
+
   // Find the CSS variables on body that include a `url(...)` 
   // in their value, and then force those URLs to preload by
   // creating `link rel=preload` elements in `head` for each.
@@ -139,9 +148,16 @@ function preloadCssImages() {
             preloadLink.as = "image"
             preloadLink.crossOrigin = "anonymous"
             document.head.appendChild(preloadLink)
+            const img = new Image()
+            img.src = url
+            // Listen for when image is loaded and ready to use
+            imagesLoading.push(img.decode())
           }
         }
       }
     }
   }
+
+  // Only let function finish once all images are loaded and ready to use
+  await Promise.all(imagesLoading)
 }

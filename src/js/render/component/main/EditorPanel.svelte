@@ -247,7 +247,7 @@
 
 </script>
 
-<style lang="scss">@use "src/styles/_helpers" as *;
+<style lang="scss">
 
   // ------ Top-level ------ //
 

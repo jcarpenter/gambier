@@ -3,10 +3,11 @@ import path from 'path'
 import { stateHasChanged, wait } from '../shared/utils'
 import url from 'url'
 
+const showDevTools = false
+
 const preferencesWindowConfig = {
   show: false,
-  // width: 1060, // With dev tools open
-  width: 560,
+  width: showDevTools ? 1000 : 560,
   height: 460,
   zoomFactor: 1.0,
   titleBarStyle: 'hidden',
@@ -28,6 +29,7 @@ const preferencesWindowConfig = {
     preload: path.join(__dirname, 'preload.js')
   }
 }
+
 
 export function init() {
 
@@ -52,17 +54,17 @@ async function open() {
   // Bug: https://github.com/electron/electron/issues/26842
   const backgroundColor = global.state().systemColors.windowBackgroundColor
   if (backgroundColor) win.setBackgroundColor(backgroundColor)
-  
-  win.once('ready-to-show', () => {
-    win.show()
-  })
 
   // 'projectId' is a bit of a misnomer for Preferences, but we use it for the sake of consistency.
   win.projectId = 'preferences'
 
   // On focus, set `focusedWindowId` to win.id
+  // (after checking that it's not already).
   win.on('focus', () => {
-    global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
+    const isAlreadyFocusedInState = global.state().focusedWindowId == win.projectId
+    if (!isAlreadyFocusedInState) {
+      global.store.dispatch({ type: 'FOCUSED_WINDOW' }, win)
+    }
   })
 
   /*
@@ -89,10 +91,9 @@ async function open() {
     global.store.dispatch({ type: 'CLOSE_PREFERENCES' })
   })
 
-  // if (!app.isPackaged) {
-  //   win.webContents.openDevTools();
-  //   win.setBounds({ width: 1000 })
-  // }
+  if (showDevTools) {
+    win.webContents.openDevTools();
+  }
 
   // Load index.html
   // await win.loadFile(path.join(__dirname, 'preferences.html'), {

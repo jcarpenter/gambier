@@ -50,7 +50,10 @@ export function create() {
         label: 'Paste as Plain Text',
         id: 'edit-pasteAsPlainText',
         accelerator: 'CmdOrCtrl+Shift+Alt+V',
-        selector: 'paste:',
+        // selector: 'paste:',
+        click(item, focusedWindow) {
+          // focusedWindow.webContents.send('replaceInFiles')
+        }
       }),
   
       new MenuItem({
