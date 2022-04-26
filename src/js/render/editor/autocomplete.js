@@ -302,8 +302,6 @@ function findHints(cm, options) {
         const isCitation = string.substring(0, 2) == "[@" && /\[@[^\]]*?\]/.test(string)
 
         if (isCitation) {
-
-          console.log(cm)
          
           const text = string.slice(2, string.length - 1) // Text inside brackets
           const textIsEmpty = text == ""
@@ -315,8 +313,7 @@ function findHints(cm, options) {
             console.warn("Bibliography not found")
             return accept(null)
           }
-          const bibliographyString = await window.api.invoke('getBibliography', doc.bibliography.path)
-          let bibliography = JSON.parse(bibliographyString)
+          let bibliography = cm.panel.bibliography.data
 
           // If user has entered text, filter results by title  
           if (!textIsEmpty) {

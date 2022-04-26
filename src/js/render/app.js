@@ -1,5 +1,6 @@
-import * as StateManager from './StateManager'
+import * as CitationManager from './CitationManager'
 import * as FilesManager from './FilesManager'
+import * as StateManager from './StateManager'
 import * as ThemeManager from './ThemeManager'
 import { defineCodeMirrorMode } from './editor/codeMirrorMode'
 import Layout from './component/Layout.svelte'
@@ -17,6 +18,7 @@ async function init() {
   // Set initial values
   StateManager.init(state)
   FilesManager.init(files)
+  CitationManager.init()
 
   // Define CodeMirror "Gambier" mode. We only need to do this once.
   // Individual CodeMirror instances load via `mode: 'gambier'` in their setup configs.

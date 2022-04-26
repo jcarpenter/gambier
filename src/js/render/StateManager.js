@@ -61,8 +61,6 @@ let oldState = {}
  */
 function updateFromPatches(patches) {
 
-  console.log('updateFromPatches')
-
   // Update stateAsObject
   oldState = {...stateAsObject}
   stateAsObject = applyPatches(stateAsObject, patches)

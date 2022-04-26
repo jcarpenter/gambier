@@ -4,7 +4,7 @@ import path from 'path'
 import url from 'url'
 import { wait } from '../shared/utils'
 
-const showDevTools = app.isPackaged
+const showDevTools = !app.isPackaged
 
 const browserWindowConfig = {
   show: false,

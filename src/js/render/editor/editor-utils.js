@@ -3,7 +3,7 @@ import { markDoc } from "./mark"
 import * as map from './map'
 import { blankLineRE, listStartRE, headerStartRE, blockQuoteStartRE } from "./regexp"
 import { Pos } from "codemirror"
-
+import locale from 'locale-en-us'
 
 
 // -------- GET DOCUMENT DETAILS -------- //
@@ -479,6 +479,16 @@ export async function loadDoc(cm, doc) {
   const text = doc.path ?
     await window.api.invoke('getFileByPath', doc.path, 'utf8') : ''
 
+  // Get bibliography file contents (if a working bib is defined in 
+  // frontmatter) and attach to `cm.panel`
+  if (doc.bibliography.path) {
+    const bibliographyString = await window.api.invoke('getBibliography', doc.bibliography.path)
+    cm.panel.bibliography = {
+      path: doc.bibliography.path,
+      data: JSON.parse(bibliographyString)
+    }
+  }
+
   // Load the doc text into the editor, and clear history.
   // "Each editor is associated with an instance of CodeMirror.Doc, its document. A document represents the editor content, plus a selection, an undo history, and a mode. A document can only be associated with a single editor at a time. You can create new documents by calling the CodeMirror.Doc(text: string, mode: Object, firstLineNumber: ?number, lineSeparator: ?string) constructor" — https://codemirror.net/doc/manual.html#Doc
   cm.swapDoc(CodeMirror.Doc(text))
@@ -498,6 +508,7 @@ export async function loadDoc(cm, doc) {
   markDoc(cm)
 
   cm.refresh()
+
 
   // setCursor(cm)
 }

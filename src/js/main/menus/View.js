@@ -318,19 +318,23 @@ export function create() {
         ______________________________,
         new MenuItem({
           label: 'Developer',
+          id: 'view-developer',
           submenu: [
             new MenuItem({
               label: 'Toggle Developer Tools',
+              id: 'view-developer-toggle-dev-tools',
               accelerator: isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I',
               role: 'toggleDevTools',
             }),
             new MenuItem({
               label: 'Reload',
+              id: 'view-developer-reload',
               accelerator: 'CmdOrCtrl+R',
               role: 'reload'
             }),
             new MenuItem({
               label: 'Toggle Grid',
+              id: 'view-developer-toggle-grid',
               accelerator: 'CmdOrCtrl+Alt+G',
               click() {
                 global.store.dispatch({
@@ -425,6 +429,12 @@ export function onStateChanged(state, oldState, project, oldProject, panel, pref
     const id = item.id.replace('view-theme-', '')
     item.checked = id == state.theme.id
   })
+  
+  appMenu.getMenuItemById('view-developer-toggle-dev-tools').enabled = true
+  appMenu.getMenuItemById('view-developer-reload').enabled = true
+  appMenu.getMenuItemById('view-developer-toggle-grid').enabled = true
+
+  // Enable developer menu options if app is packaged
 
   // Set Sidebar menu items enabled and checked
   const sidebarTabs = ['project', 'allDocs', 'mostRecent', 'tags', 'media', 'search']

@@ -4,6 +4,8 @@
   import FormRow from '../../ui/FormRow.svelte';
   import InputText from '../../ui/InputText.svelte';
   import { store } from '../../../WizardManager';
+  import { getRenderedCitation } from '../../../CitationManager';
+
   
   export let cm = null
   export let element = null
@@ -66,7 +68,7 @@
     }
 
     // Try to get rendered citation
-    const result = await window.api.invoke('getCitation', doc.bibliography.path, element.markdown)
+    const result = await getRenderedCitation(cm.panel.bibliography.data, element.markdown)
 
     if (result) {
       renderedCitation = result
@@ -98,7 +100,7 @@
     line-height: 1.4em;
     padding: 8px 10px !important;
     border-radius: 0 0 var(--wizard-border-radius) var(--wizard-border-radius);
-    min-height: calc(1.4em * 5);
+    // min-height: calc(1.4em * 5);
   }
 
   .definition :global(a) {

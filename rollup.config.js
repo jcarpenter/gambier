@@ -78,7 +78,7 @@ export default [
       }),
       // These two plugins enable us to use external dependencies from npm.
       // Docs: https://github.com/rollup/plugins/tree/master/packages/commonjs
-      resolve(),
+      resolve({ preferBuiltins: false }),
       commonjs()
     ],
     output: {

@@ -4,12 +4,11 @@ import path from 'path'
 import { deleteFile, deleteFiles, selectProjectDirectoryFromDialog } from './actions/index.js'
 import matter from 'gray-matter'
 import { isValidHttpUrl } from '../shared/utils.js'
-import getCitation from './getCitation.js'
 
 export function init() {
 
 
-  // -------- IPC: Renderer "sends" to Main -------- //
+  /* ------------ IPC: Renderer "sends" to Main ----------- */
 
   ipcMain.on('saveImageFromClipboard', async (evt) => {
     const win = BrowserWindow.fromWebContents(evt.sender)
@@ -132,15 +131,26 @@ export function init() {
     }
   })
 
-  // -------- IPC: Invoke -------- //
+
+  /* --------------------- IPC: Invoke -------------------- */
 
   ipcMain.handle('getBibliography', async (evt, bibliographyPath) => {
     const bibliography = await readFile(bibliographyPath, 'utf8')
     return bibliography
   })
 
-  ipcMain.handle('getCitation', async (evt, bibliographyPath, citekey) => {
-    return await getCitation(bibliographyPath, citekey)
+  /**
+   * Load and return CSL file. This is used to style
+   * rendered citations. 
+   * TODO: Make this dynamic. Is currently hard-coded to a 
+   * CSL definition of my own making. But there are many
+   * available, and we should make it configurable.
+   * https://github.com/citation-style-language/styles
+   */
+  ipcMain.handle('getCsl', async (evt) => {
+    const cslPath = path.join(app.getAppPath(), 'app/references/joshcarpenter-custom-csl.csl')
+    const csl = await readFile(cslPath, 'utf8')
+    return csl
   })
 
   // Return x/y coordinates of cursor inside sender window
@@ -154,17 +164,13 @@ export function init() {
       y: point.y - bounds.y
     }
 
-    const cursorIsOutsideBounds = 
+    const cursorIsOutsideBounds =
       pos.x < 0 || // left of window
       pos.y < 0 || // above window
       pos.x > bounds.width || // right of window
       pos.y > bounds.height // below window
-    
+
     return cursorIsOutsideBounds ? null : pos
-  })
-  
-  ipcMain.handle('getState', (evt) => {
-    return global.state()
   })
 
   ipcMain.handle('getFiles', (evt) => {
@@ -179,12 +185,26 @@ export function init() {
     return file
   })
 
+  ipcMain.handle('getFormatOfClipboard', (evt) => {
+    return clipboard.availableFormats()
+  })
+
   ipcMain.handle('getHTMLFromClipboard', (evt) => {
     return clipboard.readHTML()
   })
 
-  ipcMain.handle('getFormatOfClipboard', (evt) => {
-    return clipboard.availableFormats()
+  /**
+ * Load and return locale xml file.
+ * TODO: Make this dynamic. Is currently hard-coded path.
+ */
+  ipcMain.handle('getLocale', async (evt) => {
+    const localePath = path.join(app.getAppPath(), 'app/references/locales-en-US.xml')
+    const locale = await readFile(localePath, 'utf8')
+    return locale
+  })
+
+  ipcMain.handle('getState', (evt) => {
+    return global.state()
   })
 
   ipcMain.handle('moveOrCopyFileIntoProject', async (evt, filePath, folderPath, isCopy) => {
@@ -246,43 +266,12 @@ export function init() {
     }
   })
 
-
-
-
 }
 
 
 
 
-
-// -------- IPC: Invoke -------- //
-
-// // ipcMain.handle('getValidatedPathOrURL', async (event, docPath, pathToCheck) => {
-// //   // return path.resolve(basePath, filepath)
-
-// //   /*
-// //   Element: Image, link, backlink, link reference definition
-// //   File type: directory, html, png|jpg|gif, md|mmd|markdown
-// //   */
-
-// //   // console.log('- - - - - -')
-// //   // console.log(pathToCheck.match(/.{0,2}\//))
-// //   const directory = path.parse(docPath).dir
-// //   const resolvedPath = path.resolve(directory, pathToCheck)
-
-// //   const docPathExists = await pathExists(docPath)
-// //   const pathToCheckExists = await pathExists(pathToCheck)
-// //   const resolvedPathExists = await pathExists(resolvedPath)
-
-// //   // console.log('docPath: ', docPath)
-// //   // console.log('pathToCheck: ', pathToCheck)
-// //   // console.log('resolvedPath: ', resolvedPath)
-// //   // console.log(docPathExists, pathToCheckExists, resolvedPathExists)
-
-// //   // if (pathToCheck.match(/.{0,2}\//)) {
-// //   //   console.log()
-// //   // }
-// // })
+/* ------------------ Utility functions ----------------- */
 
 /**
  * Save the selected doc

@@ -32,12 +32,13 @@ let renderToMainChannels = [
 // Main, and await returned response.
 let renderMainRenderInvokeChannels = [
   'getBibliography',
-  'getCitation',
+  'getCsl',
   'getCursorWindowPosition',
   'getFileByPath',
   'getFiles',
   'getFormatOfClipboard',
   'getHTMLFromClipboard',
+  'getLocale',
   'getState',
   'moveOrCopyFileIntoProject',
   'queryDb'

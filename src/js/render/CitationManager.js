@@ -1,8 +1,10 @@
-import { app } from "electron";
-import { readFile } from "fs-extra";
 import convert from "xml-js";
-import path from "path";
 import CSL from "citeproc";
+
+
+let citeproc // instance of citeproc engine
+let style // csl file contents
+let locale // locale file contents
 
 // Find citation keys in strings of text. Supports prefix, id, locator, suffix.
 // Simple: [@timothy2019]
@@ -15,8 +17,89 @@ const citekeyRE = /\[[^\[\]\(\)]*?-?@[a-z0-9_][a-z0-9_:.#$%&\-+?<>~/]*?.*?\](?!\
 // Demo: https://regex101.com/r/QfLdwI/1
 const citekeyComponentsRE = /(?<prefix>[^\n\[\]\(\)]*?)?@(?<id>[a-zA-Z0-9_][^\s,;\]]+)(?:,\s(?<label>[\D]+)\s?(?<locator>[\w\-,:]+))?(?<suffix>.*)?/
 
-// Variable for our citeproc engine. We'll only populate this once.
-let citeproc
+
+/**
+ * Setup citation manager.
+ * - Load CSL styles
+ * - Load locale file
+ * - Create citeproc engine instance
+ * We only need to do these things once.
+ */
+export async function init() {
+
+  // Load csl and locale files
+  style = await window.api.invoke('getCsl')
+  locale = await window.api.invoke('getLocale')
+
+  // Setup citeproc engine
+  citeproc = await makeCiteprocEngine()
+
+}
+
+
+/**
+ * For the specified bibliography and citation, return a rendered
+ * version of the citation.
+ * @param {object} bibliography - Bibliography. Originally loaded from XML file, converted to JSON string, and parsed into as JS object.
+ * @param {string} citekey - Markdown of valid citation. E.g. citekey, prefix, locator, suffix, etc.
+ */
+export async function getRenderedCitation(bibliography, citekey) {
+
+  bibliography.forEach((item) => citeproc.sys.items[item.id] = item)
+  citeproc.updateItems(Object.keys(citeproc.sys.items))
+
+  // Get citekey components (prefix, id, etc)
+  // Groups return as "According to", "@dole2012", "pp.", "3-4"
+  // First use slice to remove enclosing square brackets
+  // [@tim2020] --> tim2020
+  let {
+    prefix = undefined,
+    id = '',
+    label = '',
+    locator = '',
+    suffix = '',
+  } = citekey.slice(1, citekey.length - 1).match(citekeyComponentsRE)?.groups
+
+  if (label) {
+
+    // If label is present, we need to get the full parent term name, 
+    // E.g. the parent term name of "pp." is "page"
+    // Citeproc only accepts parent term names (which is annoying)
+
+    // There might be multiple qualifying parent labels. E.g. "page" and "pages" will
+    // both return for "@marlee98 page 22". This will usually be because the singular is 
+    // subset of the plural, so in these cases, match the plural.
+    // Else, if there's only one match, use it.
+    const matchingLabels = citeproc.sys.locatorLabels.filter(({ term }) => label.includes(term))
+    label = matchingLabels.length > 1 ?
+      matchingLabels.find((m) => m.plural).parentTerm :
+      matchingLabels[0].parentTerm
+  }
+
+  // Remove ugly timestamp locator labels
+  // t. 19:31 -> 19.31
+  // Demo: https://regex101.com/r/Uh1KAd/2/
+  // if (label) label = label.replace(/(t\.|tt\.|times|time)\s?/, '')
+
+  let renderedCitation = citeproc.previewCitationCluster({
+    citationItems: [{
+      prefix,
+      id,
+      label,
+      locator,
+      suffix
+    }],
+    properties: {
+      noteIndex: 0
+    }
+  }, [], [], 'text')
+
+  // Strip {{html}} and {{/html}} from rendered output
+  renderedCitation = renderedCitation.replaceAll(/{{html}}|{{\/html}}/g, "")
+
+  return renderedCitation
+
+}
 
 
 /**
@@ -25,12 +108,6 @@ let citeproc
  * @returns 
  */
 async function makeCiteprocEngine() {
-
-  const stylePath = path.join(app.getAppPath(), 'app/references/joshcarpenter-custom-csl.csl')
-  const localePath = path.join(app.getAppPath(), 'app/references/locales-en-US.xml')
-  
-  const style = await readFile(stylePath, 'utf8')
-  const locale = await readFile(localePath, 'utf8')
 
   const engine = new CSL.Engine({
 
@@ -95,6 +172,7 @@ function getCitationLocatorLabels(locale) {
   // `compact: false` to preserve positions of comments (otherwise they get batched)
   // `trim: true` to remove white space.
   const localeJs = convert.xml2js(locale, { compact: false, trim: true, spaces: 4 })
+  // const localeJs = convert.xml2js(locale, { compact: false, trim: true, spaces: 4 })
 
   // Get "terms" array. 
   // Yes, this is ugly; log localeJs to console to see the hierarchy.
@@ -163,69 +241,4 @@ function getCitationLocatorLabels(locale) {
   locators.sort((a, b) => (a.term > b.term) ? 1 : -1)
 
   return locators
-}
-
-
-export default async function (bibliographyPath, citekey) {
-
-  // Setup citeproc engine the first time through
-  if (!citeproc) citeproc = await makeCiteprocEngine()
-
-  // Load bibliography (list of CSL "items")
-  // Per https://citeproc-js.readthedocs.io/en/latest/csl-json/markup.html
-  const bibliographyString = await readFile(bibliographyPath, 'utf8')
-  const arrayOfItems = JSON.parse(bibliographyString)
-  arrayOfItems.forEach((item) => citeproc.sys.items[item.id] = item)
-  citeproc.updateItems(Object.keys(citeproc.sys.items))
-
-  // Get citekey components (prefix, id, etc)
-  // Groups return as "According to", "@dole2012", "pp.", "3-4"
-  // First use slice to remove enclosing square brackets
-  // [@tim2020] --> tim2020
-  let {
-    prefix = undefined,
-    id = '',
-    label = '',
-    locator = '',
-    suffix = '',
-  } = citekey.slice(1, citekey.length - 1).match(citekeyComponentsRE)?.groups
-
-  if (label) {
-
-    // If label is present, we need to get the full parent term name, 
-    // E.g. the parent term name of "pp." is "page"
-    // Citeproc only accepts parent term names (which is annoying)
-
-    // There might be multiple qualifying parent labels. E.g. "page" and "pages" will
-    // both return for "@marlee98 page 22". This will usually be because the singular is 
-    // subset of the plural, so in these cases, match the plural.
-    // Else, if there's only one match, use it.
-    const matchingLabels = citeproc.sys.locatorLabels.filter(({ term }) => label.includes(term))
-    label = matchingLabels.length > 1 ?
-      matchingLabels.find((m) => m.plural).parentTerm :
-      matchingLabels[0].parentTerm
-  }
-
-  // Remove ugly timestamp locator labels
-  // t. 19:31 -> 19.31
-  // Demo: https://regex101.com/r/Uh1KAd/2/
-  // if (label) label = label.replace(/(t\.|tt\.|times|time)\s?/, '')
-
-  let renderedCitation = citeproc.previewCitationCluster({
-    citationItems: [{
-      prefix,
-      id,
-      label,
-      locator,
-      suffix
-    }],
-    properties: {
-      noteIndex: 0
-    }
-  }, [], [], 'text')
-
-  // Strip {{html}} and {{/html}} from rendered output
-  renderedCitation = renderedCitation.replaceAll(/{{html}}|{{\/html}}/g, "")
-
-  return renderedCitation
 }
