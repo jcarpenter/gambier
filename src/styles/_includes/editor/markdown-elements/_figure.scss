@@ -7,9 +7,9 @@
   // padding at bottom of this line.
   line-height: 0;
 
-  .CodeMirror-widget {
+  .CodeMirror-widget > div {
     border-radius: var(--mark-border-radius);
-    background-color: var(--figure-bg);
+    background-color: var(--figure-mark-bg);
     padding: 0.5em;
 
     height: 100%;
@@ -25,11 +25,11 @@
       height: auto;
       cursor: default;
       overflow: hidden;
-      // background-color: var(--figure-thumb-bg);
-      border-radius: var(--figure-thumb-borderRadius);
-      border-width: var(--figure-thumb-borderWidth);
+      // background-color: var(--figure-mark-thumb-bg);
+      border-radius: var(--figure-mark-thumb-border-radius);
+      border-width: var(--figure-mark-thumb-border-width);
       border-style: solid;
-      border-color: var(--figure-thumb-borderColor);
+      border-color: var(--figure-mark-thumb-border-color);
       // padding: 3px;
     }
 
@@ -41,7 +41,11 @@
       grid-column: 2;
       overflow-x: hidden;
       overflow-y: scroll;
-      color: var(--figure-caption);
+      color: var(--figure-mark-caption);
+    }
+
+    &.highlighted {
+      background: var(--figure-mark-highlight-bg);
     }
   }
 

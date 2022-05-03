@@ -27,12 +27,12 @@ pre.CodeMirror-line.texmath-display {
   }
 
   &.fencedcodeblock-firstLine > [role='presentation'] {
-    border-radius: var(--fencedcodeblock-borderRadius) var(--fencedcodeblock-borderRadius) 0 0;
+    border-radius: var(--fencedcodeblock-border-radius) var(--fencedcodeblock-border-radius) 0 0;
     // padding: 0 0.2em;
   }
 
   &.fencedcodeblock-lastLine > [role='presentation'] {
-    border-radius: 0 0 var(--fencedcodeblock-borderRadius) var(--fencedcodeblock-borderRadius);
+    border-radius: 0 0 var(--fencedcodeblock-border-radius) var(--fencedcodeblock-border-radius);
     // padding: 0 0.2em;
   }
 }

@@ -56,156 +56,161 @@ body {
 /* -------------------------------------------------------------------------- */
   
   // Shared style, since many `md` characters should look the same
-  $common-source-text:              accentColor($s:-20%, $l:-20%);
-  $common-source-bg:                accentColor($a:-0.9);
-  $common-md:                       accentColor($s:-40%, $a:-0.2);
-  $common-mark-highlighted-text:    accentColor($l:-30%);
-  $common-mark-highlighted-bg:      accentColor($l:+20%);
+  $common-source-text:                accentColor($s:-20%, $l:-20%);
+  $common-source-bg:                  accentColor($a:-0.9);
+  $common-md:                         accentColor($s:-40%, $a:-0.2);
+  $common-mark-highlighted-text:      accentColor($l:-30%);
+  $common-mark-highlighted-bg:        accentColor($l:+20%);
 
   --editor-background-color:        hsl(0, 0%, 97%);
-  --editor-border-radius:           5px;
-  --editor-default-text-color:    hsl(0, 0%, 25%);
-  --editor-header-height:           2.25em;
+  --editor-border-radius:             5px;
+  --editor-default-text-color:      hsl(0, 0%, 25%);
+  --editor-header-height:             2.25em;
   --editor-not-focused-selected-text-color:     hsl(0, 0%, 90%);
-  --editor-scrollbar:               #{foregroundColor(0.25)};
-  --editor-selected-text-color:     var(--text-selected-background); 
-  --editor-side-padding:            4em;
+  --editor-scrollbar:                 #{foregroundColor(0.25)};
+  --editor-selected-text-color:       var(--text-selected-background); 
+  --editor-side-padding:              4em;
 
-  --mark-border-radius:             0.2rem;
-  --mark-border-width:              0px;
-  --source-bg-borderRadius:         0.2em;
+  --mark-border-radius:               0.2rem;
+  --mark-border-width:                0px;
+  --source-bg-borderRadius:           0.2em;
 
-  --citation-mark:                  #{accentColor($l:-20%)};
-  --citation-mark-bg:               #{accentColor($a:-0.8)};
-  --citation-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
-  --citation-mark-highlight:        #{$common-mark-highlighted-text};
-  --citation-mark-highlight-bg:     #{$common-mark-highlighted-bg};
-  --citation-source-text:           #{$common-source-text};
-  --citation-source-bg:             #{$common-source-bg};
-  --citation-source-md:             #{$common-md};
+  --citation-mark:                    #{accentColor($l:-20%)};
+  --citation-mark-bg:                 #{accentColor($a:-0.8)};
+  --citation-mark-border:             #{accentColor($l:-30%, $a:-0.9)};
+  --citation-mark-highlight:          #{$common-mark-highlighted-text};
+  --citation-mark-highlight-bg:       #{$common-mark-highlighted-bg};
+  --citation-source-text:             #{$common-source-text};
+  --citation-source-bg:               #{$common-source-bg};
+  --citation-source-md:               #{$common-md};
 
   $code: hsl(0, 0%, 33%);
-  --code-source:                    #{color.adjust($code, $lightness: -15%)};
-  --code-source-bg:                 #{color.adjust($code, $alpha: -0.9)};
-  --code-source-md:                 #{color.adjust($code, $lightness: -10%, $alpha: -0.6)};
-  --code-borderRadius:              2px;
+  --code-source:                      #{color.adjust($code, $lightness: -15%)};
+  --code-source-bg:                   #{color.adjust($code, $alpha: -0.9)};
+  --code-source-md:                   #{color.adjust($code, $lightness: -10%, $alpha: -0.6)};
+  --code-borderRadius:                2px;
 
-  $emphasis: hsl(0, 0%, 24%);
-  --emphasis:                       #{$emphasis};
-  --emphasis-md:                    #{color.adjust($emphasis, $alpha: -0.6)};
+  $emphasis:                        hsl(0, 0%, 24%);
+  --emphasis:                         #{$emphasis};
+  --emphasis-md:                      #{color.adjust($emphasis, $alpha: -0.6)};
 
-  --fencedcodeblock-bg:             #{accentColor($a:-0.93)};
-  --fencedcodeblock-md:             #{accentColor($s: -10%, $a:-0.2)};
-  --fencedcodeblock-options-label:  #{foregroundColor(0.25)};
-  --fencedcodeblock-borderRadius:   0.2em;
-  --fencedcodeblock-syntax-icon:    url(/img/sf/chevron.down.small.heavy.svg);
+  --fencedcodeblock-bg:               #{accentColor($a:-0.93)};
+  --fencedcodeblock-md:               #{accentColor($s: -10%, $a:-0.2)};
+  --fencedcodeblock-options-label:    #{foregroundColor(0.25)};
+  --fencedcodeblock-border-radius:    0.2em;
+  --fencedcodeblock-syntax-icon:      url(/img/sf/chevron.down.small.heavy.svg);
 
-  --footnote-mark:                  #{accentColor($l:-20%)};
-  --footnote-mark-bg:               #{accentColor($a:-0.8)};
-  --footnote-mark-border:           #{accentColor($l:-30%, $a:-0.9)};
-  --footnote-mark-highlight:        #{$common-mark-highlighted-text};
-  --footnote-mark-highlight-bg:     #{$common-mark-highlighted-bg};
-  --footnote-source-text:           #{$common-source-text};
-  --footnote-source-bg:             #{$common-source-bg};
-  --footnote-source-md:             #{$common-md};
+  --footnote-mark:                    #{accentColor($l:-20%)};
+  --footnote-mark-bg:                 #{accentColor($a:-0.8)};
+  --footnote-mark-border:             #{accentColor($l:-30%, $a:-0.9)};
+  --footnote-mark-highlight:          #{$common-mark-highlighted-text};
+  --footnote-mark-highlight-bg:       #{$common-mark-highlighted-bg};
+  --footnote-source-text:             #{$common-source-text};
+  --footnote-source-bg:               #{$common-source-bg};
+  --footnote-source-md:               #{$common-md};
   
-  --figure-bg:                      #{accentColor($a:-0.93)};
-  --figure-caption:                 #{accentColor($l:-10%, $s: -20%)};
-  --figure-options-label:           #{foregroundColor(0.4)};
-  --figure-thumb-bg:                transparent;
-  --figure-thumb-borderColor:       #{accentColor()};
-  --figure-thumb-borderRadius:      3.5px;
-  --figure-thumb-borderWidth:       1px;
-
-  --frontmatter-text:               #{accentColor($l:-35%, $s: -50%)};
-  --frontmatter-atom:               #{accentColor($l:-10%, $s: -60%, $a:-0.1)};
-  --frontmatter-meta:               #{accentColor($l:-10%, $s: -50%, $a:-0.1)};
-  --frontmatter-tag:                #{accentColor($l:-35%, $s: -50%)};
-  --frontmatter-tag-underline:      #{accentColor($l:-35%, $s: -50%, $a:-0.6)};
-  --frontmatter-md:                 #{accentColor($l:-10%, $s: -50%, $a:-0.5)};
-  --frontmatter-bg:                 #{accentColor($s: -10%, $a:-0.94)};
-  --frontmatter-dividers:           #{accentColor($a:-0.9)};
-  --frontmatter-border-width:       0px;
-  --frontmatter-border:             transparent;
-  --frontmatter-borderRadius:       0.3em;
-
-  --h1:                             #{foregroundColor()};
-  --h2:                             #{foregroundColor(0.8)};
-  --h3:                             #{foregroundColor(0.8)};
-  --h4:                             #{foregroundColor(0.8)};
-  --h5:                             #{foregroundColor(0.8)};
-  --h6:                             #{foregroundColor(0.8)};
-  --hr-bg:                        hsla(0, 0%, 78%, 0.2);
-
-  --image-mark:                     #{accentColor($l:-20%)};
-  --image-mark-bg:                  #{accentColor($a:-0.8)};
-  --image-mark-border:              #{accentColor($l:-30%, $a:-0.9)};
-  --image-mark-highlight:           #{$common-mark-highlighted-text};
-  --image-mark-highlight-bg:        #{$common-mark-highlighted-bg};
-  --image-source-text:              #{accentColor($l:-15%)};
-  --image-source-text-url:          #{accentColor($l:-15%, $a:-0.2)};
-  --image-source-text-title:        #{accentColor($l:-15%, $a:-0.4)};
-  --image-source-text-bg:           #{accentColor($a:0.05)};
-  --image-source-text-md:           #{$common-md};
+  --figure-mark-bg:                   #{accentColor($a:-0.93)};
+  --figure-mark-caption:              #{accentColor($l:-10%, $s: -20%)};
+  --figure-mark-options-label:        #{foregroundColor(0.4)};
+  --figure-mark-thumb-bg:             transparent;
+  --figure-mark-thumb-border-color:   #{accentColor()};
+  --figure-mark-thumb-border-radius:  3.5px;
+  --figure-mark-thumb-border-width:   1px;
+  --figure-mark-highlight-bg:         #{accentColor($l:+36%)};
   
-  $link-text:                       accentColor($s:-30%, $l:-25%);
-  $link-underline:                  accentColor($s:-30%, $l:-25%, $a: -0.5);
-  $link-hover:                      accentColor($s:-30%, $l:-35%);
+  --image-mark-highlight-bg:          #{$common-mark-highlighted-bg};
+
+  --frontmatter-text:                 #{accentColor($l:-35%, $s: -50%)};
+  --frontmatter-atom:                 #{accentColor($l:-10%, $s: -60%, $a:-0.1)};
+  --frontmatter-meta:                 #{accentColor($l:-10%, $s: -50%, $a:-0.1)};
+  --frontmatter-tag:                  #{accentColor($l:-35%, $s: -50%)};
+  --frontmatter-tag-underline:        #{accentColor($l:-35%, $s: -50%, $a:-0.6)};
+  --frontmatter-md:                   #{accentColor($l:-10%, $s: -50%, $a:-0.5)};
+  --frontmatter-bg:                   #{accentColor($s: -10%, $a:-0.94)};
+  --frontmatter-dividers:             #{accentColor($a:-0.9)};
+  --frontmatter-border-width:         0px;
+  --frontmatter-border:               transparent;
+  --frontmatter-borderRadius:         0.3em;
+
+  --h1:                               #{foregroundColor()};
+  --h2:                               #{foregroundColor(0.8)};
+  --h3:                               #{foregroundColor(0.8)};
+  --h4:                               #{foregroundColor(0.8)};
+  --h5:                               #{foregroundColor(0.8)};
+  --h6:                               #{foregroundColor(0.8)};
+  
+  --hr-bg:                          hsla(0, 0%, 78%, 0.2);
+
+  --image-mark:                       #{accentColor($l:-20%)};
+  --image-mark-bg:                    #{accentColor($a:-0.8)};
+  --image-mark-border:                #{accentColor($l:-30%, $a:-0.9)};
+  --image-mark-highlight:             #{$common-mark-highlighted-text};
+  --image-mark-highlight-bg:          #{$common-mark-highlighted-bg};
+
+  --image-source-text:                #{accentColor($l:-15%)};
+  --image-source-text-url:            #{accentColor($l:-15%, $a:-0.2)};
+  --image-source-text-title:          #{accentColor($l:-15%, $a:-0.4)};
+  --image-source-text-bg:             #{accentColor($a:0.05)};
+  --image-source-text-md:             #{$common-md};
+  
+  $link-text:                         accentColor($s:-30%, $l:-25%);
+  $link-underline:                    accentColor($s:-30%, $l:-25%, $a: -0.5);
+  $link-hover:                        accentColor($s:-30%, $l:-35%);
   
   // Applies to url-in-brackets and email-in-brackets
-  --in-brackets:                    #{$link-text};
-  --in-brackets-underline:          #{$link-underline};
-  --in-brackets-hover-underline:    #{accentColor($l:-10%, $a:-0.2)};
-  --in-brackets-md:                 #{$common-md};
+  --in-brackets:                      #{$link-text};
+  --in-brackets-underline:            #{$link-underline};
+  --in-brackets-hover-underline:      #{accentColor($l:-10%, $a:-0.2)};
+  --in-brackets-md:                   #{$common-md};
 
-  --link-mark:                      #{$common-source-text};
-  --link-mark-underline:            #{$link-underline};
-  --link-hover:                     #{$link-hover};
-  --link-mark-highlight:            #{$common-mark-highlighted-text};
-  --link-mark-highlight-bg:         var(--text-selected-background);
-  --link-mark-border-radius:         3px;
-  --link-weight:                    400;
+  --link-mark:                        #{$common-source-text};
+  --link-mark-underline:              #{$link-underline};
+  --link-hover:                       #{$link-hover};
+  --link-mark-highlight:              #{$common-mark-highlighted-text};
+  --link-mark-highlight-bg:           var(--text-selected-background);
+  --link-mark-border-radius:          3px;
+  --link-weight:                      400;
   
-  --link-source-text:               #{$common-source-text};
-  --link-source-url:                #{accentColor($l:5%, $s:-20%)};
-  --link-source-title:              #{accentColor($s: -20%)};
-  --link-source-bg:                 transparent;
-  --link-source-md:                 #{$common-md};
+  --link-source-text:                 #{$common-source-text};
+  --link-source-url:                  #{accentColor($l:5%, $s:-20%)};
+  --link-source-title:                #{accentColor($s: -20%)};
+  --link-source-bg:                   transparent;
+  --link-source-md:                   #{$common-md};
   // --link-ref-definition-bg:         #{color.adjust($link, $alpha: -0.9)};
 
-  --list-marker:                    #{accentColor()};
-  --list-indentation:               1em;
+  --list-marker:                      #{accentColor()};
+  --list-indentation:                 1em;
 
-  --texmath-inline:               hsla(0, 0%, 84%, 0.5);
-  --texmath-display:              hsla(0, 0%, 84%, 0.5);
+  --texmath-inline:                 hsla(0, 0%, 84%, 0.5);
+  --texmath-display:                hsla(0, 0%, 84%, 0.5);
 
-  --quote:                          #{foregroundColor(0.6)};
-  --quote-md:                       #{accentColor()};
-  --quote-indent:                   2em;
-  --quote-border-bg:                transparent;
-  --quote-border-width:             0.6em;
+  --quote:                            #{foregroundColor(0.6)};
+  --quote-md:                         #{accentColor()};
+  --quote-indent:                     2em;
+  --quote-border-bg:                  transparent;
+  --quote-border-width:               0.6em;
 
   $strikethrough: #3d3d3d;
-  --strikethrough:                  #{$strikethrough};
-  --strikethrough-line:             hsla(0, 0%, 0%, 0.5);
-  --strikethrough-md:               #{color.adjust($strikethrough, $alpha: -0.4)};
+  --strikethrough:                    #{$strikethrough};
+  --strikethrough-line:               hsla(0, 0%, 0%, 0.5);
+  --strikethrough-md:                 #{color.adjust($strikethrough, $alpha: -0.4)};
 
   $strong: #3d3d3d;
-  --strong:                         #{$strong};
-  --strong-md:                      #{color.adjust($strong, $alpha: -0.5)};
+  --strong:                           #{$strong};
+  --strong-md:                        #{color.adjust($strong, $alpha: -0.5)};
 
-  --task-mark-icon:                 url(/img/sf/checkmark.small.heavy.svg);
-  --task-mark-icon-bg:            white;
-  --task-mark-open-bg:              transparent;
-  --task-mark-open-border:          #{foregroundColor(0.3)};
-  --task-mark-closed-bg:            #{accentColor()};
-  --task-mark-closed-border:        #{accentColor()};
-  --task-mark-bg:                   #{accentColor($a:-0.8)};
-  --task-mark-border:               #{accentColor($l:-30%, $a:-0.9)};
-  --task-mark-highlight:            #{$common-mark-highlighted-text};
-  --task-mark-highlight-bg:         #{$common-mark-highlighted-bg};
+  --task-mark-icon:                   url(/img/sf/checkmark.small.heavy.svg);
+  --task-mark-icon-bg:              white;
+  --task-mark-open-bg:                transparent;
+  --task-mark-open-border:            #{foregroundColor(0.3)};
+  --task-mark-closed-bg:              #{accentColor()};
+  --task-mark-closed-border:          #{accentColor()};
+  --task-mark-bg:                     #{accentColor($a:-0.8)};
+  --task-mark-border:                 #{accentColor($l:-30%, $a:-0.9)};
+  --task-mark-highlight:              #{$common-mark-highlighted-text};
+  --task-mark-highlight-bg:           #{$common-mark-highlighted-bg};
   
-  --task-source-text:               #{accentColor($s:-30%, $l:-25%)};
-  --task-source-text-bg:            #{accentColor($a:0.05)};
-  --task-source-text-md:            #{$common-md};
+  --task-source-text:                 #{accentColor($s:-30%, $l:-25%)};
+  --task-source-text-bg:              #{accentColor($a:0.05)};
+  --task-source-text-md:              #{$common-md};
 }

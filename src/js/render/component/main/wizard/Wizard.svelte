@@ -92,7 +92,7 @@
     // Update local element value
     element = $store.element
     
-    // console.log(element)
+    console.log(element)
 
     // Determine which component to render...
     // Depends on 1) element type, and 2) how the wizard was opened.
@@ -151,7 +151,7 @@
 
     } else if (type.equalsAny('figure', 'image-inline') && (tabOrClick || hover)) {
 
-      // Show inline image wizard
+      // Show image wizard (applies to both figures and inline images)
       component = Image
 
     } else if (type.equalsAny('image-reference-collapsed', 'image-reference-full') && (tabOrClick || hover)) {
@@ -356,6 +356,7 @@
     // TODO: Need to get the element
     // const rect = textMarker.replacedWith.getBoundingClientRect() 
     if (!$store.domElement) return
+    console.log($store.domElement)
     const rect = $store.domElement.getBoundingClientRect() 
     domEl.style.left = `${rect.left + rect.width / 2}px` 
     domEl.style.top = `${rect.top - wizardOffset}px`
@@ -612,13 +613,15 @@
   }}
 >
   {#if element && component}
-    <svelte:component 
-      this={component} 
-      bind:this={componentInstance} 
-      {cm} 
-      {element} 
-      suppressWarnings={$store.suppressWarnings}
-    />
+    {#key element}
+      <svelte:component 
+        this={component} 
+        bind:this={componentInstance} 
+        {cm} 
+        {element} 
+        suppressWarnings={$store.suppressWarnings}
+      />
+    {/key}
   {/if}
   <!-- <div class="notch"></div> -->
   <!-- <img class="notch" src="img/notch.svg"> -->

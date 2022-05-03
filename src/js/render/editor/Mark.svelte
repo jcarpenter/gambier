@@ -435,29 +435,33 @@
 
   <!-- FIGURE -->
 
-  <span class="thumb">
-    <ImagePreview 
-      userSpecifiedUrl={element.spans.find(({type}) => type.includes('url'))?.string}
-      {cm}
-      {element}
+  <div class:highlighted={isHighlighted}>
+    <span 
+      class="thumb"
+      bind:this={el}
+    >
+      <ImagePreview 
+        userSpecifiedUrl={element.spans.find(({type}) => type.includes('url'))?.string}
+        {cm}
+        {element}
+      />
+    </span>
+    <span
+      contenteditable
+      spellcheck="false"
+      tabindex="0"
+      class={`caption mark editable ${classes.join(' ')}`}
+      class:highlighted={isHighlighted}
+      class:blank={displayedText == ''}
+      bind:textContent={displayedText}
+      on:mousedown={selectMark}
+      on:keydown={onKeyDown}
+      on:click={onClick}
+      on:input={writeChanges}
+      on:paste={pasteAsPlainText}
+      on:scroll|preventDefault
     />
-  </span>
-  <span
-    contenteditable
-    spellcheck="false"
-    tabindex="0"
-    bind:this={el}
-    class={`caption mark editable ${classes.join(' ')}`}
-    class:highlighted={isHighlighted}
-    class:blank={displayedText == ''}
-    bind:textContent={displayedText}
-    on:mousedown={selectMark}
-    on:keydown={onKeyDown}
-    on:click={onClick}
-    on:input={writeChanges}
-    on:paste={pasteAsPlainText}
-    on:scroll|preventDefault
-  />
+  </div>
 
 {:else if isEditable}
 

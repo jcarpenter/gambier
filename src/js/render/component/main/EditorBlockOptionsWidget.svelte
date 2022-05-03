@@ -43,8 +43,8 @@ import DisclosureButton from "../ui/DisclosureButton.svelte";
   }
   
   :global(pre.figure .blockOptions)  {
-    .label { color: var(--figure-options-label); }
-    .iconButton .icon { background: var(--figure-options-icon); }
+    .label { color: var(--figure-mark-options-label); }
+    .iconButton .icon { background: var(--figure-mark-options-icon); }
   }
   
 

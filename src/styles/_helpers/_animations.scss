@@ -4,10 +4,13 @@
 
 /*
 Svelte docs: "If you want to make @keyframes that are accessible globally, you need to prepend your keyframe names with -global-. The -global- part will be removed when compiled, and the keyframe then be referenced using just my-animation-name elsewhere in your code." — 
-
 */
 
 // Focus ring
+
+@mixin focusRing {
+    box-shadow: 0 0 0 3.5px var(--focus-ring-color);
+}
 
 @mixin focusRingAnimation() {
     animation-fill-mode: forwards;
@@ -20,7 +23,7 @@ Svelte docs: "If you want to make @keyframes that are accessible globally, you n
         box-shadow: 0 0 0 25px transparent;
     }
     to {
-        box-shadow: 0 0 0 3.5px var(--focus-ring-color);
+        @include focusRing;
     }
 }
 

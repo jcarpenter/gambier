@@ -20,6 +20,7 @@
   export let disabled = false
   export let isError = false
   export let autofocus = false
+  export let animateFocus = true
 
   $: tabindex = $state.system.keyboardNavEnabled ? 0 : -1
 
@@ -68,10 +69,13 @@
     align-items: center;
     padding: 0 3px 0 7px;
     // flex-grow: 1;
-
     &:focus-within {
       @include focusRingAnimation
-    }
+    } 
+  }
+
+  .inputText:not(.animateFocus):focus-within {
+    animation-duration: 0s !important;
   }
 
   .icon, .errorIcon {
@@ -250,6 +254,7 @@
   class:compact 
   class:isError
   class:disabled
+  class:animateFocus
   class:showPlaceholder={!value}
   use:setAsCustomPropOnNode={{multiLineMaxHeight}}
   use:setSize={{width, margin}}

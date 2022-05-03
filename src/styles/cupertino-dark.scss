@@ -58,7 +58,7 @@ body {
   --fencedcodeblock-bg:             #{colorVar("accent", $alpha: 0.07)};
   --fencedcodeblock-md:             #{colorVar("accent", $sat: -10%, $alpha:0.8)};
   --fencedcodeblock-options-label:  #{foregroundColor(0.25)};
-  --fencedcodeblock-borderRadius:   0.2em;
+  --fencedcodeblock-border-radius:   0.2em;
   --fencedcodeblock-syntax-icon:    url(img/ui/chevron.down.small.heavy.svg);
 
   // @include setColorVar("footnote", #aa5096);
@@ -71,13 +71,13 @@ body {
   --footnote-source-bg:             #{colorVar("accent", $alpha: 0.05)};
   --footnote-source-md:             #{colorVar("accent", $alpha: 0.6)};
   
-  --figure-bg:                    rgba(241, 188, 127, 0.2) !important;      
-  --figure-caption:                 #{colorVar("accent", $light: -10%, $sat: -20%)};
-  --figure-options-label:           #{foregroundColor(0.4)};
-  --figure-thumb-bg:                transparent;
-  --figure-thumb-borderColor:       #{colorVar("accent")};
-  --figure-thumb-borderRadius:      3.5px;
-  --figure-thumb-borderWidth:       1px;
+  --figure-mark-bg:                    rgba(241, 188, 127, 0.2) !important;      
+  --figure-mark-caption:                 #{colorVar("accent", $light: -10%, $sat: -20%)};
+  --figure-mark-options-label:           #{foregroundColor(0.4)};
+  --figure-mark-thumb-bg:                transparent;
+  --figure-mark-thumb-border-color:       #{colorVar("accent")};
+  --figure-mark-thumb-border-radius:      3.5px;
+  --figure-mark-thumb-border-width:       1px;
 
   --frontmatter-bg:                 #{foregroundColor(0.03)};
   --frontmatter-md:                 #{foregroundColor(0.4)};

@@ -3,9 +3,9 @@ import BezierEasing from 'bezier-easing'
 // We use 'bezier-easing' package to convert CSS cubic bezier easing 
 // curves to easing functions (which Svelte transitions require).
 
-// 
-// 
-// 
+// To use in CSS, use `--macos-default-easing` variable,
+// which is defined in _mac-misc.scss.
+
 const macOsDefaultEasingCurve = BezierEasing(0.25, 0.1, 0.25, 1)
 const cssEaseInOutCurve = BezierEasing(0.42, 0.0, 0.58, 1.0)
 

@@ -6,7 +6,6 @@
   import { store } from '../../../WizardManager';
   import { getRenderedCitation } from '../../../CitationManager';
 
-  
   export let cm = null
   export let element = null
   export let suppressWarnings = false
@@ -24,6 +23,7 @@
       renderedCitation = ""
       return
     }
+    
     // If we're actually targeting a new element we want the 
     // string to start off blank. OTOH, if the user is typing
     // into the citation field (to add a suffix, for example),
@@ -39,8 +39,6 @@
     }
 
     cachedElement = element
-
-    // console.log(element)
 
     // If citation is empty, leave things blank and return
     const isEmpty = element.markdown == "[@]"
@@ -123,15 +121,16 @@
 
 <Separator margin={'0'} color={'wizard-separator'} />
 
-<FormRow margin={'8px 8px'}>
+<FormRow margin={'8px 8px 8px 0'}>
   <InputText
     autofocus={$store.openedBy.hover == false}
+    animateFocus={false}
     placeholder={'Required'}
     isError={content.string == '' && !suppressWarnings}
     multiLine={true}
     multiLineMaxHeight={200}
     width={'100%'}
-    compact={true} 
+    compact={true}
     value={content.string}
     on:input={(evt) => writeToDoc(cm, evt.target.textContent, element.line, content.start, content.end)}
   />

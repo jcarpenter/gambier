@@ -101,6 +101,7 @@
     transform-origin: left top;
     overflow: hidden;
     border-right: 1px solid var(--sidebar-border-color);
+    will-change: transform;
 
     // Transparent sidebar style:
     // background-color: var(--window-background-color);
@@ -114,6 +115,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    will-change: transform;
   }
 
   #tabs {
@@ -160,7 +162,7 @@
   id="sidebar"
   class="parent"
   use:setLayoutFocus={{current: $project.focusedSectionId, setTo: 'sidebar'}}
-  use:setAsCustomPropOnNode={{sidebarWidth}}
+  style:--sidebarWidth={sidebarWidth}
   transition:mask={{ 
     thisNodeIsMask: true,
     direction: 'x',

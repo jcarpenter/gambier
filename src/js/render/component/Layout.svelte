@@ -65,8 +65,11 @@
     // collapses from right side. Makes it easier to animate 
     // (otherwise if it was anchored on left, we'd need to
     // animate both width -and- transform x.
-    right: 0;
-    transform: translate(-1, 0);
+    // right: 0;
+    // transform: translate(-1, 0);
+    // left: calc(var(--sidebarWidth) * 1px);
+    transform: translate(calc(var(--sidebarWidth) * 1px), 0);
+    
     height: 100%;
     overflow: hidden;
     display: flex;
@@ -77,7 +80,10 @@
     // transform: translate(calc(var(--sidebarWidth) * 1px), 0); 
     // transform-origin: left top;
     // Animate when sidebar opens/closes
-    transition: width var(--sidebar-openClose-duration);
+    will-change: transform;
+    transition: 
+      transform var(--sidebar-openClose-duration) var(--macos-default-easing), 
+      width var(--sidebar-openClose-duration) step-end;
   }
 </style>
 
@@ -104,7 +110,7 @@
     {/if}
     <div 
       id="main" 
-      use:setAsCustomPropOnNode={{sidebarWidth}}
+      style:--sidebarWidth={sidebarWidth}
     >
       <!-- <Toolbar /> -->
       <!-- <Separator /> -->

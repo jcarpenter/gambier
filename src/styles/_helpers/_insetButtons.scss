@@ -67,7 +67,7 @@
 }
 
 @mixin inset-button-focus() {
-  // Hide focus outlin on parent
+  // Hide focus outline on parent
   outline: none;
   // Show focus ring on control
   .control {
