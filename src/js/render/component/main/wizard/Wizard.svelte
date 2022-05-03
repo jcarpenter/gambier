@@ -92,7 +92,6 @@
     // Update local element value
     element = $store.element
     
-    console.log(element)
 
     // Determine which component to render...
     // Depends on 1) element type, and 2) how the wizard was opened.
@@ -127,22 +126,16 @@
 
     } else if (type == 'link-inline' && (hover && metaKey)) {
       
-      // Show preview of link URL
+      // Show the link URL
       component = UrlPreview
       await tick()
-      componentInstance.url = 'Open ' + element.spans.find(({type}) => type.includes('url'))?.string
+      const linkUrl = element.spans.find(({type}) => type.includes('url'))?.string
+      componentInstance.url = linkUrl ? linkUrl : ''
 
     } else if (type == 'link-inline' && (tabOrClick || hover)) {
 
       // Show link wizard
       component = Link
-
-    } else if (type == 'link-inline' && (hover && metaKey)) {
-      
-      // Show preview of link URL
-      component = UrlPreview
-      await tick()
-      componentInstance.url = element.spans.find(({type}) => type.includes('url'))?.string
 
     } else if (type.equalsAny('link-reference-collapsed', 'link-reference-full') && (tabOrClick || hover)) {
 
@@ -356,7 +349,6 @@
     // TODO: Need to get the element
     // const rect = textMarker.replacedWith.getBoundingClientRect() 
     if (!$store.domElement) return
-    console.log($store.domElement)
     const rect = $store.domElement.getBoundingClientRect() 
     domEl.style.left = `${rect.left + rect.width / 2}px` 
     domEl.style.top = `${rect.top - wizardOffset}px`

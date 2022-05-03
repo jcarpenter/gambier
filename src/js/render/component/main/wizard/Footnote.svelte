@@ -37,7 +37,7 @@
 
 <Separator margin={'0'} />
 
-<FormRow margin={'8px 8px'}>
+<FormRow margin={'8px 8px 8px 0'}>
   <InputText
     autofocus={$store.openedBy.hover == false}
     placeholder={'Required'}
